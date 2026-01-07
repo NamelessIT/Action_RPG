@@ -925,11 +925,11 @@ PlayerSettings:
   captureStartupLogs: {}
   activeInputHandler: 2
   windowsGamepadBackendHint: 0
-  cloudProjectId: 7ff29123-0560-4191-a91b-c75f43a8f9d4
+  cloudProjectId: 0a860533-9e8d-4bda-8268-4ae299c9e71b
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: ActionRPG
-  organizationId: tuankhoaanh
+  projectName: Action_RPG
+  organizationId: hoanghuy192004
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}
