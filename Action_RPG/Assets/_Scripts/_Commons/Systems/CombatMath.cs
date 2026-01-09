@@ -80,12 +80,12 @@ public static class CombatMath
         float totalDamage = finalPhys + finalMagic;
 
         // Debug chi tiết (có thể comment lại nếu spam console)
-        /*
+
         Debug.Log($"LOG DAMGE >> RawPhys: {rawPhysical} | RawMagic: {rawMagic} \n" +
                   $"ArmorDir: {armorDir} (Gốc {target.armor}) | T: {t} \n" +
                   $"DefenseMult: {defenseValMult} | DirBonus: {dirBonusMult} \n" +
                   $"FINAL: {totalDamage} (Phys: {finalPhys} + Magic: {finalMagic})");
-        */
+
 
         return totalDamage;
     }
