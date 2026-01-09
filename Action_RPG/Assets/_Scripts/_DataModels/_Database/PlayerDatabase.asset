@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5075a1482ed30ad43acd8cbc2ef4c9c1, type: 3}
+  m_Name: PlayerDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerDatabase
+  players:
+  - id: 1
+    name: Chris Don
+    STR: 20
+    DEX: 15
+    INT: 1
+    VIT: 10
+    AGI: 10
+    base_hp: 1000
+    max_stamina: 100
+    dash_cost: 20
+    armor_backstab_reduce: 20
+    defaultAccessories: 
