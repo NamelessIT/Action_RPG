@@ -33,7 +33,7 @@ public static class CombatMath
         float critMult = isCrit ? attacker.critMultiplier : 1.0f;
 
         // [Source: 67] Raw Phys
-        float rawPhysical = attacker.physicalAtk * attacker.skillAtkMultiplier * critMult;
+        float rawPhysical = attacker.physicalAtk * attacker.skillPhysicalMultiplier * critMult;
 
         // [Source: 68] Raw Magic
         float rawMagic = attacker.magicAtk * attacker.skillMagicMultiplier * critMult;
