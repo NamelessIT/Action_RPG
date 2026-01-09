@@ -1,120 +1,256 @@
 ﻿using UnityEngine;
 using Unity.Cinemachine;
+
 public class PlayerController : MonoBehaviour
 {
-    [Header("Movement")]
+    [Header("Movement Settings")]
     public float moveSpeed = 5f;
     public float idleDelay = 0.25f;
 
-    private Vector3 movement;
-
-    // Khai báo các component cần lấy
+    // Khai báo các component
     private Animator animator;
     private SpriteRenderer spriteRenderer;
     private Rigidbody rb;
+    private CinemachineImpulseSource impulseSource;
 
+    [Header("Rotation Mechanics")]
+    [Tooltip("Thời gian để xoay 180 độ (Giây). Ví dụ: 0.5s")]
+    public float turnDuration = 0.1f ;
 
+    [Tooltip("Góc lệch tối đa cho phép di chuyển. > 45 độ thì đứng lại xoay.")]
+    public float moveThresholdAngle = 45f;
+
+    [Header("Combat Settings")]
+    public float attackRange = 1.5f;
+    public LayerMask enemyLayer;
+    public float baseDamage = 10f;
+
+    // State variables
     private int lastDirection = 0;
     private bool isWalking = false;
     private float lastMoveTime = 0f;
+    private bool isTurning = false;
 
-    [Header("Effects")]
-    private CinemachineImpulseSource impulseSource;
+    // Movement internal variables
+    private Vector3 movementInput;
+    private Vector3 currentVisualDir;
+
+    // Testing
+    public Transform testEnemyTarget;
+
+    // Biến tạm để test Crit (Sau này có thể làm random)
+    public bool testIsCrit = false;
 
     void Start()
     {
-        // QUAN TRỌNG: Dùng GetComponentInChildren để lấy component từ object con (Odo)
         animator = GetComponentInChildren<Animator>();
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
-
-        // Rigidbody nằm ngay trên object cha (Player) nên dùng GetComponent bình thường
         rb = GetComponent<Rigidbody>();
-
-        // Kiểm tra xem có lấy được component không để tránh lỗi sau này
-        if (animator == null) Debug.LogError("Không tìm thấy Animator ở Object con!");
-        if (spriteRenderer == null) Debug.LogError("Không tìm thấy SpriteRenderer ở Object con!");
-
-        // Lấy component Impulse Source nằm trên chính Player
         impulseSource = GetComponent<CinemachineImpulseSource>();
+
+        if (animator == null) Debug.LogError("Thiếu Animator!");
+        if (spriteRenderer == null) Debug.LogError("Thiếu SpriteRenderer!");
+
+        currentVisualDir = Vector3.back;
     }
 
     void Update()
     {
-        // Lấy input
+        // 1. TẤN CÔNG
+        if (Input.GetMouseButtonDown(0)) PerformAttack();
+
+        // 2. DI CHUYỂN & XOAY
+        HandleMovementStopToTurn();
+
+        // 3. TEST
+        if (Input.GetKeyDown(KeyCode.K)) TakeDamage(10);
+        if (Input.GetKeyDown(KeyCode.T) && testEnemyTarget != null)
+        {
+            float t = CombatMath.CalculateDirectionFactor(transform, testEnemyTarget);
+            Debug.Log($"Hệ số hướng t={t}");
+        }
+    }
+
+    void HandleMovementStopToTurn()
+    {
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveZ = Input.GetAxisRaw("Vertical");
+        movementInput = new Vector3(moveX, 0f, moveZ).normalized;
 
-        // Debug input để kiểm tra bàn phím
-        //if (moveX != 0 || moveZ != 0)
-        //{
-        //    Debug.Log($"Input Detected -> X: {moveX}, Z: {moveZ}");
-        //}
-
-        movement = new Vector3(moveX, 0f, moveZ).normalized;
-
-        // Logic check di chuyển
-        if (movement.magnitude > 0.1f)
+        if (movementInput.magnitude > 0.1f)
         {
-            isWalking = true;
             lastMoveTime = Time.time;
 
-            if (Mathf.Abs(moveZ) > Mathf.Abs(moveX))
+            float angleDifference = Vector3.Angle(currentVisualDir, movementInput);
+            float rotSpeed = Mathf.PI / turnDuration;
+
+            // Xử lý quay đầu 180 độ
+            if (angleDifference > 175f)
             {
-                // 0: Front (xuống), 1: Back (lên), 2: Side (ngang)
-                lastDirection = moveZ > 0 ? 1 : 0;
+                currentVisualDir = Quaternion.Euler(0, 1f, 0) * currentVisualDir;
+            }
+
+            // Xoay từ từ
+            currentVisualDir = Vector3.RotateTowards(
+                currentVisualDir,
+                movementInput,
+                rotSpeed * Time.deltaTime,
+                0.0f
+            );
+
+            // Kiểm tra góc lệch để quyết định đi hay dừng
+            if (angleDifference > moveThresholdAngle)
+            {
+                isTurning = true;
+                isWalking = false;
             }
             else
             {
-                lastDirection = 2; // Side
+                isTurning = false;
+                isWalking = true;
             }
-
-            // Xử lý FlipX (Lưu ý: spriteRenderer đang nằm ở object con)
-            if (moveX > 0) spriteRenderer.flipX = true;
-            else if (moveX < 0) spriteRenderer.flipX = false;
         }
         else
         {
             if (Time.time - lastMoveTime > idleDelay)
             {
                 isWalking = false;
+                isTurning = false;
             }
         }
 
-        // Gửi trạng thái đến Animator
+        UpdateAnimationDirection(currentVisualDir);
+    }
+
+    void UpdateAnimationDirection(Vector3 facingDir)
+    {
+        // --- CODE HIỆN TẠI (4 HƯỚNG) ---
+        // Khi chưa gỡ comment 8 hướng, đoạn này vẫn chạy để game không lỗi
+        if (Mathf.Abs(facingDir.z) > Mathf.Abs(facingDir.x))
+        {
+            lastDirection = facingDir.z > 0 ? 1 : 0;
+        }
+        else
+        {
+            lastDirection = 2;
+        }
+
+        if (facingDir.x > 0.1f) spriteRenderer.flipX = true;
+        else if (facingDir.x < -0.1f) spriteRenderer.flipX = false;
+
         if (animator != null)
         {
-            animator.SetBool("IsWalking", isWalking);
+            animator.SetBool("IsWalking", isWalking || isTurning);
             animator.SetFloat("Direction", (float)lastDirection);
-
-            // Debug xem giá trị gửi vào Animator là gì
-             //Debug.Log($"Animator Vars -> IsWalking: {isWalking}, Direction: {lastDirection}");
         }
+        // -------------------------------
 
-        if (Input.GetKeyDown(KeyCode.K))
+
+        /* =========================================================
+           [8-DIRECTION & 5-SPRITES SETUP] 
+           KHI NÀO CÓ ĐỦ 5 ANIMATION (Dưới, Trên, Trái, Dưới-Trái, Trên-Trái):
+           1. Vào Animator tạo Parameter "DirectionInt" (Type: Int).
+           2. Bỏ comment đoạn code dưới đây.
+           3. Comment lại đoạn code 4 hướng ở trên.
+           ========================================================= */
+
+        /*
+        // 1. Tính góc 360 độ (0 là hướng Nam/Dưới, tăng dần theo chiều kim đồng hồ)
+        float angle = Vector3.SignedAngle(Vector3.back, facingDir, Vector3.up);
+        if (angle < 0) angle += 360;
+
+        // 2. Chia thành 8 hướng (mỗi hướng 45 độ)
+        // Cộng 22.5 để xoay trục cho khớp
+        int directionIndex = Mathf.FloorToInt((angle + 22.5f) / 45f);
+        if (directionIndex >= 8) directionIndex = 0; 
+
+        // 3. Logic FlipX cho 5 Sprites (Lật các hướng bên Phải thành bên Trái)
+        // Index: 0=S, 1=SW, 2=W, 3=NW, 4=N, 5=NE, 6=E, 7=SE
+        
+        bool shouldFlip = false;
+        int animationToPlay = directionIndex;
+
+        if (directionIndex > 4) // Các hướng bên phải (5, 6, 7)
         {
-            TakeDamage(10);
+            shouldFlip = true;
+            // Map ngược lại về sprite bên trái
+            // 5 (NE) -> 3 (NW)
+            // 6 (E)  -> 2 (W)
+            // 7 (SE) -> 1 (SW)
+            animationToPlay = 8 - directionIndex; 
         }
+
+        // 4. Gửi vào Animator & SpriteRenderer
+        if (animator != null)
+        {
+            animator.SetBool("IsWalking", isWalking || isTurning);
+            animator.SetInteger("DirectionInt", animationToPlay); // Gửi index 0,1,2,3,4
+        }
+        
+        // Luôn set FlipX theo logic đã tính toán
+        spriteRenderer.flipX = shouldFlip;
+        */
     }
 
     void FixedUpdate()
     {
-        Vector3 targetPosition = rb.position + movement * moveSpeed * Time.fixedDeltaTime;
-        rb.MovePosition(targetPosition);
+        if (!isTurning && isWalking)
+        {
+            Vector3 targetPosition = rb.position + movementInput * moveSpeed * Time.fixedDeltaTime;
+            rb.MovePosition(targetPosition);
+        }
     }
 
+    void PerformAttack()
+    {
+        // Debug.Log("Player vung kiếm tấn công!"); (Bỏ bớt log thừa)
 
-    // Hàm giả lập việc bị đánh (gọi hàm này khi va chạm enemy)
+        // Lấy Stat của bản thân (Attacker)
+        CharacterStats myStats = GetComponent<CharacterStats>();
+        if (myStats == null)
+        {
+            Debug.LogError("Chưa gắn script CharacterStats vào Player!");
+            return;
+        }
+
+        Collider[] hitEnemies = Physics.OverlapSphere(transform.position, attackRange, enemyLayer);
+        foreach (Collider enemy in hitEnemies)
+        {
+            // Lấy Stat của kẻ địch (Target)
+            CharacterStats enemyStats = enemy.GetComponent<CharacterStats>();
+
+            if (enemyStats != null)
+            {
+                // 1. Tính hướng (t)
+                float t = CombatMath.CalculateDirectionFactor(transform, enemy.transform);
+
+                // 2. Tính Damage (Gọi CombatMath)
+                // Truyền stat của mình, stat của địch, t, và có crit hay không
+                float damage = CombatMath.CalculateFullDamage(myStats, enemyStats, t, testIsCrit);
+
+                // 3. Gây sát thương
+                enemyStats.TakeDamage(damage);
+
+                // 4. (Optional) Rung màn hình nhẹ khi đánh trúng
+                if (impulseSource != null) impulseSource.GenerateImpulseWithForce(0.1f);
+            }
+        }
+    }
+
     public void TakeDamage(int damage)
     {
-        Debug.Log($"Odo bị đánh! Mất {damage} máu.");
+        Debug.Log($"Odo bị đánh! -{damage} HP");
+        if (impulseSource != null) impulseSource.GenerateImpulseWithForce(0.2f);
+    }
 
-        if (impulseSource != null)
-        {
-            // CÁCH 1: Gọi đơn giản (Sử dụng đúng thông số Y=-1 bạn đã chỉnh trong Inspector)
-            impulseSource.GenerateImpulseWithForce(0.1f);
+    public void SetTurnSmoothTime(float time)
+    {
+        turnDuration = time;
+    }
 
-            // CÁCH 2: Nếu bạn muốn đòn đánh mạnh hơn thì nhân thêm lực
-            // impulseSource.GenerateImpulseWithForce(2.0f); // Mạnh gấp đôi
-        }
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, attackRange);
     }
 }
