@@ -200,122 +200,165 @@ public class PlayerController : MonoBehaviour
         UpdateAnimationDirection(currentVisualDir);
     }
 
+    //void UpdateAnimationDirection(Vector3 facingDir)
+    //{
+    //    if (Mathf.Abs(facingDir.z) > Mathf.Abs(facingDir.x))
+    //    {
+    //        lastDirection = facingDir.z > 0 ? 1 : 0;
+    //    }
+    //    else
+    //    {
+    //        lastDirection = 2;
+    //    }
+
+    //    if (facingDir.x > 0.1f) spriteRenderer.flipX = true;
+    //    else if (facingDir.x < -0.1f) spriteRenderer.flipX = false;
+
+    //    if (animator != null)
+    //    {
+    //        // [CẬP NHẬT QUAN TRỌNG] Thêm || isDashing
+    //        // Nếu đang Dash -> IsWalking = true -> Animator chuyển sang Walk_Tree (Logic animation chạy/lướt)
+    //        animator.SetBool("IsWalking", isWalking || isTurning || isDashing);
+    //        animator.SetFloat("Direction", (float)lastDirection);
+    //    }
+    //    // -------------------------------
+
+
+
+
+
+    //    /* =========================================================
+
+    //       [8-DIRECTION & 5-SPRITES SETUP] 
+
+    //       KHI NÀO CÓ ĐỦ 5 ANIMATION (Dưới, Trên, Trái, Dưới-Trái, Trên-Trái):
+
+    //       1. Vào Animator tạo Parameter "DirectionInt" (Type: Int).
+
+    //       2. Bỏ comment đoạn code dưới đây.
+
+    //       3. Comment lại đoạn code 4 hướng ở trên.
+
+    //       ========================================================= */
+
+
+
+    //    /*
+
+    //    // 1. Tính góc 360 độ (0 là hướng Nam/Dưới, tăng dần theo chiều kim đồng hồ)
+
+    //    float angle = Vector3.SignedAngle(Vector3.back, facingDir, Vector3.up);
+
+    //    if (angle < 0) angle += 360;
+
+
+
+    //    // 2. Chia thành 8 hướng (mỗi hướng 45 độ)
+
+    //    // Cộng 22.5 để xoay trục cho khớp
+
+    //    int directionIndex = Mathf.FloorToInt((angle + 22.5f) / 45f);
+
+    //    if (directionIndex >= 8) directionIndex = 0; 
+
+
+
+    //    // 3. Logic FlipX cho 5 Sprites (Lật các hướng bên Phải thành bên Trái)
+
+    //    // Index: 0=S, 1=SW, 2=W, 3=NW, 4=N, 5=NE, 6=E, 7=SE
+
+
+
+    //    bool shouldFlip = false;
+
+    //    int animationToPlay = directionIndex;
+
+
+
+    //    if (directionIndex > 4) // Các hướng bên phải (5, 6, 7)
+
+    //    {
+
+    //        shouldFlip = true;
+
+    //        // Map ngược lại về sprite bên trái
+
+    //        // 5 (NE) -> 3 (NW)
+
+    //        // 6 (E)  -> 2 (W)
+
+    //        // 7 (SE) -> 1 (SW)
+
+    //        animationToPlay = 8 - directionIndex; 
+
+    //    }
+
+
+
+    //    // 4. Gửi vào Animator & SpriteRenderer
+
+    //    if (animator != null)
+
+    //    {
+
+    //        animator.SetBool("IsWalking", isWalking || isTurning);
+
+    //        animator.SetInteger("DirectionInt", animationToPlay); // Gửi index 0,1,2,3,4
+
+    //    }
+
+
+
+    //    // Luôn set FlipX theo logic đã tính toán
+
+    //    spriteRenderer.flipX = shouldFlip;
+
+    //    */
+    //}
     void UpdateAnimationDirection(Vector3 facingDir)
     {
-        if (Mathf.Abs(facingDir.z) > Mathf.Abs(facingDir.x))
-        {
-            lastDirection = facingDir.z > 0 ? 1 : 0;
-        }
-        else
-        {
-            lastDirection = 2;
-        }
-
-        if (facingDir.x > 0.1f) spriteRenderer.flipX = true;
-        else if (facingDir.x < -0.1f) spriteRenderer.flipX = false;
-
-        if (animator != null)
-        {
-            // [CẬP NHẬT QUAN TRỌNG] Thêm || isDashing
-            // Nếu đang Dash -> IsWalking = true -> Animator chuyển sang Walk_Tree (Logic animation chạy/lướt)
-            animator.SetBool("IsWalking", isWalking || isTurning || isDashing);
-            animator.SetFloat("Direction", (float)lastDirection);
-        }
-        // -------------------------------
-
-
-
-
-
-        /* =========================================================
-
-           [8-DIRECTION & 5-SPRITES SETUP] 
-
-           KHI NÀO CÓ ĐỦ 5 ANIMATION (Dưới, Trên, Trái, Dưới-Trái, Trên-Trái):
-
-           1. Vào Animator tạo Parameter "DirectionInt" (Type: Int).
-
-           2. Bỏ comment đoạn code dưới đây.
-
-           3. Comment lại đoạn code 4 hướng ở trên.
-
-           ========================================================= */
-
-
-
-        /*
-
-        // 1. Tính góc 360 độ (0 là hướng Nam/Dưới, tăng dần theo chiều kim đồng hồ)
-
+        // Tính góc 360 độ từ hướng South (Vector3.back)
         float angle = Vector3.SignedAngle(Vector3.back, facingDir, Vector3.up);
+        if (angle < 0) angle += 360f;
 
-        if (angle < 0) angle += 360;
-
-
-
-        // 2. Chia thành 8 hướng (mỗi hướng 45 độ)
-
-        // Cộng 22.5 để xoay trục cho khớp
-
-        int directionIndex = Mathf.FloorToInt((angle + 22.5f) / 45f);
-
-        if (directionIndex >= 8) directionIndex = 0; 
-
-
-
-        // 3. Logic FlipX cho 5 Sprites (Lật các hướng bên Phải thành bên Trái)
-
-        // Index: 0=S, 1=SW, 2=W, 3=NW, 4=N, 5=NE, 6=E, 7=SE
-
-        
+        int directionIndex = Mathf.FloorToInt((angle + 22.5f) / 45f) % 8;
 
         bool shouldFlip = false;
+        int animationIndex = directionIndex;
 
-        int animationToPlay = directionIndex;
-
-
-
-        if (directionIndex > 4) // Các hướng bên phải (5, 6, 7)
-
+        // Map hướng phải → trái + flip
+        switch (directionIndex)
         {
-
-            shouldFlip = true;
-
-            // Map ngược lại về sprite bên trái
-
-            // 5 (NE) -> 3 (NW)
-
-            // 6 (E)  -> 2 (W)
-
-            // 7 (SE) -> 1 (SW)
-
-            animationToPlay = 8 - directionIndex; 
-
+            case 5: // NE → NW
+                animationIndex = 3;
+                shouldFlip = true;
+                break;
+            case 6: // E → W
+                animationIndex = 2;
+                shouldFlip = true;
+                break;
+            case 7: // SE → SW
+                animationIndex = 1;
+                shouldFlip = true;
+                break;
+            default:
+                shouldFlip = false;
+                break;
         }
 
-
-
-        // 4. Gửi vào Animator & SpriteRenderer
-
+        // ✅ GỬI GIÁ TRỊ FLOAT VÀO "Direction" (KHÔNG DÙNG Int!)
         if (animator != null)
-
         {
-
-            animator.SetBool("IsWalking", isWalking || isTurning);
-
-            animator.SetInteger("DirectionInt", animationToPlay); // Gửi index 0,1,2,3,4
-
+            bool isMoving = isWalking || isTurning || isDashing;
+            animator.SetBool("IsWalking", isMoving);
+            animator.SetFloat("Direction", (float)animationIndex); // ← Đây là chìa khóa!
         }
 
-        
-
-        // Luôn set FlipX theo logic đã tính toán
-
-        spriteRenderer.flipX = shouldFlip;
-
-        */
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.flipX = shouldFlip;
+        }
     }
-
     void FixedUpdate()
     {
         if (stats == null) return;
