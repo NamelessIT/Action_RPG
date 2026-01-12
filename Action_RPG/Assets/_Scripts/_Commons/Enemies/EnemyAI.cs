@@ -68,8 +68,8 @@ public class EnemyAI : MonoBehaviour
         {
             Debug.Log("Quá xa nhà -> Bắt đầu quay về!");
             isReturningHome = true;
-            stats.currentAggro = 0; // Xóa hận thù
-            // Không cần set stats.outCombat = true ở đây nữa, ta dùng logic Aggro để check
+            stats.currentAggro = 0;
+            stats.outCombat = true; // Ép buộc thoát combat để tránh lỗi lặp
         }
 
         // --- 2. XỬ LÝ STATE ---
@@ -87,30 +87,57 @@ public class EnemyAI : MonoBehaviour
         combat.HandleCombatUpdate();
     }
 
-    // [CẬP NHẬT QUAN TRỌNG] Sửa logic bị kẹt
+    // [QUAN TRỌNG] HÀM ĐÃ ĐƯỢC SỬA LỖI LOGIC NEUTRAL TỰ ĐÁNH
     void HandleReturningState(float distToSpawn, float distToPlayer)
     {
-        // Điều kiện hủy quay về:
-        // 1. Có Hận thù (Nghĩa là vừa bị đánh -> TakeDamage -> AddAggro > 0)
-        // 2. HOẶC Player đứng ngay trong tầm đánh (chặn đường)
-        bool shouldFightBack = stats.currentAggro > 0 || distToPlayer <= combat.basicAttackRange;
+        // 1. Kiểm tra các điều kiện để HỦY quay về và ĐÁNH LẠI
 
-        if (shouldFightBack && stats.enemyType != EnemyType.Friendly)
+        bool gotHit = stats.currentAggro > 0;
+        bool blockedByPlayer = distToPlayer <= combat.basicAttackRange;
+
+        bool shouldFightBack = false;
+
+        if (stats.enemyType == EnemyType.Hostile)
         {
-            Debug.Log("Đang về thì bị đánh/gặp địch -> Chiến tiếp!");
+            // Hostile: Hung hăng mọi lúc mọi nơi
+            // Bị đánh HOẶC Bị chặn đường -> Chiến luôn
+            if (gotHit || blockedByPlayer) shouldFightBack = true;
+        }
+        else if (stats.enemyType == EnemyType.Neutral)
+        {
+            // Neutral: Hiền lành nhưng không nhu nhược
+            // 1. Nếu BỊ ĐÁNH (gotHit) -> Chắc chắn đánh lại.
+            // 2. Nếu BỊ CHẶN ĐƯỜNG (blockedByPlayer):
+            //    - Chỉ đánh lại khi CÒN Ở XA NHÀ (distToSpawn > 3.0f).
+            //    - Nếu đã về gần nhà (<= 3.0f) -> Bỏ qua việc bị chặn, cố đi nốt về chỗ ngủ để reset.
+
+            if (gotHit)
+            {
+                shouldFightBack = true;
+            }
+            else if (blockedByPlayer && distToSpawn > 3.0f)
+            {
+                shouldFightBack = true;
+            }
+        }
+
+        // Thực hiện hành động nếu quyết định đánh lại
+        if (shouldFightBack)
+        {
+            Debug.Log("Đang về thì bị khiêu khích -> Chiến tiếp!");
             isReturningHome = false;
 
-            // Nếu chưa có Aggro (trường hợp gặp địch chặn đường), buff Aggro lên
+            // Nếu chưa có Aggro (trường hợp bị chặn đường), buff lên để đánh
             if (stats.currentAggro <= 0) stats.AddAggro(50f);
 
             stats.EnterCombat();
             return;
         }
 
-        // Logic di chuyển về
+        // 2. Logic di chuyển về (Nếu không đánh nhau)
         if (distToSpawn < 1.0f)
         {
-            isReturningHome = false; // Đã về đến nơi
+            isReturningHome = false;
             stats.currentAggro = 0;
             State_Idle();
         }
@@ -142,11 +169,10 @@ public class EnemyAI : MonoBehaviour
         }
         else
         {
-            // Logic tự kích hoạt Aggro cho Hostile khi thấy Player (kể cả khi vừa về nhà xong)
             if (stats.enemyType == EnemyType.Hostile && canSensePlayer)
             {
-                // Chỉ kích hoạt nếu Player nằm trong vùng hoạt động (Aggro Radius)
-                // Để tránh việc vừa về đến nhà, thấy Player ở xa tít (ngoài vùng) lại chạy ra đuổi tiếp
+                // Kiểm tra lại: Hostile chỉ tự đánh khi Player ở trong vùng hoạt động
+                // Để tránh việc vừa về nhà xong, thấy Player ở tít xa (ngoài vùng) lại chạy ra
                 float distToSpawn = Vector3.Distance(transform.position, stats.spawnPosition);
                 if (distToSpawn <= stats.aggroRadius)
                 {
@@ -154,12 +180,11 @@ public class EnemyAI : MonoBehaviour
                 }
                 else
                 {
-                    State_Idle(); // Ở nhà nhưng Player ở ngoài vùng -> Kệ
+                    State_Idle(); // Ở nhà, thấy Player nhưng Player ở ngoài vùng -> Kệ
                 }
             }
             else
             {
-                // Logic lang thang về (cho Neutral/Friendly)
                 float distToSpawn = Vector3.Distance(transform.position, stats.spawnPosition);
                 if (distToSpawn > 1.0f) State_MoveTo(stats.spawnPosition, "Returning Idle");
                 else State_Idle();

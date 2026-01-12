@@ -18,7 +18,7 @@ public class PlayerController : MonoBehaviour
     public LayerMask enemyLayer;
 
     // State variables
-    private int lastDirection = 0;
+    //private int lastDirection = 0;
     private bool isWalking = false;
     private float lastMoveTime = 0f;
     private bool isTurning = false;

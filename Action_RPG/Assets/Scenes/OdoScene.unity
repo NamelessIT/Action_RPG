@@ -762,7 +762,7 @@ MonoBehaviour:
   combatTurnDuration: 0.4
   facingDirection: {x: 0, y: 0, z: -1}
   enemyID: 1
-  enemyType: 0
+  enemyType: 1
   detectionMethod: 2
   currentAggro: 0
   maxAggro: 100
