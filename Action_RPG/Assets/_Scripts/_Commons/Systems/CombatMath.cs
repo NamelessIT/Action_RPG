@@ -9,10 +9,17 @@ public static class CombatMath
     /// <summary>
     /// Tính toán hệ số t (Hướng đánh). Giữ nguyên code cũ đã ngon.
     /// </summary>
-    public static float CalculateDirectionFactor(Transform attacker, Transform target)
+    public static float CalculateDirectionFactor(Transform attacker, CharacterStats targetStats)
     {
-        Vector3 attackDir = (target.position - attacker.position).normalized;
-        Vector3 targetForward = target.forward;
+        // 1. Hướng đòn đánh
+        Vector3 attackDir = (targetStats.transform.position - attacker.position).normalized;
+        // 2. [QUAN TRỌNG] Lấy hướng mặt từ biến facingDirection thủ công
+        // Thay vì dùng targetStats.transform.forward (bị sai trong 2.5D)
+        Vector3 targetForward = targetStats.facingDirection;
+
+        // Nếu vector = 0 (lỗi), gán mặc định
+        if (targetForward == Vector3.zero) targetForward = Vector3.back;
+
         float dir = Vector3.Dot(attackDir, targetForward);
         float t = Mathf.Clamp01((dir + 1) / 2);
 

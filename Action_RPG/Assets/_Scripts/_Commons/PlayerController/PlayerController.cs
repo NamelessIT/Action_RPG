@@ -32,7 +32,6 @@ public class PlayerController : MonoBehaviour
     private Vector3 currentVisualDir;
 
     // Testing
-    public Transform testEnemyTarget;
     public bool testIsCrit = false;
 
     void Start()
@@ -91,11 +90,14 @@ public class PlayerController : MonoBehaviour
         // --- 4. DI CHUYỂN ---
         HandleMovementStopToTurn();
 
+        // [MỚI] Cập nhật hướng nhìn vào Stats để Enemy biết đường mà đánh lén
+        if (stats != null) stats.facingDirection = currentVisualDir;
+
         // Test keys
         if (Input.GetKeyDown(KeyCode.K)) TakeDamage(10);
-        if (Input.GetKeyDown(KeyCode.T) && testEnemyTarget != null)
+        if (Input.GetKeyDown(KeyCode.T) && stats != null)
         {
-            float t = CombatMath.CalculateDirectionFactor(transform, testEnemyTarget);
+            float t = CombatMath.CalculateDirectionFactor(transform, stats);
             Debug.Log($"Hệ số hướng t={t}");
         }
     }
@@ -339,10 +341,10 @@ public class PlayerController : MonoBehaviour
             {
                 hitAnything = true;
                 stats.EnterCombat();
-                float t = CombatMath.CalculateDirectionFactor(transform, enemy.transform);
+                float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
                 float damage = CombatMath.CalculateFullDamage(stats, enemyStats, t, testIsCrit);
                 enemyStats.TakeDamage(damage);
-                if (impulseSource != null) impulseSource.GenerateImpulseWithForce(0.1f);
+                //if (impulseSource != null) impulseSource.GenerateImpulseWithForce(0.1f);
             }
         }
         if (hitAnything) Debug.Log("Tấn công TRÚNG ĐỊCH -> Vào Combat");

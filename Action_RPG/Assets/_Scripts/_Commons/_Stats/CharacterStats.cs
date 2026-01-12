@@ -17,7 +17,7 @@ public class CharacterStats : MonoBehaviour
     public float staminaBaseRecovery = 0.5f;
 
     [Tooltip("Hồi phục mỗi giây khi NGOÀI combat")]
-    public float staminaOutCombatRecovery = 20f;
+    public float staminaOutCombatRecovery = 15f;
 
     // [MỚI] Thời gian chờ hồi phục sau khi dùng thể lực (Dash/Run)
     public float staminaRegenDelay = 1.0f;
@@ -25,7 +25,7 @@ public class CharacterStats : MonoBehaviour
 
     [Header("--- Combat State ---")]
     public bool outCombat = true;
-    public float outCombatTime = 5.0f;
+    public float outCombatTime = 10.0f;
     private float combatTimer = 0f;
 
     [Header("--- Dash & Run Settings ---")]
@@ -39,10 +39,11 @@ public class CharacterStats : MonoBehaviour
 
     [HideInInspector] public float lastDashTime = -10f;
 
-    [Header("--- Energy ---")]
-    public float maxEnergy = 50f;
-    public float currentEnergy;
-    public float energyBaseCollection = 0.5f;
+    [Header("--- Sins ---")]
+    public float maxSin = 50f;
+    public float currentSin;
+    public float baseSinGain = 0.5f;
+    public float sinGain;
 
     [Header("--- Base Stats ---")]
     public float STR; public float DEX; public float INT; public float VIT; public float AGI;
@@ -51,6 +52,7 @@ public class CharacterStats : MonoBehaviour
     public float physicalAtk = 120.0f;
     public float magicAtk = 60.0f;
 
+    //Hệ số của bản thân (chưa tính skill)
     [Header("--- Multipliers ---")]
     public float skillPhysicalMultiplier = 1.0f;
     public float skillMagicMultiplier = 0.5f;
@@ -75,15 +77,18 @@ public class CharacterStats : MonoBehaviour
     private float idleTurnDuration = 0.1f;
     public float combatTurnDuration = 0.4f;
 
+    // [MỚI] Biến lưu hướng mặt thực tế (Dùng cho CombatMath)
+    [HideInInspector] public Vector3 facingDirection = Vector3.back;
+
     void Start()
     {
         maxHp = baseHp;
         currentHp = maxHp;
         currentStamina = maxStamina;
-        currentEnergy = maxEnergy;
+        currentSin= maxSin;
     }
 
-    public void Update()
+    public virtual void Update()
     {
         HandleCombatState();
         HandleStaminaRegen();
@@ -148,7 +153,7 @@ public class CharacterStats : MonoBehaviour
         return false;
     }
 
-    public void TakeDamage(float damage)
+    public virtual void TakeDamage(float damage)
     {
         if (isInvincible)
         {
