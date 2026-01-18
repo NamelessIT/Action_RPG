@@ -26,11 +26,11 @@ public class InAppPlayerStateDAO
 
     // === Base Data (không thay đổi) ===
     public PlayerDB LoadPlayerFromDB(int playerId) => playerDB.GetPlayer(playerId);
-    public WeaponDB LoadWeaponFromDB(int weaponId) => weaponDB.GetWeapon(weaponId);
+    public WeaponDB LoadWeaponFromDB(string weaponId) => weaponDB.GetWeapon(weaponId);
     public CheckpointDB LoadCheckpoint(int checkpointId) => checkpointDB.GetCheckpoint(checkpointId);
     public List<int> LoadPlayerAccessories(int playerId) => playerDB.GetEquippedAccessories(playerId);
     public List<StatDB> LoadAccessoryStats(int accessoryId) => accessoryDB.GetStats(accessoryId);
-    public List<StatDB> LoadWeaponStats(int weaponId) => weaponDB.GetExtraStats(weaponId);
+    public List<StatDB> LoadWeaponStats(string weaponId) => weaponDB.GetExtraStats(weaponId);
 
     // === Save/Load State (dùng file JSON) ===
     private string GetSavePath(int playerId)
