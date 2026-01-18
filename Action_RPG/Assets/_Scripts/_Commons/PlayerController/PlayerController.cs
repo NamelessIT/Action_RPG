@@ -7,7 +7,7 @@ public class PlayerController : MonoBehaviour
     [Header("Settings")]
     public float idleDelay = 0.25f;
 
-    private CharacterStats stats;
+    private Stats stats;
     private Animator animator;
     private SpriteRenderer spriteRenderer;
     private Rigidbody rb;
@@ -18,7 +18,7 @@ public class PlayerController : MonoBehaviour
     public LayerMask enemyLayer;
 
     // State variables
-    private int lastDirection = 0;
+    //private int lastDirection = 0;
     private bool isWalking = false;
     private float lastMoveTime = 0f;
     private bool isTurning = false;
@@ -32,12 +32,11 @@ public class PlayerController : MonoBehaviour
     private Vector3 currentVisualDir;
 
     // Testing
-    public Transform testEnemyTarget;
     public bool testIsCrit = false;
 
     void Start()
     {
-        stats = GetComponent<CharacterStats>();
+        stats = GetComponent<Stats>();
         animator = GetComponentInChildren<Animator>();
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
         rb = GetComponent<Rigidbody>();
@@ -91,18 +90,21 @@ public class PlayerController : MonoBehaviour
         // --- 4. DI CHUYỂN ---
         HandleMovementStopToTurn();
 
+        // [MỚI] Cập nhật hướng nhìn vào Stats để Enemy biết đường mà đánh lén
+        if (stats != null) stats.facingDirection = currentVisualDir;
+
         // Test keys
         if (Input.GetKeyDown(KeyCode.K)) TakeDamage(10);
-        if (Input.GetKeyDown(KeyCode.T) && testEnemyTarget != null)
+        if (Input.GetKeyDown(KeyCode.T) && stats != null)
         {
-            float t = CombatMath.CalculateDirectionFactor(transform, testEnemyTarget);
+            float t = CombatMath.CalculateDirectionFactor(transform, stats);
             Debug.Log($"Hệ số hướng t={t}");
         }
     }
 
     void PerformDash()
     {
-        if (Time.time < stats.lastDashTime + stats.dashRecovery)
+        if (Time.time < stats.lastDashTime + stats.baseDashRecovery)
         {
             Debug.Log("Dash Cooldown!");
             return;
@@ -133,8 +135,8 @@ public class PlayerController : MonoBehaviour
         currentVisualDir = dashDir;
         UpdateAnimationDirection(currentVisualDir); // Cập nhật ngay để Animator nhận IsWalking=true
 
-        float duration = stats.dashDuration;
-        float dashSpeed = stats.dashDistance / duration;
+        float duration = stats.baseDashDuration;
+        float dashSpeed = stats.baseDashDistance / duration;
 
         rb.linearVelocity = dashDir * dashSpeed;
 
@@ -363,7 +365,7 @@ public class PlayerController : MonoBehaviour
 
         if (!isTurning && isWalking && !isDashing)
         {
-            float currentSpeed = stats.moveSpeed * (isSprinting ? stats.runSpeedMultiplier : 1f);
+            float currentSpeed = stats.baseMoveSpeed * (isSprinting ? stats.runSpeedMultiplier : 1f);
             Vector3 targetPosition = rb.position + movementInput * currentSpeed * Time.fixedDeltaTime;
             rb.MovePosition(targetPosition);
         }
@@ -377,15 +379,15 @@ public class PlayerController : MonoBehaviour
         Collider[] hitEnemies = Physics.OverlapSphere(transform.position, attackRange, enemyLayer);
         foreach (Collider enemy in hitEnemies)
         {
-            CharacterStats enemyStats = enemy.GetComponent<CharacterStats>();
+            Stats enemyStats = enemy.GetComponent<Stats>();
             if (enemyStats != null)
             {
                 hitAnything = true;
                 stats.EnterCombat();
-                float t = CombatMath.CalculateDirectionFactor(transform, enemy.transform);
+                float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
                 float damage = CombatMath.CalculateFullDamage(stats, enemyStats, t, testIsCrit);
                 enemyStats.TakeDamage(damage);
-                if (impulseSource != null) impulseSource.GenerateImpulseWithForce(0.1f);
+                //if (impulseSource != null) impulseSource.GenerateImpulseWithForce(0.1f);
             }
         }
         if (hitAnything) Debug.Log("Tấn công TRÚNG ĐỊCH -> Vào Combat");
