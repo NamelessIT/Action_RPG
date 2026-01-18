@@ -36,7 +36,7 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        CharacterStats stats = playerObj.GetComponent<CharacterStats>();
+        Stats stats = playerObj.GetComponent<Stats>();
         if (stats == null)
         {
             Debug.LogError("[GameManager] ❌ Player không có script CharacterStats!");
@@ -57,9 +57,9 @@ public class GameManager : MonoBehaviour
         stats.physicalAtk = currentPlayerState.PhysicalAtk;
         stats.magicAtk = currentPlayerState.MagicAtk;
 
-        stats.moveSpeed = currentPlayerState.MoveSpeed;
-        stats.dashDistance = currentPlayerState.DashDistance;
-        stats.dashRecovery = currentPlayerState.DashRecovery;
+        stats.baseMoveSpeed = currentPlayerState.MoveSpeed;
+        stats.baseDashDistance = currentPlayerState.DashDistance;
+        stats.baseDashRecovery = currentPlayerState.DashRecovery;
         stats.dashCost = currentPlayerState.dashCost;
 
         stats.armorBackstabReduce = currentPlayerState.armorBackstabReduce;
@@ -71,7 +71,7 @@ public class GameManager : MonoBehaviour
         Debug.Log($"[GameManager] ✅ Đã gán stats cho Player:");
         Debug.Log($"  - HP: {stats.currentHp}/{stats.maxHp}");
         Debug.Log($"  - ATK: {stats.physicalAtk:0.0} | Magic: {stats.magicAtk:0.0}");
-        Debug.Log($"  - Speed: {stats.moveSpeed:0.0} | Crit: {currentPlayerState.CritChance:P1}");
+        Debug.Log($"  - Speed: {stats.baseMoveSpeed:0.0} | Crit: {currentPlayerState.CritChance:P1}");
     }
     void Update()
     {

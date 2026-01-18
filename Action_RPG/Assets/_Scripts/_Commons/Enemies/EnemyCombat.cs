@@ -36,7 +36,7 @@ public class EnemyCombat : MonoBehaviour
         lastAttackTime = Time.time;
 
         // Tính toán damage (Gọi CombatMath)
-        CharacterStats playerStats = target.GetComponent<CharacterStats>();
+        Stats playerStats = target.GetComponent<Stats>();
         if (playerStats != null)
         {
             // [CẬP NHẬT] Truyền playerStats vào đây

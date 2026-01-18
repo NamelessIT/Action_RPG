@@ -36,7 +36,7 @@ public class EnemyAI : MonoBehaviour
 
         agent.updateRotation = false;
         agent.updateUpAxis = false;
-        agent.speed = stats.moveSpeed;
+        agent.speed = stats.baseMoveSpeed;
 
         if (stats.enemyType == EnemyType.Hostile && playerTarget != null)
         {

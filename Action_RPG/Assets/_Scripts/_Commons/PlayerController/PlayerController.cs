@@ -7,7 +7,7 @@ public class PlayerController : MonoBehaviour
     [Header("Settings")]
     public float idleDelay = 0.25f;
 
-    private CharacterStats stats;
+    private Stats stats;
     private Animator animator;
     private SpriteRenderer spriteRenderer;
     private Rigidbody rb;
@@ -36,7 +36,7 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
-        stats = GetComponent<CharacterStats>();
+        stats = GetComponent<Stats>();
         animator = GetComponentInChildren<Animator>();
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
         rb = GetComponent<Rigidbody>();
@@ -104,7 +104,7 @@ public class PlayerController : MonoBehaviour
 
     void PerformDash()
     {
-        if (Time.time < stats.lastDashTime + stats.dashRecovery)
+        if (Time.time < stats.lastDashTime + stats.baseDashRecovery)
         {
             Debug.Log("Dash Cooldown!");
             return;
@@ -135,8 +135,8 @@ public class PlayerController : MonoBehaviour
         currentVisualDir = dashDir;
         UpdateAnimationDirection(currentVisualDir); // Cập nhật ngay để Animator nhận IsWalking=true
 
-        float duration = stats.dashDuration;
-        float dashSpeed = stats.dashDistance / duration;
+        float duration = stats.baseDashDuration;
+        float dashSpeed = stats.baseDashDistance / duration;
 
         rb.linearVelocity = dashDir * dashSpeed;
 
@@ -365,7 +365,7 @@ public class PlayerController : MonoBehaviour
 
         if (!isTurning && isWalking && !isDashing)
         {
-            float currentSpeed = stats.moveSpeed * (isSprinting ? stats.runSpeedMultiplier : 1f);
+            float currentSpeed = stats.baseMoveSpeed * (isSprinting ? stats.runSpeedMultiplier : 1f);
             Vector3 targetPosition = rb.position + movementInput * currentSpeed * Time.fixedDeltaTime;
             rb.MovePosition(targetPosition);
         }
@@ -379,7 +379,7 @@ public class PlayerController : MonoBehaviour
         Collider[] hitEnemies = Physics.OverlapSphere(transform.position, attackRange, enemyLayer);
         foreach (Collider enemy in hitEnemies)
         {
-            CharacterStats enemyStats = enemy.GetComponent<CharacterStats>();
+            Stats enemyStats = enemy.GetComponent<Stats>();
             if (enemyStats != null)
             {
                 hitAnything = true;

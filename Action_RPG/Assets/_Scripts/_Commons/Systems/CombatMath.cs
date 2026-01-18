@@ -9,7 +9,7 @@ public static class CombatMath
     /// <summary>
     /// Tính toán hệ số t (Hướng đánh). Giữ nguyên code cũ đã ngon.
     /// </summary>
-    public static float CalculateDirectionFactor(Transform attacker, CharacterStats targetStats)
+    public static float CalculateDirectionFactor(Transform attacker, Stats targetStats)
     {
         // 1. Hướng đòn đánh
         Vector3 attackDir = (targetStats.transform.position - attacker.position).normalized;
@@ -34,10 +34,10 @@ public static class CombatMath
     /// <summary>
     /// HÀM TÍNH DAMAGE CHÍNH THỨC (Theo file công thức)
     /// </summary>
-    public static float CalculateFullDamage(CharacterStats attacker, CharacterStats target, float t, bool isCrit)
+    public static float CalculateFullDamage(Stats attacker, Stats target, float t, bool isCrit)
     {
         // --- 1. Tính Raw Damage ---
-        float critMult = isCrit ? attacker.critMultiplier : 1.0f;
+        float critMult = isCrit ? attacker.baseCritMultiplier : 1.0f;
 
         // [Source: 67] Raw Phys
         float rawPhysical = attacker.physicalAtk * attacker.skillPhysicalMultiplier * critMult;

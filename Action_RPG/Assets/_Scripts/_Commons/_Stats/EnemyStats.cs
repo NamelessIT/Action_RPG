@@ -4,7 +4,7 @@ using System.Collections.Generic;
 public enum EnemyType { Hostile, Neutral, Friendly }
 public enum DetectionMethod { Sight, Sound, Range }
 
-public class EnemyStats : CharacterStats
+public class EnemyStats : Stats
 {
     // ... (Phần Header giữ nguyên) ...
     [Header("--- Enemy Identity ---")]
