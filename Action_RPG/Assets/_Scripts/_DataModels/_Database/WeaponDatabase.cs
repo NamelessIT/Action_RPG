@@ -1,11 +1,11 @@
-﻿// _Scripts/_DataModels/_Database/WeaponDatabase.cs
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
 [System.Serializable]
 public class WeaponStatEntry
 {
-    public int weaponId;
+    
+    public string weaponId;
     public string statName;
     public float value;
 }
@@ -14,30 +14,33 @@ public class WeaponStatEntry
 public class WeaponDatabase : ScriptableObject
 {
     public List<WeaponDB> weapons = new List<WeaponDB>();
-    public List<WeaponStatEntry> extraStats = new List<WeaponStatEntry>(); // ← THÊM DÒNG NÀY
+    public List<WeaponStatEntry> extraStats = new List<WeaponStatEntry>();
 
-    private Dictionary<int, WeaponDB> weaponCache;
-    private Dictionary<int, List<StatDB>> statCache;
 
-    public WeaponDB GetWeapon(int id)
+    private Dictionary<string, WeaponDB> weaponCache;
+    private Dictionary<string, List<StatDB>> statCache;
+
+
+    public WeaponDB GetWeapon(string id)
     {
         if (weaponCache == null)
         {
-            weaponCache = new Dictionary<int, WeaponDB>();
+            weaponCache = new Dictionary<string, WeaponDB>();
             foreach (var weapon in weapons)
-                weaponCache[weapon.id] = weapon;
+                weaponCache[weapon.id] = weapon; 
         }
         return weaponCache.TryGetValue(id, out var result) ? result : null;
     }
 
-    public List<StatDB> GetExtraStats(int weaponId)
+
+    public List<StatDB> GetExtraStats(string weaponId)
     {
         if (statCache == null)
         {
-            statCache = new Dictionary<int, List<StatDB>>();
+            statCache = new Dictionary<string, List<StatDB>>();
             foreach (var entry in extraStats)
             {
-                if (!statCache.ContainsKey(entry.weaponId))
+                if (!statCache.ContainsKey(entry.weaponId)) 
                     statCache[entry.weaponId] = new List<StatDB>();
                 statCache[entry.weaponId].Add(new StatDB
                 {
@@ -46,9 +49,6 @@ public class WeaponDatabase : ScriptableObject
                 });
             }
         }
-
-        if (statCache.TryGetValue(weaponId, out var list))
-            return list;
-        return new List<StatDB>();
+        return statCache.TryGetValue(weaponId, out var list) ? list : new List<StatDB>();
     }
 }

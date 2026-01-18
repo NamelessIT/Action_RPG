@@ -67,29 +67,40 @@ public class PlayerStateManager
         // 3. Load weapon
         if (player.weapon_holding.HasValue)
         {
-            var weapon = dao.LoadWeaponFromDB(player.weapon_holding.Value);
+            string weaponIdStr = player.weapon_holding.Value.ToString();
+            var weapon = dao.LoadWeaponFromDB(weaponIdStr); 
+
             if (weapon != null)
             {
-                runtime.weaponBaseAtk = weapon.base_atk;
-                runtime.weaponAttackSpeed = weapon.attack_speed;
-                runtime.weaponMoveFlexibility = weapon.move_flexibility;
-                runtime.weaponDefenseValue = weapon.defense_value;
-                runtime.weaponId = weapon.id;
+                runtime.weaponBaseAtk = weapon.baseAtk; 
+                runtime.weaponAttackSpeed = weapon.baseAttackSpeed; 
+                runtime.weaponMoveFlexibility = weapon.moveFlexibility;
+                runtime.weaponDefenseValue = weapon.baseDefenseValue; 
 
-                if (weapon.crit_value > 0)
-                    runtime.AddFlatStat("crit_chance", weapon.crit_value);
+                if (int.TryParse(weapon.id, out int parsedId))
+                {
+                    runtime.weaponId = parsedId;
+                }
+                else
+                {
+                    Debug.LogError($"[PlayerStateManager] ❌ Weapon ID không hợp lệ: '{weapon.id}'. Dùng ID=0 làm mặc định.");
+                    runtime.weaponId = 0; 
+                }
+                if (weapon.bonusCritChance > 0)
+                    runtime.AddFlatStat("crit_chance", weapon.bonusCritChance);
 
-                var weaponStats = dao.LoadWeaponStats(weapon.id);
+
+                var weaponStats = dao.LoadWeaponStats(weapon.id); 
                 foreach (var stat in weaponStats)
                     runtime.AddFlatStat(stat.statName, stat.value);
 
-                Debug.Log($"[PlayerStateManager] ✅ Tải vũ khí ID {weapon.id}: ATK={weapon.base_atk}, Speed={weapon.attack_speed}");
+                Debug.Log($"[PlayerStateManager] ✅ Tải vũ khí ID {weapon.id}: ATK={weapon.baseAtk}, Speed={weapon.baseAttackSpeed}");
                 if (weaponStats.Count > 0)
                     Debug.Log($"[PlayerStateManager]   └─ Stat phụ: {string.Join(", ", weaponStats.ConvertAll(s => $"{s.statName}={s.value}"))}");
             }
             else
             {
-                Debug.LogWarning($"[PlayerStateManager] ⚠ Vũ khí được chỉ định (ID={player.weapon_holding}) không tồn tại!");
+                Debug.LogWarning($"[PlayerStateManager] ⚠ Vũ khí được chỉ định (ID={weaponIdStr}) không tồn tại!");
             }
         }
         else
