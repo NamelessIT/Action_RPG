@@ -51,7 +51,14 @@ public class Stats : MonoBehaviour
     [Header("--- Attack Stats ---")]
     public float physicalAtk ;
     public float magicAtk ;
+
+    // [SỬA] Tách comment ra khỏi khai báo biến
+    [Tooltip("Thời gian giữa các đòn đánh (Cooldown)")]
     public float baseAttackSpeed;
+
+    // Biến hỗ trợ Combo (Logic này sẽ nằm ở PlayerController, nhưng Stats chứa thông số)
+    public float comboResetTime = 1.0f; // Thời gian chờ để reset combo về đòn 1
+    public float heavyAttackChargeTime = 1.0f; // Thời gian giữ chuột để max dame
 
     [Header("--- Crit ---")]
     public float baseCritChance;
@@ -75,6 +82,7 @@ public class Stats : MonoBehaviour
     public float baseMoveSpeed = 5f;
     public float runSpeedMultiplier = 1.5f;
     public float moveThresholdAngle = 45f;
+    public float moveFlexibility=1f;
 
     [Header("--- Rotation Dynamic ---")]
     public float turnDuration = 0.1f;

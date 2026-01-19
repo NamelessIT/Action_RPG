@@ -14,9 +14,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponDatabase
   weapons:
   - id: 1
-    base_atk: 120
-    attack_speed: 1.2
-    move_flexibility: 0.1
-    defense_value: 10
-    crit_value: 0.1
-  extraStats: []
+    weaponType: 
+    weaponAtkType: 
+    weaponName: 
+    lore: 
+    description: 
+    icon: 
+    rarity: 
+    baseAtk: 0
+    baseAttackSpeed: 0
+    moveFlexibility: 0
+    baseDefenseValue: 0
+    bonusCritChance: 0
+    substats: 
+    effectConfig: 
+    reqStr: 0
+    reqDex: 0
+    reqInt: 0
+    reqVit: 0
+    reqAgi: 0
+    playerOnly: 0
+  extraStats:
+  - weaponId: 
+    statName: 
+    value: 0

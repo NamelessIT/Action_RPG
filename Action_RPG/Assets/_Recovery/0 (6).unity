@@ -1232,7 +1232,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d9e1d9e78e2b1f489c06dae141ef40f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EquipmentManager
-  currentWeapon: {fileID: 11400000, guid: 5e0c29e2bf7ed2a4e85b60d2296a66c0, type: 2}
+  currentWeapon: {fileID: 0}
   currentAccessory: {fileID: 0}
 --- !u!114 &1748768100
 MonoBehaviour:

@@ -65,4 +65,11 @@ public class EnemyStats : Stats
         currentAggro += amount;
         if (currentAggro > maxAggro) currentAggro = maxAggro;
     }
+
+    //public void spawnWolf(float amount)
+    //{
+    //    object wofl stats=
+    //        st
+    //}
+
 }

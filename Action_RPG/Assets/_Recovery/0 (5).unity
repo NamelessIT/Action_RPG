@@ -951,7 +951,7 @@ MonoBehaviour:
   baseMoveSpeed: 5
   runSpeedMultiplier: 1.5
   moveThresholdAngle: 45
-  moveFlexibility: 1
+  moveFlexibility: 0
   turnDuration: 0.1
   combatTurnDuration: 0.4
   resistanceKnockBack: 0.1
@@ -1126,7 +1126,7 @@ MonoBehaviour:
   baseMoveSpeed: 5
   runSpeedMultiplier: 1.5
   moveThresholdAngle: 45
-  moveFlexibility: 1
+  moveFlexibility: 0
   turnDuration: 0.1
   combatTurnDuration: 0.1
   resistanceKnockBack: 0.1
@@ -1289,7 +1289,7 @@ MonoBehaviour:
   baseMoveSpeed: 5
   runSpeedMultiplier: 1.5
   moveThresholdAngle: 45
-  moveFlexibility: 1
+  moveFlexibility: 0
   turnDuration: 0.1
   combatTurnDuration: 0.4
   resistanceKnockBack: 0.1
