@@ -23,8 +23,8 @@ public class EquipmentManager : MonoBehaviour
         // 1. Nếu đang cầm vũ khí cũ -> Tháo ra (Trừ chỉ số)
         //if (currentWeapon != null)
         //{
-        //    Debug.Log("Tháo vũ khí ra");
-        //    UnequipWeapon();
+            //Debug.Log("Tháo vũ khí ra");
+            //UnequipWeapon();
         //}
 
         // 2. Gán vũ khí mới
@@ -45,8 +45,6 @@ public class EquipmentManager : MonoBehaviour
         {
             allyStats.flatPhysicalAtk += newWeapon.baseAtk; // Ví dụ cộng vào flat
             Debug.Log("cộng thêm chỉ số vào flatPhysicalAtk: " + allyStats.flatPhysicalAtk + " với baseAtk vũ khí là : "+ newWeapon.baseAtk);
-
-
         }
         else
         {
@@ -55,17 +53,19 @@ public class EquipmentManager : MonoBehaviour
         }
         allyStats.baseAttackSpeed = newWeapon.baseAttackSpeed;
         allyStats.moveFlexibility = newWeapon.moveFlexibility;
-        // ... (Cập nhật các biến khác từ WeaponData vào AllyStats)
+        allyStats.defenseValue += newWeapon.defenseValue;
+        allyStats.bonusCritChance += newWeapon.bonusCritChance;
 
         // 4. Tính toán lại toàn bộ chỉ số
         allyStats.RecalculateStats();
 
-        Debug.Log($"Đã trang bị: {newWeapon.weaponName}"+ " chỉ số đã cộng "+ allyStats.flatPhysicalAtk);
+        Debug.Log($"Đã trang bị: {newWeapon.weaponName}");
     }
 
     // Hàm tháo vũ khí
     public void UnequipWeapon()
     {
+        // Sau này sửa các chỗ null thành id của Hand
         if (currentWeapon == null) return;
 
         // Trừ chỉ số Substats
@@ -78,10 +78,22 @@ public class EquipmentManager : MonoBehaviour
         }
 
         // Trừ chỉ số Base
-        allyStats.flatPhysicalAtk -= currentWeapon.baseAtk;
-        allyStats.trueMoveFlexibility = 0; // Reset về 0 hoặc giá trị mặc định
+        if (currentWeapon.weaponAtkType == WeaponData.WeaponAtkType.Physical)
+        {
+            allyStats.flatPhysicalAtk -= currentWeapon.baseAtk;
+            Debug.Log("Đã trừ flatPhysicalAtk: " + allyStats.flatPhysicalAtk + " với baseAtk vũ khí là : " + currentWeapon.baseAtk);
+        }
+        else
+        {
+            allyStats.flatMagicAtk -= currentWeapon.baseAtk; 
+            Debug.Log("cộng thêm chỉ số vào flatMagicAtk: " + allyStats.flatMagicAtk + " với baseAtk vũ khí là : " + currentWeapon.baseAtk);
+        }
+        allyStats.moveFlexibility = 0; // Reset về 0 hoặc giá trị mặc định
+        allyStats.defenseValue -= currentWeapon.defenseValue;
+        allyStats.bonusCritChance -= currentWeapon.bonusCritChance;
+        currentWeapon = null; //Sau này sửa null thành id của hand
+        //allyStats.baseAttackSpeed = null.baseAttackSpeed; sửa attackSpeed thành attackSpeed của hand
 
-        currentWeapon = null;
         allyStats.RecalculateStats();
     }
 
@@ -98,11 +110,27 @@ public class EquipmentManager : MonoBehaviour
             case StatModifier.StatType.INT: allyStats.INT += value; break;
             case StatModifier.StatType.VIT: allyStats.VIT += value; break;
             case StatModifier.StatType.AGI: allyStats.AGI += value; break;
+            case StatModifier.StatType.BonusSTR: allyStats.STR += value; break;
+            case StatModifier.StatType.BonusDEX: allyStats.DEX += value; break;
+            case StatModifier.StatType.BonusINT: allyStats.INT += value; break;
+            case StatModifier.StatType.BonusVIT: allyStats.VIT += value; break;
+            case StatModifier.StatType.BonusAGI: allyStats.AGI += value; break;
 
             case StatModifier.StatType.FlatHP: allyStats.flatHp += value; break;
-            case StatModifier.StatType.BonusHP_Percent: allyStats.bonusHp += value; break; // Lưu ý: Trong code AllyStats bạn dùng biến 'bonusHp', không phải 'bonusHpPercent'
+            case StatModifier.StatType.BonusHP: allyStats.bonusHp += value; break; 
 
-            case StatModifier.StatType.FlatAtk: allyStats.flatPhysicalAtk += value; break;
+            case StatModifier.StatType.FlatPhysicalAtk: allyStats.flatPhysicalAtk += value; break;
+            case StatModifier.StatType.FlatMagicAtk: allyStats.flatMagicAtk += value; break;
+            case StatModifier.StatType.BonusPhysicalAtk: allyStats.bonusPhysicalAtk += value; break;
+            case StatModifier.StatType.BonusMagicAtk: allyStats.bonusMagicAtk += value; break;
+            case StatModifier.StatType.CritChance: allyStats.bonusCritChance += value; break;
+            case StatModifier.StatType.CritMultiplier: allyStats.bonusCritMultiplier += value; break;
+            case StatModifier.StatType.Armor: allyStats.armor += value; break;
+            case StatModifier.StatType.MagicResist: allyStats.magicResist += value; break;
+            case StatModifier.StatType.BonusMoveSpeed: allyStats.bonusMoveSpeed += value; break;
+            case StatModifier.StatType.BonusCDR: allyStats.bonusCdr += value; break;
+            case StatModifier.StatType.DefenseValue: allyStats.defenseValue += value; break;
+
                 // ... Thêm các case cho các chỉ số khác
         }
     }

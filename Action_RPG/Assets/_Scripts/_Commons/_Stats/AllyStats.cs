@@ -30,6 +30,7 @@ public class AllyStats : Stats
     public float flatPhysicalAtk=0f;
     public float flatMagicAtk=0f;
     public float critChance;
+    public float bonusCritChance;
     public float critMultiplier;
     public float bonusCritMultiplier;
 
@@ -64,56 +65,53 @@ public class AllyStats : Stats
         RecalculateStats();
     }
 
-    // Hàm này phải được gọi mỗi khi: Lên cấp, Đổi đồ, Nhận Buff
+    // Hàm này phải được gọi mỗi khi: Lên cấp, Đổi đồ, Nhận Buff, Chịu Debuff
     public void RecalculateStats()
     {
         // 1. Tính HP
-        // Công thức: hpGain = base * (1 + bonus * VIT / (VIT + H))
-        hpGain = baseHpGain * (1 + 10f * VIT / (VIT + H));
+        // Công thức: hpGain = base * (1 + maxBonus * VIT / (VIT + H))
+        hpGain = baseHpGain * (1 + maxHpGainBonus * VIT / (VIT + H));
 
         // Công thức: MaxHP = (Flat + VIT * 15) * (1 + Bonus%)
-        maxHp = (flatHp + baseHp + (VIT * 15f)) * (1 + bonusHp);
+        maxHp = (flatHp + baseHp + hpPerVIT) * (1 + bonusHp);
         currentHp = Mathf.Clamp(currentHp, 0, maxHp); // Đảm bảo máu không vượt quá Max
 
         // 2. Tính Sin
-        sinGain = baseSinGain * (1 + 0.7f * INT / (INT + S));
+        sinGain = baseSinGain * (1 + maxSinBonus * INT / (INT + S));
 
         // 3. Tính Damage
         physicalAtk = (flatPhysicalAtk + STR * physicalAtkPerSTR) * (1 + bonusPhysicalAtk);
-        magicAtk = (flatMagicAtk + INT * 3f) * (1 + bonusMagicAtk);
+        magicAtk = (flatMagicAtk + INT * magicAtkPerINT) * (1 + bonusMagicAtk);
 
         // 4. Tính Attack Speed (Giới hạn buff tối đa bởi AGI)
-        float speedBuffFromAGI = 0.8f * AGI / (AGI + A);
-        // attackSpeed = baseAttackSpeed * (1 + speedBuffFromAGI + bonusAttackSpeed); 
+        bonusAttackSpeed = maxAttackSpeedBuff * AGI / (AGI + A);
+        attackSpeed = baseAttackSpeed * (1 + bonusAttackSpeed); 
         // (Lưu ý: baseAttackSpeed nên lấy từ Weapon đang cầm)
 
         // 5. Tính Crit
-        float critFromDEX = DEX * 0.015f; // 1.5% per DEX
         // baseCritChance lấy từ Stats.cs
-        // critChance = baseCritChance + critFromDEX + bonusCritChance;
-        // critMultiplier = baseCritMultiplier + bonusCritMultiplier;
+        critChance = baseCritChance + critPerDEX * DEX + bonusCritChance;
+        critMultiplier = baseCritMultiplier + bonusCritMultiplier;
 
         // 6. Tính Movement & Flexibility
-        // Công thức flexibility: 1 - ((1 - weaponFlex) * (1 - reduceBySTR))
-        float strReduction = 0.6f * STR / (STR + M);
-        //trueMoveFlexibility = 1f - ((1f - moveFlexibility) * (1f - strReduction)); //moveFlexibility lấy từ vũ khí
+        // Công thức flexibility: 1 - ((1 - weaponFlex) * (1 - maxReduceBySTR))
+        trueMoveFlexibility = 1f - ((1f - moveFlexibility) * (1f - maxReduceBySTR)); //moveFlexibility lấy từ vũ khí
 
         // Công thức Move Speed (Sửa lỗi cú pháp ^ thành Mathf.Pow)
         // moveSpeed = baseMoveSpeed + (0.2f * Mathf.Pow(AGI, 0.5f) - VIT * 0.005f) ...
-        // Tạm thời dùng công thức đơn giản hơn để test:
-        moveSpeed = baseMoveSpeed * (1 + bonusMoveSpeed) * trueMoveFlexibility;
-        if (moveSpeed < 3f) moveSpeed = 3f; // Min speed
+        moveSpeed = baseMoveSpeed * (0.2f * Mathf.Pow(AGI, 0.5f) - VIT * moveSpeedReducePerVIT) * ((1 + trueMoveFlexibility) / 2) * bonusMoveSpeed;
+        if (moveSpeed < minSpeed) moveSpeed = minSpeed; // Min speed
 
         // 7. Tính Dash
         dashDistance = baseDashDistance * (1f - trueMoveFlexibility); // Nặng thì lướt ngắn
         dashRecovery = (baseDashRecovery + (1f - trueMoveFlexibility)) * (1f - 0.35f * DEX / (DEX + R));
 
         // Cost Dash (AGI Threshold)
-        if (AGI >= 75) dashCost = 15;
+        if (AGI >= AGI_ThreshHold) dashCost = 15;
         else dashCost = 20;
 
         // 8. Cooldown Reduction
-        // cooldownReduction = baseCdr + (0.0015f * AGI) + bonusCdr;
+        cooldownReduction = baseCdr + (cdrPerAGI * AGI) + bonusCdr;
     }
 
     public override void Update()

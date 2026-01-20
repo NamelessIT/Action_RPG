@@ -1,19 +1,40 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class AccessoryData : MonoBehaviour
+[CreateAssetMenu(fileName = "New Accessory", menuName = "Inventory/Accessory Data")]
+public class AccessoryData : ScriptableObject
 {
-    public int id;
-    public string accessoryType;
+    public enum AccessoryType
+    {
+        CoreShard,
+        MarkOfSin,
+        RelicOfMemory,
+        Parasite,
+        Chain
+    }
+    public enum Rarity
+    {
+        Residual_1,
+        Stained_2,
+        Corrupted_3,
+        Condemned_4,
+        Anomalous_5
+    }
+    public string id;
+    public AccessoryType accessoryType;
     public string AccessoryName;
-    public string lore;
-    public string description;
-    public string icon;
-    public string rarity;
+    [TextArea] public string lore;
+    [TextArea] string description;
+    public Sprite icon;
+    public Rarity rarity;
     public int setId;
-    public List<string> stats; //JSON
-    public string effectConfig; //JSON
+
+    [Header("Substats")]
+    // Đổi từ string sang List để Inspector hiển thị đẹp và code đọc được luôn
+    public List<StatModifier> substats = new List<StatModifier>();
+
+    //public string effectConfig; //để sau
     public bool isUnique;
     public bool playerOnly;
     // Start is called once before the first execution of Update after the MonoBehaviour is created

@@ -10,28 +10,27 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f9b495199aa16a44489d2944cd3f302f, type: 3}
-  m_Name: Hand
+  m_Name: WPN_SW_T2_01
   m_EditorClassIdentifier: Assembly-CSharp::WeaponData
-  id: 1
-  weaponType: Hand
-  weaponAtkType: Physical
-  weaponName: Hand
-  lore: "N\u1EAFm \u0111\u1EA5m c\u1EE7a m\u1ED9t chi\u1EBFn binh v\xF4 c\xF9ng d\xE0y
-    d\u1EB7n kinh nghi\u1EC7m"
-  description: "\u0110\u1EA5m tay, y\u1EBFu nh\u1EDBt"
+  id: WPN_SW_T2_01
+  weaponType: 1
+  weaponAtkType: 0
+  weaponName: "Ki\u1EBFm Tinh Luy\u1EC7n"
+  lore: 
+  description: "C\xE2n b\u1EB1ng ho\xE0n h\u1EA3o gi\u1EEFa t\u1EA5n c\xF4ng v\xE0
+    ph\xF2ng th\u1EE7."
   icon: {fileID: 0}
   rarity: 1
-  baseAtk: 5
-  baseAttackSpeed: 1.25
-  moveFlexibility: 1
-  defenseValue: 0
+  baseAtk: 28
+  baseAttackSpeed: 1.15
+  moveFlexibility: 0.8
+  defenseValue: 30
   bonusCritChance: 0
   substats:
   - stat: 0
-    val: 0
-    type: 0
+    val: 10
     powerMod: 0
-  reqStr: 0
+  reqStr: 10
   reqDex: 0
   reqInt: 0
   reqVit: 0

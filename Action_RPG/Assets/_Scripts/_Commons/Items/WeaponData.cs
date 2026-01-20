@@ -27,7 +27,6 @@ public class WeaponData : ScriptableObject
         Corrupted_3,
         Condemned_4,
         Anomalous_5
-
     }
     public string id;
     public WeaponType weaponType;

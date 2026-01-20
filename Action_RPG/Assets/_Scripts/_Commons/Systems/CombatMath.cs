@@ -91,6 +91,7 @@ public static class CombatMath
         Debug.Log($"LOG DAMGE >> RawPhys: {rawPhysical} | RawMagic: {rawMagic} \n" +
                   $"ArmorDir: {armorDir} (Gốc {target.armor}) | T: {t} \n" +
                   $"DefenseMult: {defenseValMult} | DirBonus: {dirBonusMult} \n" +
+                  $"Final Type Damage >> FinalPhys: {finalPhys} | FinalMagic: {finalMagic} \n" +
                   $"FINAL: {totalDamage} (Phys: {finalPhys} + Magic: {finalMagic})");
 
 

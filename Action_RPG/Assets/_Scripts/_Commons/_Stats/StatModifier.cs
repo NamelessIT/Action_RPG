@@ -11,16 +11,26 @@ public class StatModifier
         INT, 
         VIT, 
         AGI,
+        BonusSTR,
+        BonusDEX,
+        BonusINT,
+        BonusVIT,
+        BonusAGI,
         FlatHP, 
-        BonusHP_Percent,
-        FlatAtk, 
-        BonusAtk_Percent,
+        BonusHP,
+        FlatPhysicalAtk,
+        FlatMagicAtk,
+        BonusPhysicalAtk,
+        BonusMagicAtk,
         CritChance, 
-        CritDamage,
+        CritMultiplier,
+        Armor,
+        MagicResist,
+        BonusMoveSpeed,
+        BonusCDR,
+        DefenseValue,
         // ... Thêm các stat khác tùy nhu cầu
     }
-
-
 
     public StatType stat;
     public float val;
