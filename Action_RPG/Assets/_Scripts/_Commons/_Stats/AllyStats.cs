@@ -95,7 +95,8 @@ public class AllyStats : Stats
 
         // 6. Tính Movement & Flexibility
         // Công thức flexibility: 1 - ((1 - weaponFlex) * (1 - maxReduceBySTR))
-        trueMoveFlexibility = 1f - ((1f - moveFlexibility) * (1f - maxReduceBySTR)); //moveFlexibility lấy từ vũ khí
+        trueMoveFlexibility =  1 - ((1 - moveFlexibility) * (1 - maxReduceBySTR * STR / (STR + M))); //moveFlexibility lấy từ vũ khí
+        combatTurnDuration = 0.6f - (0.5f * trueMoveFlexibility);
 
         // Công thức Move Speed (Sửa lỗi cú pháp ^ thành Mathf.Pow)
         // moveSpeed = baseMoveSpeed + (0.2f * Mathf.Pow(AGI, 0.5f) - VIT * 0.005f) ...

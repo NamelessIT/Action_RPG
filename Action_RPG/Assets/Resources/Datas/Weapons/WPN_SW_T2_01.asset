@@ -29,7 +29,7 @@ MonoBehaviour:
   substats:
   - stat: 0
     val: 10
-    powerMod: 0
+    powerMod: 1
   reqStr: 10
   reqDex: 0
   reqInt: 0

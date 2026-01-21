@@ -87,7 +87,7 @@ public class Stats : MonoBehaviour
     [Header("--- Rotation Dynamic ---")]
     public float turnDuration = 0.1f;
     private float idleTurnDuration = 0.1f;
-    public float combatTurnDuration = 0.4f;
+    public float combatTurnDuration;
 
     public float resistanceKnockBack = 0.1f; 
     public float resistanceEffect = 0f; //giảm thời gian debuff

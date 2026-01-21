@@ -4,6 +4,7 @@ using System.Collections;
 
 
 // nhiệm vụ: làm thêm attack cooldown dựa trên attack speed (có kết hợp animator) và hoàn thiện animator
+// làm tháo , pick vũ khí PickUpWeapon
 public class PlayerController : MonoBehaviour
 {
     [Header("Settings")]
@@ -107,6 +108,7 @@ public class PlayerController : MonoBehaviour
             Debug.Log($"Hệ số hướng t={t}");
         }
         if (Input.GetKeyDown(KeyCode.E)) PickUpWeapon();
+        if (Input.GetKeyDown(KeyCode.X)) DropWeapon();
     }
 
     void PerformDash()
@@ -286,7 +288,7 @@ public class PlayerController : MonoBehaviour
     void PickUpWeapon()
     {
         Debug.Log("đang xài vũ khí :" + equipmentManager.currentWeapon);
-        equipmentManager.EquipWeapon(equipmentManager.currentWeapon);
+        equipmentManager.EquipWeapon(equipmentManager.pickUpWeapon);
     }
     void ChangeWeapon()
     {
@@ -294,7 +296,8 @@ public class PlayerController : MonoBehaviour
     }
     void DropWeapon()
     {
-
+        Debug.Log("Drop vũ khí");
+        equipmentManager.ResetToBaseWeapon();
     }
 
 

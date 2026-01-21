@@ -26,7 +26,10 @@ MonoBehaviour:
   moveFlexibility: 0.8
   defenseValue: 30
   bonusCritChance: 0
-  substats: []
+  substats:
+  - stat: 0
+    val: 0
+    powerMod: 1
   reqStr: 0
   reqDex: 0
   reqInt: 0

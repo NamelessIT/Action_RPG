@@ -58,4 +58,21 @@ public class WeaponData : ScriptableObject
 
     public bool playerOnly;
     // public string effectConfig; // Để sau
+
+    // Hàm này chạy ngay lập tức khi bạn chỉnh sửa trong Inspector
+    private void OnValidate()
+    {
+        if (substats != null)
+        {
+            foreach (var sub in substats)
+            {
+                // Nếu thấy powerMod bằng 0 (do Unity tạo mặc định), tự sửa thành 1
+                // Lưu ý: Dùng 0f để so sánh float chuẩn xác
+                if (sub.powerMod == 0f)
+                {
+                    sub.powerMod = 1.0f;
+                }
+            }
+        }
+    }
 }

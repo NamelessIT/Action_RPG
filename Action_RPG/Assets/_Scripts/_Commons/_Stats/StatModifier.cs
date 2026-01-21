@@ -32,9 +32,16 @@ public class StatModifier
         // ... Thêm các stat khác tùy nhu cầu
     }
 
+
     public StatType stat;
     public float val;
-    public float powerMod = 1.0f; // Mặc định 1.0 (cho Weapon), biến thiên (cho Accessory)
+    public float powerMod=1.0f;
+
+    // Constructor mặc định
+    public StatModifier() 
+    { 
+        powerMod = 1.0f; 
+    }
 
     // Hàm tiện ích để lấy giá trị thực (val * powerMod)
     public float GetFinalValue()
