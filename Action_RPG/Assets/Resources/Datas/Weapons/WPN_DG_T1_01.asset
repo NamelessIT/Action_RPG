@@ -16,8 +16,8 @@ MonoBehaviour:
   weaponType: 2
   weaponAtkType: 0
   weaponName: "Dao G\u0103m M\u1EBB"
-  lore: 
-  description: "Con dao nh\u1ECF v\xE0 nh\u1EB9. T\u1ED1c \u0111\u1ED9 c\u1EF1c nhanh."
+  lore: "Con dao nh\u1ECF v\xE0 nh\u1EB9. T\u1ED1c \u0111\u1ED9 c\u1EF1c nhanh."
+  description: 
   icon: {fileID: 0}
   rarity: 0
   baseAtk: 10

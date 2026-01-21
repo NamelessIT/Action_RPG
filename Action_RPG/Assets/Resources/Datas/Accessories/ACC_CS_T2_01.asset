@@ -10,15 +10,25 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f6cbf2f21cbaafa4c8dacb28b94abfb2, type: 3}
-  m_Name: ACC_MS_T1_01
+  m_Name: ACC_CS_T2_01
   m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
-  id: ACC_MS_T1_01
-  accessoryType: 1
-  AccessoryName: First Mark of Sin
-  lore: 
+  id: ACC_CS_T2_01
+  accessoryType: 0
+  AccessoryName: "M\u1EA3nh L\xF5i C\u1EE9ng"
+  lore: "M\u1ED9t m\u1EA3nh kim lo\u1EA1i gia c\u01B0\u1EDDng b\u1ECB n\u1EE9t."
+  description: 
   icon: {fileID: 0}
-  rarity: 0
+  rarity: 1
   setId: 0
-  substats: []
+  substats:
+  - stat: 3
+    val: 15
+    powerMod: 1
+  - stat: 18
+    val: 10
+    powerMod: 1
+  - stat: 19
+    val: 10
+    powerMod: 1
   isUnique: 0
   playerOnly: 0

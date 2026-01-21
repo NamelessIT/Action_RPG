@@ -16,9 +16,8 @@ MonoBehaviour:
   weaponType: 3
   weaponAtkType: 0
   weaponName: "Cung Th\u1EE3 S\u0103n"
-  lore: 
-  description: "C\xE2y cung g\u1ED7 \u0111\u01A1n s\u01A1. B\u1EAFn xa v\xE0 c\u01A1
-    \u0111\u1ED9ng."
+  lore: "C\xE2y cung g\u1ED7 \u0111\u01A1n s\u01A1. B\u1EAFn xa v\xE0 c\u01A1 \u0111\u1ED9ng."
+  description: 
   icon: {fileID: 0}
   rarity: 0
   baseAtk: 18

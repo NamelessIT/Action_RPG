@@ -2,6 +2,7 @@
 
 public class AllyStats : Stats
 {
+    public float exp;
     [Header("--- Sub-Health ---")]
     public float H = 200f;
     public float maxHpGainBonus = 10f;
@@ -69,9 +70,10 @@ public class AllyStats : Stats
     public void RecalculateStats()
     {
         // 1. Tính HP
+        // Công thức: baseHp = 100 + 20*level
+        baseHp = 100 + 20 * level;
         // Công thức: hpGain = base * (1 + maxBonus * VIT / (VIT + H))
         hpGain = baseHpGain * (1 + maxHpGainBonus * VIT / (VIT + H));
-
         // Công thức: MaxHP = (Flat + VIT * 15) * (1 + Bonus%)
         maxHp = (flatHp + baseHp + hpPerVIT) * (1 + bonusHp);
         currentHp = Mathf.Clamp(currentHp, 0, maxHp); // Đảm bảo máu không vượt quá Max
@@ -105,7 +107,7 @@ public class AllyStats : Stats
 
         // 7. Tính Dash
         dashDistance = baseDashDistance * (1f - trueMoveFlexibility); // Nặng thì lướt ngắn
-        dashRecovery = (baseDashRecovery + (1f - trueMoveFlexibility)) * (1f - 0.35f * DEX / (DEX + R));
+        dashRecovery = (baseDashRecovery + (1f - trueMoveFlexibility)) * (1f - maxDashReduction * DEX / (DEX + R));
 
         // Cost Dash (AGI Threshold)
         if (AGI >= AGI_ThreshHold) dashCost = 15;

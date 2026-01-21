@@ -16,9 +16,9 @@ MonoBehaviour:
   weaponType: 5
   weaponAtkType: 1
   weaponName: "G\u1EADy Ng\u1ECDc B\xEDch"
-  lore: 
-  description: "T\u0103ng c\u01B0\u1EDDng kh\u1EA3 n\u0103ng c\u1ED9ng h\u01B0\u1EDFng
-    ma thu\u1EADt."
+  lore: "T\u0103ng c\u01B0\u1EDDng kh\u1EA3 n\u0103ng c\u1ED9ng h\u01B0\u1EDFng ma
+    thu\u1EADt."
+  description: 
   icon: {fileID: 0}
   rarity: 1
   baseAtk: 38
@@ -27,9 +27,12 @@ MonoBehaviour:
   defenseValue: 15
   bonusCritChance: 0
   substats:
-  - stat: 0
-    val: 0
-    powerMod: 0
+  - stat: 2
+    val: 5
+    powerMod: 1
+  - stat: 3
+    val: 5
+    powerMod: 1
   reqStr: 0
   reqDex: 0
   reqInt: 10

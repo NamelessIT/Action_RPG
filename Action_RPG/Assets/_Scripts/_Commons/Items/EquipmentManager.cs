@@ -4,11 +4,34 @@ using System.Collections.Generic;
 public class EquipmentManager : MonoBehaviour
 {
     private AllyStats allyStats;
+    //Weapon
+    [Header("Weapon")]
     private WeaponData baseWeapon; // Vũ khí mặc định (Hand)
-
     public WeaponData pickUpWeapon;
     public WeaponData currentWeapon;
-    public AccessoryData currentAccessory;
+    //Core Shield
+    [Header("Core Shield")]
+    public CoreShieldData pickUpCoreShield;
+    public CoreShieldData currentCoreShield;
+
+    //Accessory
+    [Header("Accessories Slots")]
+    public AccessoryData pickUpAccessory;
+    [Header("Core Shard")]
+    //public AccessoryData pickUpCoreShard;
+    public AccessoryData currentCoreShard;
+    [Header("Mark of Sin")]
+    //public AccessoryData pickUpMarkOfSin;
+    public AccessoryData currentMarkOfSin;
+    [Header("Relic of Memory")]
+    //public AccessoryData pickUpRelicOfMemory;
+    public AccessoryData currentRelicOfMemory;
+    [Header("Parasite")]
+    //public AccessoryData pickUpParasite;
+    public AccessoryData currentParasite;
+    [Header("Chain")]
+    //public AccessoryData pickUpChain;
+    public AccessoryData currentChain;
 
     void Start()
     {
@@ -16,6 +39,7 @@ public class EquipmentManager : MonoBehaviour
         InitializeBaseWeapon(); // Khởi tạo vũ khí mặc định
     }
 
+    // ---------------Weapon---------------
     // 1. Tự động load vũ khí mặc định từ Resources
     void InitializeBaseWeapon()
     {
@@ -147,6 +171,209 @@ public class EquipmentManager : MonoBehaviour
         allyStats.moveFlexibility = newWeapon.moveFlexibility;
         allyStats.defenseValue += newWeapon.defenseValue; // Sửa lỗi cú pháp: dùng baseDefenseValue
         allyStats.bonusCritChance += newWeapon.bonusCritChance;
+
+        allyStats.RecalculateStats();
+    }
+
+    // ---------------Core Shield---------------
+    // 1. Trang bị Core Shield mới
+    public void EquipCoreShield(CoreShieldData newShield)
+    {
+        if (newShield == null)
+        {
+            Debug.Log("Core Shield không hợp lệ (null)");
+            return;
+        }
+
+        if (currentCoreShield == newShield)
+        {
+            Debug.Log("Đã trang bị Core Shield này rồi");
+            return;
+        }
+
+        // Nếu đang đeo khiên cũ -> Tháo ra trước
+        if (currentCoreShield != null)
+        {
+            UnequipCoreShieldInternal(currentCoreShield);
+        }
+
+        // Đeo khiên mới vào
+        EquipCoreShieldInternal(newShield);
+    }
+
+    // 2. Tháo Core Shield (Về trạng thái trống)
+    public void UnequipCoreShield()
+    {
+        if (currentCoreShield != null)
+        {
+            UnequipCoreShieldInternal(currentCoreShield);
+            // KHÁC BIỆT: Không gọi EquipInternal(baseShield) vì Shield tháo ra là hết
+        }
+        else
+        {
+            Debug.Log("Không có Core Shield nào để tháo");
+        }
+    }
+    private void EquipCoreShieldInternal(CoreShieldData newShield)
+    {
+        Debug.Log($"Trang bị Shield: {newShield.coreShieldName}");
+        currentCoreShield = newShield;
+
+        // 1. Cộng Substats (Dùng lại hàm ApplyModifier có sẵn)
+        if (newShield.substats != null)
+        {
+            foreach (StatModifier mod in newShield.substats)
+            {
+                ApplyModifier(mod, false); // false = cộng vào
+            }
+        }
+
+        // 2. Cộng Base Stats (Riêng của Shield)
+        allyStats.armor += newShield.armor;
+        allyStats.magicResist += newShield.magicResist;
+
+        // 3. Tính lại chỉ số tổng
+        allyStats.RecalculateStats();
+    }
+
+    private void UnequipCoreShieldInternal(CoreShieldData shieldToRemove)
+    {
+        Debug.Log($"Tháo Shield: {shieldToRemove.coreShieldName}");
+
+        // 1. Trừ Substats
+        if (shieldToRemove.substats != null)
+        {
+            foreach (StatModifier mod in shieldToRemove.substats)
+            {
+                ApplyModifier(mod, true); // true = trừ ra
+            }
+        }
+
+        // 2. Trừ Base Stats
+        allyStats.armor -= shieldToRemove.armor;
+        allyStats.magicResist -= shieldToRemove.magicResist;
+
+        // 3. Reset biến và tính lại
+        currentCoreShield = null; // Quan trọng: Đưa về null để biểu thị không đeo gì
+        allyStats.RecalculateStats();
+    }
+
+    // --------------- ACCESSORY (5 SLOTS) ---------------
+    // 1. Trang bị Accessory (Tự động nhận diện slot dựa trên Type)
+    public void EquipAccessory(AccessoryData newAccessory)
+    {
+        if (newAccessory == null)
+        {
+            Debug.Log("Accessory không hợp lệ (null)");
+            return;
+        }
+
+        // Lấy ra món đồ đang đeo ở slot tương ứng (nếu có) để so sánh
+        AccessoryData currentInSlot = GetCurrentAccessoryByType(newAccessory.accessoryType);
+
+        if (currentInSlot == newAccessory)
+        {
+            Debug.Log($"Đã trang bị {newAccessory.AccessoryName} ở slot {newAccessory.accessoryType} rồi.");
+            return;
+        }
+
+        // Nếu slot đó đang có đồ cũ -> Tháo ra trước
+        if (currentInSlot != null)
+        {
+            UnequipAccessoryInternal(currentInSlot);
+        }
+
+        // Đeo đồ mới vào
+        EquipAccessoryInternal(newAccessory);
+    }
+
+    // 2. Tháo một Accessory cụ thể
+    public void UnequipAccessory(AccessoryData accToRemove)
+    {
+        if (accToRemove == null) return;
+
+        // Kiểm tra xem món đồ này có thực sự đang được đeo không
+        AccessoryData currentInSlot = GetCurrentAccessoryByType(accToRemove.accessoryType);
+
+        if (currentInSlot == accToRemove)
+        {
+            UnequipAccessoryInternal(accToRemove);
+        }
+        else
+        {
+            Debug.Log("Không thể tháo: Món đồ này hiện không được trang bị.");
+        }
+    }
+
+    // --- HÀM TRỢ GIÚP ---
+
+    // Hàm này giúp lấy biến slot tương ứng dựa trên Enum Type
+    private AccessoryData GetCurrentAccessoryByType(AccessoryData.AccessoryType type)
+    {
+        switch (type)
+        {
+            case AccessoryData.AccessoryType.CoreShard: return currentCoreShard;
+            case AccessoryData.AccessoryType.MarkOfSin: return currentMarkOfSin;
+            case AccessoryData.AccessoryType.RelicOfMemory: return currentRelicOfMemory;
+            case AccessoryData.AccessoryType.Parasite: return currentParasite;
+            case AccessoryData.AccessoryType.Chain: return currentChain;
+            default: return null;
+        }
+    }
+
+    // Hàm gán biến slot thành null hoặc giá trị mới
+    private void SetAccessorySlot(AccessoryData.AccessoryType type, AccessoryData data)
+    {
+        switch (type)
+        {
+            case AccessoryData.AccessoryType.CoreShard: currentCoreShard = data; break;
+            case AccessoryData.AccessoryType.MarkOfSin: currentMarkOfSin = data; break;
+            case AccessoryData.AccessoryType.RelicOfMemory: currentRelicOfMemory = data; break;
+            case AccessoryData.AccessoryType.Parasite: currentParasite = data; break;
+            case AccessoryData.AccessoryType.Chain: currentChain = data; break;
+        }
+    }
+
+    // --- LOGIC CỘNG TRỪ CHỈ SỐ (INTERNAL) ---
+
+    private void EquipAccessoryInternal(AccessoryData newAcc)
+    {
+        Debug.Log($"Trang bị Accessory [{newAcc.accessoryType}]: {newAcc.AccessoryName}");
+
+        // 1. Gán vào slot
+        SetAccessorySlot(newAcc.accessoryType, newAcc);
+
+        // 2. Cộng Substats
+        if (newAcc.substats != null)
+        {
+            foreach (StatModifier mod in newAcc.substats)
+            {
+                ApplyModifier(mod, false); // false = cộng vào
+            }
+        }
+
+        // Accessory thường không có Base Stats cố định như Armor/Atk riêng lẻ 
+        // mà phụ thuộc hoàn toàn vào Substats, nên ta chỉ cần tính lại Stats.
+        // Nếu sau này Accessory có base stat, bạn cộng ở đây giống Shield.
+
+        allyStats.RecalculateStats();
+    }
+
+    private void UnequipAccessoryInternal(AccessoryData accToRemove)
+    {
+        Debug.Log($"Tháo Accessory [{accToRemove.accessoryType}]: {accToRemove.AccessoryName}");
+
+        // 1. Trừ Substats
+        if (accToRemove.substats != null)
+        {
+            foreach (StatModifier mod in accToRemove.substats)
+            {
+                ApplyModifier(mod, true); // true = trừ ra
+            }
+        }
+
+        // 2. Gán slot về null
+        SetAccessorySlot(accToRemove.accessoryType, null);
 
         allyStats.RecalculateStats();
     }

@@ -16,9 +16,9 @@ MonoBehaviour:
   weaponType: 1
   weaponAtkType: 0
   weaponName: "Ki\u1EBFm Tinh Luy\u1EC7n"
-  lore: 
-  description: "C\xE2n b\u1EB1ng ho\xE0n h\u1EA3o gi\u1EEFa t\u1EA5n c\xF4ng v\xE0
-    ph\xF2ng th\u1EE7."
+  lore: "C\xE2n b\u1EB1ng ho\xE0n h\u1EA3o gi\u1EEFa t\u1EA5n c\xF4ng v\xE0 ph\xF2ng
+    th\u1EE7."
+  description: 
   icon: {fileID: 0}
   rarity: 1
   baseAtk: 28

@@ -16,9 +16,8 @@ MonoBehaviour:
   weaponType: 3
   weaponAtkType: 0
   weaponName: "Cung G\u1ED7 S\u1ED3i"
-  lore: 
-  description: "L\u1EF1c b\u1EAFn m\u1EA1nh h\u01A1n, d\xE2y cung b\u1EC1n b\u1EC9
-    h\u01A1n."
+  lore: "L\u1EF1c b\u1EAFn m\u1EA1nh h\u01A1n, d\xE2y cung b\u1EC1n b\u1EC9 h\u01A1n."
+  description: 
   icon: {fileID: 0}
   rarity: 1
   baseAtk: 30
@@ -29,7 +28,7 @@ MonoBehaviour:
   substats:
   - stat: 1
     val: 10
-    powerMod: 0
+    powerMod: 1
   reqStr: 10
   reqDex: 10
   reqInt: 0

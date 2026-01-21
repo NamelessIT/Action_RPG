@@ -107,8 +107,12 @@ public class PlayerController : MonoBehaviour
             float t = CombatMath.CalculateDirectionFactor(transform, stats);
             Debug.Log($"Hệ số hướng t={t}");
         }
-        if (Input.GetKeyDown(KeyCode.E)) PickUpWeapon();
+        if (Input.GetKeyDown(KeyCode.E)) EquipWeapon();
         if (Input.GetKeyDown(KeyCode.X)) DropWeapon();
+        if (Input.GetKeyDown(KeyCode.C)) EquipCoreShield();
+        if (Input.GetKeyDown(KeyCode.U)) DropCoreShield();
+        if (Input.GetKeyDown(KeyCode.N)) EquipPickedAccessory();
+        if (Input.GetKeyDown(KeyCode.M)) DropPickedAccessory();
     }
 
     void PerformDash()
@@ -285,19 +289,42 @@ public class PlayerController : MonoBehaviour
         }
         if (hitAnything) Debug.Log("Tấn công TRÚNG ĐỊCH -> Vào Combat");
     }
-    void PickUpWeapon()
+    // Hàm trang bị hoặc đổi vũ khí (xài chung)
+    void EquipWeapon()
     {
-        Debug.Log("đang xài vũ khí :" + equipmentManager.currentWeapon);
+        Debug.Log("Đang xài vũ khí:" + equipmentManager.currentWeapon);
         equipmentManager.EquipWeapon(equipmentManager.pickUpWeapon);
     }
-    void ChangeWeapon()
-    {
-
-    }
+    // Tháo vũ khí (UI sẽ hiện là tháo, code là chuyển sang Hand)
     void DropWeapon()
     {
         Debug.Log("Drop vũ khí");
         equipmentManager.ResetToBaseWeapon();
+    }
+    // Hàm trang bị hoặc đổi core shield (xài chung)
+    void EquipCoreShield()
+    {
+        Debug.Log("Đang xài core shield:" + equipmentManager.currentCoreShield);
+        equipmentManager.EquipCoreShield(equipmentManager.pickUpCoreShield);
+    }
+    // Tháo core shield (chuyển sang rỗng)
+    void DropCoreShield()
+    {
+        Debug.Log("Tháo Core Shield");
+        equipmentManager.UnequipCoreShield();
+    }
+
+    // Hàm trang bị hoặc đổi Accessory, xài chung cho cả 5 loại
+    void EquipPickedAccessory()
+    {
+        // Bạn không cần quan tâm nó là loại gì, ném vào Manager tự xử lý
+        equipmentManager.EquipAccessory(equipmentManager.pickUpAccessory);
+    }
+
+    void DropPickedAccessory()
+    {
+        // Tháo đúng món đang giữ trong biến pickUpAccessory
+        equipmentManager.UnequipAccessory(equipmentManager.pickUpAccessory);
     }
 
 

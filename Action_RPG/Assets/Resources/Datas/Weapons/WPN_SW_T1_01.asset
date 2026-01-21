@@ -16,9 +16,9 @@ MonoBehaviour:
   weaponType: 1
   weaponAtkType: 0
   weaponName: "Ki\u1EBFm R\u1EC9"
-  lore: 
-  description: "Thanh ki\u1EBFm \u0111\xE3 r\u1EC9 s\xE9t nh\u01B0ng v\u1EABn c\xF2n
-    b\xE9n. C\xE2n b\u1EB1ng."
+  lore: "Thanh ki\u1EBFm \u0111\xE3 r\u1EC9 s\xE9t nh\u01B0ng v\u1EABn c\xF2n b\xE9n.
+    C\xE2n b\u1EB1ng."
+  description: 
   icon: {fileID: 0}
   rarity: 0
   baseAtk: 16
@@ -26,10 +26,7 @@ MonoBehaviour:
   moveFlexibility: 0.8
   defenseValue: 30
   bonusCritChance: 0
-  substats:
-  - stat: 0
-    val: 0
-    powerMod: 1
+  substats: []
   reqStr: 0
   reqDex: 0
   reqInt: 0

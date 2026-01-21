@@ -16,9 +16,9 @@ MonoBehaviour:
   weaponType: 7
   weaponAtkType: 1
   weaponName: "S\xE1ch Ph\xE9p Ai C\u1EADp"
-  lore: 
-  description: "Quy\u1EC3n s\xE1ch ma thu\u1EADt r\xE1ch n\xE1t. Nh\u1EB9 v\xE0 thi
-    tri\u1EC3n nhanh."
+  lore: "Quy\u1EC3n s\xE1ch ma thu\u1EADt r\xE1ch n\xE1t. Nh\u1EB9 v\xE0 thi tri\u1EC3n
+    nhanh."
+  description: 
   icon: {fileID: 0}
   rarity: 0
   baseAtk: 18

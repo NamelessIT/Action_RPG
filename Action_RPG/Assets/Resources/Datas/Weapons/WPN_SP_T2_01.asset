@@ -16,9 +16,9 @@ MonoBehaviour:
   weaponType: 4
   weaponAtkType: 0
   weaponName: "Th\u01B0\u01A1ng Hi\u1EC7p S\u0129"
-  lore: 
-  description: "M\u0169i th\u01B0\u01A1ng s\u1EAFc b\xE9n, c\xE1n l\xE0m b\u1EB1ng
-    g\u1ED7 s\u1ED3i b\u1ECDc th\xE9p."
+  lore: "M\u0169i th\u01B0\u01A1ng s\u1EAFc b\xE9n, c\xE1n l\xE0m b\u1EB1ng g\u1ED7
+    s\u1ED3i b\u1ECDc th\xE9p."
+  description: 
   icon: {fileID: 0}
   rarity: 1
   baseAtk: 35
@@ -29,7 +29,7 @@ MonoBehaviour:
   substats:
   - stat: 0
     val: 10
-    powerMod: 0
+    powerMod: 1
   reqStr: 10
   reqDex: 10
   reqInt: 0
