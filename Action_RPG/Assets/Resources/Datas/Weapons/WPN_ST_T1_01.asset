@@ -16,9 +16,8 @@ MonoBehaviour:
   weaponType: 5
   weaponAtkType: 1
   weaponName: "G\u1EADy T\u1EADp S\u1EF1"
-  lore: 
-  description: "C\xE2y g\u1EADy g\u1ED7 s\u1ED3i d\xE0nh cho h\u1ECDc vi\xEAn ph\xE1p
-    s\u01B0."
+  lore: "C\xE2y g\u1EADy g\u1ED7 s\u1ED3i d\xE0nh cho h\u1ECDc vi\xEAn ph\xE1p s\u01B0."
+  description: 
   icon: {fileID: 0}
   rarity: 0
   baseAtk: 22

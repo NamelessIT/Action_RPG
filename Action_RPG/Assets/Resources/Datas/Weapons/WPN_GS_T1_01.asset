@@ -16,9 +16,9 @@ MonoBehaviour:
   weaponType: 6
   weaponAtkType: 0
   weaponName: "\u0110\u1EA1i Ki\u1EBFm C\u1ED5 X\u01B0a"
-  lore: 
-  description: "Thanh ki\u1EBFm kh\u1ED5ng l\u1ED3 c\u0169 k\u1EF9. N\u1EB7ng n\u1EC1
-    nh\u01B0ng uy l\u1EF1c."
+  lore: "Thanh ki\u1EBFm kh\u1ED5ng l\u1ED3 c\u0169 k\u1EF9. N\u1EB7ng n\u1EC1 nh\u01B0ng
+    uy l\u1EF1c."
+  description: 
   icon: {fileID: 0}
   rarity: 0
   baseAtk: 25

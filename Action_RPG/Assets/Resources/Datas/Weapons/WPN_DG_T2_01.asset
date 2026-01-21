@@ -16,9 +16,9 @@ MonoBehaviour:
   weaponType: 2
   weaponAtkType: 0
   weaponName: "Dao S\xE1t Th\u1EE7"
-  lore: 
-  description: "Nh\u1EB9 t\u1EF1a l\xF4ng h\u1ED3ng, th\xEDch h\u1EE3p cho vi\u1EC7c
-    \xE1m s\xE1t."
+  lore: "Nh\u1EB9 t\u1EF1a l\xF4ng h\u1ED3ng, th\xEDch h\u1EE3p cho vi\u1EC7c \xE1m
+    s\xE1t."
+  description: 
   icon: {fileID: 0}
   rarity: 1
   baseAtk: 18
@@ -29,7 +29,7 @@ MonoBehaviour:
   substats:
   - stat: 4
     val: 10
-    powerMod: 0
+    powerMod: 1
   reqStr: 0
   reqDex: 15
   reqInt: 0

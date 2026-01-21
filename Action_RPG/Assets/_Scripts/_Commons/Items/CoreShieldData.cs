@@ -26,19 +26,23 @@ public class CoreShieldData : ScriptableObject
 
     [Header("Substats")]
     // Đổi từ string sang List để Inspector hiển thị đẹp và code đọc được luôn
-    public List<StatModifier> stats = new List<StatModifier>();
+    public List<StatModifier> substats = new List<StatModifier>();
     //public string effectConfig; để sau
 
     public bool playerOnly;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    private void OnValidate()
     {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
+        if (substats != null)
+        {
+            foreach (var sub in substats)
+            {
+                // Nếu thấy powerMod bằng 0 (do Unity tạo mặc định), tự sửa thành 1
+                // Lưu ý: Dùng 0f để so sánh float chuẩn xác
+                if (sub.powerMod == 0f)
+                {
+                    sub.powerMod = 1.0f;
+                }
+            }
+        }
     }
 }

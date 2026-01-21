@@ -10,32 +10,26 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f6cbf2f21cbaafa4c8dacb28b94abfb2, type: 3}
-  m_Name: ACC_CS_T1_01
+  m_Name: ACC_CH_T3_01
   m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
-  id: ACC_CS_T1_01
-  accessoryType: 0
-  AccessoryName: "M\u1EA3nh L\xF5i Sinh M\u1EC7nh"
-  lore: "M\u1EA3nh v\u1EE1 c\xF2n s\xF3t l\u1EA1i t\u1EEB l\xF5i n\u0103ng l\u01B0\u1EE3ng
-    c\u1EE7a m\u1ED9t c\u1ED7 m\xE1y h\u1ED9 v\u1EC7."
+  id: ACC_CH_T3_01
+  accessoryType: 4
+  AccessoryName: "X\xEDch K\xECm H\xE3m"
+  lore: "S\u1EE3i x\xEDch l\u1EA1nh l\u1EBDo d\xF9ng \u0111\u1EC3 tr\xF3i bu\u1ED9c
+    t\xF9 nh\xE2n."
   description: 
   icon: {fileID: 0}
-  rarity: 0
+  rarity: 2
   setId: 0
   substats:
-  - stat: 0
-    val: 2
+  - stat: 2
+    val: 20
+    powerMod: 1
+  - stat: 21
+    val: 0.1
     powerMod: 1
   - stat: 1
-    val: 2
-    powerMod: 1
-  - stat: 2
-    val: 2
-    powerMod: 1
-  - stat: 3
-    val: 2
-    powerMod: 1
-  - stat: 4
-    val: 2
+    val: 20
     powerMod: 1
   isUnique: 0
-  playerOnly: 1
+  playerOnly: 0

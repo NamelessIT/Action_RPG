@@ -5,8 +5,9 @@ public class Stats : MonoBehaviour
     [Header("--- Health ---")]
     public float maxHp;
     public float currentHp;
-    public float baseHp = 100f;
+    public float baseHp;
     public float baseHpGain = 2f;
+    public float level = 1f;
 
     public bool isInvincible = false;
 

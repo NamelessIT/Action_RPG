@@ -16,9 +16,9 @@ MonoBehaviour:
   weaponType: 7
   weaponAtkType: 1
   weaponName: "S\xE1ch H\u1ECDc Gi\u1EA3"
-  lore: 
-  description: "Ch\u1EE9a c\xE1c c\xE2u th\u1EA7n ch\xFA ph\u1EE9c t\u1EA1p h\u01A1n,
-    thi tri\u1EC3n nhanh."
+  lore: "Ch\u1EE9a c\xE1c c\xE2u th\u1EA7n ch\xFA ph\u1EE9c t\u1EA1p h\u01A1n, thi
+    tri\u1EC3n nhanh."
+  description: 
   icon: {fileID: 0}
   rarity: 1
   baseAtk: 30
@@ -29,7 +29,7 @@ MonoBehaviour:
   substats:
   - stat: 2
     val: 10
-    powerMod: 0
+    powerMod: 1
   reqStr: 0
   reqDex: 0
   reqInt: 15
