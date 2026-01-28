@@ -3,22 +3,32 @@ using Unity.Cinemachine;
 using System.Collections;
 
 
-// nhiệm vụ: làm thêm attack cooldown dựa trên attack speed (có kết hợp animator) và hoàn thiện animator
-// làm tháo , pick vũ khí PickUpWeapon
+// nhiệm vụ: làm thêm attack cooldown dựa trên attack speed AllyStats.attackSpeed (có kết hợp animator) và hoàn thiện animator
 public class PlayerController : MonoBehaviour
 {
     [Header("Settings")]
     public float idleDelay = 0.25f;
 
-    private Stats stats;
+    private AllyStats stats;
     private Animator animator;
     private SpriteRenderer spriteRenderer;
     private Rigidbody rb;
     private CinemachineImpulseSource impulseSource;
 
+    [Header("--- Combo System ---")]
+    public int comboCount = 0;          // Đòn đánh thứ mấy (0, 1, 2...)
+    public int maxCombo = 2;            // Combo tối đa 3 đòn
+    public float lastAttackTime = 0f;   // Thời điểm đánh đòn cuối
+    public float comboWindow = 2.0f;    // Thời gian cho phép nối combo (nếu quá thì reset về 0)
+    public bool isAttacking = false;    // Đang trong animation đánh
+
+    // Biến tính toán runtime
+    //private float currentAttackCooldown = 0f;
+
     [Header("Combat Settings")]
-    public float attackRange = 1.5f;
+    public float attackRange = 0.5f;
     public LayerMask enemyLayer;
+    private bool nextAttackQueued = false; // Đã bấm chuột cho đòn tiếp theo chưa?
 
     // State variables
     //private int lastDirection = 0;
@@ -39,13 +49,18 @@ public class PlayerController : MonoBehaviour
 
     private EquipmentManager equipmentManager;
 
+    // [MỚI] Biến để lưu tiến trình đánh đang chạy
+    private Coroutine currentAttackCoroutine;
+
     void Start()
     {
-        stats = GetComponent<Stats>();
+        stats = GetComponent<AllyStats>();
+
         animator = GetComponentInChildren<Animator>();
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
         rb = GetComponent<Rigidbody>();
         impulseSource = GetComponent<CinemachineImpulseSource>();
+        enemyLayer = LayerMask.GetMask("Enemy");
 
         if (stats == null) Debug.LogError("Thiếu CharacterStats!");
         if (animator == null) Debug.LogError("Thiếu Animator!");
@@ -59,6 +74,12 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         if (stats == null) return;
+
+        // Cập nhật tốc độ đánh cho Animator (để múa kiếm nhanh chậm theo stats)
+        if (animator != null)
+        {
+            animator.SetFloat("AttackSpeedMultiplier", stats.attackSpeed);
+        }
 
         // --- 1. DASH (Ưu tiên cao nhất) ---
         if (isDashing) return; // Đang lướt thì không nhận input khác
@@ -130,6 +151,31 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
+        // --- LOGIC CANCEL ATTACK ---
+        if (isAttacking)
+        {
+            // 1. Dừng ngay lập tức Coroutine đánh đang chạy
+            if (currentAttackCoroutine != null)
+            {
+                StopCoroutine(currentAttackCoroutine);
+            }
+
+            // 2. Reset các trạng thái tấn công
+            isAttacking = false;
+            nextAttackQueued = false; // Xóa luôn lệnh đánh tiếp theo nếu có
+
+            // 3. Reset Animator để nó không bị kẹt ở pose đánh
+            if (animator != null)
+            {
+                animator.ResetTrigger("Attack");
+                animator.SetFloat("ComboStep", 0);
+                // Có thể cần play ngay animation khác hoặc để Blend Tree tự xử lý
+            }
+
+            Debug.Log(">> Đã Cancel Attack để Dash!");
+        }
+        // ---------------------------------
+
         StartCoroutine(DashCoroutine());
     }
 
@@ -139,6 +185,17 @@ public class PlayerController : MonoBehaviour
         isSprinting = false;
         stats.lastDashTime = Time.time;
         stats.isInvincible = true;
+
+        // --- [MỚI] KÍCH HOẠT ANIMATION DASH ---
+        //if (animator != null)
+        //{
+            // Cách 1: Dùng Trigger (Khuyên dùng cho Dash nhanh/ngắn)
+            //animator.SetTrigger("Dash");
+
+            // Cách 2: Nếu bạn dùng Bool (Cho Dash dài/giữ nút)
+            // animator.SetBool("IsDashing", true); 
+        //}
+        // --------------------------------------
 
         Vector3 dashDir = movementInput.magnitude > 0.1f ? movementInput : currentVisualDir;
         dashDir.y = 0;
@@ -167,6 +224,14 @@ public class PlayerController : MonoBehaviour
 
     void HandleMovementStopToTurn()
     {
+
+        // [MỚI] Nếu đang đánh thì KHÔNG nhận input di chuyển nữa
+        if (isAttacking)
+        {
+            movementInput = Vector3.zero; // Xóa vector di chuyển
+            return; // Thoát hàm ngay, không tính toán xoay hay đi nữa
+        }
+
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveZ = Input.GetAxisRaw("Vertical");
         movementInput = new Vector3(moveX, 0f, moveZ).normalized;
@@ -272,6 +337,82 @@ public class PlayerController : MonoBehaviour
     {
         if (stats == null) return;
 
+        // Nếu đang đánh: Cho phép "đặt gạch" đòn tiếp theo
+        if (isAttacking)
+        {
+            // Chỉ cho phép queue nếu animation đã chạy được một chút (ví dụ 30% thời lượng)
+            // Để tránh spam click quá sớm. Ở đây mình cho phép luôn để test cho dễ.
+            nextAttackQueued = true;
+            return;
+        }
+
+        // Check cooldown bình thường cho đòn đầu tiên
+        float cooldownTime = 1.0f / stats.attackSpeed;
+        if (Time.time < lastAttackTime + cooldownTime) return;
+
+        // Reset combo nếu quá hạn
+        if (Time.time > lastAttackTime + comboWindow)
+        {
+            comboCount = 0;
+        }
+
+        currentAttackCoroutine=StartCoroutine(AttackRoutine());
+    }
+
+    IEnumerator AttackRoutine()
+    {
+        // 1. Setup
+        isAttacking = true;
+        nextAttackQueued = false;
+        lastAttackTime = Time.time;
+
+        // --- DEBUG ---
+        // Debug.Log("Thực hiện đánh Combo số: " + comboCount);
+
+        // 2. Gửi Animator
+        if (animator != null)
+        {
+            // [FIX 1] Reset Trigger cũ để tránh bị dính lệnh thừa từ lần bấm trước
+            animator.ResetTrigger("Attack");
+
+            animator.SetFloat("ComboStep", (float)comboCount);
+            animator.SetTrigger("Attack");
+        }
+
+        // 3. Tăng Combo
+        comboCount++;
+        if (comboCount >= maxCombo) comboCount = 0;
+
+        // 4. Deal Damage
+        yield return new WaitForSeconds(0.1f);
+        HandleDamageLogic();
+
+        // 5. Tính thời gian chờ (Animation Duration)
+        float baseAnimDuration = 0.5f;
+        float realDuration = baseAnimDuration / stats.attackSpeed;
+
+        // [FIX 2] Thay vì trừ số cứng, hãy chờ khoảng 90% thời lượng animation
+        // Điều này giúp animation chạy gần hết mới chuyển, tránh bị cắt quá sớm nhìn bị giật
+        float waitTime = realDuration * 0.9f;
+
+        yield return new WaitForSeconds(waitTime);
+
+        // 6. Mở khóa
+        isAttacking = false;
+
+        // 7. Check hàng chờ (Input Buffer)
+        if (nextAttackQueued)
+        {
+            // [FIX 3] QUAN TRỌNG NHẤT: Chờ 1 Frame để Animator kịp thở và xử lý xong Transition cũ
+            yield return null;
+
+            currentAttackCoroutine = StartCoroutine(AttackRoutine());
+        }
+    }
+
+    // Tách phần gây damage ra cho gọn
+    void HandleDamageLogic()
+    {
         bool hitAnything = false;
         Collider[] hitEnemies = Physics.OverlapSphere(transform.position, attackRange, enemyLayer);
         foreach (Collider enemy in hitEnemies)
@@ -282,13 +423,18 @@ public class PlayerController : MonoBehaviour
                 hitAnything = true;
                 stats.EnterCombat();
                 float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
+
+                // Có thể thêm logic: Đòn cuối combo (comboCount == maxCombo) thì damage to hơn
+                float comboMultiplier = (comboCount == 0) ? 1.5f : 1.0f; // Vì comboCount đã ++ ở trên nên lúc này 0 nghĩa là vừa đánh xong đòn cuối (reset)
+
                 float damage = CombatMath.CalculateFullDamage(stats, enemyStats, t, testIsCrit);
-                enemyStats.TakeDamage(damage);
-                //if (impulseSource != null) impulseSource.GenerateImpulseWithForce(0.1f);
+                enemyStats.TakeDamage(damage * comboMultiplier);
             }
         }
         if (hitAnything) Debug.Log("Tấn công TRÚNG ĐỊCH -> Vào Combat");
     }
+
+
     // Hàm trang bị hoặc đổi vũ khí (xài chung)
     void EquipWeapon()
     {

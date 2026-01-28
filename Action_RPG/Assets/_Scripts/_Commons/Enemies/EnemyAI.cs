@@ -264,7 +264,7 @@ public class EnemyAI : MonoBehaviour
         bool isMoving = agent.velocity.magnitude > 0.1f;
         animator.SetBool("IsWalking", isMoving);
         int dirIndex = 0;
-        if (Mathf.Abs(dir.z) > Mathf.Abs(dir.x)) dirIndex = dir.z > 0 ? 1 : 0;
+        if (Mathf.Abs(dir.z) > Mathf.Abs(dir.x)) dirIndex = dir.z > 0 ? 4 : 0;
         else dirIndex = 2;
         animator.SetFloat("Direction", (float)dirIndex);
         if (dir.x > 0) spriteRenderer.flipX = true;
