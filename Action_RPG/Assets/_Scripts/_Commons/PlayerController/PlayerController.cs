@@ -30,6 +30,11 @@ public class PlayerController : MonoBehaviour
     public LayerMask enemyLayer;
     private bool nextAttackQueued = false; // Đã bấm chuột cho đòn tiếp theo chưa?
 
+    // [MỚI] Biến hỗ trợ Charge Attack
+    private bool isCharging = false;
+    private float chargeTimer = 0f;
+    private float currentDamageMultiplier = 1.0f; // Hệ số sát thương của đòn hiện tại
+
     // State variables
     //private int lastDirection = 0;
     private bool isWalking = false;
@@ -75,6 +80,13 @@ public class PlayerController : MonoBehaviour
     {
         if (stats == null) return;
 
+        // Logic Reset Combo (Giữ nguyên)
+        if (Time.time > lastAttackTime + comboWindow && !isAttacking && comboCount > 0)
+        {
+            comboCount = 0;
+            // Debug.Log("Combo Reset!");
+        }
+
         // Cập nhật tốc độ đánh cho Animator (để múa kiếm nhanh chậm theo stats)
         if (animator != null)
         {
@@ -113,7 +125,54 @@ public class PlayerController : MonoBehaviour
         }
 
         // --- 3. TẤN CÔNG ---
-        if (Input.GetMouseButtonDown(0)) PerformAttack();
+        // --- [MỚI] XỬ LÝ ATTACK INPUT (CHARGE) ---
+
+        // 1. Bắt đầu nhấn chuột -> Bắt đầu tính giờ
+        if (Input.GetMouseButtonDown(0) && !isAttacking)
+        {
+            isCharging = true;
+            chargeTimer = 0f;
+        }
+
+        // 2. Đang giữ chuột -> Tăng thời gian
+        if (isCharging)
+        {
+            if (Input.GetMouseButton(0))
+            {
+                chargeTimer += Time.deltaTime;
+                // Có thể thêm hiệu ứng visual ở đây (rung, hạt tụ lực...)
+                // if (chargeTimer >= stats.heavyAttackChargeTime) Debug.Log(">> Max Charge!");
+            }
+
+            // 3. Nhả chuột -> Quyết định đánh thường hay đánh mạnh
+            if (Input.GetMouseButtonUp(0))
+            {
+                isCharging = false;
+
+                // Kiểm tra thời gian giữ chuột
+                if (chargeTimer >= stats.heavyAttackChargeTime)
+                {
+                    // TRỌNG KÍCH (Heavy Attack)
+                    PerformAttack(true);
+                }
+                else
+                {
+                    // ĐÁNH THƯỜNG (Light Attack)
+                    PerformAttack(false);
+                }
+            }
+        }
+
+        // [Logic cũ cho Queue Attack khi đang đánh dở]
+        // Nếu đang đánh mà bấm chuột -> Queue đòn tiếp theo (mặc định là Light Attack cho mượt)
+        if (isAttacking && Input.GetMouseButtonDown(0))
+        {
+            // Nếu muốn cơ chế queue hỗ trợ cả Heavy Attack thì phức tạp hơn nhiều, 
+            // tạm thời queue mặc định là đánh thường.
+            nextAttackQueued = true;
+            // Reset timer để lần tới không bị hiểu nhầm là heavy
+            chargeTimer = 0f;
+        }
 
         // --- 4. DI CHUYỂN ---
         HandleMovementStopToTurn();
@@ -333,7 +392,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    void PerformAttack()
+    void PerformAttack(bool isHeavy = false)
     {
         if (stats == null) return;
 
@@ -356,15 +415,30 @@ public class PlayerController : MonoBehaviour
             comboCount = 0;
         }
 
-        currentAttackCoroutine=StartCoroutine(AttackRoutine());
+        currentAttackCoroutine=StartCoroutine(AttackRoutine(isHeavy));
     }
 
-    IEnumerator AttackRoutine()
+    IEnumerator AttackRoutine(bool isHeavy)
     {
         // 1. Setup
         isAttacking = true;
         nextAttackQueued = false;
         lastAttackTime = Time.time;
+
+        // [MỚI] Xác định hệ số sát thương cho đòn này
+        if (isHeavy)
+        {
+            Debug.Log(">> THỰC HIỆN TRỌNG KÍCH (HEAVY ATTACK)!");
+            currentDamageMultiplier = stats.heavyAttackCharge; // Lấy từ Stats (ví dụ = 2)
+            
+            // Nếu có animation riêng cho Heavy Attack thì set ở đây
+            // animator.SetTrigger("HeavyAttack");
+            // Tạm thời dùng chung trigger Attack nhưng có thể reset combo hoặc hiệu ứng khác
+        }
+        else
+        {
+            currentDamageMultiplier = 1.0f; // Đánh thường
+        }
 
         // --- DEBUG ---
         // Debug.Log("Thực hiện đánh Combo số: " + comboCount);
@@ -376,20 +450,33 @@ public class PlayerController : MonoBehaviour
             animator.ResetTrigger("Attack");
 
             animator.SetFloat("ComboStep", (float)comboCount);
+            Debug.Log("ComboStep: "+comboCount);
+            //set bool trọng kích animation
             animator.SetTrigger("Attack");
         }
 
         // 3. Tăng Combo
-        comboCount++;
-        if (comboCount >= maxCombo) comboCount = 0;
+        if (isHeavy)
+        {
+            comboCount = 0; // Trọng kích xong thì reset combo
+        }
+        else
+        {
+            comboCount++;
+            if (comboCount >= maxCombo) comboCount = 0;
+        }
 
         // 4. Deal Damage
         yield return new WaitForSeconds(0.1f);
-        HandleDamageLogic();
+        HandleDamageLogic( isHeavy);
 
         // 5. Tính thời gian chờ (Animation Duration)
         float baseAnimDuration = 0.5f;
-        float realDuration = baseAnimDuration / stats.attackSpeed;
+
+        // [MỚI] Heavy Attack thường chậm hơn, có thể chia cho 0.5 tốc độ đánh chẳng hạn
+        float speedMod = isHeavy ? (stats.attackSpeed * 0.7f) : stats.attackSpeed;
+
+        float realDuration = baseAnimDuration / speedMod;
 
         // [FIX 2] Thay vì trừ số cứng, hãy chờ khoảng 90% thời lượng animation
         // Điều này giúp animation chạy gần hết mới chuyển, tránh bị cắt quá sớm nhìn bị giật
@@ -400,18 +487,21 @@ public class PlayerController : MonoBehaviour
         // 6. Mở khóa
         isAttacking = false;
 
+        // Reset multiplier về mặc định
+        currentDamageMultiplier = 1.0f;
+
         // 7. Check hàng chờ (Input Buffer)
         if (nextAttackQueued)
         {
             // [FIX 3] QUAN TRỌNG NHẤT: Chờ 1 Frame để Animator kịp thở và xử lý xong Transition cũ
             yield return null;
 
-            currentAttackCoroutine = StartCoroutine(AttackRoutine());
+            currentAttackCoroutine = StartCoroutine(AttackRoutine(false));
         }
     }
 
     // Tách phần gây damage ra cho gọn
-    void HandleDamageLogic()
+    void HandleDamageLogic(bool isHeavy)
     {
         bool hitAnything = false;
         Collider[] hitEnemies = Physics.OverlapSphere(transform.position, attackRange, enemyLayer);
@@ -425,10 +515,19 @@ public class PlayerController : MonoBehaviour
                 float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
 
                 // Có thể thêm logic: Đòn cuối combo (comboCount == maxCombo) thì damage to hơn
-                float comboMultiplier = (comboCount == 0) ? 1.5f : 1.0f; // Vì comboCount đã ++ ở trên nên lúc này 0 nghĩa là vừa đánh xong đòn cuối (reset)
-
+                float totalMultiplier = 1;
+                if (isHeavy)
+                {
+                    totalMultiplier=currentDamageMultiplier;
+                }
+                else
+                {
+                    Debug.Log("comboCount: "+ comboCount);
+                    totalMultiplier= (comboCount == 1) ? 1.0f : 1.5f;
+                }
                 float damage = CombatMath.CalculateFullDamage(stats, enemyStats, t, testIsCrit);
-                enemyStats.TakeDamage(damage * comboMultiplier);
+                enemyStats.TakeDamage(damage * totalMultiplier);
+                if (currentDamageMultiplier > 1) Debug.Log($"Gây {damage * totalMultiplier} sát thương (Heavy x{currentDamageMultiplier})");
             }
         }
         if (hitAnything) Debug.Log("Tấn công TRÚNG ĐỊCH -> Vào Combat");

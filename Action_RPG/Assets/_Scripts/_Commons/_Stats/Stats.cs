@@ -60,6 +60,7 @@ public class Stats : MonoBehaviour
     // Biến hỗ trợ Combo (Logic này sẽ nằm ở PlayerController, nhưng Stats chứa thông số)
     public float comboResetTime = 1.0f; // Thời gian chờ để reset combo về đòn 1
     public float heavyAttackChargeTime = 1.0f; // Thời gian giữ chuột để max dame
+    public int heavyAttackCharge = 2;
 
     [Header("--- Crit ---")]
     public float baseCritChance;

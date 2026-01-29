@@ -918,10 +918,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyStats
   maxHp: 0
   currentHp: 0
-  baseHp: 100
+  baseHp: 1000000
   baseHpGain: 2
   level: 1
-  isInvincible: 0
+  isInvincible: 1
   maxStamina: 100
   currentStamina: 0
   staminaBaseRecovery: 0.5
@@ -935,20 +935,19 @@ MonoBehaviour:
   baseDashDuration: 0.2
   runCost: 12
   lastDashTime: -10
-  maxSin: 0
+  maxSin: 50
   currentSin: 0
-  baseSinGain: 5
+  baseSinGain: 0.5
   STR: 0
   DEX: 0
   INT: 0
   VIT: 0
   AGI: 0
-  physicalAtk: 15
-  magicAtk: 5
-  baseAttackSpeed: 0.5
+  physicalAtk: 120
+  magicAtk: 60
+  baseAttackSpeed: 0
   comboResetTime: 1
   heavyAttackChargeTime: 1
-  heavyAttackCharge: 2
   baseCritChance: 0
   baseCritMultiplier: 1.5
   skillPhysicalMultiplier: 1
@@ -963,18 +962,18 @@ MonoBehaviour:
   moveThresholdAngle: 45
   moveFlexibility: 1
   turnDuration: 0.1
-  combatTurnDuration: 0
+  combatTurnDuration: 0.4
   resistanceKnockBack: 0.1
   resistanceEffect: 0
   facingDirection: {x: 0, y: 0, z: -1}
-  enemyID: 
-  enemyType: 2
-  detectionMethod: 0
+  enemyID: 1
+  enemyType: 1
+  detectionMethod: 2
   currentAggro: 0
   maxAggro: 100
   aggroDecayRate: 5
-  aggroRadius: 20
-  detectionRange: 10
+  aggroRadius: 6
+  detectionRange: 3
   viewAngle: 110
   spawnPosition: {x: 0, y: 0, z: 0}
 --- !u!195 &1319874510
@@ -1012,7 +1011,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyCombat
   isAttacking: 0
-  basicAttackRange: 0.5
+  basicAttackRange: 2
 --- !u!1 &1355773655
 GameObject:
   m_ObjectHideFlags: 0
@@ -1125,7 +1124,6 @@ MonoBehaviour:
   baseAttackSpeed: 0
   comboResetTime: 1
   heavyAttackChargeTime: 1
-  heavyAttackCharge: 2
   baseCritChance: 0
   baseCritMultiplier: 1.5
   skillPhysicalMultiplier: 1
@@ -1268,7 +1266,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AllyStats
   maxHp: 0
   currentHp: 0
-  baseHp: 0
+  baseHp: 100
   baseHpGain: 2
   level: 1
   isInvincible: 0
@@ -1298,7 +1296,6 @@ MonoBehaviour:
   baseAttackSpeed: 0
   comboResetTime: 1
   heavyAttackChargeTime: 1
-  heavyAttackCharge: 2
   baseCritChance: 0
   baseCritMultiplier: 1.5
   skillPhysicalMultiplier: 1
@@ -1313,7 +1310,7 @@ MonoBehaviour:
   moveThresholdAngle: 45
   moveFlexibility: 1
   turnDuration: 0.1
-  combatTurnDuration: 0
+  combatTurnDuration: 0.4
   resistanceKnockBack: 0.1
   resistanceEffect: 0
   facingDirection: {x: 0, y: 0, z: -1}

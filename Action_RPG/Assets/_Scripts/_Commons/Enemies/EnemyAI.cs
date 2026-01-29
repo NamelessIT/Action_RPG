@@ -32,7 +32,7 @@ public class EnemyAI : MonoBehaviour
             if (p != null) playerTarget = p.transform;
         }
 
-        combat.Setup(stats, playerTarget);
+        combat.Setup(stats, playerTarget,animator);
 
         agent.updateRotation = false;
         agent.updateUpAxis = false;
@@ -53,6 +53,17 @@ public class EnemyAI : MonoBehaviour
     void Update()
     {
         if (playerTarget == null) return;
+
+        // [MỚI] QUAN TRỌNG: Nếu đang đánh thì đứng yên tuyệt đối, không tính toán AI
+        if (combat.isAttacking)
+        {
+            if (agent.isOnNavMesh)
+            {
+                agent.isStopped = true;
+                agent.velocity = Vector3.zero; // Dừng trượt
+            }
+            return;
+        }
 
         bool canSensePlayer = CheckDetection();
         float distToSpawn = Vector3.Distance(transform.position, stats.spawnPosition);
@@ -94,13 +105,11 @@ public class EnemyAI : MonoBehaviour
 
         bool gotHit = stats.currentAggro > 0;
         bool blockedByPlayer = distToPlayer <= combat.basicAttackRange;
-
         bool shouldFightBack = false;
 
         if (stats.enemyType == EnemyType.Hostile)
         {
             // Hostile: Hung hăng mọi lúc mọi nơi
-            // Bị đánh HOẶC Bị chặn đường -> Chiến luôn
             if (gotHit || blockedByPlayer) shouldFightBack = true;
         }
         else if (stats.enemyType == EnemyType.Neutral)

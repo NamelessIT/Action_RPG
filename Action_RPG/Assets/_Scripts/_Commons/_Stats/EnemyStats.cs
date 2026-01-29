@@ -29,6 +29,7 @@ public class EnemyStats : Stats
     {
         base.maxHp = base.baseHp;
         base.currentHp = base.maxHp;
+        base.baseAttackSpeed = 0.5f;
         spawnPosition = transform.position;
 
         if (enemyType == EnemyType.Hostile) currentAggro = maxAggro;
@@ -66,10 +67,6 @@ public class EnemyStats : Stats
         if (currentAggro > maxAggro) currentAggro = maxAggro;
     }
 
-    //public void spawnWolf(float amount)
-    //{
-    //    object wofl stats=
-    //        st
-    //}
+
 
 }
