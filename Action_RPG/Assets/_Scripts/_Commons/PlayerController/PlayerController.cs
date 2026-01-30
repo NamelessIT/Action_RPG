@@ -512,6 +512,8 @@ public class PlayerController : MonoBehaviour
     {
         bool hitAnything = false;
         Collider[] hitEnemies = Physics.OverlapSphere(transform.position, attackRange, enemyLayer);
+        // [MỚI] Lấy vũ khí hiện tại để truyền vào hàm tính toán
+        WeaponData currentWpn = equipmentManager.currentWeapon;
         foreach (Collider enemy in hitEnemies)
         {
             Stats enemyStats = enemy.GetComponent<Stats>();
@@ -521,6 +523,7 @@ public class PlayerController : MonoBehaviour
                 stats.EnterCombat();
                 float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
 
+                // Tính hệ số combo / charge (đây là externalMult)
                 float totalMultiplier = 1;
 
                 if (isHeavy)
@@ -532,13 +535,21 @@ public class PlayerController : MonoBehaviour
                     // [FIX] Dùng stepIndex thay vì comboCount
                     // stepIndex là giá trị đã được "chụp ảnh" lại lúc bắt đầu đánh
                     Debug.Log("Current Combo Step: " + stepIndex);
-                    totalMultiplier = (stepIndex == 0) ? 1.0f : 1.5f;
+                    totalMultiplier = (stepIndex == 0) ? 1.0f : 1.5f; //Nếu muốn chỉnh scale các hit thì chỉnh ở đây
                 }
 
-                float damage = CombatMath.CalculateFullDamage(stats, enemyStats, t, testIsCrit);
-                enemyStats.TakeDamage(damage * totalMultiplier);
+                float damage = CombatMath.CalculateFullDamage(
+                    stats,
+                    enemyStats,
+                    t,
+                    testIsCrit,
+                    null,          // SkillData (null vì là đánh thường)
+                    currentWpn,    // Để biêt xem vũ khí là Physical hay Magic
+                    totalMultiplier // Hệ số gây sát thương của combo đòn đánh
+                );
+                enemyStats.TakeDamage(damage);
 
-                if (currentDamageMultiplier > 1) Debug.Log($"Gây {damage * totalMultiplier} sát thương (Heavy x{currentDamageMultiplier})");
+                if (currentDamageMultiplier > 1.5) Debug.Log($"Gây {damage} sát thương (Heavy x{currentDamageMultiplier})");
             }
         }
         if (hitAnything) Debug.Log("Tấn công TRÚNG ĐỊCH -> Vào Combat");

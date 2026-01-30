@@ -120,7 +120,15 @@ public class EnemyCombat : MonoBehaviour
         {
             float t = CombatMath.CalculateDirectionFactor(transform, playerStats);
             // Enemy thường mặc định không crit (hoặc thêm logic crit sau)
-            float damage = CombatMath.CalculateFullDamage(stats, playerStats, t, false);
+            float damage = CombatMath.CalculateFullDamage(
+                stats,           // Attacker 
+                playerStats,     // Target 
+                t,               // Direction Factor 
+                false,           // IsCrit (Enemy thường mặc định false)
+                null,            // SkillData: Để null (Nếu enemy đánh thường)
+                null,            // WeaponData: Để null (Logic sẽ tự hiểu là Physical)
+                1.0f             // ExternalMult: Mặc định là 1
+            );
             playerStats.TakeDamage(damage);
         }
     }
