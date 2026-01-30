@@ -32,18 +32,50 @@ public static class CombatMath
     }
 
     /// <summary>
-    /// HÀM TÍNH DAMAGE CHÍNH THỨC (Theo file công thức)
+    /// Hàm tính damage chính thức
+    /// <param name="skill">Skill sử dụng (null nếu là đánh thường)</param>
+    /// <param name="weapon">Vũ khí đang cầm (để check type khi đánh thường)</param>
+    /// <param name="externalMult">Hệ số phụ (Combo, Charge... mặc định là 1)</param>
     /// </summary>
-    public static float CalculateFullDamage(Stats attacker, Stats target, float t, bool isCrit)
+    public static float CalculateFullDamage(Stats attacker, Stats target, float t, bool isCrit, SkillData skill, WeaponData weapon, float externalMult = 1.0f)
     {
         // --- 1. Tính Raw Damage ---
         float critMult = isCrit ? attacker.baseCritMultiplier : 1.0f;
 
+        // XÁC ĐỊNH MULTIPLIER (SKILL vs BASIC ATTACK) ---
+        float physMult = 0f;
+        float magicMult = 0f;
+        if (skill != null)
+        {
+            // A. Dùng Skill: Lấy hệ số từ Skill
+            physMult = skill.skillPhysicalMultiplier;
+            magicMult = skill.skillMagicMultiplier;
+        }
+        else
+        {
+            // B. Đánh thường: Dựa vào loại vũ khí
+            // Nếu weapon null (tay không) -> mặc định là Physical
+            bool isMagicWeapon = weapon != null && weapon.weaponAtkType == WeaponData.WeaponAtkType.Magic;
+
+            if (isMagicWeapon)
+            {
+                physMult = 0f;
+                magicMult = 1.0f; // Đánh thường hệ số cơ bản là 100%
+            }
+            else // Physical (Hand, Sword, Spear...)
+            {
+                physMult = 1.0f; // Đánh thường hệ số cơ bản là 100%
+                magicMult = 0f;
+            }
+        }
+        // Nhân thêm hệ số phụ (Combo step / Charge attack)
+        physMult *= externalMult;
+        magicMult *= externalMult;
         // [Source: 67] Raw Phys
-        float rawPhysical = attacker.physicalAtk * critMult;
+        float rawPhysical = attacker.physicalAtk * physMult * critMult;
 
         // [Source: 68] Raw Magic
-        float rawMagic = attacker.magicAtk * critMult;
+        float rawMagic = attacker.magicAtk * magicMult * critMult;
 
 
         // --- 2. Tính Armor/Resist thực tế theo hướng đánh (Armor Direction) ---
