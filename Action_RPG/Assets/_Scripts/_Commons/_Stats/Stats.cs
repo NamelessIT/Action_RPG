@@ -66,10 +66,6 @@ public class Stats : MonoBehaviour
     public float baseCritChance;
     public float baseCritMultiplier = 1.5f;
 
-    //Hệ số của bản thân (chưa tính skill)
-    [Header("--- Multipliers ---")]
-    public float skillPhysicalMultiplier = 1.0f;
-    public float skillMagicMultiplier = 0.5f;
 
     [Header("--- Penetration (Player Only) ---")]
     public float armorBackstabReduce = 0.5f;

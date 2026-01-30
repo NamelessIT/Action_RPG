@@ -951,8 +951,6 @@ MonoBehaviour:
   heavyAttackCharge: 2
   baseCritChance: 0
   baseCritMultiplier: 1.5
-  skillPhysicalMultiplier: 1
-  skillMagicMultiplier: 0.5
   armorBackstabReduce: 0.5
   magicResistBackstabReduce: 0.5
   armor: 100
@@ -1128,8 +1126,6 @@ MonoBehaviour:
   heavyAttackCharge: 2
   baseCritChance: 0
   baseCritMultiplier: 1.5
-  skillPhysicalMultiplier: 1
-  skillMagicMultiplier: 0.5
   armorBackstabReduce: 0.5
   magicResistBackstabReduce: 0.5
   armor: 100
@@ -1301,8 +1297,6 @@ MonoBehaviour:
   heavyAttackCharge: 2
   baseCritChance: 0
   baseCritMultiplier: 1.5
-  skillPhysicalMultiplier: 1
-  skillMagicMultiplier: 0.5
   armorBackstabReduce: 0.5
   magicResistBackstabReduce: 0.5
   armor: 100
@@ -1360,6 +1354,26 @@ MonoBehaviour:
   cooldownReduction: 0
   cdrPerAGI: 0.0015
   bonusCdr: 0
+--- !u!114 &1748768106
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1748768083}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7124aff0becfad4497d4ef6d9d95b6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkillManager
+  isPlayer: 1
+  pickUpSkill: {fileID: 0}
+  currentDefaultPassive: {fileID: 0}
+  currentPassive1: {fileID: 0}
+  currentPassive2: {fileID: 0}
+  currentSkill: {fileID: 0}
+  currentSignature: {fileID: 0}
+  enemySkills: []
 --- !u!1 &1791929642
 GameObject:
   m_ObjectHideFlags: 0
@@ -1696,6 +1710,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7595386532533513913, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1748768099}
+    - targetCorrespondingSourceObject: {fileID: 7595386532533513913, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1748768106}
   m_SourcePrefab: {fileID: 100100000, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

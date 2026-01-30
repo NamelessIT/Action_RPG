@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using Unity.Cinemachine;
 using System.Collections;
+using UnityEngine.Rendering;
 
 
 // nhiệm vụ: làm thêm attack cooldown dựa trên attack speed AllyStats.attackSpeed (có kết hợp animator) và hoàn thiện animator
@@ -53,6 +54,7 @@ public class PlayerController : MonoBehaviour
     public bool testIsCrit = false;
 
     private EquipmentManager equipmentManager;
+    private SkillManager skillManager;
 
     // [MỚI] Biến để lưu tiến trình đánh đang chạy
     private Coroutine currentAttackCoroutine;
@@ -74,6 +76,7 @@ public class PlayerController : MonoBehaviour
         currentVisualDir = Vector3.back;
 
         equipmentManager = GetComponent<EquipmentManager>();
+        skillManager = GetComponent<SkillManager>();
     }
 
     void Update()
@@ -193,6 +196,7 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.U)) DropCoreShield();
         if (Input.GetKeyDown(KeyCode.N)) EquipPickedAccessory();
         if (Input.GetKeyDown(KeyCode.M)) DropPickedAccessory();
+        if (Input.GetKeyDown(KeyCode.L)) LearnSkill();
     }
 
     void PerformDash()
@@ -425,6 +429,8 @@ public class PlayerController : MonoBehaviour
         nextAttackQueued = false;
         lastAttackTime = Time.time;
 
+        int currentStep = comboCount;
+
         // [MỚI] Xác định hệ số sát thương cho đòn này
         if (isHeavy)
         {
@@ -449,8 +455,8 @@ public class PlayerController : MonoBehaviour
             // [FIX 1] Reset Trigger cũ để tránh bị dính lệnh thừa từ lần bấm trước
             animator.ResetTrigger("Attack");
 
-            animator.SetFloat("ComboStep", (float)comboCount);
-            Debug.Log("ComboStep: "+comboCount);
+            animator.SetFloat("ComboStep", (float)currentStep);
+            Debug.Log("ComboStep: "+ currentStep);
             //set bool trọng kích animation
             animator.SetTrigger("Attack");
         }
@@ -468,7 +474,7 @@ public class PlayerController : MonoBehaviour
 
         // 4. Deal Damage
         yield return new WaitForSeconds(0.1f);
-        HandleDamageLogic( isHeavy);
+        HandleDamageLogic( isHeavy, currentStep);
 
         // 5. Tính thời gian chờ (Animation Duration)
         float baseAnimDuration = 0.5f;
@@ -501,7 +507,8 @@ public class PlayerController : MonoBehaviour
     }
 
     // Tách phần gây damage ra cho gọn
-    void HandleDamageLogic(bool isHeavy)
+    // [CẬP NHẬT] Thêm tham số stepIndex để biết chính xác đòn này là đòn thứ mấy
+    void HandleDamageLogic(bool isHeavy, int stepIndex)
     {
         bool hitAnything = false;
         Collider[] hitEnemies = Physics.OverlapSphere(transform.position, attackRange, enemyLayer);
@@ -514,19 +521,23 @@ public class PlayerController : MonoBehaviour
                 stats.EnterCombat();
                 float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
 
-                // Có thể thêm logic: Đòn cuối combo (comboCount == maxCombo) thì damage to hơn
                 float totalMultiplier = 1;
+
                 if (isHeavy)
                 {
-                    totalMultiplier=currentDamageMultiplier;
+                    totalMultiplier = currentDamageMultiplier;
                 }
                 else
                 {
-                    Debug.Log("comboCount: "+ comboCount);
-                    totalMultiplier= (comboCount == 1) ? 1.0f : 1.5f;
+                    // [FIX] Dùng stepIndex thay vì comboCount
+                    // stepIndex là giá trị đã được "chụp ảnh" lại lúc bắt đầu đánh
+                    Debug.Log("Current Combo Step: " + stepIndex);
+                    totalMultiplier = (stepIndex == 0) ? 1.0f : 1.5f;
                 }
+
                 float damage = CombatMath.CalculateFullDamage(stats, enemyStats, t, testIsCrit);
                 enemyStats.TakeDamage(damage * totalMultiplier);
+
                 if (currentDamageMultiplier > 1) Debug.Log($"Gây {damage * totalMultiplier} sát thương (Heavy x{currentDamageMultiplier})");
             }
         }
@@ -571,7 +582,10 @@ public class PlayerController : MonoBehaviour
         // Tháo đúng món đang giữ trong biến pickUpAccessory
         equipmentManager.UnequipAccessory(equipmentManager.pickUpAccessory);
     }
-
+    void LearnSkill()
+    {
+        skillManager.EquipSkill(skillManager.pickUpSkill);
+    }
 
     public void TakeDamage(int damage)
     {

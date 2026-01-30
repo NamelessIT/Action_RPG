@@ -40,10 +40,10 @@ public static class CombatMath
         float critMult = isCrit ? attacker.baseCritMultiplier : 1.0f;
 
         // [Source: 67] Raw Phys
-        float rawPhysical = attacker.physicalAtk * attacker.skillPhysicalMultiplier * critMult;
+        float rawPhysical = attacker.physicalAtk * critMult;
 
         // [Source: 68] Raw Magic
-        float rawMagic = attacker.magicAtk * attacker.skillMagicMultiplier * critMult;
+        float rawMagic = attacker.magicAtk * critMult;
 
 
         // --- 2. Tính Armor/Resist thực tế theo hướng đánh (Armor Direction) ---
