@@ -2,7 +2,15 @@
 using System.Collections.Generic;
 
 public enum EnemyType { Hostile, Neutral, Friendly }
-public enum DetectionMethod { Sight, Sound, Range }
+
+// [CẬP NHẬT] DetectionMethod bây giờ có thể chọn cả 2 hoặc từng cái
+[System.Flags]
+public enum DetectionMethod
+{
+    Sight = 1,
+    Range = 2,
+    Both = Sight | Range
+}
 
 public class EnemyStats : Stats
 {
@@ -18,9 +26,22 @@ public class EnemyStats : Stats
     public float aggroDecayRate = 5f;
     public float aggroRadius = 20f;
 
-    [Header("--- Perception ---")]
-    public float detectionRange = 10f;
+    // [MỚI] Thời gian chờ trước khi bắt đầu tụt Aggro (sau khi bị đánh lần cuối)
+    public float aggroRetentionTime = 5.0f;
+    private float lastDamageReceivedTime = -100f; // Mốc thời gian bị đánh cuối cùng
+
+    [Header("--- Perception (Detection) ---")]
+    [Tooltip("Phạm vi phát hiện hình cầu (Cảm nhận xung quanh)")]
+    public float detectionRadius = 5f;
+
+    [Tooltip("Tầm nhìn xa của hình quạt")]
+    public float viewDistance = 10f;
+
+    [Tooltip("Góc nhìn của hình quạt (Độ)")]
     [Range(0, 360)] public float viewAngle = 110f;
+
+    // [MỚI] Layer Mask để chặn tầm nhìn (Tường, Vật cản...)
+    public LayerMask obstacleMask;
 
     [Header("--- Spawn Info ---")]
     [HideInInspector] public Vector3 spawnPosition;
@@ -32,8 +53,8 @@ public class EnemyStats : Stats
         base.baseAttackSpeed = 0.5f;
         spawnPosition = transform.position;
 
-        if (enemyType == EnemyType.Hostile) currentAggro = maxAggro;
-        else currentAggro = 0;
+        currentAggro = 0;
+        obstacleMask = LayerMask.GetMask("Obstacle");
     }
 
     public override void Update()
@@ -48,23 +69,32 @@ public class EnemyStats : Stats
         if (enemyType == EnemyType.Hostile) return;
 
         // Chỉ giảm Aggro khi ĐÃ THOÁT COMBAT (cho Neutral/Friendly)
-        if (outCombat && currentAggro > 0)
+        if (Time.time > lastDamageReceivedTime + aggroRetentionTime)
         {
-            currentAggro -= aggroDecayRate * Time.deltaTime;
+            if (currentAggro > 0)
+            {
+                currentAggro -= aggroDecayRate * Time.deltaTime;
+                // Debug.Log($"Aggro đang giảm: {currentAggro}");
+            }
         }
+
         if (currentAggro < 0) currentAggro = 0;
     }
 
     public override void TakeDamage(float damage)
     {
         base.TakeDamage(damage);
-        AddAggro(50f);
+
+        // [MỚI] Cập nhật thời điểm bị đánh
+        lastDamageReceivedTime = Time.time;
+        AddAggro(25f);
     }
 
     public void AddAggro(float amount)
     {
         currentAggro += amount;
         if (currentAggro > maxAggro) currentAggro = maxAggro;
+        lastDamageReceivedTime = Time.time;
     }
 
 

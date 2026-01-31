@@ -456,7 +456,7 @@ public class PlayerController : MonoBehaviour
             animator.ResetTrigger("Attack");
 
             animator.SetFloat("ComboStep", (float)currentStep);
-            Debug.Log("ComboStep: "+ currentStep);
+            //Debug.Log("ComboStep: "+ currentStep);
             //set bool trọng kích animation
             animator.SetTrigger("Attack");
         }
@@ -534,7 +534,7 @@ public class PlayerController : MonoBehaviour
                 {
                     // [FIX] Dùng stepIndex thay vì comboCount
                     // stepIndex là giá trị đã được "chụp ảnh" lại lúc bắt đầu đánh
-                    Debug.Log("Current Combo Step: " + stepIndex);
+                    //Debug.Log("Current Combo Step: " + stepIndex);
                     totalMultiplier = (stepIndex == 0) ? 1.0f : 1.5f; //Nếu muốn chỉnh scale các hit thì chỉnh ở đây
                 }
 

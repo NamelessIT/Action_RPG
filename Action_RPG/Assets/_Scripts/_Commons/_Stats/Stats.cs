@@ -31,13 +31,13 @@ public class Stats : MonoBehaviour
     private float combatTimer = 0f;
 
     [Header("--- Dash & Run Settings ---")]
-    public float baseDashDistance = 3f;
-    public float baseDashRecovery = 1f;
-    public float dashCost = 20f;
+    public float baseDashDistance = 1.5f;
+    public float baseDashRecovery = 1.25f;
+    public float dashCost = 15f;
     public float baseDashDuration = 0.2f;
 
     // [MỚI] Thể lực tiêu hao mỗi giây khi chạy nhanh
-    public float runCost = 12.0f;
+    public float runCost = 8.0f;
 
     [HideInInspector] public float lastDashTime = -10f;
 
@@ -99,6 +99,9 @@ public class Stats : MonoBehaviour
     public float buffDurationBonus = 0f;
     // [MỚI] Biến lưu hướng mặt thực tế (Dùng cho CombatMath)
     [HideInInspector] public Vector3 facingDirection = Vector3.back;
+
+    [Header("--- Stealth ---")]
+    public float stealthFactor = 1.0f; // 1 = Bình thường, 0.5 = Giảm 50% tầm địch
 
     void Start()
     {

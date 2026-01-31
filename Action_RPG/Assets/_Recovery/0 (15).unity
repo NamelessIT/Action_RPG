@@ -809,7 +809,7 @@ Transform:
   m_GameObject: {fileID: 961739749}
   serializedVersion: 2
   m_LocalRotation: {x: 0.20985529, y: 0, z: 0, w: 0.9777325}
-  m_LocalPosition: {x: 2.93682, y: 2.6, z: -4.66612}
+  m_LocalPosition: {x: 2.93682, y: 2.6, z: -2.29314}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -918,7 +918,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyStats
   maxHp: 0
   currentHp: 0
-  baseHp: 1000
+  baseHp: 100
   baseHpGain: 2
   level: 1
   isInvincible: 0
@@ -929,25 +929,25 @@ MonoBehaviour:
   staminaRegenDelay: 1
   outCombat: 1
   outCombatTime: 10
-  baseDashDistance: 1.5
-  baseDashRecovery: 1.25
-  dashCost: 15
+  baseDashDistance: 3
+  baseDashRecovery: 1
+  dashCost: 20
   baseDashDuration: 0.2
-  runCost: 8
+  runCost: 12
   lastDashTime: -10
   maxSin: 0
   currentSin: 0
   baseSinGain: 5
-  STR: 1
-  DEX: 1
-  INT: 1
-  VIT: 1
-  AGI: 1
-  physicalAtk: 1
-  magicAtk: 1
+  STR: 0
+  DEX: 0
+  INT: 0
+  VIT: 0
+  AGI: 0
+  physicalAtk: 15
+  magicAtk: 5
   physicalLifeSteal: 0
   magicLifeSteal: 0
-  baseAttackSpeed: 0
+  baseAttackSpeed: 0.5
   comboResetTime: 1
   heavyAttackChargeTime: 1
   heavyAttackCharge: 2
@@ -968,21 +968,15 @@ MonoBehaviour:
   resistanceEffect: 0
   buffDurationBonus: 0
   facingDirection: {x: 0, y: 0, z: -1}
-  stealthFactor: 1
   enemyID: 
-  enemyType: 0
-  detectionMethod: 1
+  enemyType: 2
+  detectionMethod: 0
   currentAggro: 0
   maxAggro: 100
   aggroDecayRate: 5
   aggroRadius: 20
-  aggroRetentionTime: 5
-  detectionRadius: 1
-  viewDistance: 1
-  viewAngle: 50
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 0
+  detectionRange: 10
+  viewAngle: 110
   spawnPosition: {x: 0, y: 0, z: 0}
 --- !u!195 &1319874510
 NavMeshAgent:
@@ -1152,7 +1146,6 @@ MonoBehaviour:
   resistanceEffect: 0
   buffDurationBonus: 0
   facingDirection: {x: 0, y: 0, z: -1}
-  stealthFactor: 1
 --- !u!65 &1439149635
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1288,9 +1281,9 @@ MonoBehaviour:
   staminaRegenDelay: 1
   outCombat: 1
   outCombatTime: 10
-  baseDashDistance: 3
-  baseDashRecovery: 1
-  dashCost: 20
+  baseDashDistance: 1.5
+  baseDashRecovery: 1.25
+  dashCost: 15
   baseDashDuration: 0.2
   runCost: 12
   lastDashTime: -10
@@ -1327,7 +1320,6 @@ MonoBehaviour:
   resistanceEffect: 0
   buffDurationBonus: 0
   facingDirection: {x: 0, y: 0, z: -1}
-  stealthFactor: 1
   exp: 0
   H: 200
   maxHpGainBonus: 10
@@ -1453,7 +1445,7 @@ Transform:
   m_GameObject: {fileID: 1820998462}
   serializedVersion: 2
   m_LocalRotation: {x: 0.20985529, y: 0, z: 0, w: 0.9777325}
-  m_LocalPosition: {x: 2.93682, y: 2.6, z: -4.66612}
+  m_LocalPosition: {x: 2.93682, y: 2.6, z: -2.29314}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1683,7 +1675,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7318812970211550158, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -5.003
+      value: -2.63002
       objectReference: {fileID: 0}
     - target: {fileID: 7318812970211550158, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: m_LocalRotation.w

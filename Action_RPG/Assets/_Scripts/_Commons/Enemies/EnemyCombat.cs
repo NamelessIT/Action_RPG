@@ -1,5 +1,6 @@
 ﻿using GLTFast.Schema;
 using System.Collections;
+using Unity.VisualScripting.Antlr3.Runtime.Misc;
 using UnityEngine;
 
 public class EnemyCombat : MonoBehaviour
@@ -56,6 +57,9 @@ public class EnemyCombat : MonoBehaviour
     {
         isAttacking = true;
         lastAttackTime = Time.time;
+
+        if (stats != null) stats.EnterCombat();
+
 
         // 1. Xoay mặt về phía Player ngay trước khi đánh để chính xác hơn
         Vector3 dirToTarget = (target.position - transform.position).normalized;
