@@ -549,6 +549,10 @@ public class PlayerController : MonoBehaviour
                 );
                 enemyStats.TakeDamage(damage);
 
+                // --- [MỚI] BÁO CHO STATS BIẾT LÀ VỪA ĐÁNH TRÚNG ---
+                // Truyền t và testIsCrit (hoặc biến crit thật của bạn)
+                if (stats != null) stats.NotifyOnHitEnemy(t, testIsCrit);
+
                 if (currentDamageMultiplier > 1.5) Debug.Log($"Gây {damage} sát thương (Heavy x{currentDamageMultiplier})");
             }
         }

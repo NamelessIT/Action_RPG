@@ -10,14 +10,24 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
-  m_Name: DefaultPassive2
+  m_Name: LeoPassive
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
-  id: 
-  skillName: 
+  id: LeoPassive
+  skillName: "N\u1ED9i t\u1EA1i c\u1EE7a Leo"
   icon: {fileID: 0}
+  skilDesc: "\u2022 Nh\u1EADn 5% bonusPhysicalAtk v\xE0 bonusMagicAtk\n\u2022 T\u0103ng
+    15% th\u1EDDi gian nh\u1EADn buff.\n\u2022 Khi \u0111\xE1nh backstab (t=1) ho\u1EB7c
+    khi crit, h\u1ED3i 2 Sin Charge (cooldown 1s)."
   skillType: 0
   skillPhysicalMultiplier: 0
   skillMagicMultiplier: 0
   cooldown: 0
   sinChargeReq: 0
-  skilDesc: 
+  effectCode: 2
+  passiveStats:
+  - stat: 14
+    val: 0.05
+    powerMod: 1
+  - stat: 15
+    val: 0.05
+    powerMod: 1
