@@ -53,6 +53,10 @@ public class Stats : MonoBehaviour
     public float physicalAtk ;
     public float magicAtk ;
 
+    [Header("--- LifeSteal ---")]
+    public float physicalLifeSteal;
+    public float magicLifeSteal;
+
     // [SỬA] Tách comment ra khỏi khai báo biến
     [Tooltip("Thời gian giữa các đòn đánh (Cooldown)")]
     public float baseAttackSpeed;
@@ -87,9 +91,12 @@ public class Stats : MonoBehaviour
     private float idleTurnDuration = 0.1f;
     public float combatTurnDuration;
 
+    [Header("--- Knockback & Effect Res ---")]
     public float resistanceKnockBack = 0.1f; 
     public float resistanceEffect = 0f; //giảm thời gian debuff
 
+    [Header("--- Tăng thời gian nhận Buff ---")]
+    public float buffDurationBonus = 0f;
     // [MỚI] Biến lưu hướng mặt thực tế (Dùng cho CombatMath)
     [HideInInspector] public Vector3 facingDirection = Vector3.back;
 

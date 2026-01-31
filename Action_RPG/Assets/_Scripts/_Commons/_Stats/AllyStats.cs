@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System;
 
 public class AllyStats : Stats
 {
@@ -58,7 +59,13 @@ public class AllyStats : Stats
     public float cdrPerAGI=0.0015f;
     public float bonusCdr;
 
-
+    // Đây là cái "chuông" để báo cho Passive Chris biết khi nào bị đánh
+    public Action<float> OnTakeDamage;
+    // Đây là cái chuông để báo cho Passive Leo biết khi nào đánh backstab hoặc crit
+    // Action gửi đi 2 tham số: 
+    // 1. float t (Hệ số hướng, t=1 là lưng)
+    // 2. bool isCrit (Có chí mạng không)
+    public Action<float, bool> OnHitEnemy;
 
     void Start()
     {
@@ -117,6 +124,21 @@ public class AllyStats : Stats
         cooldownReduction = baseCdr + (cdrPerAGI * AGI) + bonusCdr;
     }
 
+    // Ghi đè hàm TakeDamage của cha (Stats)
+    public override void TakeDamage(float damage)
+    {
+        // 1. Gọi logic trừ máu cơ bản của cha (Stats.cs)
+        base.TakeDamage(damage);
+
+        // 2. Rung chuông báo động cho các Passive nghe thấy
+        // Dấu ? để kiểm tra nếu không có ai nghe thì không báo lỗi
+        OnTakeDamage?.Invoke(damage);
+    }
+    // Cho Leo Passive
+    public void NotifyOnHitEnemy(float t, bool isCrit)
+    {
+        OnHitEnemy?.Invoke(t, isCrit);
+    }
     public override void Update()
     {
         base.Update();
