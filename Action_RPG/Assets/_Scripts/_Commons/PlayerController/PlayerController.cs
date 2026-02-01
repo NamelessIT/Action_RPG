@@ -540,6 +540,10 @@ public class PlayerController : MonoBehaviour
 
                 float totalCritChance = stats.critChance + equipmentManager.currentWeapon.bonusCritChance;
                 bool isCrit= CombatMath.CheckIsCrit(totalCritChance);
+                if (isTestCrit)
+                {
+                    isCrit = true;
+                }
                 Debug.Log("isCrit: " + isCrit);
                 if (isCrit)
                 {
