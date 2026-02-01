@@ -107,6 +107,10 @@ public class Stats : MonoBehaviour
     [Header("--- Stealth ---")]
     public float stealthFactor = 1.0f; // 1 = Bình thường, 0.5 = Giảm 50% tầm địch
 
+    [Header ("--- Mark ---")]
+    [Tooltip("Bị đánh dấu")]
+    public bool IsMarked=false;
+
     void Start()
     {
         maxHp = baseHp;
