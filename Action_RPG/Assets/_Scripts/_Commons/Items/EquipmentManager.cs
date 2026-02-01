@@ -411,6 +411,10 @@ public class EquipmentManager : MonoBehaviour
             case StatModifier.StatType.BonusMoveSpeed: allyStats.bonusMoveSpeed += value; break;
             case StatModifier.StatType.BonusCDR: allyStats.bonusCdr += value; break;
             case StatModifier.StatType.DefenseValue: allyStats.defenseValue += value; break;
+            case StatModifier.StatType.PhysicalLifeSteal: allyStats.physicalLifeSteal += value; break;
+            case StatModifier.StatType.MagicLifeSteal: allyStats.magicLifeSteal += value; break;
+            case StatModifier.StatType.KnockBackRes: allyStats.resistanceKnockBack += value; break;
+            case StatModifier.StatType.EffectRes: allyStats.resistanceEffect += value; break;
 
                 // ... Thêm các case cho các chỉ số khác
         }

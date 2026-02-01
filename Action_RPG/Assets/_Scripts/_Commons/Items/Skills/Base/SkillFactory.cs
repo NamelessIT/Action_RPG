@@ -12,15 +12,12 @@ public static class SkillFactory
                 return typeof(ChrisPassive);
             case SkillData.PassiveEffectCode.Leo:
                 return typeof(LeoPassive);
-
             case SkillData.PassiveEffectCode.Vanguard:
-                // return typeof(VanguardPassive); // Bạn sẽ tạo file này sau
-                return null;
-
+                return typeof(VanguardPassive);
             case SkillData.PassiveEffectCode.Warrior:
-                // return typeof(WarriorPassive);
-                return null;
-
+                return typeof(WarriorPassive);
+            case SkillData.PassiveEffectCode.BattleMage:
+                return typeof(BattleMagePassive);
             // ... Thêm các case khác vào đây ...
 
             default:

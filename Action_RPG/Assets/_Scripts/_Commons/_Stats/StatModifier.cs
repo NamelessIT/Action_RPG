@@ -29,6 +29,11 @@ public class StatModifier
         BonusMoveSpeed,
         BonusCDR,
         DefenseValue,
+        PhysicalLifeSteal,
+        MagicLifeSteal,
+        KnockBackRes,
+        EffectRes,
+
         // ... Thêm các stat khác tùy nhu cầu
     }
 
