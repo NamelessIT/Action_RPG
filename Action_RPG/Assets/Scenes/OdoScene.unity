@@ -163,7 +163,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f20b29b3cf784e84fa721ca7704e47ed, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpawnManager
-  enemyPrefab: {fileID: 7595386532533513913, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+  enemyPrefab: {fileID: -2253911629886400664, guid: aeacfc3b876278b4887d6336bdd3d16e, type: 3}
   maxCount: 1
   respawnTime: 10
   spawnRadius: 2
@@ -950,7 +950,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c64231f935be08c47a863eed95e77be4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
-  playerTarget: {fileID: 1748768098}
+  playerTarget: {fileID: 0}
   currentState: Idle
   isReturningHome: 0
   enablePatrol: 0
@@ -959,6 +959,9 @@ MonoBehaviour:
   enableLookAround: 1
   lookAngle: 45
   lookSpeed: 2
+  enableRandomTurn: 1
+  randomTurnMinTime: 10
+  randomTurnMaxTime: 20
 --- !u!114 &1319874509
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1291,11 +1294,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1439149632}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!4 &1748768098 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 7318812970211550158, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
-  m_PrefabInstance: {fileID: 9022525804194762693}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1791929642
 GameObject:
   m_ObjectHideFlags: 0

@@ -27,18 +27,30 @@ public class EnemyAI : MonoBehaviour
     public float patrolWaitTime = 3.0f;
 
     [Space(10)]
-    [Tooltip("Bật tắt hành vi nhìn quanh khi đứng yên (Dùng cho Goblin, tắt cho Statue)")]
+    [Tooltip("Bật tắt hành vi nhìn quanh khi đứng yên (Lắc đầu)")]
     public bool enableLookAround = true;
     [Tooltip("Góc quét (Độ). VD: 45 độ trái phải")]
     public float lookAngle = 45f;
     [Tooltip("Tốc độ quay đầu")]
     public float lookSpeed = 2.0f;
 
-    // Biến nội bộ cho Patrol & Look
+    [Space(10)]
+    [Header("--- Ambient Behavior (Random Turn) ---")]
+    [Tooltip("Cho phép tự đổi hướng đứng khi đang Idle (Dành cho lính gác)")]
+    public bool enableRandomTurn = true;
+    [Tooltip("Thời gian tối thiểu giữa các lần đổi hướng (nên > lookSpeed)")]
+    public float randomTurnMinTime = 10.0f;
+    [Tooltip("Thời gian tối đa giữa các lần đổi hướng")]
+    public float randomTurnMaxTime = 20.0f;
+
+    // Biến nội bộ
     private Vector3 baseIdleDirection;
     private float lookTimer;
     private float currentPatrolTimer;
     private bool isPatrolWaiting = false;
+
+    // [MỚI] Timer cho Random Turn
+    private float nextTurnTimer;
 
     void Start()
     {
@@ -71,6 +83,10 @@ public class EnemyAI : MonoBehaviour
         }
 
         baseIdleDirection = stats.facingDirection;
+
+        // [MỚI] Khởi tạo timer quay ngẫu nhiên
+        nextTurnTimer = Random.Range(randomTurnMinTime, randomTurnMaxTime);
+
         HandleAnimation(stats.facingDirection);
     }
 
@@ -126,7 +142,6 @@ public class EnemyAI : MonoBehaviour
             // Nếu không có Aggro -> Idle hoặc Tuần tra
             else
             {
-                // [Logic này thay thế cho HandleNormalBehavior cũ]
                 if (stats.enemyType == EnemyType.Hostile && canSensePlayer)
                 {
                     if (distToSpawn <= stats.aggroRadius)
@@ -154,6 +169,43 @@ public class EnemyAI : MonoBehaviour
 
         HandleVisuals();
         combat.HandleCombatUpdate();
+    }
+
+    // [MỚI] Hàm xử lý quay ngẫu nhiên hướng đứng
+    void HandleRandomTurn()
+    {
+        nextTurnTimer -= Time.deltaTime;
+
+        if (nextTurnTimer <= 0)
+        {
+            // Chọn một góc ngẫu nhiên (360 độ)
+            float randomAngle = Random.Range(0f, 360f);
+
+            // Tính vector hướng mới từ góc đó
+            // (Giả sử trục Y là trục đứng, xoay quanh Y)
+            Quaternion rot = Quaternion.Euler(0, randomAngle, 0);
+            Vector3 newDir = rot * Vector3.forward; // Hoặc Vector3.right tùy trục gốc
+
+            // Cập nhật hướng gốc (trục xoay)
+            baseIdleDirection = newDir.normalized;
+
+            // Nếu KHÔNG bật LookAround, ta phải cập nhật facingDirection ngay lập tức
+            // Nếu bật LookAround, hàm HandleLookAround sẽ tự lo việc xoay theo baseIdleDirection
+            if (!enableLookAround)
+            {
+                stats.facingDirection = baseIdleDirection;
+            }
+            else
+            {
+                // Nếu đang lắc đầu, reset LookTimer để nó bắt đầu lắc từ trung tâm hướng mới
+                // giúp chuyển động mượt hơn, không bị giật cục
+                lookTimer = 0f;
+            }
+
+            // Reset timer cho lần quay tiếp theo
+            nextTurnTimer = Random.Range(randomTurnMinTime, randomTurnMaxTime);
+            // Debug.Log("Enemy đổi hướng đứng!");
+        }
     }
 
     // --- CÁC HÀM XỬ LÝ LOGIC ---
@@ -197,7 +249,13 @@ public class EnemyAI : MonoBehaviour
                 }
 
                 currentPatrolTimer -= Time.deltaTime;
+
+                // Khi đứng chờ ở điểm tuần tra, cũng có thể áp dụng LookAround
                 if (enableLookAround) HandleLookAround();
+
+                // Tùy chọn: Bạn có muốn nó tự quay hướng ngẫu nhiên trong lúc chờ Patrol không?
+                // Nếu muốn thì bỏ comment dòng dưới:
+                // if (enableRandomTurn) HandleRandomTurn(); 
 
                 if (currentPatrolTimer <= 0)
                 {
@@ -217,9 +275,34 @@ public class EnemyAI : MonoBehaviour
         }
         else
         {
+            // Logic cho Enemy đứng yên (không đi tuần)
             State_Idle();
         }
     }
+
+    void State_Idle()
+    {
+        currentState = "Idle";
+        if (agent.isOnNavMesh) agent.isStopped = true;
+
+        if (stats.facingDirection != Vector3.zero && baseIdleDirection == Vector3.zero)
+            baseIdleDirection = stats.facingDirection;
+
+        // [MỚI] Gọi hàm xử lý quay ngẫu nhiên
+        if (enableRandomTurn)
+        {
+            HandleRandomTurn();
+        }
+
+        // Gọi hàm nhìn quanh (lắc lư)
+        if (enableLookAround)
+        {
+            HandleLookAround();
+        }
+    }
+
+    // Các hàm khác giữ nguyên (HandleLookAround, GetRandomPatrolPoint, HandleReturningState...)
+    // Copy y nguyên phần dưới của file cũ
 
     Vector3 GetRandomPatrolPoint()
     {
@@ -270,14 +353,11 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        // Kiểm tra xem Agent đã tính xong đường chưa VÀ khoảng cách còn lại <= khoảng cách dừng cho phép
         if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.5f)
         {
-            // Đã về đến nơi an toàn
             isReturningHome = false;
             stats.currentAggro = 0;
             stats.outCombat = true;
-
             baseIdleDirection = stats.facingDirection;
             ResetPatrolState();
         }
@@ -295,28 +375,12 @@ public class EnemyAI : MonoBehaviour
         State_Idle();
     }
 
-    // --- CÁC HÀM HÀNH ĐỘNG ---
-
     void State_MoveTo(Vector3 targetPos, string debugState)
     {
         if (!agent.isOnNavMesh) return;
         currentState = debugState;
         agent.isStopped = false;
         agent.SetDestination(targetPos);
-    }
-
-    void State_Idle()
-    {
-        currentState = "Idle";
-        if (agent.isOnNavMesh) agent.isStopped = true;
-
-        if (stats.facingDirection != Vector3.zero && baseIdleDirection == Vector3.zero)
-            baseIdleDirection = stats.facingDirection;
-
-        if (enableLookAround)
-        {
-            HandleLookAround();
-        }
     }
 
     void HandleLookAround()
@@ -348,14 +412,12 @@ public class EnemyAI : MonoBehaviour
         currentState = "Fleeing";
         Vector3 dirToPlayer = transform.position - playerTarget.position;
         Vector3 fleePos = transform.position + dirToPlayer.normalized * 5f;
-
         float distFleeToSpawn = Vector3.Distance(fleePos, stats.spawnPosition);
         if (distFleeToSpawn > stats.aggroRadius)
         {
             Vector3 dirFromSpawn = (fleePos - stats.spawnPosition).normalized;
             fleePos = stats.spawnPosition + dirFromSpawn * stats.aggroRadius;
         }
-
         NavMeshHit hit;
         if (NavMesh.SamplePosition(fleePos, out hit, 5.0f, NavMesh.AllAreas))
         {
@@ -366,8 +428,6 @@ public class EnemyAI : MonoBehaviour
             State_MoveTo(stats.spawnPosition, "Fleeing Home");
         }
     }
-
-    // --- VISUALS ---
 
     void HandleVisuals()
     {
@@ -408,38 +468,28 @@ public class EnemyAI : MonoBehaviour
     bool CheckDetection()
     {
         if (playerTarget == null) return false;
-
         float playerStealth = 1.0f;
         Stats playerStats = playerTarget.GetComponent<Stats>();
         if (playerStats != null) playerStealth = playerStats.stealthFactor;
-
         float distToPlayer = Vector3.Distance(transform.position, playerTarget.position);
         float effectiveRadius = stats.detectionRadius * playerStealth;
-
         if ((stats.detectionMethod & DetectionMethod.Range) != 0)
         {
             if (distToPlayer <= effectiveRadius) return true;
         }
-
         if ((stats.detectionMethod & DetectionMethod.Sight) != 0)
         {
             float effectiveViewDist = stats.viewDistance * playerStealth;
             float effectiveAngle = stats.viewAngle;
-
             if (distToPlayer <= effectiveViewDist)
             {
                 Vector3 dirToPlayer = (playerTarget.position - transform.position).normalized;
                 Vector3 facingDir = stats.facingDirection;
                 if (facingDir == Vector3.zero) facingDir = transform.forward;
-
                 float angleToPlayer = Vector3.Angle(facingDir, dirToPlayer);
-
                 if (angleToPlayer < effectiveAngle / 2f)
                 {
-                    if (!Physics.Raycast(transform.position, dirToPlayer, distToPlayer, stats.obstacleMask))
-                    {
-                        return true;
-                    }
+                    if (!Physics.Raycast(transform.position, dirToPlayer, distToPlayer, stats.obstacleMask)) return true;
                 }
             }
         }
@@ -452,7 +502,6 @@ public class EnemyAI : MonoBehaviour
         {
             Gizmos.color = new Color(1, 1, 0, 0.3f);
             Gizmos.DrawWireSphere(transform.position, stats.detectionRadius);
-
             if ((stats.detectionMethod & DetectionMethod.Sight) != 0)
             {
                 Gizmos.color = new Color(1, 0, 0, 0.5f);
@@ -466,10 +515,8 @@ public class EnemyAI : MonoBehaviour
                 Gizmos.color = Color.blue;
                 Gizmos.DrawRay(transform.position, forward * stats.viewDistance);
             }
-
             Gizmos.color = Color.magenta;
             Gizmos.DrawWireSphere(transform.position, stats.aggroRadius);
-
             if (enablePatrol)
             {
                 Gizmos.color = Color.cyan;
