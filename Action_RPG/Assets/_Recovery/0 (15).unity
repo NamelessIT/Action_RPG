@@ -1281,9 +1281,9 @@ MonoBehaviour:
   staminaRegenDelay: 1
   outCombat: 1
   outCombatTime: 10
-  baseDashDistance: 3
-  baseDashRecovery: 1
-  dashCost: 20
+  baseDashDistance: 1.5
+  baseDashRecovery: 1.25
+  dashCost: 15
   baseDashDuration: 0.2
   runCost: 12
   lastDashTime: -10

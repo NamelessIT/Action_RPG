@@ -62,6 +62,7 @@ public class EnemyAI : MonoBehaviour
                 agent.isStopped = true;
                 agent.velocity = Vector3.zero; // Dừng trượt
             }
+            stats.EnterCombat();
             return;
         }
 
@@ -80,13 +81,21 @@ public class EnemyAI : MonoBehaviour
             Debug.Log("Quá xa nhà -> Bắt đầu quay về!");
             isReturningHome = true;
             stats.currentAggro = 0;
-            stats.outCombat = true; // Ép buộc thoát combat để tránh lỗi lặp
+
+            // [YÊU CẦU 2] OutCombat = true khi quay về
+            stats.outCombat = true;
         }
 
         // --- 2. XỬ LÝ STATE ---
 
         if (isReturningHome)
         {
+            // Trong lúc đang đi về, đảm bảo vẫn là Out Combat (trừ khi bị đánh lại)
+            if (stats.outCombat == false && currentState == "Returning")
+            {
+                // Dòng này tùy chọn: Nếu bạn muốn nó hồi máu nhanh khi đang đi bộ về
+                // stats.outCombat = true; 
+            }
             HandleReturningState(distToSpawn, distToPlayer);
         }
         else
@@ -110,7 +119,11 @@ public class EnemyAI : MonoBehaviour
         if (stats.enemyType == EnemyType.Hostile)
         {
             // Hostile: Hung hăng mọi lúc mọi nơi
-            if (gotHit || blockedByPlayer) shouldFightBack = true;
+            if (gotHit || blockedByPlayer)
+            {
+                stats.outCombat = false;
+                shouldFightBack = true;
+            } 
         }
         else if (stats.enemyType == EnemyType.Neutral)
         {
@@ -123,10 +136,12 @@ public class EnemyAI : MonoBehaviour
             if (gotHit)
             {
                 shouldFightBack = true;
+                stats.outCombat= false;
             }
             else if (blockedByPlayer && distToSpawn > 3.0f)
             {
                 shouldFightBack = true;
+                stats.outCombat = false;
             }
         }
 
@@ -135,6 +150,7 @@ public class EnemyAI : MonoBehaviour
         {
             Debug.Log("Đang về thì bị khiêu khích -> Chiến tiếp!");
             isReturningHome = false;
+            stats.outCombat = false;
 
             // Nếu chưa có Aggro (trường hợp bị chặn đường), buff lên để đánh
             if (stats.currentAggro <= 0) stats.AddAggro(50f);
@@ -148,6 +164,7 @@ public class EnemyAI : MonoBehaviour
         {
             isReturningHome = false;
             stats.currentAggro = 0;
+            stats.outCombat = true;
             State_Idle();
         }
         else
@@ -220,12 +237,14 @@ public class EnemyAI : MonoBehaviour
     void State_Chase()
     {
         State_MoveTo(playerTarget.position, "Chasing");
+        stats.EnterCombat();
     }
 
     void State_Attack()
     {
         currentState = "Attacking";
         if (agent.isOnNavMesh) agent.isStopped = true;
+        stats.EnterCombat();
         combat.PerformBasicAttack();
     }
 
@@ -280,19 +299,98 @@ public class EnemyAI : MonoBehaviour
         else if (dir.x < 0) spriteRenderer.flipX = false;
     }
 
+    // [HÀM MỚI] Kiểm tra phát hiện Player
     bool CheckDetection()
     {
-        float dist = Vector3.Distance(transform.position, playerTarget.position);
-        return dist <= stats.detectionRange;
+        if (playerTarget == null) return false;
+
+        // 1. Lấy chỉ số lén lút của Player
+        float playerStealth = 1.0f;
+        Stats playerStats = playerTarget.GetComponent<Stats>();
+        if (playerStats != null)
+        {
+            playerStealth = playerStats.stealthFactor;
+        }
+
+        // 2. Tính khoảng cách thực tế
+        float distToPlayer = Vector3.Distance(transform.position, playerTarget.position);
+
+        // --- A. PHÁT HIỆN BẰNG PHẠM VI (RANGE / SOUND) ---
+        // Phạm vi này bị giảm bởi chỉ số Stealth
+        // Ví dụ: Radius gốc 5m, Stealth 0.8 -> Còn 4m
+        float effectiveRadius = stats.detectionRadius * playerStealth;
+
+        if ((stats.detectionMethod & DetectionMethod.Range) != 0)
+        {
+            if (distToPlayer <= effectiveRadius) return true;
+        }
+
+        // --- B. PHÁT HIỆN BẰNG TẦM NHÌN (SIGHT) ---
+        if ((stats.detectionMethod & DetectionMethod.Sight) != 0)
+        {
+            // Tầm nhìn xa cũng bị giảm
+            float effectiveViewDist = stats.viewDistance * playerStealth;
+            // Góc nhìn cũng bị hẹp lại (Option nâng cao, tùy bạn muốn dùng hay không)
+            // float effectiveAngle = stats.viewAngle * playerStealth; 
+            float effectiveAngle = stats.viewAngle; // Tạm thời giữ nguyên góc
+
+            if (distToPlayer <= effectiveViewDist)
+            {
+                Vector3 dirToPlayer = (playerTarget.position - transform.position).normalized;
+
+                // Tính góc giữa hướng mặt Enemy và hướng tới Player
+                // Lưu ý: facingDirection là Vector3.back/forward... trong game 2.5D của bạn
+                // Nếu dùng 3D thuần thì dùng transform.forward
+                Vector3 facingDir = stats.facingDirection;
+                if (facingDir == Vector3.zero) facingDir = transform.forward; // Fallback
+
+                float angleToPlayer = Vector3.Angle(facingDir, dirToPlayer);
+
+                // Kiểm tra góc (chia đôi vì viewAngle là tổng góc mở)
+                if (angleToPlayer < effectiveAngle / 2f)
+                {
+                    // [QUAN TRỌNG] Kiểm tra vật cản (Raycast)
+                    // Bắn tia từ mắt Enemy tới Player
+                    if (!Physics.Raycast(transform.position, dirToPlayer, distToPlayer, stats.obstacleMask))
+                    {
+                        return true; // Nhìn thấy và không bị che
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
+    // [CẬP NHẬT] Vẽ Gizmos để debug dễ hơn
     void OnDrawGizmosSelected()
     {
         if (stats != null)
         {
-            Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(transform.position, stats.detectionRange);
-            Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, stats.aggroRadius);
-            Gizmos.color = Color.magenta; Gizmos.DrawWireSphere(transform.position, stats.aggroRadius * 1.5f);
+            // 1. Vẽ phạm vi tròn (Range)
+            Gizmos.color = new Color(1, 1, 0, 0.3f); // Vàng mờ
+            Gizmos.DrawWireSphere(transform.position, stats.detectionRadius);
+
+            // 2. Vẽ hình quạt (Sight)
+            if ((stats.detectionMethod & DetectionMethod.Sight) != 0)
+            {
+                Gizmos.color = new Color(1, 0, 0, 0.5f); // Đỏ
+                Vector3 forward = stats.facingDirection != Vector3.zero ? stats.facingDirection : transform.forward;
+
+                // Vẽ 2 cạnh của hình quạt
+                Quaternion leftRayRotation = Quaternion.AngleAxis(-stats.viewAngle / 2, Vector3.up);
+                Quaternion rightRayRotation = Quaternion.AngleAxis(stats.viewAngle / 2, Vector3.up);
+
+                Vector3 leftRay = leftRayRotation * forward;
+                Vector3 rightRay = rightRayRotation * forward;
+
+                Gizmos.DrawRay(transform.position, leftRay * stats.viewDistance);
+                Gizmos.DrawRay(transform.position, rightRay * stats.viewDistance);
+            }
+
+            // Vẽ Aggro Radius
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawWireSphere(transform.position, stats.aggroRadius);
         }
     }
 }

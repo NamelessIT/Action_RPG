@@ -19,6 +19,7 @@ public class WeaponData : ScriptableObject
     { 
         Physical,
         Magic,
+        Both,
     }
     public enum Rarity
     {
