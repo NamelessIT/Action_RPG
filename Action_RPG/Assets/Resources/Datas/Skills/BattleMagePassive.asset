@@ -10,14 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
-  m_Name: Passive1
+  m_Name: BattleMagePassive
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
-  id: SKL_PAS_DEF_01
-  skillName: "N\u1ED9i t\u1EA1i"
+  id: BattleMagePassive
+  skillName: 
   icon: {fileID: 0}
+  skilDesc: "\u2022 10% MagicLifeSteal\n\u2022 T\u1ED1c \u0111\u1ED9 di chuy\u1EC3n
+    c\u1ED9ng th\xEAm chuy\u1EC3n th\xE0nh Armor v\xE0 Magic Resist\n\u2022 T\u0103ng
+    t\u1ED1c \u0111\u1ED9 h\u1ED3i Sin Charge khi \u0111\u1EE9ng y\xEAn."
   skillType: 1
   skillPhysicalMultiplier: 0
   skillMagicMultiplier: 0
   cooldown: 0
   sinChargeReq: 0
-  skilDesc: 
+  effectCode: 5
+  passiveStats:
+  - stat: 24
+    val: 0.1
+    powerMod: 1

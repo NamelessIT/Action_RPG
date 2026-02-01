@@ -94,14 +94,41 @@ public static class CombatMath
         float magicDR = 0.25f * (magicResistDir / (magicResistDir + C_CONST));
 
 
-        // --- 4. Tính Defense Value Multiplier (Chỉ số đỡ đòn của vũ khí) ---
-        // [Source: 73, 74] Chỉ tác dụng nếu t <= 0.5 (Đánh trước mặt hoặc bên hông)
+        // --- 4. TÍNH DEFENSE & MANUAL GUARD (SỬA LẠI) ---
         float defenseValMult = 1.0f;
-        if (t <= 0.5f)
-        {
-            defenseValMult = 1f / (1f + target.defenseValue * K_CONST);
-        }
+        float skillReductionMult = 1.0f; // Mặc định là 1 (không giảm)
 
+        // Kiểm tra góc Block (blockThreshold nằm ở Stats cha nên gọi trực tiếp được)
+        if (t <= target.blockThreshold)
+        {
+            // A. Auto Block bằng chỉ số Defense của vũ khí
+            defenseValMult = 1f / (1f + target.defenseValue * K_CONST);
+
+            // B. Manual Guard (Phải ép kiểu sang AllyStats mới check được)
+            if (target is AllyStats allyTarget)
+            {
+                if (allyTarget.isManualGuarding)
+                {
+                    // Giảm damage theo chỉ số (VD: 1 - 0.5 = 0.5)
+                    skillReductionMult = 1.0f - allyTarget.manualGuardReduction;
+                    allyTarget.NotifyBlockSuccess(); // C. Báo hiệu Block thành công (Logic hồi Stamina)
+                }
+            }
+            else // Nếu target là Enemy thường
+            {               
+                if (target.defenseValue > 0)
+                {
+                    // Enemy có thể cần logic notify riêng nếu muốn, tạm thời bỏ qua
+                }
+            }
+        }
+        // Cứ là AllyStats và đang vung kiếm (MomentumActive) là được giảm
+        if (target is AllyStats warrior && warrior.isMomentumActive)
+        {
+            // Nhân dồn giảm sát thương (Multiplicative stacking)
+            // Ví dụ: Giảm 30% -> Nhân với 0.7
+            skillReductionMult *= (1.0f - warrior.momentumReduction);
+        }
 
         // --- 5. Tính Direction Bonus Multiplier (Thưởng sát thương theo hướng) ---
         // [Source: 75-80] Từ 1.0 (t=0) đến 1.25 (t=1). Công thức tuyến tính: 1 + 0.25 * t
@@ -110,14 +137,18 @@ public static class CombatMath
 
         // --- 6. TÍNH FINAL DAMAGE ---
         // [Source: 81] Final Phys
-        float finalPhys = rawPhysical * (1 - physDR) * defenseValMult * dirBonusMult;
+        float finalPhys = rawPhysical * (1 - physDR) * defenseValMult * dirBonusMult * skillReductionMult;
 
         // [Source: 82] Final Magic
-        float finalMagic = rawMagic * (1 - magicDR) * defenseValMult * dirBonusMult;
+        float finalMagic = rawMagic * (1 - magicDR) * defenseValMult * dirBonusMult * skillReductionMult;
 
         // [Source: 83] Tổng
         float totalDamage = finalPhys + finalMagic;
-
+        // Debug kiểm tra xem skillReductionMult có hoạt động không
+        if (skillReductionMult < 1.0f)
+        {
+            Debug.Log($"<color=green>SHIELD BLOCK!</color> Giảm {(1 - skillReductionMult) * 100}% sát thương. Damage còn: {totalDamage}");
+        }
         // Debug chi tiết (có thể comment lại nếu spam console)
 
         Debug.Log($"LOG DAMGE >> RawPhys: {rawPhysical} | RawMagic: {rawMagic} \n" +

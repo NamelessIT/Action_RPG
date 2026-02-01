@@ -390,7 +390,7 @@ public class PlayerController : MonoBehaviour
 
         if (!isTurning && isWalking && !isDashing)
         {
-            float currentSpeed = stats.baseMoveSpeed * (isSprinting ? stats.runSpeedMultiplier : 1f);
+            float currentSpeed = stats.moveSpeed * (isSprinting ? stats.runSpeedMultiplier : 1f);
             Vector3 targetPosition = rb.position + movementInput * currentSpeed * Time.fixedDeltaTime;
             rb.MovePosition(targetPosition);
         }

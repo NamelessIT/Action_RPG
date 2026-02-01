@@ -96,19 +96,18 @@ public class SkillManager : MonoBehaviour
                     Debug.Log("Đã trang bị Passive này rồi!");
                     return;
                 }
-
                 // Bước 2: Tìm slot trống
                 if (currentPassive1 == null)
                 {
                     Debug.Log($"Trang bị Passive vào Slot 1: {newSkill.skillName}");
                     currentPassive1 = newSkill;
-                    // TODO: Cộng chỉ số
+                    ApplyPassiveEffect(newSkill);
                 }
                 else if (currentPassive2 == null)
                 {
                     Debug.Log($"Trang bị Passive vào Slot 2: {newSkill.skillName}");
                     currentPassive2 = newSkill;
-                    // TODO: Cộng chỉ số
+                    ApplyPassiveEffect(newSkill);
                 }
                 else
                 {
@@ -291,6 +290,10 @@ public class SkillManager : MonoBehaviour
             case StatModifier.StatType.BonusMoveSpeed: allyStats.bonusMoveSpeed += value; break;
             case StatModifier.StatType.BonusCDR: allyStats.bonusCdr += value; break;
             case StatModifier.StatType.DefenseValue: allyStats.defenseValue += value; break;
+            case StatModifier.StatType.PhysicalLifeSteal: allyStats.physicalLifeSteal += value; break;
+            case StatModifier.StatType.MagicLifeSteal: allyStats.magicLifeSteal += value; break;
+            case StatModifier.StatType.KnockBackRes: allyStats.resistanceKnockBack += value; break;
+            case StatModifier.StatType.EffectRes: allyStats.resistanceEffect += value; break;
 
                 // ... Thêm các case cho các chỉ số khác
         }

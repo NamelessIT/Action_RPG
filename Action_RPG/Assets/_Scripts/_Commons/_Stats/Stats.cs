@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System;
 
 public class Stats : MonoBehaviour
 {
@@ -79,6 +80,9 @@ public class Stats : MonoBehaviour
     public float armor = 100;
     public float magicResist = 100;
     public float defenseValue = 20;
+    [Header("--- Defense Logic ---")]
+    // Góc block hiệu quả. Mặc định 0.5 (180 độ). Vanguard sẽ sửa thành 0.75 (270 độ).
+    public float blockThreshold = 0.5f;
 
     [Header("--- Movement Setting ---")]
     public float baseMoveSpeed = 5f;

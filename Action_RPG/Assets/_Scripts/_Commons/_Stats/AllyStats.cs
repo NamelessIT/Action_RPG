@@ -40,7 +40,8 @@ public class AllyStats : Stats
     [Header("--- Movement ---")]
     public float moveSpeed;
     public float moveSpeedReducePerVIT=0.005f;
-    public float minSpeed=3f;
+    public float minSpeed = 3f;
+    public float maxSpeed = 9f;
     public float maxReduceBySTR=0.6f;
     public float M = 150f;
     public float bonusMoveSpeed;
@@ -59,13 +60,30 @@ public class AllyStats : Stats
     public float cdrPerAGI=0.0015f;
     public float bonusCdr;
 
+    // ---------------- Chris Passive ----------------
     // Đây là cái "chuông" để báo cho Passive Chris biết khi nào bị đánh
     public Action<float> OnTakeDamage;
+
+    // ---------------- Leo Passive ----------------
     // Đây là cái chuông để báo cho Passive Leo biết khi nào đánh backstab hoặc crit
     // Action gửi đi 2 tham số: 
     // 1. float t (Hệ số hướng, t=1 là lưng)
     // 2. bool isCrit (Có chí mạng không)
     public Action<float, bool> OnHitEnemy;
+
+    // ---------------- Vanguard Passive ----------------
+    // Sự kiện khi Block thành công (Để Vanguard hồi Stamina)
+    public Action OnBlockSuccess;
+    // [MỚI] Biến xác định đang dựng khiên chủ động
+    public bool isManualGuarding = false;
+    // [MỚI] Chỉ số giảm sát thương khi dựng khiên (0.5 = 50%)
+    public float manualGuardReduction = 0f;
+
+    // ---------------- Warrior Passive ----------------
+    // Biến xác định đang trong trạng thái vung kiếm
+    public bool isMomentumActive = false;
+    // Chỉ số giảm thương (0.3 = 30%)
+    public float momentumReduction = 0.3f;
 
     void Start()
     {
@@ -109,8 +127,9 @@ public class AllyStats : Stats
 
         // Công thức Move Speed (Sửa lỗi cú pháp ^ thành Mathf.Pow)
         // moveSpeed = baseMoveSpeed + (0.2f * Mathf.Pow(AGI, 0.5f) - VIT * 0.005f) ...
-        moveSpeed = baseMoveSpeed * (0.2f * Mathf.Pow(AGI, 0.5f) - VIT * moveSpeedReducePerVIT) * ((1 + trueMoveFlexibility) / 2) * bonusMoveSpeed;
+        moveSpeed = baseMoveSpeed * (1 + ((0.05f * Mathf.Sqrt(AGI) - VIT * moveSpeedReducePerVIT) * (1 + trueMoveFlexibility) / 2)) * (1 + bonusMoveSpeed);
         if (moveSpeed < minSpeed) moveSpeed = minSpeed; // Min speed
+        if (moveSpeed > maxSpeed) moveSpeed = maxSpeed;
 
         // 7. Tính Dash
         dashDistance = baseDashDistance * (1f - trueMoveFlexibility); // Nặng thì lướt ngắn
@@ -124,7 +143,7 @@ public class AllyStats : Stats
         cooldownReduction = baseCdr + (cdrPerAGI * AGI) + bonusCdr;
     }
 
-    // Ghi đè hàm TakeDamage của cha (Stats)
+    // Ghi đè hàm TakeDamage của cha (Stats) (Cho Chris)
     public override void TakeDamage(float damage)
     {
         // 1. Gọi logic trừ máu cơ bản của cha (Stats.cs)
@@ -138,6 +157,11 @@ public class AllyStats : Stats
     public void NotifyOnHitEnemy(float t, bool isCrit)
     {
         OnHitEnemy?.Invoke(t, isCrit);
+    }
+    // Hàm để CombatMath gọi khi tính toán thấy Block thành công (Cho Vanguard)
+    public void NotifyBlockSuccess()
+    {
+        OnBlockSuccess?.Invoke();
     }
     public override void Update()
     {
