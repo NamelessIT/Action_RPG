@@ -140,7 +140,6 @@ public class Stats : MonoBehaviour
             if (combatTimer >= outCombatTime)
             {
                 outCombat = true;
-                Debug.Log(">> Out Combat! (Hồi thể lực nhanh, Xoay nhanh)");
             }
         }
     }

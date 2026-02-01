@@ -51,7 +51,7 @@ public class PlayerController : MonoBehaviour
     private Vector3 currentVisualDir;
 
     // Testing
-    public bool testIsCrit = false;
+    public bool isTestCrit = false;
 
     private EquipmentManager equipmentManager;
     private SkillManager skillManager;
@@ -524,36 +524,44 @@ public class PlayerController : MonoBehaviour
                 float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
 
                 // Tính hệ số combo / charge (đây là externalMult)
-                float totalMultiplier = 1;
+                float attackMultiplier = 1;
 
                 if (isHeavy)
                 {
-                    totalMultiplier = currentDamageMultiplier;
+                    attackMultiplier = currentDamageMultiplier;
                 }
                 else
                 {
                     // [FIX] Dùng stepIndex thay vì comboCount
                     // stepIndex là giá trị đã được "chụp ảnh" lại lúc bắt đầu đánh
                     //Debug.Log("Current Combo Step: " + stepIndex);
-                    totalMultiplier = (stepIndex == 0) ? 1.0f : 1.5f; //Nếu muốn chỉnh scale các hit thì chỉnh ở đây
+                    attackMultiplier = (stepIndex == 0) ? 1.0f : 1.5f; //Nếu muốn chỉnh scale các hit thì chỉnh ở đây
+                }
+
+                float totalCritChance = stats.critChance + equipmentManager.currentWeapon.bonusCritChance;
+                bool isCrit= CombatMath.CheckIsCrit(totalCritChance);
+                Debug.Log("isCrit: " + isCrit);
+                if (isCrit)
+                {
+                    // Có thể thêm hiệu ứng màn hình rung, tiếng động mạnh ở đây
+                     Debug.Log("<color=red>CRITICAL HIT!</color>");
                 }
 
                 float damage = CombatMath.CalculateFullDamage(
                     stats,
                     enemyStats,
                     t,
-                    testIsCrit,
+                    isCrit,
                     null,          // SkillData (null vì là đánh thường)
                     currentWpn,    // Để biêt xem vũ khí là Physical hay Magic
-                    totalMultiplier // Hệ số gây sát thương của combo đòn đánh
+                    attackMultiplier // Hệ số gây sát thương của combo đòn đánh
                 );
                 enemyStats.TakeDamage(damage);
 
                 // --- [MỚI] BÁO CHO STATS BIẾT LÀ VỪA ĐÁNH TRÚNG ---
-                // Truyền t và testIsCrit (hoặc biến crit thật của bạn)
-                if (stats != null) stats.NotifyOnHitEnemy(t, testIsCrit);
+                // Truyền t và isCrit (hoặc biến crit thật của bạn)
+                if (stats != null) stats.NotifyOnHitEnemy(t, isCrit);
 
-                if (currentDamageMultiplier > 1.5) Debug.Log($"Gây {damage} sát thương (Heavy x{currentDamageMultiplier})");
             }
         }
         if (hitAnything) Debug.Log("Tấn công TRÚNG ĐỊCH -> Vào Combat");

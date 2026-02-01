@@ -1030,7 +1030,7 @@ MonoBehaviour:
   stealthFactor: 1
   IsMarked: 0
   enemyID: 
-  enemyType: 0
+  enemyType: 1
   detectionMethod: 1
   currentAggro: 0
   maxAggro: 100
@@ -1540,6 +1540,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: baseCritChance
+      value: 80
+      objectReference: {fileID: 0}
     - target: {fileID: 7318812970211550158, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: m_LocalPosition.x
       value: 2.84514
