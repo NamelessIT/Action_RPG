@@ -94,6 +94,17 @@ public class EnemyAI : MonoBehaviour
     {
         if (playerTarget == null) return;
 
+        // Nếu bị Stun -> Đứng yên, không làm gì cả, return luôn
+        if (stats.isStunned)
+        {
+            if (agent.isOnNavMesh)
+            {
+                agent.isStopped = true;
+                agent.velocity = Vector3.zero;
+            }
+            return;
+        }
+
         if (combat.isAttacking)
         {
             if (agent.isOnNavMesh)

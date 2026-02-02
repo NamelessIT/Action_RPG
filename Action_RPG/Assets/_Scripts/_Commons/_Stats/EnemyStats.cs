@@ -81,14 +81,29 @@ public class EnemyStats : Stats
         if (currentAggro < 0) currentAggro = 0;
     }
 
-    public override void TakeDamage(float damage)
+    // Override phiên bản đầy đủ (DamageInfo)
+    public override void TakeDamage(DamageInfo info)
     {
-        base.TakeDamage(damage);
+        base.TakeDamage(info);
 
         // [MỚI] Cập nhật thời điểm bị đánh
-        lastDamageReceivedTime = Time.time;
+        // (Biến này bạn đã khai báo ở phần Aggro System trước đó)
+        // lastDamageReceivedTime = Time.time; 
+
+        // Thêm Aggro (Hận thù)
         AddAggro(25f);
     }
+
+    // Override phiên bản rút gọn
+    //public override void TakeDamage(float damage)
+    //{
+    //    DamageInfo info = new DamageInfo
+    //    {
+    //        damageAmount = damage,
+    //        sourcePosition = transform.position
+    //    };
+    //    TakeDamage(info);
+    //}
 
     public void AddAggro(float amount)
     {

@@ -15,6 +15,9 @@ public class EnemyCombat : MonoBehaviour
     // Tầm đánh cơ bản (nếu chưa có skill)
     public float basicAttackRange = 2.0f;
 
+    private int currentComboStep = 0;
+    private int maxCombo = 2;
+
 
     // [MỚI] Biến này để lưu Coroutine đánh, giúp Boss có thể Cancel
     protected Coroutine currentAttackCoroutine;
@@ -91,7 +94,9 @@ public class EnemyCombat : MonoBehaviour
         float dist = Vector3.Distance(transform.position, target.position);
         if (dist <= basicAttackRange + 0.5f) // +0.5f du di một chút
         {
-            DealDamage();
+            currentComboStep++;
+            if (currentComboStep >= maxCombo) currentComboStep = 0;
+            DealDamage(currentComboStep);
         }
 
         // 5. Chờ nốt phần còn lại của Animation (Recovery)
@@ -115,7 +120,8 @@ public class EnemyCombat : MonoBehaviour
         }
     }
 
-    void DealDamage()
+    // Thay thế hàm DealDamage cũ
+    void DealDamage(int step)
     {
         Debug.Log($"{gameObject.name} thực hiện ĐÁNH THƯỜNG vào {target.name}");
 
@@ -124,20 +130,54 @@ public class EnemyCombat : MonoBehaviour
         {
             float t = CombatMath.CalculateDirectionFactor(transform, playerStats);
 
-            bool isCrit = CombatMath.CheckIsCrit(stats.baseCritChance);
+            // --- BƯỚC 1: KHỞI TẠO DAMAGE INFO ---
+            DamageInfo info = new DamageInfo();
+            info.sourcePosition = transform.position;
+            info.isCrit = false;
+            info.isKnockback = false;
+            info.isStun = false;
 
+            // --- BƯỚC 2: CẤU HÌNH HIỆU ỨNG CỦA ENEMY ---
+            // Cách đơn giản: Check tên hoặc ID của Enemy để gán hiệu ứng
+
+            // Ví dụ 1: Boss Golem -> Mọi đòn đánh đều gây Knockback
+            if (stats.enemyID == "Boss_Golem")
+            {
+                info.isKnockback = true;
+                info.knockbackForce = 12f; // Lực đẩy của Boss
+            }
+
+            // Ví dụ 2: Orc -> Đòn thứ 3 (kết thúc combo) gây Stun + Knockback
+            // currentComboStep được tính ở Coroutine EnemyAttackRoutine
+            if (stats.enemyID == "Orc_Warrior" && currentComboStep == 2) // Giả sử maxCombo=3, index 0,1,2
+            {
+                info.isStun = true;
+                info.stunDuration = 1.0f;
+                info.isKnockback = true;
+                info.knockbackForce = 8f;
+                Debug.Log("Orc thực hiện đòn đập mạnh gây choáng!");
+            }
+
+            // --- BƯỚC 3: TÍNH CRIT & DAMAGE ---
+            bool isCrit = CombatMath.CheckIsCrit(stats.baseCritChance);
             if (isCrit) Debug.Log($"<color=orange>{gameObject.name} CRITS!</color>");
-            // Enemy thường mặc định không crit (hoặc thêm logic crit sau)
+
+            info.isCrit = isCrit;
+
             float damage = CombatMath.CalculateFullDamage(
-                stats,           // Attacker 
-                playerStats,     // Target 
-                t,               // Direction Factor 
-                isCrit,           // IsCrit (Enemy thường mặc định false)
-                null,            // SkillData: Để null (Nếu enemy đánh thường)
-                null,            // WeaponData: Để null (Logic sẽ tự hiểu là Physical)
-                1.0f             // ExternalMult: Mặc định là 1
+                stats,
+                playerStats,
+                t,
+                isCrit,
+                null,
+                null,
+                1.0f
             );
-            playerStats.TakeDamage(damage);
+
+            info.damageAmount = damage;
+
+            // --- BƯỚC 4: GỬI GÓI TIN ---
+            playerStats.TakeDamage(info);
         }
     }
 
