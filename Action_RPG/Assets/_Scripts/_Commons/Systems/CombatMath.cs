@@ -39,7 +39,9 @@ public static class CombatMath
         // Random từ 0 đến 100. Ví dụ chance = 25.
         // Nếu ra 10 -> 10 < 25 -> True (Crit)
         // Nếu ra 80 -> 80 < 25 -> False (Không Crit)
-        return Random.Range(0f, 100f) < critChance;
+        float critCheck = Random.Range(0f, 1f);
+        Debug.Log($"Crit Check: {critCheck}");
+        return critCheck < critChance;
     }
 
     /// <summary>

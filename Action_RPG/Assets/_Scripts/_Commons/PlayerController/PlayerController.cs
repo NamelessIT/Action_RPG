@@ -594,7 +594,7 @@ public class PlayerController : MonoBehaviour
                 }
 
                 // Tính Crit
-                float totalCritChance = stats.baseCritChance;
+                float totalCritChance = stats.critChance;
                 if (currentWpn != null) totalCritChance += currentWpn.bonusCritChance;
 
                 bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
