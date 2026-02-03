@@ -1,6 +1,8 @@
-﻿using UnityEngine;
 using System;
 using System.Collections; // Để dùng Coroutine
+using UnityEngine;
+using UnityEngine.AI;
+using static UnityEngine.AdaptivePerformance.Provider.AdaptivePerformanceSubsystemDescriptor;
 
 public class Stats : MonoBehaviour
 {
@@ -100,6 +102,13 @@ public class Stats : MonoBehaviour
     public float resistanceKnockBack = 0.1f; 
     public float resistanceEffect = 0f; //giảm thời gian debuff
 
+    private float stunEndTime = 0f;
+
+    private Coroutine currentStunCoroutine;
+
+    // [MỚI] Trạng thái bị khống chế
+    public bool isStunned = false;
+
     [Header("--- Tăng thời gian nhận Buff ---")]
     public float buffDurationBonus = 0f;
     // [MỚI] Biến lưu hướng mặt thực tế (Dùng cho CombatMath)
@@ -113,6 +122,12 @@ public class Stats : MonoBehaviour
     private Coroutine bleedCoroutine;
     private float bleedTimer = 0f; // Bộ đếm thời gian còn lại của Bleed
     private float currentBleedDamage = 0f; // Lưu damage để nếu đánh tiếp thì cập nhật damage mới
+    [Header ("--- Mark ---")]
+    [Tooltip("Bị đánh dấu")]
+    public bool IsMarked=false;
+
+    private NavMeshAgent agent;
+    private Rigidbody rb;
 
     void Start()
     {
@@ -120,6 +135,9 @@ public class Stats : MonoBehaviour
         currentHp = maxHp;
         currentStamina = maxStamina;
         currentSin= maxSin;
+
+        agent = GetComponent<NavMeshAgent>();
+        rb = GetComponent<Rigidbody>();
     }
 
     public virtual void Update()
@@ -143,7 +161,6 @@ public class Stats : MonoBehaviour
             if (combatTimer >= outCombatTime)
             {
                 outCombat = true;
-                Debug.Log(">> Out Combat! (Hồi thể lực nhanh, Xoay nhanh)");
             }
         }
     }
@@ -221,7 +238,7 @@ public class Stats : MonoBehaviour
         return false;
     }
 
-    public virtual void TakeDamage(float damage)
+    public virtual void TakeDamage(DamageInfo info)
     {
         if (isInvincible)
         {
@@ -230,10 +247,146 @@ public class Stats : MonoBehaviour
         }
 
         EnterCombat();
-        currentHp -= damage;
-        Debug.Log($"{gameObject.name} nhận {damage} sát thương! HP còn: {currentHp}/{maxHp}");
+        currentHp -= info.damageAmount;
+        if (info.isCrit) Debug.Log($"<color=red>CRIT!</color> {gameObject.name} nhận {info.damageAmount}");
+        else Debug.Log($"{gameObject.name} nhận {info.damageAmount}");
+
+        // --- XỬ LÝ HIỆU ỨNG (CC) ---
+        ApplyCrowdControl(info);
 
         if (currentHp <= 0) Die();
+    }
+
+    //// Hàm cũ (Overload) để tương thích code cũ chưa kịp sửa
+    public virtual void TakeDamage(float damage)
+    {
+        DamageInfo info = new DamageInfo
+        {
+            damageAmount = damage,
+            isCrit = false,
+            isStun = false,
+            isKnockback = false
+        };
+        TakeDamage(info);
+    }
+
+    // --- LOGIC STUN & KNOCKBACK ---
+    void ApplyCrowdControl(DamageInfo info)
+    {
+        // 1. Xử lý KNOCKBACK
+        if (info.isKnockback)
+        {
+            // Tính lực đẩy lùi thực tế sau khi trừ Kháng
+            // Ví dụ: Force 10, Res 0.2 -> Thực nhận 8
+            float finalForce = info.knockbackForce * (1.0f - resistanceKnockBack);
+
+            // Nếu lực vẫn > 0 thì đẩy
+            if (finalForce > 0)
+            {
+                Vector3 knockbackDir = (transform.position - info.sourcePosition).normalized;
+                knockbackDir.y = 0; // Giữ thăng bằng mặt đất
+                StartCoroutine(KnockbackRoutine(knockbackDir, finalForce));
+            }
+        }
+
+        // 2. Xử lý STUN (Nâng cấp)
+        if (info.isStun)
+        {
+            float finalDuration = Mathf.Max(0.1f, info.stunDuration * (1.0f - resistanceEffect));
+            float proposedEndTime = Time.time + finalDuration;
+
+            // Chỉ áp dụng nếu stun mới kéo dài lâu hơn thời gian stun còn lại
+            if (proposedEndTime > stunEndTime)
+            {
+                stunEndTime = proposedEndTime;
+
+                // Reset coroutine cũ để chạy cái mới chính xác hơn
+                if (currentStunCoroutine != null) StopCoroutine(currentStunCoroutine);
+                currentStunCoroutine = StartCoroutine(StunRoutine(finalDuration));
+            }
+        }
+    }
+
+    IEnumerator KnockbackRoutine(Vector3 dir, float force)
+    {
+        isStunned = true;
+
+        // Biến lưu trạng thái gốc để khôi phục sau khi đẩy xong
+        bool wasKinematic = false;
+        bool hasAgent = (agent != null);
+
+        // 1. TẠM DỪNG NAVMESH AGENT (Nếu là Enemy)
+        // Phải tắt update position để Agent không "giằng co" vị trí với Rigidbody
+        if (hasAgent)
+        {
+            if (agent.isOnNavMesh) agent.isStopped = true;
+            agent.updatePosition = false;
+            agent.updateRotation = false;
+        }
+
+        // 2. XỬ LÝ RIGIDBODY (Cho cả Player và Enemy)
+        if (rb != null)
+        {
+            wasKinematic = rb.isKinematic; // Lưu lại: Enemy là true, Player là false
+
+            // BẮT BUỘC: Phải tắt Kinematic thì mới AddForce hoặc set velocity được
+            rb.isKinematic = false;
+
+            // Reset vận tốc cũ để lực đẩy dứt khoát hơn
+            rb.linearVelocity = Vector3.zero;
+
+            // Thêm lực đẩy
+            rb.AddForce(dir * force, ForceMode.Impulse);
+        }
+
+        // 3. CHỜ THỜI GIAN BỊ ĐẨY
+        yield return new WaitForSeconds(0.2f);
+
+        // 4. KHÔI PHỤC TRẠNG THÁI
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero; // Phanh lại
+            rb.isKinematic = wasKinematic; // Trả lại trạng thái gốc (Enemy -> Kinematic, Player -> Dynamic)
+        }
+
+        if (hasAgent)
+        {
+            // Đồng bộ vị trí Agent theo vị trí vật lý mới của Enemy
+            agent.Warp(transform.position);
+            agent.updatePosition = true;
+            agent.updateRotation = true;
+            // Vẫn giữ isStopped = true vì đang bị Stun (sẽ mở lại ở StunRoutine hoặc Logic AI)
+        }
+
+        // 5. CHECK STUN TIẾP THEO
+        yield return new WaitForSeconds(0.1f);
+
+        // Logic kiểm tra xem có ai đang gia hạn stun không (Stun chồng Stun)
+        // Nếu không có StunRoutine nào khác đang chạy đè lên thì mới tắt
+        // (Tuy nhiên ở đây bạn dùng biến bool đơn giản nên ta cứ set false nếu hết giờ)
+        if (isStunned) isStunned = false;
+    }
+
+    IEnumerator StunRoutine(float duration)
+    {
+        isStunned = true;
+        // Debug.Log($"{gameObject.name} bị STUN!");
+
+        if (agent != null && agent.isOnNavMesh)
+        {
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+        }
+
+        // Thay vì WaitForSeconds cố định, ta chờ đến đúng thời điểm stunEndTime
+        // Điều này giúp việc "ghi đè" thời gian trở nên mượt mà (chỉ cần update stunEndTime)
+        while (Time.time < stunEndTime)
+        {
+            yield return null;
+        }
+
+        isStunned = false;
+        // Debug.Log($"{gameObject.name} hết STUN");
     }
 
     void Die()

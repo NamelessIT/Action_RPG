@@ -151,16 +151,28 @@ public class AllyStats : Stats
     }
 
     // Ghi đè hàm TakeDamage của cha (Stats) (Cho Chris)
-    public override void TakeDamage(float damage)
+    // Override phiên bản đầy đủ (DamageInfo)
+    public override void TakeDamage(DamageInfo info)
     {
-        // 1. Gọi logic trừ máu cơ bản của cha (Stats.cs)
-        base.TakeDamage(damage);
+        // 1. Gọi logic cơ bản của cha (Trừ máu, xử lý Stun/Knockback ở Stats.cs)
+        base.TakeDamage(info);
 
-        // 2. Rung chuông báo động cho các Passive nghe thấy
-        // Dấu ? để kiểm tra nếu không có ai nghe thì không báo lỗi
-        OnTakeDamage?.Invoke(damage);
+        // 2. Rung chuông báo động cho các Passive (chỉ cần gửi số damge)
+        OnTakeDamage?.Invoke(info.damageAmount);
     }
-    // Cho Leo Passive, BloodReaverPassive
+
+    // Override phiên bản rút gọn (để tương thích ngược)
+    //public override void TakeDamage(float damage)
+    //{
+    //    // Tự tạo một DamageInfo đơn giản (không crit, không hiệu ứng)
+    //    DamageInfo info = new DamageInfo
+    //    {
+    //        damageAmount = damage,
+    //        sourcePosition = transform.position // Tạm lấy vị trí bản thân (ko đẩy lùi)
+    //    };
+    //    TakeDamage(info); // Gọi hàm trên
+    //}
+    // Cho Leo Passive
     public void NotifyOnHitEnemy(Stats target, float t, bool isCrit)
     {
         OnHitEnemy?.Invoke(target, t, isCrit);

@@ -32,6 +32,17 @@ public static class CombatMath
     }
 
     /// <summary>
+    /// Kiểm tra xem đòn đánh có chí mạng không dựa trên % cơ hội (0-100)
+    /// </summary>
+    public static bool CheckIsCrit(float critChance)
+    {
+        // Random từ 0 đến 100. Ví dụ chance = 25.
+        // Nếu ra 10 -> 10 < 25 -> True (Crit)
+        // Nếu ra 80 -> 80 < 25 -> False (Không Crit)
+        return Random.Range(0f, 100f) < critChance;
+    }
+
+    /// <summary>
     /// Hàm tính damage chính thức
     /// <param name="skill">Skill sử dụng (null nếu là đánh thường)</param>
     /// <param name="weapon">Vũ khí đang cầm (để check type khi đánh thường)</param>
@@ -40,7 +51,7 @@ public static class CombatMath
     public static float CalculateFullDamage(Stats attacker, Stats target, float t, bool isCrit, SkillData skill, WeaponData weapon, float externalMult = 1.0f)
     {
         // --- 1. Tính Raw Damage ---
-        float critMult = isCrit ? attacker.baseCritMultiplier : 1.0f;
+        float critMult = isCrit ? attacker.baseCritMultiplier : 1.0f; //Sửa lại thành critMultiplier 
 
         // XÁC ĐỊNH MULTIPLIER (SKILL vs BASIC ATTACK) ---
         float physMult = 0f;

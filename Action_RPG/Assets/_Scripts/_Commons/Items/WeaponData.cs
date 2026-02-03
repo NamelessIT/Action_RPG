@@ -1,6 +1,15 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
+[System.Serializable]
+public class AttackEffect
+{
+    public bool causesKnockback;
+    public float knockbackForce = 10f;
+    public bool causesStun;
+    public float stunDuration = 1.0f;
+}
+
 [CreateAssetMenu(fileName = "New Weapon", menuName = "Inventory/Weapon Data")]
 public class WeaponData : ScriptableObject
 {
@@ -59,6 +68,10 @@ public class WeaponData : ScriptableObject
 
     public bool playerOnly;
     // public string effectConfig; // Để sau
+
+    [Header("Combo Effects")]
+    [Tooltip("Index 0 = Đòn 1, Index 1 = Đòn 2...")]
+    public List<AttackEffect> comboEffects;
 
     // Hàm này chạy ngay lập tức khi bạn chỉnh sửa trong Inspector
     private void OnValidate()

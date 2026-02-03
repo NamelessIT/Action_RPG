@@ -36,3 +36,4 @@ MonoBehaviour:
   reqVit: 10
   reqAgi: 0
   playerOnly: 0
+  comboEffects: []

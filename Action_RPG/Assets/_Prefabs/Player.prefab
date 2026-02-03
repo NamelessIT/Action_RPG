@@ -14,6 +14,9 @@ GameObject:
   - component: {fileID: 523185047943716899}
   - component: {fileID: 4658667183789246777}
   - component: {fileID: 2094500909127700378}
+  - component: {fileID: 444507834702181166}
+  - component: {fileID: 1448595461306789732}
+  - component: {fileID: 8734627235539532154}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -112,7 +115,7 @@ Rigidbody:
   m_IsKinematic: 0
   m_Interpolate: 0
   m_Constraints: 112
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
 --- !u!136 &523185047943716899
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -148,9 +151,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bbef119d14bd44d4a91e7ef7fd4ba6cc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
-  moveSpeed: 5
   idleDelay: 0.25
-  testEnemyTarget: {fileID: 0}
+  comboCount: 0
+  maxCombo: 2
+  lastAttackTime: 0
+  comboWindow: 2
+  isAttacking: 0
+  attackRange: 0.5
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  testIsCrit: 0
 --- !u!114 &2094500909127700378
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -204,6 +215,162 @@ MonoBehaviour:
     DissipationDistance: 100
     PropagationSpeed: 343
   DefaultVelocity: {x: 0, y: 1, z: 0}
+--- !u!114 &444507834702181166
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7595386532533513913}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 963235f003ae6d7419be01929585e4a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AllyStats
+  maxHp: 0
+  currentHp: 0
+  baseHp: 0
+  baseHpGain: 2
+  level: 1
+  isInvincible: 0
+  maxStamina: 100
+  currentStamina: 0
+  staminaBaseRecovery: 0.5
+  staminaOutCombatRecovery: 15
+  staminaRegenDelay: 1
+  outCombat: 1
+  outCombatTime: 10
+  baseDashDistance: 3
+  baseDashRecovery: 1
+  dashCost: 20
+  baseDashDuration: 0.2
+  runCost: 12
+  lastDashTime: -10
+  maxSin: 0
+  currentSin: 0
+  baseSinGain: 5
+  STR: 0
+  DEX: 0
+  INT: 0
+  VIT: 0
+  AGI: 0
+  physicalAtk: 0
+  magicAtk: 0
+  physicalLifeSteal: 0
+  magicLifeSteal: 0
+  baseAttackSpeed: 0
+  comboResetTime: 1
+  heavyAttackChargeTime: 1
+  heavyAttackCharge: 2
+  baseCritChance: 0
+  baseCritMultiplier: 1.5
+  armorBackstabReduce: 0.5
+  magicResistBackstabReduce: 0.5
+  armor: 100
+  magicResist: 100
+  defenseValue: 20
+  blockThreshold: 0.5
+  baseMoveSpeed: 5
+  runSpeedMultiplier: 1.5
+  moveThresholdAngle: 45
+  moveFlexibility: 1
+  turnDuration: 0.1
+  combatTurnDuration: 0
+  resistanceKnockBack: 0.1
+  resistanceEffect: 0
+  buffDurationBonus: 0
+  facingDirection: {x: 0, y: 0, z: -1}
+  stealthFactor: 1
+  exp: 0
+  H: 200
+  maxHpGainBonus: 10
+  hpPerVIT: 15
+  hpGain: 0
+  bonusHp: 0
+  flatHp: 0
+  sinGain: 0
+  S: 100
+  maxSinBonus: 0.7
+  physicalAtkPerSTR: 2.5
+  magicAtkPerINT: 3
+  maxAttackSpeedBuff: 0.8
+  critPerDEX: 0.015
+  A: 80
+  C: 100
+  K: 0.005
+  bonusPhysicalAtk: 0
+  bonusMagicAtk: 0
+  attackSpeed: 0
+  bonusAttackSpeed: 0
+  flatPhysicalAtk: 0
+  flatMagicAtk: 0
+  critChance: 0
+  bonusCritChance: 0
+  critMultiplier: 0
+  bonusCritMultiplier: 0
+  moveSpeed: 0
+  moveSpeedReducePerVIT: 0.005
+  minSpeed: 3
+  maxSpeed: 9
+  maxReduceBySTR: 0.6
+  M: 150
+  bonusMoveSpeed: 0
+  trueMoveFlexibility: 0
+  dashDistance: 0
+  dashRecovery: 0
+  maxDashReduction: 0.35
+  AGI_ThreshHold: 75
+  R: 80
+  baseCdr: 0
+  cooldownReduction: 0
+  cdrPerAGI: 0.0015
+  bonusCdr: 0
+  isManualGuarding: 0
+  manualGuardReduction: 0
+  isMomentumActive: 0
+  momentumReduction: 0.3
+--- !u!114 &1448595461306789732
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7595386532533513913}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d9e1d9e78e2b1f489c06dae141ef40f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EquipmentManager
+  pickUpWeapon: {fileID: 0}
+  currentWeapon: {fileID: 0}
+  pickUpCoreShield: {fileID: 0}
+  currentCoreShield: {fileID: 0}
+  pickUpAccessory: {fileID: 0}
+  currentCoreShard: {fileID: 0}
+  currentMarkOfSin: {fileID: 0}
+  currentRelicOfMemory: {fileID: 0}
+  currentParasite: {fileID: 0}
+  currentChain: {fileID: 0}
+--- !u!114 &8734627235539532154
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7595386532533513913}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7124aff0becfad4497d4ef6d9d95b6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkillManager
+  isPlayer: 1
+  pickUpSkill: {fileID: 0}
+  currentDefaultPassive: {fileID: 0}
+  currentPassive1: {fileID: 0}
+  currentPassive2: {fileID: 0}
+  currentSkill: {fileID: 0}
+  currentSignature: {fileID: 0}
+  enemySkills: []
 --- !u!1 &7640082629832890871
 GameObject:
   m_ObjectHideFlags: 0
@@ -286,7 +453,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 1216159308, guid: b927109c968b1884f8115128f40a7c70, type: 3}
+  m_Sprite: {fileID: 1660286943, guid: dc3a791e874b3314a96a2349ec2b9870, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
