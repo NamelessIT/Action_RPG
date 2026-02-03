@@ -67,9 +67,10 @@ public class AllyStats : Stats
     // ---------------- Leo Passive ----------------
     // Đây là cái chuông để báo cho Passive Leo biết khi nào đánh backstab hoặc crit
     // Action gửi đi 2 tham số: 
+    // 1. Stats (Để xác định mục tiêu bị đánh) (Dùng để áp dụng hiệu ứng Bleed) (BloodReaver)
     // 1. float t (Hệ số hướng, t=1 là lưng)
     // 2. bool isCrit (Có chí mạng không)
-    public Action<float, bool> OnHitEnemy;
+    public Action<Stats, float, bool> OnHitEnemy;
 
     // ---------------- Vanguard Passive ----------------
     // Sự kiện khi Block thành công (Để Vanguard hồi Stamina)
@@ -84,6 +85,12 @@ public class AllyStats : Stats
     public bool isMomentumActive = false;
     // Chỉ số giảm thương (0.3 = 30%)
     public float momentumReduction = 0.3f;
+
+    // ---------------- Rouge ----------------
+    // Action gửi đi: 
+    // 1. Stats victim (Kẻ vừa bị giết)
+    // 2. bool isBackstab (Có phải giết từ sau lưng không)
+    public Action<Stats, bool> OnKillEnemy;
 
     void Start()
     {
@@ -100,7 +107,7 @@ public class AllyStats : Stats
         // Công thức: hpGain = base * (1 + maxBonus * VIT / (VIT + H))
         hpGain = baseHpGain * (1 + maxHpGainBonus * VIT / (VIT + H));
         // Công thức: MaxHP = (Flat + VIT * 15) * (1 + Bonus%)
-        maxHp = (flatHp + baseHp + hpPerVIT) * (1 + bonusHp);
+        maxHp = (flatHp + baseHp + hpPerVIT * VIT) * (1 + bonusHp);
         currentHp = Mathf.Clamp(currentHp, 0, maxHp); // Đảm bảo máu không vượt quá Max
 
         // 2. Tính Sin
@@ -153,15 +160,31 @@ public class AllyStats : Stats
         // Dấu ? để kiểm tra nếu không có ai nghe thì không báo lỗi
         OnTakeDamage?.Invoke(damage);
     }
-    // Cho Leo Passive
-    public void NotifyOnHitEnemy(float t, bool isCrit)
+    // Cho Leo Passive, BloodReaverPassive
+    public void NotifyOnHitEnemy(Stats target, float t, bool isCrit)
     {
-        OnHitEnemy?.Invoke(t, isCrit);
+        OnHitEnemy?.Invoke(target, t, isCrit);
     }
     // Hàm để CombatMath gọi khi tính toán thấy Block thành công (Cho Vanguard)
     public void NotifyBlockSuccess()
     {
         OnBlockSuccess?.Invoke();
+    }
+    // Hàm gọi sự kiện (Sẽ được PlayerController gọi) (Cho Rouge)
+    public void NotifyKillEnemy(Stats victim, bool isBackstab)
+    {
+        OnKillEnemy?.Invoke(victim, isBackstab);
+    }
+    // [MỚI] Hàm này chỉ tính lại Damage và Crit (Nhẹ, chạy được trong Update) (Dùng cho BloodReaver)
+    public void CalculateCombatStatsOnly()
+    {
+        // 1. Tính Damage (Công thức copy từ RecalculateStats xuống)
+        physicalAtk = (flatPhysicalAtk + STR * physicalAtkPerSTR) * (1 + bonusPhysicalAtk);
+        //magicAtk = (flatMagicAtk + INT * magicAtkPerINT) * (1 + bonusMagicAtk);
+
+        // 2. Tính Crit (Công thức copy từ RecalculateStats xuống)
+        critChance = baseCritChance + critPerDEX * DEX + bonusCritChance;
+        critMultiplier = baseCritMultiplier + bonusCritMultiplier;
     }
     public override void Update()
     {

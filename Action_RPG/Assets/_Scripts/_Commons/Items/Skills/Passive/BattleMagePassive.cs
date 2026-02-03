@@ -14,6 +14,7 @@ public class BattleMagePassive : SkillBehavior
     [Header("Interaction Settings")]
     [Tooltip("Số lượng Speed trả lại để tính toán khi đang dựng khiên Vanguard (Phải khớp với số bên Vanguard)")]
     public float shieldSlowCompensation = 0.5f; // Khớp với VanguardPassive
+    // Sau này thêm 1 if để kiểm tra xem đang kích hoạt node không giảm speed chưa, chuyển thành 0f
 
     // Biến lưu giá trị đã cộng để trừ ra khi update frame mới
     private float addedArmor = 0f;

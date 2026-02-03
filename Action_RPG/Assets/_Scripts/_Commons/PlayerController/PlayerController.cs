@@ -197,6 +197,7 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.N)) EquipPickedAccessory();
         if (Input.GetKeyDown(KeyCode.M)) DropPickedAccessory();
         if (Input.GetKeyDown(KeyCode.L)) LearnSkill();
+        if (Input.GetKeyDown(KeyCode.R)) UpdateStat();
     }
 
     void PerformDash()
@@ -517,8 +518,10 @@ public class PlayerController : MonoBehaviour
         foreach (Collider enemy in hitEnemies)
         {
             Stats enemyStats = enemy.GetComponent<Stats>();
-            if (enemyStats != null)
+            if (enemyStats != null && enemyStats.currentHp > 0)
             {
+                // [MỚI] Lưu trạng thái trước khi đánh
+                bool wasAlive = enemyStats.currentHp > 0;
                 hitAnything = true;
                 stats.EnterCombat();
                 float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
@@ -548,10 +551,22 @@ public class PlayerController : MonoBehaviour
                     totalMultiplier // Hệ số gây sát thương của combo đòn đánh
                 );
                 enemyStats.TakeDamage(damage);
+                // --- [MỚI] KIỂM TRA KẾT LIỄU ---
+                if (wasAlive && enemyStats.currentHp <= 0)
+                {
+                    // Nếu trước đó còn sống, giờ đã chết -> Gọi là Kill
+                    bool isBackstab = (t == 1f); 
+                    if (stats != null)
+                    {
+                        stats.NotifyKillEnemy(enemyStats, isBackstab);
+                    }
+
+                    Debug.Log(">> KẾT LIỄU ĐỊCH!");
+                }
 
                 // --- [MỚI] BÁO CHO STATS BIẾT LÀ VỪA ĐÁNH TRÚNG ---
                 // Truyền t và testIsCrit (hoặc biến crit thật của bạn)
-                if (stats != null) stats.NotifyOnHitEnemy(t, testIsCrit);
+                if (stats != null) stats.NotifyOnHitEnemy(enemyStats, t, testIsCrit);
 
                 if (currentDamageMultiplier > 1.5) Debug.Log($"Gây {damage} sát thương (Heavy x{currentDamageMultiplier})");
             }
@@ -600,6 +615,11 @@ public class PlayerController : MonoBehaviour
     void LearnSkill()
     {
         skillManager.EquipSkill(skillManager.pickUpSkill);
+    }
+    void UpdateStat()
+    {
+        stats.RecalculateStats();
+        Debug.Log("Đã tính toán lại stat thủ công");
     }
 
     public void TakeDamage(int damage)
