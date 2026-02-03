@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections;
+using System;
+using System.Collections; // Để dùng Coroutine
 using UnityEngine;
 using UnityEngine.AI;
 using static UnityEngine.AdaptivePerformance.Provider.AdaptivePerformanceSubsystemDescriptor;
@@ -117,6 +117,11 @@ public class Stats : MonoBehaviour
     [Header("--- Stealth ---")]
     public float stealthFactor = 1.0f; // 1 = Bình thường, 0.5 = Giảm 50% tầm địch
 
+    // --- HIỆU ỨNG CHẢY MÁU (BLEED) ---
+    [Header("--- Bleed ---")]
+    private Coroutine bleedCoroutine;
+    private float bleedTimer = 0f; // Bộ đếm thời gian còn lại của Bleed
+    private float currentBleedDamage = 0f; // Lưu damage để nếu đánh tiếp thì cập nhật damage mới
     [Header ("--- Mark ---")]
     [Tooltip("Bị đánh dấu")]
     public bool IsMarked=false;
@@ -184,6 +189,40 @@ public class Stats : MonoBehaviour
         combatTimer = 0f;
     }
 
+    public void ApplyBleed(float damagePerTick, float duration)
+    {
+        // 1. Cập nhật thông số mới nhất
+        currentBleedDamage = damagePerTick; // Có thể làm logic: Lấy damage cao nhất hoặc cộng dồn
+
+        // 2. Gia hạn thời gian (Reset lại đồng hồ đếm ngược)
+        bleedTimer = duration;
+
+        // 3. Chỉ Start Coroutine nếu nó chưa chạy
+        if (bleedCoroutine == null)
+        {
+            bleedCoroutine = StartCoroutine(BleedRoutine());
+        }
+    }
+
+    private IEnumerator BleedRoutine()
+    {
+        // Vòng lặp chạy chừng nào còn thời gian
+        while (bleedTimer > 0)
+        {
+            // Chờ 1 giây
+            yield return new WaitForSeconds(1.0f);
+
+            // Trừ thời gian
+            bleedTimer -= 1.0f;
+
+            // Gây sát thương
+            TakeDamage(currentBleedDamage);
+            Debug.Log($"<color=red>{gameObject.name} đang chảy máu: -{currentBleedDamage} HP (Còn {bleedTimer}s)</color>");
+        }
+
+        // Hết giờ -> Xóa Coroutine để lần sau Start lại được
+        bleedCoroutine = null;
+    }
     // [CẬP NHẬT] Hàm tiêu hao thể lực dùng chung cho Dash và Run
     public bool TryConsumeStamina(float amount)
     {

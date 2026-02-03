@@ -23,7 +23,7 @@ public class LeoPassive : SkillBehavior
     }
 
     // Logic xử lý khi đánh trúng
-    private void HandleOnHitEnemy(float t, bool isCrit)
+    private void HandleOnHitEnemy(Stats target, float t, bool isCrit)
     {
         // Điều kiện: Backstab 
         // Hoặc là Crit
