@@ -52,6 +52,7 @@ public class EnemyStats : Stats
     public int monsterRank = 0;
     void Start()
     {
+        base.Start();
         base.maxHp = base.baseHp;
         base.currentHp = base.maxHp;
         base.baseAttackSpeed = 0.5f;

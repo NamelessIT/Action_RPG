@@ -562,6 +562,7 @@ public class PlayerController : MonoBehaviour
                 // A. Logic Trọng Kích (Heavy Attack) -> Mặc định gây Knockback mạnh
                 if (isHeavy)
                 {
+                    Debug.Log("Trọng Kích -> Gây knockback");
                     info.isKnockback = true;
                     info.knockbackForce = 15f; // Lực đẩy mạnh cho trọng kích
                     // info.isStun = true; // Bỏ comment nếu muốn trọng kích gây choáng luôn

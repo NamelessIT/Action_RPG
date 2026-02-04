@@ -36,9 +36,9 @@ MonoBehaviour:
   comboEffects:
   - causesKnockback: 0
     knockbackForce: 0
-    causesStun: 0
-    stunDuration: 0
-  - causesKnockback: 0
-    knockbackForce: 0
     causesStun: 1
+    stunDuration: 1
+  - causesKnockback: 1
+    knockbackForce: 10
+    causesStun: 0
     stunDuration: 1

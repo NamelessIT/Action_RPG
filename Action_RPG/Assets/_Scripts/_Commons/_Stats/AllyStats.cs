@@ -97,6 +97,7 @@ public class AllyStats : Stats
 
     void Start()
     {
+        base.Start();
         // Gọi tính toán lần đầu
         RecalculateStats();
         InitializeClassStats();
