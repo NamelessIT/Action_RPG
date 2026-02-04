@@ -29,6 +29,7 @@ public class WarriorPassive : SkillBehavior
             if (!stats.isMomentumActive)
             {
                 stats.isMomentumActive = true;
+                //stats.resistanceKnockBack += 0.2;
                 // Debug.Log(">> Momentum Armor: ON");
             }
         }
@@ -37,6 +38,7 @@ public class WarriorPassive : SkillBehavior
             if (stats.isMomentumActive)
             {
                 stats.isMomentumActive = false;
+                //stats.resistanceKnockBack -= 0.2;
                 // Debug.Log(">> Momentum Armor: OFF");
             }
         }

@@ -4,7 +4,7 @@ using System;
 public static class SkillFactory
 {
     // Hàm này trả về KIỂU (Type) của script dựa trên Enum
-    public static Type GetSkillComponentType(SkillData.PassiveEffectCode code)
+    public static Type GetPassiveComponentType(SkillData.PassiveEffectCode code)
     {
         switch (code)
         {
@@ -22,6 +22,24 @@ public static class SkillFactory
                 return typeof(BloodReaverPassive);
             case SkillData.PassiveEffectCode.Rouge:
                 return typeof(RougePassive);
+            //case SkillData.PassiveEffectCode.Mage:
+            //return typeof(MagePassive);
+            // ... Thêm các case khác vào đây ...
+
+            default:
+                return null;
+        }
+    }
+    public static Type GetSkillComponentType(SkillData.SkillEffectCode code)
+    {
+        switch (code)
+        {
+            case SkillData.SkillEffectCode.ChrisSkill:
+                return typeof(ChrisSkill);
+            case SkillData.SkillEffectCode.LeoSkill:
+                return typeof(LeoSkill);
+            case SkillData.SkillEffectCode.RougeSkill:
+                return typeof(RougeSkill);
             // ... Thêm các case khác vào đây ...
 
             default:
