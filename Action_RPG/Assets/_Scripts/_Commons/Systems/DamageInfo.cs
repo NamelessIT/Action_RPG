@@ -13,4 +13,10 @@ public struct DamageInfo
     public bool isKnockback;
     public float knockbackForce;
     public Vector3 sourcePosition; // Vị trí kẻ đánh (để tính hướng đẩy lùi)
+
+    // [MỚI] Cấp độ va chạm (Dùng cho Super Armor)
+    // 0: Normal (Quái nhỏ)
+    // 1: Heavy (Quái to / Trọng kích)
+    // 2: Massive (Boss / Skill đặc biệt)
+    public int impactLevel;
 }

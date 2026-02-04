@@ -40,7 +40,7 @@ public static class CombatMath
         // Nếu ra 10 -> 10 < 25 -> True (Crit)
         // Nếu ra 80 -> 80 < 25 -> False (Không Crit)
         float critCheck = Random.Range(0f, 1f);
-        Debug.Log($"Crit Check: {critCheck}");
+        //Debug.Log($"Crit Check: {critCheck}");
         return critCheck < critChance;
     }
 

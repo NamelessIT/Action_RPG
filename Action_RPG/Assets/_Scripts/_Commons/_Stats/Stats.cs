@@ -102,12 +102,18 @@ public class Stats : MonoBehaviour
     public float resistanceKnockBack = 0.1f; 
     public float resistanceEffect = 0f; //giảm thời gian debuff
 
+
     private float stunEndTime = 0f;
 
     private Coroutine currentStunCoroutine;
 
     // [MỚI] Trạng thái bị khống chế
     public bool isStunned = false;
+
+    // [MỚI] Super Armor (Siêu Giáp) - Không bị ngắt chiêu
+    [Header("--- Super Armor ---")]
+    public bool isSuperArmor = false;
+    public int superArmorLevel = 0; // Cấp độ giáp (0: Chống quái nhỏ, 1: Chống Elite...)
 
     [Header("--- Tăng thời gian nhận Buff ---")]
     public float buffDurationBonus = 0f;
@@ -273,6 +279,13 @@ public class Stats : MonoBehaviour
     // --- LOGIC STUN & KNOCKBACK ---
     void ApplyCrowdControl(DamageInfo info)
     {
+        if (isSuperArmor && info.impactLevel <= superArmorLevel)
+        {
+            // Có thể thêm hiệu ứng visual (ví dụ: người lóe sáng trắng chịu đòn)
+             Debug.Log("Super Armor Blocked CC!");
+            return;
+        }
+
         // 1. Xử lý KNOCKBACK
         if (info.isKnockback)
         {
@@ -293,16 +306,16 @@ public class Stats : MonoBehaviour
         if (info.isStun)
         {
             float finalDuration = Mathf.Max(0.1f, info.stunDuration * (1.0f - resistanceEffect));
-            float proposedEndTime = Time.time + finalDuration;
-
-            // Chỉ áp dụng nếu stun mới kéo dài lâu hơn thời gian stun còn lại
-            if (proposedEndTime > stunEndTime)
+            // [SỬA] Bỏ hàm Mathf.Max(0.1f). Nếu thời gian < 0.1s coi như kháng hoàn toàn
+            if (finalDuration >= 0.1f)
             {
-                stunEndTime = proposedEndTime;
-
-                // Reset coroutine cũ để chạy cái mới chính xác hơn
-                if (currentStunCoroutine != null) StopCoroutine(currentStunCoroutine);
-                currentStunCoroutine = StartCoroutine(StunRoutine(finalDuration));
+                float proposedEndTime = Time.time + finalDuration;
+                if (proposedEndTime > stunEndTime)
+                {
+                    stunEndTime = proposedEndTime;
+                    if (currentStunCoroutine != null) StopCoroutine(currentStunCoroutine);
+                    currentStunCoroutine = StartCoroutine(StunRoutine(finalDuration));
+                }
             }
         }
     }
@@ -370,7 +383,7 @@ public class Stats : MonoBehaviour
     IEnumerator StunRoutine(float duration)
     {
         isStunned = true;
-        // Debug.Log($"{gameObject.name} bị STUN!");
+         Debug.Log($"{gameObject.name} bị STUN!");
 
         if (agent != null && agent.isOnNavMesh)
         {

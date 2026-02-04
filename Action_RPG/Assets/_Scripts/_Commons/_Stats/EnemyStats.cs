@@ -46,6 +46,10 @@ public class EnemyStats : Stats
     [Header("--- Spawn Info ---")]
     [HideInInspector] public Vector3 spawnPosition;
 
+
+    [Header("--- Enemy Rank ---")]
+    // 0 = Small (Goblins...), 1 = Elite (Orcs...), 2 = Boss (Golem...)
+    public int monsterRank = 0;
     void Start()
     {
         base.maxHp = base.baseHp;
@@ -55,6 +59,33 @@ public class EnemyStats : Stats
 
         currentAggro = 0;
         obstacleMask = LayerMask.GetMask("Obstacle");
+
+        SetupResistances();
+    }
+
+    void SetupResistances()
+    {
+        // Cấu hình tự động dựa trên Rank
+        if (monsterRank == 0) // Quái nhỏ
+        {
+            isSuperArmor = false; // Dễ bị đẩy
+            resistanceKnockBack = 0.1f;
+        }
+        else if (monsterRank == 1) // Quái Elite (Orc)
+        {
+            isSuperArmor = true;
+            superArmorLevel = 0; // Chống đòn đánh thường (Impact 0), nhưng bị Trọng kích (Impact 1) đẩy
+            resistanceKnockBack = 0.5f;
+        }
+        else if (monsterRank == 2) // Boss (Golem)
+        {
+            isSuperArmor = true;
+            superArmorLevel = 10; // Level 10 là "Bất tử" với CC (Player Impact max chỉ khoảng 1-2)
+
+            // Hoặc đơn giản là set kháng 100%
+            resistanceKnockBack = 1.0f;
+            resistanceEffect = 1.0f;
+        }
     }
 
     public override void Update()
