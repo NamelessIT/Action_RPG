@@ -205,6 +205,21 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.M)) DropPickedAccessory();
         if (Input.GetKeyDown(KeyCode.L)) LearnSkill();
         if (Input.GetKeyDown(KeyCode.R)) UpdateStat();
+        // --- SKILL INPUT ---
+        // Ví dụ: 1 là Skill thường, 2 là Chiêu cuối (Signature)
+        if (Input.GetKeyDown(KeyCode.Alpha1))
+        {
+            // Gọi SkillManager dùng skill ở slot Skill thường
+            if (skillManager.currentSkill != null)
+                skillManager.CastSkill(skillManager.currentSkill);
+        }
+
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            // Gọi SkillManager dùng skill ở slot Signature
+            if (skillManager.currentSignature != null)
+                skillManager.CastSkill(skillManager.currentSignature);
+        }
     }
 
     void PerformDash()

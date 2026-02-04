@@ -12,14 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
   m_Name: MagePassive
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
-  id: 
-  skillName: 
+  id: MagePassive
+  skillName: Mage Passive
   icon: {fileID: 0}
   skilDesc: 
-  skillType: 0
+  skillType: 1
   skillPhysicalMultiplier: 0
   skillMagicMultiplier: 0
   cooldown: 0
   sinChargeReq: 0
-  effectCode: 0
+  passiveEffectCode: 0
+  skillEffectCode: 0
   passiveStats: []

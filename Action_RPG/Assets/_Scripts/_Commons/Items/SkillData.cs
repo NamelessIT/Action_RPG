@@ -11,7 +11,7 @@ public class SkillData : ScriptableObject
     // Định danh logic đặc biệt (Để SkillManager biết phải code gì cho skill này)
     public enum PassiveEffectCode
     {
-        None, //Các skill khác
+        None, //Skill hoặc signature
         Chris, // Cơ bản ChrisDon
         Leo, // Cơ bản Leo
         Vanguard,  // Vanguard
@@ -21,7 +21,20 @@ public class SkillData : ScriptableObject
         Rouge,
         Duelist,
         Mage,
-        Hermit
+        Hermit,
+    }
+    public enum SkillEffectCode
+    {
+        None, //Passive hoặc Signature
+        ChrisSkill,
+        LeoSkill,
+        VanguardSkill,
+        WarriorSkill,
+        BattleMageSkill,
+        BloodReaverSkill,
+        RougeSkill,
+        DuelistSkill,
+        MageSkill,
     }
     public string id;
     public string skillName;
@@ -33,7 +46,9 @@ public class SkillData : ScriptableObject
     public float cooldown;
     public float sinChargeReq;
     [Header("Special Logic ID")]
-    public PassiveEffectCode effectCode; // <-- Quan trọng: Chọn logic ở đây
+    public PassiveEffectCode passiveEffectCode; // <-- Quan trọng: Chọn logic ở đây
+    public SkillEffectCode skillEffectCode;
+
     [Header("Passive Stat Modifiers")]
     // Dùng để cộng chỉ số tĩnh (VD: +10% HP, +Crit) mà không cần viết code
     public List<StatModifier> passiveStats = new List<StatModifier>();
