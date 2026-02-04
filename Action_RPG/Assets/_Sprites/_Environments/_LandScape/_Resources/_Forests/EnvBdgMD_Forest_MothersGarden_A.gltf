@@ -1,0 +1,112 @@
+{
+  "asset" : {
+    "generator" : "UE Viewer (umodel) build 1590",
+    "version" : "2.0"
+  },
+  "scene" : 0,
+  "scenes" : [
+    {
+      "nodes" : [ 0 ]
+    }
+  ],
+  "nodes" : [
+    {
+      "name" : "EnvBdgMD_Forest_MothersGarden_A",
+      "mesh" : 0
+    }
+  ],
+  "materials" : [
+    {
+      "name" : "EnvBdgMi_City_B_Casino_A",
+      "pbrMetallicRoughness" : {
+        "baseColorFactor" : [ 0.3, 0.3, 0.3, 1.0 ],
+        "metallicFactor" : 0.1,
+        "roughnessFactor" : 0.5
+      }
+    }
+  ],
+  "meshes" : [
+    {
+      "primitives" : [
+        {
+          "attributes" : {
+            "POSITION" : 1,
+            "NORMAL" : 2,
+            "TANGENT" : 3,
+            "TEXCOORD_0" : 4
+          },
+          "indices" : 0,
+          "material" : 0
+        }
+      ],
+      "name" : "EnvBdgMD_Forest_MothersGarden_A"
+    }
+  ],
+  "buffers" : [
+    {
+      "uri" : "EnvBdgMD_Forest_MothersGarden_A.bin",
+      "byteLength" : 1293228
+    }
+  ],
+  "bufferViews" : [
+    {
+      "buffer" : 0,
+      "byteOffset" : 0,
+      "byteLength" : 93948
+    },
+    {
+      "buffer" : 0,
+      "byteOffset" : 93948,
+      "byteLength" : 299820
+    },
+    {
+      "buffer" : 0,
+      "byteOffset" : 393768,
+      "byteLength" : 299820
+    },
+    {
+      "buffer" : 0,
+      "byteOffset" : 693588,
+      "byteLength" : 399760
+    },
+    {
+      "buffer" : 0,
+      "byteOffset" : 1093348,
+      "byteLength" : 199880
+    }
+  ],
+  "accessors" : [
+    {
+      "bufferView" : 0,
+      "componentType" : 5123,
+      "count" : 46974,
+      "type" : "SCALAR"
+    },
+    {
+      "bufferView" : 1,
+      "min" : [ -3.1, -5.96046e-08, -9.00585 ],
+      "max" : [ 11.716, 12, 9.00585 ],
+      "componentType" : 5126,
+      "count" : 24985,
+      "type" : "VEC3"
+    },
+    {
+      "bufferView" : 2,
+      "componentType" : 5126,
+      "count" : 24985,
+      "type" : "VEC3"
+    },
+    {
+      "bufferView" : 3,
+      "componentType" : 5126,
+      "count" : 24985,
+      "type" : "VEC4"
+    },
+    {
+      "bufferView" : 4,
+      "componentType" : 5126,
+      "count" : 24985,
+      "type" : "VEC2"
+    }
+  ]
+}

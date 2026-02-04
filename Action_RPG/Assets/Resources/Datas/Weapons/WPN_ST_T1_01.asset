@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9b495199aa16a44489d2944cd3f302f, type: 3}
+  m_Name: WPN_ST_T1_01
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponData
+  id: WPN_ST_T1_01
+  weaponType: 5
+  weaponAtkType: 1
+  weaponName: "G\u1EADy T\u1EADp S\u1EF1"
+  lore: "C\xE2y g\u1EADy g\u1ED7 s\u1ED3i d\xE0nh cho h\u1ECDc vi\xEAn ph\xE1p s\u01B0."
+  description: 
+  icon: {fileID: 0}
+  rarity: 0
+  baseAtk: 22
+  baseAttackSpeed: 0.8
+  moveFlexibility: 0.7
+  defenseValue: 15
+  bonusCritChance: 0
+  substats: []
+  reqStr: 0
+  reqDex: 0
+  reqInt: 0
+  reqVit: 0
+  reqAgi: 0
+  playerOnly: 0

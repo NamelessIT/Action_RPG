@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6cbf2f21cbaafa4c8dacb28b94abfb2, type: 3}
+  m_Name: ACC_PA_T5_02
+  m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
+  id: ACC_PA_T5_02
+  accessoryType: 3
+  AccessoryName: "K\xFD Sinh N\xE3o"
+  lore: "\u1ED9t lo\u1EA1i n\u1EA5m ph\xE1t s\xE1ng b\xE1m v\xE0o v\u1ECF n\xE3o,
+    m\u1EDF r\u1ED9ng t\xE2m tr\xED nh\u01B0ng l\xE0m c\u01A1 th\u1EC3 y\u1EBFu \u1EDBt."
+  description: 
+  icon: {fileID: 0}
+  rarity: 4
+  setId: 0
+  substats:
+  - stat: 2
+    val: 100
+    powerMod: 1
+  - stat: 20
+    val: -0.2
+    powerMod: 1
+  isUnique: 0
+  playerOnly: 0

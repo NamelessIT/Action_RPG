@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: BloodReaverPassive
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: BloodReaverPassive
+  skillName: "N\u1ED9i t\u1EA1i c\u1EE7a BloodReaver"
+  icon: {fileID: 0}
+  skilDesc: "\u2022 \u0110\xF2n \u0111\xE1nh s\u1EBD ti\xEAu hao 0,5% M\xE1u t\u1ED1i
+    \u0111a \u0111\u1EC3 g\xE2y ch\u1EA3y m\xE1u (Bleed) k\u1EBB \u0111\u1ECBch.\n\u2022
+    Khi c\xF2n d\u01B0\u1EDBi 25% M\xE1u t\u1ED1i \u0111a s\u1EBD kh\xF4ng ti\xEAu
+    hao M\xE1u n\u1EEFa.\n\u2022 M\u1ED7i 1% M\xE1u m\u1EA5t \u0111i s\u1EBD t\u0103ng
+    0.5% S\xE1t Th\u01B0\u01A1ng V\u1EADt L\xFD.\n\u2022 Khi M\xE1u d\u01B0\u1EDBi
+    30%, t\u0103ng 30% T\u1EC9 l\u1EC7 ch\xED m\u1EA1ng v\xE0 25% S\xE1t th\u01B0\u01A1ng
+    ch\xED m\u1EA1ng."
+  skillType: 1
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 0
+  sinChargeReq: 0
+  effectCode: 6
+  passiveStats: []

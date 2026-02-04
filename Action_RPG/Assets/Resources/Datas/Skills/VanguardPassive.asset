@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: VanguardPassive
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: VanguardPassive
+  skillName: "N\u1ED9i t\u1EA1i c\u1EE7a Vanguard"
+  icon: {fileID: 0}
+  skilDesc: "\u2022 M\u1EDF r\u1ED9ng g\xF3c Block hi\u1EC7u qu\u1EA3 t\u1EEB 180\xB0
+    l\xEAn 270\xB0. (t<=0,75  thay v\xEC 0,5)\n\u2022 C\xF3 th\xEAm 1 n\xFAt \u0111\u1EC3
+    d\u1EF1ng khi\xEAn, m\u1EA5t 1s \u0111\u1EC3 d\u1EF1ng khi\xEAn l\xEAn, t\u1EF1
+    slow 50%, t\u1ED1n 20 stamina/s\n\u2022 M\u1ED7i khi Block th\xE0nh c\xF4ng m\u1ED9t
+    \u0111\xF2n \u0111\xE1nh, h\u1ED3i l\u1EA1i 5% Stamina."
+  skillType: 1
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 0
+  sinChargeReq: 0
+  effectCode: 3
+  passiveStats: []

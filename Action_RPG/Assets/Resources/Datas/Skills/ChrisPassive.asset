@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: ChrisPassive
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: ChrisPassive
+  skillName: "N\u1ED9i t\u1EA1i c\u1EE7a Chris"
+  icon: {fileID: 0}
+  skilDesc: "\u2022 Nh\u1EADn + 10% M\xE1u t\u1ED1i \u0111a ( 10% bonusHp)\n\u2022
+    Th\u1EDDi gian ch\u1ECBu debuff gi\u1EA3m 15%.\n\u2022 Khi b\u1ECB \u0111\xE1nh
+    tr\xFAng, h\u1ED3i 3 stamina (cooldown 1s)."
+  skillType: 0
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 0
+  sinChargeReq: 0
+  effectCode: 1
+  passiveStats:
+  - stat: 11
+    val: 0.1
+    powerMod: 1
