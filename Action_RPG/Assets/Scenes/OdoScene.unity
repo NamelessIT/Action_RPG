@@ -129,6 +129,7 @@ GameObject:
   m_Component:
   - component: {fileID: 39675276}
   - component: {fileID: 39675277}
+  - component: {fileID: 39675280}
   m_Layer: 6
   m_Name: GoblinCamp
   m_TagString: Untagged
@@ -145,7 +146,7 @@ Transform:
   m_GameObject: {fileID: 39675275}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.53, y: 1.52, z: -2.58}
+  m_LocalPosition: {x: 1.53, y: 1.58, z: -2.58}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -168,6 +169,27 @@ MonoBehaviour:
   respawnTime: 10
   spawnRadius: 2
   spawnedEnemies: []
+--- !u!65 &39675280
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 39675275}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1001 &99826734
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -492,6 +514,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1355773656}
     m_Modifications:
+    - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: physicalAtk
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 523185047943716899, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: m_Height
       value: 0.7
@@ -1516,54 +1542,6 @@ MonoBehaviour:
     Time: 0
     Smoothing: 0
     IgnoreY: 0
---- !u!1 &2077270047
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2077270048}
-  - component: {fileID: 2077270049}
-  m_Layer: 0
-  m_Name: GameManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2077270048
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2077270047}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.84514, y: 0, z: -2.63002}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2077270049
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2077270047}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c37de827e3ac75842b05dc163c2aeb63, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  playerDB: {fileID: 11400000, guid: f62f6f127a8c16148ad96c64fa59bd2e, type: 2}
-  weaponDB: {fileID: 11400000, guid: 34e7cc2978495564686f4dbec6a35339, type: 2}
-  checkpointDB: {fileID: 11400000, guid: 1ce9cd9df7a09484083b62e6931579cc, type: 2}
-  accessoryDB: {fileID: 11400000, guid: 5b08e6a5763e6944d9521d32a7b508af, type: 2}
 --- !u!1001 &9022525804194762693
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1573,8 +1551,24 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: runCost
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: dashCost
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: baseCritChance
-      value: 0.5
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: baseDashDistance
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: baseDashRecovery
+      value: 1.25
       objectReference: {fileID: 0}
     - target: {fileID: 7318812970211550158, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1620,6 +1614,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
+    - target: {fileID: 8734627235539532154, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: pickUpSkill
+      value: 
+      objectReference: {fileID: 11400000, guid: a6165b87cd00e174bae3b3efaa06268e, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1634,6 +1632,5 @@ SceneRoots:
   - {fileID: 1791929643}
   - {fileID: 1355773656}
   - {fileID: 1215823998}
-  - {fileID: 2077270048}
   - {fileID: 781032362}
   - {fileID: 99826734}

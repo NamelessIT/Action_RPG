@@ -1,30 +1,56 @@
 ﻿using UnityEngine;
 
-// Lớp cha trừu tượng (Abstract): Không dùng trực tiếp, chỉ để kế thừa
 public abstract class SkillBehavior : MonoBehaviour
 {
     protected AllyStats stats;
     protected SkillData data;
-    protected PlayerController player; // Nếu cần điều khiển nhân vật
+    protected PlayerController player;
 
-    // Hàm khởi tạo: Chạy ngay khi Skill được trang bị
+    // Biến đếm Cooldown (Hồi chiêu) nội bộ của script
+    protected float lastUseTime = -100f;
+
     public virtual void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
         this.stats = myStats;
         this.data = myData;
         this.player = myPlayer;
-
         OnEquip();
     }
 
-    // Hàm hủy: Chạy khi tháo Skill
     public virtual void Terminate()
     {
         OnUnequip();
-        Destroy(this); // Tự hủy component này khỏi GameObject
+        Destroy(this);
     }
 
-    // Các hàm con sẽ ghi đè (override) lại logic riêng
     protected abstract void OnEquip();
     protected abstract void OnUnequip();
+
+    // --- [MỚI] HÀM KÍCH HOẠT KỸ NĂNG (Dành cho Active Skill) ---
+    // Trả về true nếu dùng thành công (để trừ năng lượng/bắt đầu cooldown)
+    public virtual bool Use()
+    {
+        // 1. Kiểm tra Cooldown
+        if (Time.time < lastUseTime + data.cooldown)
+        {
+            Debug.Log($"Skill {data.skillName} đang hồi! ({data.cooldown - (Time.time - lastUseTime):F1}s)");
+            return false;
+        }
+
+        // 2. Kiểm tra Sin Charge (Năng lượng)
+        if (stats.currentSin < data.sinChargeReq)
+        {
+            Debug.Log("Không đủ Sin Charge!");
+            return false;
+        }
+
+        // 3. Trừ Sin Charge
+        stats.currentSin -= data.sinChargeReq;
+
+        // 4. Cập nhật thời gian dùng
+        lastUseTime = Time.time;
+
+        return true;
+        // Lớp con (S_Fireball.cs) sẽ override hàm này, gọi base.Use(), nếu true thì bắn cầu lửa
+    }
 }

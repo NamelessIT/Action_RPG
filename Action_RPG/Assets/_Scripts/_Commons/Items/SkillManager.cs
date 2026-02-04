@@ -120,16 +120,30 @@ public class SkillManager : MonoBehaviour
             case SkillData.SkillType.Skill:
                 if (currentSkill != newSkill)
                 {
+                    // A. Tháo skill cũ ra trước (nếu có)
+                    if (currentSkill != null)
+                    {
+                        RemoveSkillEffect(currentSkill); // <--- QUAN TRỌNG: Dọn dẹp skill cũ
+                    }
+
                     Debug.Log($"Player trang bị Skill: {newSkill.skillName}");
                     currentSkill = newSkill;
+                    ApplySkillEffect(newSkill);
                 }
                 break;
 
             case SkillData.SkillType.Signature:
                 if (currentSignature != newSkill)
                 {
+                    // A. Tháo skill cũ ra trước
+                    if (currentSignature != null)
+                    {
+                        RemoveSkillEffect(currentSignature); // <--- QUAN TRỌNG
+                    }
+
                     Debug.Log($"Player trang bị Signature: {newSkill.skillName}");
                     currentSignature = newSkill;
+                    ApplySkillEffect(newSkill);
                 }
                 break;
 
@@ -205,10 +219,10 @@ public class SkillManager : MonoBehaviour
         }
 
         // 2. Gắn Script Logic (Dựa trên Factory)
-        if (skill.effectCode != SkillData.PassiveEffectCode.None)
+        if (skill.passiveEffectCode != SkillData.PassiveEffectCode.None)
         {
             // Hỏi Factory: "Skill này dùng script nào?" (VD: BattleHardened -> ChrisPassive)
-            System.Type componentType = SkillFactory.GetSkillComponentType(skill.effectCode);
+            System.Type componentType = SkillFactory.GetPassiveComponentType(skill.passiveEffectCode);
 
             if (componentType != null)
             {
@@ -229,6 +243,33 @@ public class SkillManager : MonoBehaviour
         }
 
         if (allyStats != null) allyStats.RecalculateStats();
+    }
+    private void ApplySkillEffect (SkillData skill)
+    {
+        if (skill == null) return;
+        // 2. Gắn Script Logic (Dựa trên Factory)
+        if (skill.skillEffectCode != SkillData.SkillEffectCode.None)
+        {
+            // Hỏi Factory: "Skill này dùng script nào?" (VD: BattleHardened -> ChrisPassive)
+            System.Type componentType = SkillFactory.GetSkillComponentType(skill.skillEffectCode);
+
+            if (componentType != null)
+            {
+                if (!activeSkills.ContainsKey(skill))
+                {
+                    Debug.Log($">> Đang gắn script: {componentType.Name} vào Player");
+
+                    // AddComponent: Gắn script đó vào GameObject Player
+                    SkillBehavior behavior = (SkillBehavior)gameObject.AddComponent(componentType);
+
+                    // Khởi tạo (Truyền stats và data vào cho script con dùng)
+                    behavior.Initialize(allyStats, skill, playerController);
+
+                    // Lưu vào danh sách để quản lý
+                    activeSkills.Add(skill, behavior);
+                }
+            }
+        }
     }
 
     private void RemovePassiveEffect(SkillData skill)
@@ -257,6 +298,21 @@ public class SkillManager : MonoBehaviour
         }
 
         if (allyStats != null) allyStats.RecalculateStats();
+    }
+    private void RemoveSkillEffect(SkillData skill)
+    {
+        if (skill == null) return;
+        // 2. Hủy Script Logic
+        if (activeSkills.ContainsKey(skill))
+        {
+            SkillBehavior behaviorToRemove = activeSkills[skill];
+
+            // Gọi hàm Terminate để script tự dọn dẹp và tự hủy
+            if (behaviorToRemove != null) behaviorToRemove.Terminate();
+
+            // Xóa khỏi danh sách quản lý
+            activeSkills.Remove(skill);
+        }
     }
     void ApplyModifier(StatModifier mod, bool isReversing)
     {
@@ -296,6 +352,29 @@ public class SkillManager : MonoBehaviour
             case StatModifier.StatType.EffectRes: allyStats.resistanceEffect += value; break;
 
                 // ... Thêm các case cho các chỉ số khác
+        }
+    }
+
+    // Active Skill 
+    // --- [MỚI] HÀM DÙNG SKILL (Được gọi từ PlayerController) ---
+    public void CastSkill(SkillData skillData)
+    {
+        if (skillData == null) return;
+
+        // Tìm xem skill này có script nào đang chạy không
+        if (activeSkills.ContainsKey(skillData))
+        {
+            SkillBehavior script = activeSkills[skillData];
+
+            // Gọi hàm Use() của script đó
+            if (script != null)
+            {
+                script.Use();
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"Skill {skillData.skillName} có trong slot nhưng chưa được gắn Script!");
         }
     }
     // =========================================================
