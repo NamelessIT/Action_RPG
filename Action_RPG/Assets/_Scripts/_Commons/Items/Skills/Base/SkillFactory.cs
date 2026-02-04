@@ -22,7 +22,8 @@ public static class SkillFactory
                 return typeof(BloodReaverPassive);
             case SkillData.PassiveEffectCode.Rouge:
                 return typeof(RougePassive);
-            // ... Thêm các case khác vào đây ...
+            case SkillData.PassiveEffectCode.Mage:
+                return typeof(MagePassive);
 
             default:
                 return null;

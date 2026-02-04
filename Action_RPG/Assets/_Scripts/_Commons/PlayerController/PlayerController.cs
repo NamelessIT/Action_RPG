@@ -2,7 +2,7 @@
 using Unity.Cinemachine;
 using System.Collections;
 using UnityEngine.Rendering;
-
+using System;
 
 // nhiệm vụ: làm thêm attack cooldown dựa trên attack speed AllyStats.attackSpeed (có kết hợp animator) và hoàn thiện animator
 public class PlayerController : MonoBehaviour
@@ -59,6 +59,13 @@ public class PlayerController : MonoBehaviour
     // [MỚI] Biến để lưu tiến trình đánh đang chạy
     private Coroutine currentAttackCoroutine;
 
+
+    // ============ CLASS-NEUTRAL EVENTS (Minimal Integration) ============
+    public event System.Action<Vector2> OnMovementInputChanged;   // Gọi khi input di chuyển thay đổi
+    public event System.Action<int, bool> OnAttackPerformed;      // Gọi khi đánh trúng địch (stepIndex, isHeavy)
+    public event System.Action<WeaponData> OnWeaponEquipped;      // Gọi khi trang bị vũ khí mới
+    public event System.Action<Stats, int, bool, bool> OnHitEnemy;
+    // ==================================================================
     void Start()
     {
         stats = GetComponent<AllyStats>();
@@ -340,6 +347,7 @@ public class PlayerController : MonoBehaviour
         }
 
         UpdateAnimationDirection(currentVisualDir);
+        OnMovementInputChanged?.Invoke(new Vector2(movementInput.x, movementInput.z));
     }
     void UpdateAnimationDirection(Vector3 facingDir)
     {
@@ -623,6 +631,10 @@ public class PlayerController : MonoBehaviour
                 // --- BƯỚC 4: GỬI GÓI TIN ĐI ---
                 // Gọi hàm TakeDamage mới nhận struct DamageInfo
                 enemyStats.TakeDamage(info);
+
+                if (stats != null)
+                    stats.NotifyOnHitEnemy(enemyStats, t, isCrit);
+                OnHitEnemy?.Invoke(enemyStats, stepIndex, isHeavy, isCrit);
                 // --- [MỚI] KIỂM TRA KẾT LIỄU ---
                 if (wasAlive && enemyStats.currentHp <= 0)
                 {
@@ -644,15 +656,19 @@ public class PlayerController : MonoBehaviour
                 //if (stats != null) stats.NotifyOnHitEnemy(t, isCrit);
             }
         }
-        if (hitAnything) Debug.Log("Tấn công TRÚNG ĐỊCH -> Vào Combat");
+        if (hitAnything)
+        {
+            Debug.Log("Tấn công TRÚNG ĐỊCH -> Vào Combat");
+            OnAttackPerformed?.Invoke(stepIndex, isHeavy);
+        }
     }
-
-
+  
     // Hàm trang bị hoặc đổi vũ khí (xài chung)
     void EquipWeapon()
     {
         Debug.Log("Đang xài vũ khí:" + equipmentManager.currentWeapon);
         equipmentManager.EquipWeapon(equipmentManager.pickUpWeapon);
+        OnWeaponEquipped?.Invoke(equipmentManager.currentWeapon);
     }
     // Tháo vũ khí (UI sẽ hiện là tháo, code là chuyển sang Hand)
     void DropWeapon()
