@@ -548,12 +548,15 @@ public class PlayerController : MonoBehaviour
                 if (isHeavy)
                 {
                     info.isKnockback = true;
-                    Debug.Log("Trong kich knockback");
                     info.knockbackForce = 15f; // Lực đẩy mạnh cho trọng kích
                     // info.isStun = true; // Bỏ comment nếu muốn trọng kích gây choáng luôn
+                    info.impactLevel = 1;
                 }
                 else
                 {
+                    info.impactLevel = 0;
+                    // Trừ khi đòn cuối combo mạnh hơn?
+                    //if (stepIndex == maxCombo - 1) info.impactLevel = 1;
                     // B. Logic Đánh thường (Combo) -> Lấy từ WeaponData
                     // Kiểm tra xem vũ khí có cấu hình hiệu ứng cho đòn đánh này không
                     if (currentWpn != null && currentWpn.comboEffects != null && stepIndex < currentWpn.comboEffects.Count)
@@ -594,7 +597,7 @@ public class PlayerController : MonoBehaviour
                 if (isHeavy)
                 {
                     attackMultiplier = currentDamageMultiplier;
-                }
+                                    }
                 else
                 {
                     // stepIndex = 0 (Đòn 1) -> x1.0, stepIndex = 1 (Đòn 2) -> x1.5

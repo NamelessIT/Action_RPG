@@ -60,6 +60,9 @@ public class AllyStats : Stats
     public float cdrPerAGI=0.0015f;
     public float bonusCdr;
 
+    [Header("--- Class Info ---")]
+    public string className = "Warrior"; // Hoặc dùng Enum ClassType
+
     // ---------------- Chris Passive ----------------
     // Đây là cái "chuông" để báo cho Passive Chris biết khi nào bị đánh
     public Action<float> OnTakeDamage;
@@ -96,6 +99,7 @@ public class AllyStats : Stats
     {
         // Gọi tính toán lần đầu
         RecalculateStats();
+        InitializeClassStats();
     }
 
     // Hàm này phải được gọi mỗi khi: Lên cấp, Đổi đồ, Nhận Buff, Chịu Debuff
@@ -148,6 +152,23 @@ public class AllyStats : Stats
 
         // 8. Cooldown Reduction
         cooldownReduction = baseCdr + (cdrPerAGI * AGI) + bonusCdr;
+    }
+    public void InitializeClassStats()
+    {
+        if (className == "Warrior")
+        {
+            // WARRIOR: "Mình đồng da sắt"
+            // Luôn luôn có Super Armor cấp 0 -> Miễn nhiễm với quái nhỏ (Rank 0)
+            isSuperArmor = true;
+            superArmorLevel = 0;
+
+            // Nếu bạn muốn Warrior cấp cao cứng hơn nữa thì tăng level lên 1
+        }
+        else if (className == "Assassin")
+        {
+            // ASSASSIN: Mỏng manh, dễ bị đẩy
+            isSuperArmor = false;
+        }
     }
 
     // Ghi đè hàm TakeDamage của cha (Stats) (Cho Chris)

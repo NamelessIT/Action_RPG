@@ -579,8 +579,6 @@ PrefabInstance:
     m_RemovedComponents:
     - {fileID: 4658667183789246777, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
     - {fileID: 2094500909127700378, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
-    - {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
-    - {fileID: 1448595461306789732, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
@@ -1214,7 +1212,7 @@ MonoBehaviour:
   moveFlexibility: 1
   turnDuration: 0.1
   combatTurnDuration: 0.1
-  resistanceKnockBack: 15
+  resistanceKnockBack: 0.1
   resistanceEffect: 0
   isStunned: 0
   buffDurationBonus: 0
