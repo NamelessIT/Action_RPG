@@ -158,6 +158,12 @@ public class EnemyCombat : MonoBehaviour
                 info.knockbackForce = 8f;
                 Debug.Log("Orc thực hiện đòn đập mạnh gây choáng!");
             }
+            if (stats.enemyID == "Odo" && currentComboStep == 1) // Giả sử maxCombo=3, index 0,1,2
+            {
+                info.isKnockback = true;
+                info.knockbackForce = 8f;
+                Debug.Log("Enemy Odo thực hiện đòn đập mạnh gây knockback!");
+            }
 
             // --- BƯỚC 3: TÍNH CRIT & DAMAGE ---
             bool isCrit = CombatMath.CheckIsCrit(stats.baseCritChance);

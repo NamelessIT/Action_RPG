@@ -338,7 +338,7 @@ public class Stats : MonoBehaviour
         // isStopped đôi khi không đủ với Humanoid, tắt luôn Component cho chắc
         if (hasAgent)
         {
-            Debug.Log("hasAgent: lấy thành công");
+            //Debug.Log("hasAgent: lấy thành công");
             agent.velocity = Vector3.zero;
             agent.enabled = false; // <--- TẮT HẲN
         }
@@ -346,7 +346,7 @@ public class Stats : MonoBehaviour
         // 2. TẠM DỪNG ROOT MOTION
         if (animator != null)
         {
-            Debug.Log("animator: Lấy thành công " );
+            //Debug.Log("animator: Lấy thành công " );
             wasRootMotion = animator.applyRootMotion;
             animator.applyRootMotion = false; // Tắt Root Motion để Physics hoạt động
         }
@@ -357,7 +357,7 @@ public class Stats : MonoBehaviour
             wasKinematic = rb.isKinematic;
             rb.isKinematic = false; // Bật Physics
 
-            Debug.Log("rb.isKinematic: " + rb.isKinematic);
+            //Debug.Log("rb.isKinematic: " + rb.isKinematic);
 
             // Reset vận tốc cũ
             rb.linearVelocity = Vector3.zero;

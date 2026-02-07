@@ -1054,11 +1054,13 @@ MonoBehaviour:
   resistanceKnockBack: 0.1
   resistanceEffect: 0
   isStunned: 0
+  isSuperArmor: 0
+  superArmorLevel: 0
   buffDurationBonus: 0
   facingDirection: {x: 0, y: 0, z: -1}
   stealthFactor: 1
   IsMarked: 0
-  enemyID: 
+  enemyID: Odo
   enemyType: 1
   detectionMethod: 1
   currentAggro: 0
@@ -1073,6 +1075,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 0
   spawnPosition: {x: 0, y: 0, z: 0}
+  monsterRank: 1
 --- !u!195 &1319874510
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -1240,9 +1243,11 @@ MonoBehaviour:
   moveFlexibility: 1
   turnDuration: 0.1
   combatTurnDuration: 0.1
-  resistanceKnockBack: 15
+  resistanceKnockBack: 0.2
   resistanceEffect: 0
   isStunned: 0
+  isSuperArmor: 0
+  superArmorLevel: 0
   buffDurationBonus: 0
   facingDirection: {x: 0, y: 0, z: -1}
   stealthFactor: 1
@@ -1559,6 +1564,10 @@ PrefabInstance:
       value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: className
+      value: Warrior
+      objectReference: {fileID: 0}
+    - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: baseCritChance
       value: 0
       objectReference: {fileID: 0}
@@ -1569,6 +1578,14 @@ PrefabInstance:
     - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: baseDashRecovery
       value: 1.25
+      objectReference: {fileID: 0}
+    - target: {fileID: 4658667183789246777, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: attackRange
+      value: 0.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 4658667183789246777, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: perfectDodgeRadius
+      value: 0.35
       objectReference: {fileID: 0}
     - target: {fileID: 7318812970211550158, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: m_LocalPosition.x
