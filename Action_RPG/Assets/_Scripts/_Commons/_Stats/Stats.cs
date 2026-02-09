@@ -324,7 +324,7 @@ public class Stats : MonoBehaviour
         }
     }
 
-    IEnumerator KnockbackRoutine(Vector3 dir, float force)
+    public IEnumerator KnockbackRoutine(Vector3 dir, float force)
     {
         isStunned = true;
 

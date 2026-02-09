@@ -12,12 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
   m_Name: LeoSkill
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
-  id: 
-  skillName: 
+  id: LeoSkill
+  skillName: Phase Slash
   icon: {fileID: 0}
+  skilDesc: "H\xE0nh \u0111\u1ED9ng: L\u01B0\u1EDBt (Dash) v\u1EC1 ph\xEDa tr\u01B0\u1EDBc
+    k\xE8m m\u1ED9t nh\xE1t ch\xE9m ngang.\n\nHi\u1EC7u \u1EE9ng: G\xE2y s\xE1t th\u01B0\u01A1ng
+    trung b\xECnh. Trong l\xFAc l\u01B0\u1EDBt c\xF3 i-frame ng\u1EAFn."
   skillType: 2
-  skillPhysicalMultiplier: 0
+  skillPhysicalMultiplier: 1.5
   skillMagicMultiplier: 0
-  cooldown: 0
+  cooldown: 2
   sinChargeReq: 0
-  skilDesc: 
+  passiveEffectCode: 0
+  skillEffectCode: 2
+  passiveStats: []
