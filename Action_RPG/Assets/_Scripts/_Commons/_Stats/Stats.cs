@@ -125,6 +125,7 @@ public class Stats : MonoBehaviour
 
     // --- HIỆU ỨNG CHẢY MÁU (BLEED) ---
     [Header("--- Bleed ---")]
+    public bool isBleeding = false;
     private Coroutine bleedCoroutine;
     private float bleedTimer = 0f; // Bộ đếm thời gian còn lại của Bleed
     private float currentBleedDamage = 0f; // Lưu damage để nếu đánh tiếp thì cập nhật damage mới
@@ -205,6 +206,8 @@ public class Stats : MonoBehaviour
         // 2. Gia hạn thời gian (Reset lại đồng hồ đếm ngược)
         bleedTimer = duration;
 
+        // Đánh dấu kẻ địch đang bị Bleed
+        isBleeding = true;
         // 3. Chỉ Start Coroutine nếu nó chưa chạy
         if (bleedCoroutine == null)
         {
@@ -229,6 +232,7 @@ public class Stats : MonoBehaviour
         }
 
         // Hết giờ -> Xóa Coroutine để lần sau Start lại được
+        isBleeding = false;
         bleedCoroutine = null;
     }
     // [CẬP NHẬT] Hàm tiêu hao thể lực dùng chung cho Dash và Run

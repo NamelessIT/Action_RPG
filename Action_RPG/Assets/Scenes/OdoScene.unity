@@ -973,7 +973,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1319874499}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c64231f935be08c47a863eed95e77be4, type: 3}
   m_Name: 
@@ -1059,6 +1059,7 @@ MonoBehaviour:
   buffDurationBonus: 0
   facingDirection: {x: 0, y: 0, z: -1}
   stealthFactor: 1
+  isBleeding: 0
   IsMarked: 0
   enemyID: Odo
   enemyType: 1
@@ -1075,7 +1076,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 0
   spawnPosition: {x: 0, y: 0, z: 0}
-  monsterRank: 1
+  monsterRank: 0
 --- !u!195 &1319874510
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -1251,6 +1252,7 @@ MonoBehaviour:
   buffDurationBonus: 0
   facingDirection: {x: 0, y: 0, z: -1}
   stealthFactor: 1
+  isBleeding: 0
   IsMarked: 0
 --- !u!65 &1439149635
 BoxCollider:
