@@ -21,6 +21,6 @@ MonoBehaviour:
   skillMagicMultiplier: 0
   cooldown: 0
   sinChargeReq: 0
-  passiveEffectCode: 0
+  passiveEffectCode: 9
   skillEffectCode: 0
   passiveStats: []

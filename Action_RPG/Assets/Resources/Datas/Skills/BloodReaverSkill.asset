@@ -10,22 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
-  m_Name: ChrisPassive
+  m_Name: BloodReaverSkill
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
-  id: ChrisPassive
-  skillName: "N\u1ED9i t\u1EA1i c\u1EE7a Chris"
+  id: BloodReaverSkill
+  skillName: Reaping Strike
   icon: {fileID: 0}
-  skilDesc: "\u2022 Nh\u1EADn + 10% M\xE1u t\u1ED1i \u0111a ( 10% bonusHp)\n\u2022
-    Th\u1EDDi gian ch\u1ECBu debuff gi\u1EA3m 15%.\n\u2022 Khi b\u1ECB \u0111\xE1nh
-    tr\xFAng, h\u1ED3i 3 stamina (cooldown 1s)."
-  skillType: 0
-  skillPhysicalMultiplier: 0
+  skilDesc: "Qu\xE9t ngang v\u0169 kh\xED 180 \u0111\u1ED9 tr\u01B0\u1EDBc m\u1EB7t,
+    sau \u0111\xF3 gi\u1EADt l\xF9i b\u1EA3n th\xE2n l\u1EA1i.\nN\u1EBFu \u0111ang
+    s\u1EED d\u1EE5ng Bow, b\u1EAFn ra 1 m\u0169i t\xEAn xuy\xEAn th\u1EA5u."
+  skillType: 2
+  skillPhysicalMultiplier: 2
   skillMagicMultiplier: 0
   cooldown: 0
   sinChargeReq: 0
-  passiveEffectCode: 1
-  skillEffectCode: 0
-  passiveStats:
-  - stat: 11
-    val: 0.1
-    powerMod: 1
+  passiveEffectCode: 0
+  skillEffectCode: 6
+  passiveStats: []
