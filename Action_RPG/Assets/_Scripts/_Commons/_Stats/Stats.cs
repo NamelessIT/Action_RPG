@@ -134,8 +134,9 @@ public class Stats : MonoBehaviour
 
     private NavMeshAgent agent;
     private Rigidbody rb;
+    protected Animator animator;
 
-    void Start()
+    public virtual void Start()
     {
         maxHp = baseHp;
         currentHp = maxHp;
@@ -144,6 +145,7 @@ public class Stats : MonoBehaviour
 
         agent = GetComponent<NavMeshAgent>();
         rb = GetComponent<Rigidbody>();
+        animator = GetComponentInChildren<Animator>();
     }
 
     public virtual void Update()
@@ -292,6 +294,7 @@ public class Stats : MonoBehaviour
             // Tính lực đẩy lùi thực tế sau khi trừ Kháng
             // Ví dụ: Force 10, Res 0.2 -> Thực nhận 8
             float finalForce = info.knockbackForce * (1.0f - resistanceKnockBack);
+            Debug.Log("finalForce: " + finalForce + " info.knockbackForce: "+ info.knockbackForce + " resistanceKnockBack: "+ resistanceKnockBack);
 
             // Nếu lực vẫn > 0 thì đẩy
             if (finalForce > 0)
@@ -305,7 +308,8 @@ public class Stats : MonoBehaviour
         // 2. Xử lý STUN (Nâng cấp)
         if (info.isStun)
         {
-            float finalDuration = Mathf.Max(0.1f, info.stunDuration * (1.0f - resistanceEffect));
+            float finalDuration = info.stunDuration * (1.0f - resistanceKnockBack);
+            Debug.Log($"Stun: {finalDuration}");
             // [SỬA] Bỏ hàm Mathf.Max(0.1f). Nếu thời gian < 0.1s coi như kháng hoàn toàn
             if (finalDuration >= 0.1f)
             {
@@ -324,66 +328,89 @@ public class Stats : MonoBehaviour
     {
         isStunned = true;
 
-        // Biến lưu trạng thái gốc để khôi phục sau khi đẩy xong
         bool wasKinematic = false;
         bool hasAgent = (agent != null);
 
-        // 1. TẠM DỪNG NAVMESH AGENT (Nếu là Enemy)
-        // Phải tắt update position để Agent không "giằng co" vị trí với Rigidbody
+        // [MỚI] Biến lưu trạng thái Root Motion
+        bool wasRootMotion = false;
+
+        // 1. TẮT HẲN NAVMESH AGENT (Biện pháp mạnh)
+        // isStopped đôi khi không đủ với Humanoid, tắt luôn Component cho chắc
         if (hasAgent)
         {
-            if (agent.isOnNavMesh) agent.isStopped = true;
-            agent.updatePosition = false;
-            agent.updateRotation = false;
+            //Debug.Log("hasAgent: lấy thành công");
+            agent.velocity = Vector3.zero;
+            agent.enabled = false; // <--- TẮT HẲN
         }
 
-        // 2. XỬ LÝ RIGIDBODY (Cho cả Player và Enemy)
+        // 2. TẠM DỪNG ROOT MOTION
+        if (animator != null)
+        {
+            //Debug.Log("animator: Lấy thành công " );
+            wasRootMotion = animator.applyRootMotion;
+            animator.applyRootMotion = false; // Tắt Root Motion để Physics hoạt động
+        }
+
+        // 3. XỬ LÝ RIGIDBODY (Đẩy Lùi)
         if (rb != null)
         {
-            wasKinematic = rb.isKinematic; // Lưu lại: Enemy là true, Player là false
+            wasKinematic = rb.isKinematic;
+            rb.isKinematic = false; // Bật Physics
 
-            // BẮT BUỘC: Phải tắt Kinematic thì mới AddForce hoặc set velocity được
-            rb.isKinematic = false;
+            //Debug.Log("rb.isKinematic: " + rb.isKinematic);
 
-            // Reset vận tốc cũ để lực đẩy dứt khoát hơn
+            // Reset vận tốc cũ
             rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
 
-            // Thêm lực đẩy
+            // Debug xem lực có được add không
+            // Debug.Log($"Add Force: {force} theo hướng {dir}");
+
+            // Thêm lực đẩy (Dùng Impulse cho dứt khoát)
             rb.AddForce(dir * force, ForceMode.Impulse);
         }
 
-        // 3. CHỜ THỜI GIAN BỊ ĐẨY
+        // 4. CHỜ THỜI GIAN BAY
         yield return new WaitForSeconds(0.2f);
 
-        // 4. KHÔI PHỤC TRẠNG THÁI
+        // 5. KHÔI PHỤC TRẠNG THÁI
         if (rb != null)
         {
-            rb.linearVelocity = Vector3.zero; // Phanh lại
-            rb.isKinematic = wasKinematic; // Trả lại trạng thái gốc (Enemy -> Kinematic, Player -> Dynamic)
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = wasKinematic;
         }
 
+        // Khôi phục Root Motion
+        if (animator != null)
+        {
+            animator.applyRootMotion = wasRootMotion;
+        }
+
+        // Khôi phục Agent
         if (hasAgent)
         {
-            // Đồng bộ vị trí Agent theo vị trí vật lý mới của Enemy
-            agent.Warp(transform.position);
-            agent.updatePosition = true;
-            agent.updateRotation = true;
-            // Vẫn giữ isStopped = true vì đang bị Stun (sẽ mở lại ở StunRoutine hoặc Logic AI)
+            agent.enabled = true; // <--- BẬT LẠI
+            if (agent.isOnNavMesh)
+            {
+                agent.isStopped = true; // Vẫn giữ stop vì đang Stun
+                agent.ResetPath();      // Xóa đường đi cũ cho sạch
+            }
         }
 
-        // 5. CHECK STUN TIẾP THEO
+        // 6. CHECK STUN TIẾP
         yield return new WaitForSeconds(0.1f);
 
-        // Logic kiểm tra xem có ai đang gia hạn stun không (Stun chồng Stun)
-        // Nếu không có StunRoutine nào khác đang chạy đè lên thì mới tắt
-        // (Tuy nhiên ở đây bạn dùng biến bool đơn giản nên ta cứ set false nếu hết giờ)
-        if (isStunned) isStunned = false;
+        if (Time.time >= stunEndTime)
+        {
+            isStunned = false;
+        }
     }
 
     IEnumerator StunRoutine(float duration)
     {
         isStunned = true;
-         Debug.Log($"{gameObject.name} bị STUN!");
+        Debug.Log($"{gameObject.name} bị STUN!");
 
         if (agent != null && agent.isOnNavMesh)
         {

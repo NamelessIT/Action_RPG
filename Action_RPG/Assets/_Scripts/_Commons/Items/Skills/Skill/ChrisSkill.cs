@@ -60,7 +60,7 @@ public class ChrisSkill : SkillBehavior
 
             // B. Quét va chạm
             // Dịch tâm quét lên 1 chút để quét chính xác hơn
-            Collider[] hits = Physics.OverlapSphere(transform.position + Vector3.up + dashDir * 0.5f, hitRadius, player.enemyLayer);
+            Collider[] hits = Physics.OverlapSphere(transform.position + Vector3.up + dashDir * 0.5f, hitRadius, player.dangerLayer);
 
             foreach (var hit in hits)
             {

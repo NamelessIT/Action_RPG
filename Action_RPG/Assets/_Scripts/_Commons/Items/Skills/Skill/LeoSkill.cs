@@ -81,7 +81,7 @@ public class LeoSkill : SkillBehavior
 
     private Stats FindBestTarget()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, maxCastRange, player.enemyLayer);
+        Collider[] hits = Physics.OverlapSphere(transform.position, maxCastRange, player.dangerLayer);
         Stats bestTarget = null;
         float closestDist = Mathf.Infinity;
         Vector3 currentDir = stats.facingDirection;
@@ -134,7 +134,7 @@ public class LeoSkill : SkillBehavior
             rb.MovePosition(Vector3.Lerp(startPos, destination, percent));
 
             // Quét Damage
-            Collider[] hits = Physics.OverlapSphere(transform.position + Vector3.up, hitRadius, player.enemyLayer);
+            Collider[] hits = Physics.OverlapSphere(transform.position + Vector3.up, hitRadius, player.dangerLayer);
             foreach (var hit in hits)
             {
                 if (!damagedList.Contains(hit.gameObject))

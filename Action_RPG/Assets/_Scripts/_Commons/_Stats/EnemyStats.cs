@@ -50,8 +50,9 @@ public class EnemyStats : Stats
     [Header("--- Enemy Rank ---")]
     // 0 = Small (Goblins...), 1 = Elite (Orcs...), 2 = Boss (Golem...)
     public int monsterRank = 0;
-    void Start()
+    public override void Start()
     {
+        base.Start();
         base.maxHp = base.baseHp;
         base.currentHp = base.maxHp;
         base.baseAttackSpeed = 0.5f;
