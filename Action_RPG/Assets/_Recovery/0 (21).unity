@@ -145,7 +145,7 @@ Transform:
   m_GameObject: {fileID: 39675275}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.53, y: 1.52, z: -2.58}
+  m_LocalPosition: {x: 1.53, y: 0.596, z: -2.58}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -579,6 +579,8 @@ PrefabInstance:
     m_RemovedComponents:
     - {fileID: 4658667183789246777, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
     - {fileID: 2094500909127700378, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+    - {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+    - {fileID: 1448595461306789732, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
@@ -945,7 +947,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1319874499}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c64231f935be08c47a863eed95e77be4, type: 3}
   m_Name: 
@@ -1215,7 +1217,7 @@ MonoBehaviour:
   moveFlexibility: 1
   turnDuration: 0.1
   combatTurnDuration: 0.1
-  resistanceKnockBack: 0.1
+  resistanceKnockBack: 1
   resistanceEffect: 0
   isStunned: 0
   isSuperArmor: 0
@@ -1576,8 +1578,12 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: className
+      value: Warrior
+      objectReference: {fileID: 0}
+    - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: baseCritChance
-      value: 50
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 7318812970211550158, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1623,10 +1629,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
-    - target: {fileID: 8734627235539532154, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
-      propertyPath: pickUpSkill
-      value: 
-      objectReference: {fileID: 11400000, guid: 21a10bf688582db40a09a233650d71d1, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

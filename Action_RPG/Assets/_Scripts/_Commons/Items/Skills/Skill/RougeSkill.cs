@@ -77,7 +77,7 @@ public class RougeSkill : SkillBehavior
     // Hàm tìm mục tiêu gần nhất trong góc nhìn
     private Stats FindBestTarget()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, maxCastRange, player.enemyLayer);
+        Collider[] hits = Physics.OverlapSphere(transform.position, maxCastRange, player.dangerLayer);
         Stats bestTarget = null;
         float closestDist = Mathf.Infinity;
         Vector3 currentDir = stats.facingDirection;
@@ -136,7 +136,7 @@ public class RougeSkill : SkillBehavior
             rb.MovePosition(nextPos);
 
             // --- QUÉT DAMAGE DỌC ĐƯỜNG ---
-            Collider[] hits = Physics.OverlapSphere(transform.position + Vector3.up, hitRadius, player.enemyLayer);
+            Collider[] hits = Physics.OverlapSphere(transform.position + Vector3.up, hitRadius, player.dangerLayer);
             foreach (var hit in hits)
             {
                 if (!damagedList.Contains(hit.gameObject))

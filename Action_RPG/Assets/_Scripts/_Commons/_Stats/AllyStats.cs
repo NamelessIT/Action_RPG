@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using System;
-
+using System.Collections;
 public class AllyStats : Stats
 {
     public float exp;
@@ -63,6 +63,15 @@ public class AllyStats : Stats
     [Header("--- Class Info ---")]
     public string className = "Warrior"; // Hoặc dùng Enum ClassType
 
+    [Header("--- Combat Status ---")]
+    public bool isPerfectDodgeSuccess = false;
+
+    [Tooltip("Độ chậm thời gian (0.1 = rất chậm, 1.0 = bình thường)")]
+    public float slowMotionFactor = 0.2f;
+
+    [Tooltip("Thời gian duy trì hiệu ứng (tính theo giây thực tế)")]
+    public float slowMotionDuration = 0.5f;
+
     // ---------------- Chris Passive ----------------
     // Đây là cái "chuông" để báo cho Passive Chris biết khi nào bị đánh
     public Action<float> OnTakeDamage;
@@ -95,8 +104,9 @@ public class AllyStats : Stats
     // 2. bool isBackstab (Có phải giết từ sau lưng không)
     public Action<Stats, bool> OnKillEnemy;
 
-    void Start()
+    public override void Start()
     {
+        base.Start();
         // Gọi tính toán lần đầu
         RecalculateStats();
         InitializeClassStats();
@@ -231,5 +241,49 @@ public class AllyStats : Stats
     {
         base.Update();
         // Có thể gọi RecalculateStats ở đây để test (nhưng sẽ nặng máy), nên gọi khi cần thiết thôi.
+    }
+
+
+    // Hàm gọi khi né thành công (Có thể thêm slow motion ở đây sau này)
+    public void TriggerPerfectDodge()
+    {
+        isPerfectDodgeSuccess = true;
+        Debug.Log("<color=cyan>✨ PERFECT DODGE! ✨</color>");
+
+        // Ví dụ: Hồi 10 Stamina ngay lập tức
+        currentStamina = Mathf.Min(currentStamina + 10f, maxStamina);
+
+        // [MỚI] Kích hoạt Slow Motion
+        StartCoroutine(SlowMotionRoutine());
+
+        // Reset cờ sau 1 khoảng ngắn (để đòn đánh sau đó biết mà kích hoạt hiệu ứng)
+        StartCoroutine(ResetPerfectDodgeFlag());
+    }
+
+    // Coroutine xử lý Slow Motion
+    IEnumerator SlowMotionRoutine()
+    {
+        // 1. Làm chậm thời gian
+        Time.timeScale = slowMotionFactor;
+
+        // [QUAN TRỌNG] Phải chỉnh cả FixedDeltaTime để vật lý không bị giật
+        // Mặc định là 0.02f
+        Time.fixedDeltaTime = 0.02f * Time.timeScale;
+
+        // 2. Chờ thời gian thực (Vì Time.time đang bị chậm nên không dùng WaitForSeconds thường được)
+        yield return new WaitForSecondsRealtime(slowMotionDuration);
+
+        // 3. Trả lại thời gian bình thường
+        Time.timeScale = 1.0f;
+        Time.fixedDeltaTime = 0.02f;
+    }
+
+    IEnumerator ResetPerfectDodgeFlag()
+    {
+        // Giữ trạng thái "Vừa né xong" trong 1-2 giây để người chơi kịp bấm đánh phản công
+        // Lưu ý: WaitForSeconds ở đây sẽ bị ảnh hưởng bởi timeScale, 
+        // nhưng vì ta muốn người chơi có thời gian phản xạ trong lúc slow motion nên vẫn ổn.
+        yield return new WaitForSecondsRealtime(5.0f);
+        isPerfectDodgeSuccess = false;
     }
 }

@@ -28,7 +28,6 @@ public class PlayerController : MonoBehaviour
 
     [Header("Combat Settings")]
     public float attackRange = 0.5f;
-    public LayerMask enemyLayer;
     private bool nextAttackQueued = false; // Đã bấm chuột cho đòn tiếp theo chưa?
 
     // [MỚI] Biến hỗ trợ Charge Attack
@@ -59,6 +58,10 @@ public class PlayerController : MonoBehaviour
     // [MỚI] Biến để lưu tiến trình đánh đang chạy
     private Coroutine currentAttackCoroutine;
 
+    [Header("Perfect Dodge Settings")]
+    public float perfectDodgeRadius = 2.0f; // Bán kính nguy hiểm để tính Perfect
+    public LayerMask dangerLayer;
+
 
     // ============ CLASS-NEUTRAL EVENTS (Minimal Integration) ============
     public event System.Action<Vector2> OnMovementInputChanged;   // Gọi khi input di chuyển thay đổi
@@ -74,7 +77,7 @@ public class PlayerController : MonoBehaviour
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
         rb = GetComponent<Rigidbody>();
         impulseSource = GetComponent<CinemachineImpulseSource>();
-        enemyLayer = LayerMask.GetMask("Enemy");
+        dangerLayer = LayerMask.GetMask("Enemy");
 
         if (stats == null) Debug.LogError("Thiếu CharacterStats!");
         if (animator == null) Debug.LogError("Thiếu Animator!");
@@ -237,6 +240,10 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
+        // --- [MỚI] KIỂM TRA PERFECT DODGE NGAY KHI BẤM DASH ---
+        CheckPerfectDodgeCondition();
+        // -----------------------------------------------------
+
         // --- LOGIC CANCEL ATTACK ---
         if (isAttacking)
         {
@@ -264,6 +271,7 @@ public class PlayerController : MonoBehaviour
 
         StartCoroutine(DashCoroutine());
     }
+
 
     IEnumerator DashCoroutine()
     {
@@ -306,6 +314,39 @@ public class PlayerController : MonoBehaviour
 
         rb.linearVelocity = Vector3.zero;
         isDashing = false;
+    }
+
+    // Hàm kiểm tra xem có mối nguy hiểm nào gần đó không
+    void CheckPerfectDodgeCondition()
+    {
+        // Tạo một vùng quét xung quanh Player
+        Collider[] hits = Physics.OverlapSphere(transform.position, perfectDodgeRadius, dangerLayer);
+
+        foreach (Collider hit in hits)
+        {
+            // 1. Kiểm tra nếu là Enemy
+            EnemyCombat enemyCombat = hit.GetComponent<EnemyCombat>();
+            if (enemyCombat != null)
+            {
+                // Chỉ tính là Perfect nếu Enemy ĐANG ĐÁNH (isAttacking = true)
+                if (enemyCombat.isAttacking)
+                {
+                    stats.TriggerPerfectDodge();
+                    return; // Chỉ cần né được 1 cái là đủ
+                }
+            }
+
+            // 2. Kiểm tra nếu là Projectile (Đạn)
+            // Giả sử bạn có script Projectile, sau này check ở đây
+            /*
+            Projectile proj = hit.GetComponent<Projectile>();
+            if (proj != null) 
+            {
+                stats.TriggerPerfectDodge();
+                return;
+            }
+            */
+        }
     }
 
     void HandleMovementStopToTurn()
@@ -536,7 +577,7 @@ public class PlayerController : MonoBehaviour
     void HandleDamageLogic(bool isHeavy, int stepIndex)
     {
         bool hitAnything = false;
-        Collider[] hitEnemies = Physics.OverlapSphere(transform.position, attackRange, enemyLayer);
+        Collider[] hitEnemies = Physics.OverlapSphere(transform.position, attackRange, dangerLayer);
         WeaponData currentWpn = equipmentManager.currentWeapon;
 
         foreach (Collider enemy in hitEnemies)
@@ -562,6 +603,7 @@ public class PlayerController : MonoBehaviour
                 // A. Logic Trọng Kích (Heavy Attack) -> Mặc định gây Knockback mạnh
                 if (isHeavy)
                 {
+                    Debug.Log("Trọng Kích -> Gây knockback");
                     info.isKnockback = true;
                     info.knockbackForce = 15f; // Lực đẩy mạnh cho trọng kích
                     // info.isStun = true; // Bỏ comment nếu muốn trọng kích gây choáng luôn
@@ -585,27 +627,28 @@ public class PlayerController : MonoBehaviour
                     }
                 }
 
-                /* // --- BƯỚC 2.5: LOGIC PERFECT DODGE / PARRY (Dành cho tương lai) ---
+                 // --- BƯỚC 2.5: LOGIC PERFECT DODGE / PARRY (Dành cho tương lai) ---
                 // Khi bạn code xong hệ thống Dodge/Parry, hãy bỏ comment dòng dưới
                 
                 if (stats.isPerfectDodgeSuccess) 
                 {
                     // Nếu vừa né hoàn hảo -> Đòn phản công kế tiếp gây Stun
                     info.isStun = true;
-                    info.stunDuration = 1.5f; 
-                    Debug.Log("Phản công Perfect Dodge!");
+                    info.stunDuration = 1f;
+                    info.impactLevel = 1; // Tăng lực va chạm để xuyên giáp
+
+                    Debug.Log(">> PHẢN CÔNG PERFECT DODGE!");
                     stats.isPerfectDodgeSuccess = false; // Reset sau khi dùng
                 }
                 
-                if (stats.isPerfectParrySuccess)
-                {
-                    // Nếu vừa đỡ hoàn hảo -> Đòn phản công knockback cực mạnh
-                    info.isKnockback = true;
-                    info.knockbackForce = 20f;
-                    Debug.Log("Phản công Perfect Parry!");
-                    stats.isPerfectParrySuccess = false; // Reset
-                }
-                */
+                //if (stats.isPerfectParrySuccess)
+                //{
+                //    // Nếu vừa đỡ hoàn hảo -> Đòn phản công knockback cực mạnh
+                //    info.isKnockback = true;
+                //    info.knockbackForce = 20f;
+                //    Debug.Log("Phản công Perfect Parry!");
+                //    stats.isPerfectParrySuccess = false; // Reset
+                //}
 
                 // --- BƯỚC 3: TÍNH TOÁN SÁT THƯƠNG ---
                 float attackMultiplier = 1;
@@ -735,5 +778,13 @@ public class PlayerController : MonoBehaviour
     }
 
     public void SetTurnSmoothTime(float time) { if (stats != null) stats.turnDuration = time; }
-    void OnDrawGizmosSelected() { Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, attackRange); }
+    void OnDrawGizmosSelected() {
+        // Vẽ tầm đánh (đỏ)
+        Gizmos.color = Color.red; 
+        Gizmos.DrawWireSphere(transform.position, attackRange);
+
+        // Vẽ tầm Perfect Dodge (Xanh Cyan)
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, perfectDodgeRadius);
+    }
 }
