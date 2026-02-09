@@ -12,15 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
   m_Name: RougeSkill
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
-  id: 
-  skillName: 
+  id: RougeSkill
+  skillName: Shadow Step
   icon: {fileID: 0}
-  skilDesc: 
-  skillType: 0
-  skillPhysicalMultiplier: 0
+  skilDesc: "Bi\u1EBFn m\u1EA5t v\xE0 xu\u1EA5t hi\u1EC7n t\u1EE9c th\u1EDDi \u1EDF
+    ph\xEDa sau l\u01B0ng k\u1EBB \u0111\u1ECBch \u0111ang kh\xF3a m\u1EE5c ti\xEAu,
+    \u0111\u1ED3ng th\u1EDDi ch\xE9m 1 ph\xE1t t\u1EEB sau l\u01B0ng k\u1EBB \u0111\u1ECBch
+    \u0111\xF3."
+  skillType: 2
+  skillPhysicalMultiplier: 2
   skillMagicMultiplier: 0
-  cooldown: 0
+  cooldown: 2
   sinChargeReq: 0
   passiveEffectCode: 0
-  skillEffectCode: 0
+  skillEffectCode: 7
   passiveStats: []
