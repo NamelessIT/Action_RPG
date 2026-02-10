@@ -91,7 +91,7 @@ public class BloodReaverSkill : SkillBehavior
             traveledDist += step;
 
             // Quét va chạm trên đường bay (Raycast hoặc OverlapSphere)
-            Collider[] hits = Physics.OverlapSphere(arrowVis.transform.position, arrowRadius, LayerMask.GetMask("Enemy"));
+            Collider[] hits = Physics.OverlapSphere(arrowVis.transform.position, arrowRadius, player.dangerLayer);
 
             int validHits = 0; // Đếm số địch trúng chiêu để tính hồi máu
 
@@ -148,7 +148,7 @@ public class BloodReaverSkill : SkillBehavior
         if (forwardDir == Vector3.zero) forwardDir = transform.forward;
 
         // 2. Quét vùng (OverlapSphere + Góc)
-        Collider[] hits = Physics.OverlapSphere(transform.position, sweepRadius, LayerMask.GetMask("Enemy"));
+        Collider[] hits = Physics.OverlapSphere(transform.position, sweepRadius, player.dangerLayer);
 
         int validHits = 0; // Đếm số địch trúng chiêu để tính hồi máu
 

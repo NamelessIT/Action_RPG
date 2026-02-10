@@ -229,6 +229,12 @@ public class AllyStats : Stats
         critChance = baseCritChance + critPerDEX * DEX + bonusCritChance;
         critMultiplier = baseCritMultiplier + bonusCritMultiplier;
     }
+    public void CalculateMoveSpeedOnly()
+    {
+        moveSpeed = baseMoveSpeed * (1 + ((0.05f * Mathf.Sqrt(AGI) - VIT * moveSpeedReducePerVIT) * (1 + trueMoveFlexibility) / 2)) * (1 + bonusMoveSpeed);
+        if (moveSpeed < minSpeed) moveSpeed = minSpeed; // Min speed
+        if (moveSpeed > maxSpeed) moveSpeed = maxSpeed;
+    }
     public override void Update()
     {
         base.Update();
