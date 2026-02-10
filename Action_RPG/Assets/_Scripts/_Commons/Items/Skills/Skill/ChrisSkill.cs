@@ -5,22 +5,35 @@ using System.Collections.Generic;
 public class ChrisSkill : SkillBehavior
 {
     [Header("Skill Settings")]
-    public float dashSpeed = 5f; 
-    public float dashDuration = 2f; 
-    public float hitRadius = 0.1f;
-    public float knockbackForce = 0.5f;
+    public float dashSpeed = 3f;
+    public float dashDuration = 1.5f;
 
-    [Tooltip("Góc để xác định là húc thẳng (độ)")]
-    public float headOnAngle = 30f;
+    [Tooltip("Bán kính quét va chạm")]
+    public float hitRadius = 0.3f;
+
+    [Tooltip("Nâng tâm va chạm")]
+    public float hitOffsetY = 0f;
+
+    [Tooltip("Khoảng cách đẩy Enemy ra xa khỏi người")]
+    public float pushOffsetDistance = 1f;
+
+    public float knockbackForce = 15f;
+    public float headOnAngle = 45f;
 
     private Rigidbody rb;
     private EquipmentManager equipmentManager;
+
+    // [MỚI] Tham chiếu Animator để chơi animation ủi
+    private Animator animator;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
         base.Initialize(myStats, myData, myPlayer);
         rb = myPlayer.GetComponent<Rigidbody>();
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
+
+        // [MỚI] Lấy Animator
+        animator = myPlayer.GetComponentInChildren<Animator>();
     }
 
     protected override void OnEquip() { }
@@ -35,7 +48,15 @@ public class ChrisSkill : SkillBehavior
 
     private IEnumerator DashAndBashRoutine()
     {
-        // 1. Xác định hướng lướt
+        // --- 1. SETUP ---
+        player.isUsingSpecialSkill = true; // Khóa Input
+
+        // [ANIMATION] Bắt đầu Animation Push (Bỏ comment khi có Animation)
+        /* if (animator != null) 
+        {
+            animator.SetBool("IsPushing", true); 
+        } */
+
         Vector3 dashDir = stats.facingDirection;
         if (dashDir == Vector3.zero) dashDir = player.transform.forward;
         dashDir.y = 0;
@@ -44,46 +65,101 @@ public class ChrisSkill : SkillBehavior
         float timer = 0f;
         List<GameObject> alreadyDamagedList = new List<GameObject>();
 
-        // 2. Setup Physics: Bật Kinematic để Player xuyên qua địch
-        bool originalKinematic = rb.isKinematic;
-        rb.isKinematic = true;
+        bool originalUseGravity = rb.useGravity;
 
-        while (timer < dashDuration)
+        // [QUAN TRỌNG] Đảm bảo Physics sạch sẽ trước khi bắt đầu
+        rb.useGravity = false;
+        rb.linearVelocity = Vector3.zero;
+
+        try
         {
-            // Di chuyển Player (Kinematic Move)
-            rb.MovePosition(rb.position + dashDir * dashSpeed * Time.deltaTime);
+            // [FIX] Dùng WaitForFixedUpdate để đồng bộ hoàn toàn với Physics
+            WaitForFixedUpdate waitFixed = new WaitForFixedUpdate();
 
-            // 3. Quét va chạm
-            Collider[] hits = Physics.OverlapSphere(transform.position + Vector3.up * 0.5f, hitRadius, player.dangerLayer);
-
-            foreach (var hit in hits)
+            while (timer < dashDuration)
             {
-                // Chỉ xử lý nếu chưa gây damage cho đối tượng này trong lần lướt này
-                if (alreadyDamagedList.Contains(hit.gameObject)) continue;
+                // Dùng fixedDeltaTime cho chính xác
+                float dt = Time.fixedDeltaTime;
 
-                Stats enemyStats = hit.GetComponent<Stats>();
-                if (enemyStats != null && enemyStats.currentHp > 0)
+                // A. Ép vận tốc Player (Ghi đè hoàn toàn vận tốc cũ -> Tốc độ luôn chuẩn là 3)
+                rb.linearVelocity = dashDir * dashSpeed;
+                rb.angularVelocity = Vector3.zero;
+
+                // B. Quét va chạm
+                Vector3 centerPoint = transform.position + Vector3.up * hitOffsetY;
+                Collider[] hits = Physics.OverlapSphere(centerPoint, hitRadius, player.dangerLayer);
+
+                // Tính trước vị trí frame tiếp theo để Enemy bám dính tốt hơn
+                Vector3 nextFramePos = rb.position + (dashDir * dashSpeed * dt);
+
+                foreach (var hit in hits)
                 {
-                    alreadyDamagedList.Add(hit.gameObject);
+                    Stats enemyStats = hit.GetComponent<Stats>();
+                    if (enemyStats != null && enemyStats.currentHp > 0)
+                    {
+                        // Logic 1: Đẩy
+                        HandleContinuousPush(hit.gameObject, dashDir, nextFramePos);
 
-                    // GỌI HÀM XỬ LÝ DAMAGE & KNOCKBACK (Giống PlayerController)
-                    ApplyDamage(enemyStats, dashDir);
+                        // Logic 2: Damage
+                        if (!alreadyDamagedList.Contains(hit.gameObject))
+                        {
+                            alreadyDamagedList.Add(hit.gameObject);
+                            ApplyDamage(enemyStats, dashDir);
+                        }
+                    }
                 }
-            }
 
-            timer += Time.deltaTime;
-            yield return null;
+                timer += dt;
+
+                // [FIX] Chờ nhịp vật lý tiếp theo thay vì chờ Frame màn hình
+                yield return waitFixed;
+            }
+        }
+        finally
+        {
+            // --- 3. CLEANUP ---
+            rb.useGravity = originalUseGravity;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+
+            // [ANIMATION] Tắt Animation
+            /* if (animator != null) 
+            {
+                animator.SetBool("IsPushing", false); 
+            } */
         }
 
-        // 4. Reset Physics
-        rb.isKinematic = originalKinematic;
-        if (!originalKinematic) rb.linearVelocity = Vector3.zero;
+        // --- 4. POST-CLEANUP ---
+        // Đợi thêm 1 nhịp để đảm bảo Player dừng hẳn rồi mới trả quyền điều khiển
+        yield return new WaitForFixedUpdate();
+        player.isUsingSpecialSkill = false;
     }
 
+    void HandleContinuousPush(GameObject enemyObj, Vector3 dashDir, Vector3 playerNextPos)
+    {
+        Rigidbody enemyRb = enemyObj.GetComponent<Rigidbody>();
+        if (enemyRb != null)
+        {
+            // Điểm neo lý tưởng trước mặt Player
+            Vector3 idealPos = playerNextPos + (dashDir * pushOffsetDistance);
+            idealPos.y = enemyRb.position.y;
+
+            // Dùng MovePosition để ép Enemy vào vị trí đó
+            // Lưu ý: MovePosition hoạt động tốt cho cả Kinematic và Dynamic khi muốn teleport mượt
+            enemyRb.MovePosition(idealPos);
+
+            // Nếu là Dynamic, reset velocity để nó không bị nảy lung tung
+            if (!enemyRb.isKinematic)
+            {
+                enemyRb.linearVelocity = Vector3.zero;
+            }
+        }
+    }
+
+    // ... (Hàm ApplyDamage và OnDrawGizmos giữ nguyên) ...
     private void ApplyDamage(Stats enemyStats, Vector3 dashDir)
     {
         // --- CHUẨN BỊ DỮ LIỆU SÁT THƯƠNG ---
-        bool wasAlive = enemyStats.currentHp > 0;
         stats.EnterCombat();
 
         // 1. Tính toán hướng và góc va chạm
@@ -99,35 +175,34 @@ public class ChrisSkill : SkillBehavior
         float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
         bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
-        // 3. TẠO DAMAGE INFO (Giống PlayerController)
+        // 3. TẠO DAMAGE INFO
         DamageInfo info = new DamageInfo();
-        info.sourcePosition = transform.position; // Để hệ thống tự tính hướng đẩy lùi (Center to Center)
+        info.sourcePosition = transform.position;
         info.isCrit = isCrit;
 
-        // --- LOGIC KNOCKBACK ---
-        info.isKnockback = true;
+        // --- LOGIC KNOCKBACK / STUN ---
+        // Lưu ý: Logic đẩy lùi của Stats.cs là "Impulse" (đẩy văng ra).
+        // Còn logic của Skill này là "Drag" (kéo đi theo).
+        // Khi ApplyDamage (lần đầu chạm), ta vẫn có thể gây Stun để Enemy không đánh trả được trong lúc bị ủi.
+
+        info.isKnockback = false; // Tắt Knockback của hệ thống Stats để tránh xung đột với việc "ủi" tay bo của ta
+        info.isStun = true;       // Gây choáng để nó đứng im cho mình ủi
+        info.stunDuration = dashDuration + 0.2f; // Choáng suốt quá trình ủi + một chút sau đó
 
         if (angle <= headOnAngle)
         {
-            // Case Húc Thẳng: Lực mạnh hơn + Gây choáng (Impact Level cao)
-            info.knockbackForce = knockbackForce;
-            info.impactLevel = 2; // Giả sử mức 2 là mạnh
-            info.isStun = true;   // Khuyến mãi thêm stun nếu húc trực diện
-            info.stunDuration = 0.5f;
-            Debug.Log("Húc trực diện, bị đẩy lùi");
+            // Case Húc Thẳng: Impact mạnh
+            info.impactLevel = 2;
+            Debug.Log("Húc trực diện!");
         }
         else
         {
-            // Case Húc Sượt: Lực thường
-            info.knockbackForce = knockbackForce;
+            // Case Húc Sượt
             info.impactLevel = 1;
-            info.isStun = true;
-            info.stunDuration = 0.1f;
-            Debug.Log("Húc bên rìa, bị văng ra ngoài");
+            Debug.Log("Húc bên rìa!");
         }
 
         // 4. Tính toán lượng Damage
-        // (Có thể nhân thêm hệ số skill damage ở tham số cuối cùng, ví dụ 1.2f)
         float damage = CombatMath.CalculateFullDamage(
             stats, enemyStats, t, isCrit, data, currentWpn, 1f
         );
@@ -135,5 +210,10 @@ public class ChrisSkill : SkillBehavior
 
         // 5. GỬI ĐI
         enemyStats.TakeDamage(info);
+    }
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position + Vector3.up * hitOffsetY, hitRadius);
     }
 }

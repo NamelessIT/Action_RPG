@@ -62,6 +62,8 @@ public class PlayerController : MonoBehaviour
     public float perfectDodgeRadius = 2.0f; // Bán kính nguy hiểm để tính Perfect
     public LayerMask dangerLayer;
 
+    // [MỚI] Biến trạng thái dùng Skill đặc biệt
+    public bool isUsingSpecialSkill = false;
 
     // ============ CLASS-NEUTRAL EVENTS (Minimal Integration) ============
     public event System.Action<Vector2> OnMovementInputChanged;   // Gọi khi input di chuyển thay đổi
@@ -89,57 +91,100 @@ public class PlayerController : MonoBehaviour
         skillManager = GetComponent<SkillManager>();
     }
 
+    void FixedUpdate()
+    {
+        if (stats == null) return;
+
+        // [TỐI ƯU] Gom check điều kiện di chuyển
+        // Nếu đang dùng Skill HOẶC đang Dash -> Không được di chuyển vật lý thường
+        if (isUsingSpecialSkill || isDashing) return;
+
+        // Logic di chuyển thường
+        if (!isTurning && isWalking)
+        {
+            float currentSpeed = stats.moveSpeed * (isSprinting ? stats.runSpeedMultiplier : 1f);
+            Vector3 targetPosition = rb.position + movementInput * currentSpeed * Time.fixedDeltaTime;
+            rb.MovePosition(targetPosition);
+        }
+    }
+
     void Update()
     {
         if (stats == null) return;
 
-        // Logic Reset Combo (Giữ nguyên)
+        // --- 0. CÁC LOGIC NỀN (Luôn chạy bất kể trạng thái) ---
+        UpdateTimersAndCombo(); // Tách logic reset combo ra hàm riêng cho gọn
+        UpdateAnimatorParameters(); // Tách logic update animator parameter
+
+        // --- 1. CHẶN INPUT (Priority High) ---
+        // Nếu đang dùng Skill đặc biệt -> Chặn toàn bộ Input điều khiển
+        if (isUsingSpecialSkill) return;
+
+        // Nếu đang Dash -> Chặn toàn bộ Input điều khiển (trừ khi bạn muốn cho phép cancel dash?)
+        if (isDashing) return;
+
+        // --- 2. XỬ LÝ INPUT (Priority Medium) ---
+        HandleDashInput();      // Xử lý Shift (Dash)
+        HandleSprintInput();    // Xử lý Shift (Sprint)
+        HandleAttackInput();    // Xử lý Chuột (Attack / Charge)
+        HandleSkillInput();     // Xử lý Skill (1, 2, Q, E...)
+
+        // --- 3. XỬ LÝ DI CHUYỂN (Priority Low) ---
+        HandleMovementStopToTurn(); // Tính toán vector di chuyển & hướng nhìn
+
+        // Cập nhật hướng nhìn vào Stats (để Skill lấy hướng mà dùng)
+        if (stats != null) stats.facingDirection = currentVisualDir;
+
+        // --- 4. DEBUG KEYS ---
+        HandleDebugKeys();
+    }
+
+    void UpdateTimersAndCombo()
+    {
+        // Logic Reset Combo
         if (Time.time > lastAttackTime + comboWindow && !isAttacking && comboCount > 0)
         {
             comboCount = 0;
-            // Debug.Log("Combo Reset!");
         }
+    }
 
-        // Cập nhật tốc độ đánh cho Animator (để múa kiếm nhanh chậm theo stats)
+    void UpdateAnimatorParameters()
+    {
         if (animator != null)
         {
             animator.SetFloat("AttackSpeedMultiplier", stats.attackSpeed);
         }
+    }
 
-        // --- 1. DASH (Ưu tiên cao nhất) ---
-        if (isDashing) return; // Đang lướt thì không nhận input khác
-
+    void HandleDashInput()
+    {
         if (Input.GetKeyDown(KeyCode.LeftShift))
         {
             PerformDash();
-            return;
         }
+    }
 
-        // --- 2. SPRINT (Chạy nhanh) ---
-        // Điều kiện: Giữ Shift + Đang di chuyển
+    void HandleSprintInput()
+    {
         if (Input.GetKey(KeyCode.LeftShift) && movementInput.magnitude > 0.1f)
         {
-            // [MỚI] Trừ thể lực theo thời gian (Run Cost * Time.deltaTime)
-            // Nếu đủ thể lực thì cho phép chạy nhanh
             if (stats.TryConsumeStamina(stats.runCost * Time.deltaTime))
             {
                 isSprinting = true;
             }
             else
             {
-                // Hết thể lực -> Tắt chạy nhanh
                 isSprinting = false;
-                // Debug.Log("Hết hơi!"); 
             }
         }
         else
         {
             isSprinting = false;
         }
+    }
 
-        // --- 3. TẤN CÔNG ---
-        // --- [MỚI] XỬ LÝ ATTACK INPUT (CHARGE) ---
-
+    void HandleAttackInput()
+    {
         // 1. Bắt đầu nhấn chuột -> Bắt đầu tính giờ
         if (Input.GetMouseButtonDown(0) && !isAttacking)
         {
@@ -153,47 +198,45 @@ public class PlayerController : MonoBehaviour
             if (Input.GetMouseButton(0))
             {
                 chargeTimer += Time.deltaTime;
-                // Có thể thêm hiệu ứng visual ở đây (rung, hạt tụ lực...)
-                // if (chargeTimer >= stats.heavyAttackChargeTime) Debug.Log(">> Max Charge!");
             }
 
             // 3. Nhả chuột -> Quyết định đánh thường hay đánh mạnh
             if (Input.GetMouseButtonUp(0))
             {
                 isCharging = false;
-
-                // Kiểm tra thời gian giữ chuột
-                if (chargeTimer >= stats.heavyAttackChargeTime)
-                {
-                    // TRỌNG KÍCH (Heavy Attack)
-                    PerformAttack(true);
-                }
-                else
-                {
-                    // ĐÁNH THƯỜNG (Light Attack)
-                    PerformAttack(false);
-                }
+                if (chargeTimer >= stats.heavyAttackChargeTime) PerformAttack(true);
+                else PerformAttack(false);
             }
         }
 
-        // [Logic cũ cho Queue Attack khi đang đánh dở]
-        // Nếu đang đánh mà bấm chuột -> Queue đòn tiếp theo (mặc định là Light Attack cho mượt)
+        // Queue Attack
         if (isAttacking && Input.GetMouseButtonDown(0))
         {
-            // Nếu muốn cơ chế queue hỗ trợ cả Heavy Attack thì phức tạp hơn nhiều, 
-            // tạm thời queue mặc định là đánh thường.
             nextAttackQueued = true;
-            // Reset timer để lần tới không bị hiểu nhầm là heavy
             chargeTimer = 0f;
         }
+    }
 
-        // --- 4. DI CHUYỂN ---
-        HandleMovementStopToTurn();
+    void HandleSkillInput()
+    {
+        if (Input.GetKeyDown(KeyCode.Alpha1))
+        {
+            if (skillManager.currentSkill != null)
+                skillManager.CastSkill(skillManager.currentSkill);
+        }
 
-        // [MỚI] Cập nhật hướng nhìn vào Stats để Enemy biết đường mà đánh lén
-        if (stats != null) stats.facingDirection = currentVisualDir;
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            if (skillManager.currentSignature != null)
+                skillManager.CastSkill(skillManager.currentSignature);
+        }
 
-        // Test keys
+        // Thêm Input cho Learn Skill (L) vào đây luôn nếu muốn
+        if (Input.GetKeyDown(KeyCode.L)) LearnSkill();
+    }
+
+    void HandleDebugKeys()
+    {
         if (Input.GetKeyDown(KeyCode.K)) TakeDamage(10);
         if (Input.GetKeyDown(KeyCode.T) && stats != null)
         {
@@ -206,23 +249,7 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.U)) DropCoreShield();
         if (Input.GetKeyDown(KeyCode.N)) EquipPickedAccessory();
         if (Input.GetKeyDown(KeyCode.M)) DropPickedAccessory();
-        if (Input.GetKeyDown(KeyCode.L)) LearnSkill();
         if (Input.GetKeyDown(KeyCode.R)) UpdateStat();
-        // --- SKILL INPUT ---
-        // Ví dụ: 1 là Skill thường, 2 là Chiêu cuối (Signature)
-        if (Input.GetKeyDown(KeyCode.Alpha1))
-        {
-            // Gọi SkillManager dùng skill ở slot Skill thường
-            if (skillManager.currentSkill != null)
-                skillManager.CastSkill(skillManager.currentSkill);
-        }
-
-        if (Input.GetKeyDown(KeyCode.Alpha2))
-        {
-            // Gọi SkillManager dùng skill ở slot Signature
-            if (skillManager.currentSignature != null)
-                skillManager.CastSkill(skillManager.currentSignature);
-        }
     }
 
     void PerformDash()
@@ -449,17 +476,7 @@ public class PlayerController : MonoBehaviour
             spriteRenderer.flipX = shouldFlip;
         }
     }
-    void FixedUpdate()
-    {
-        if (stats == null) return;
 
-        if (!isTurning && isWalking && !isDashing)
-        {
-            float currentSpeed = stats.moveSpeed * (isSprinting ? stats.runSpeedMultiplier : 1f);
-            Vector3 targetPosition = rb.position + movementInput * currentSpeed * Time.fixedDeltaTime;
-            rb.MovePosition(targetPosition);
-        }
-    }
 
     void PerformAttack(bool isHeavy = false)
     {

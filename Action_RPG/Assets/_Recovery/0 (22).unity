@@ -1636,7 +1636,7 @@ PrefabInstance:
     - target: {fileID: 8734627235539532154, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: pickUpSkill
       value: 
-      objectReference: {fileID: 11400000, guid: dfcdd47a9f0edfd4bb77a1773b3702a0, type: 2}
+      objectReference: {fileID: 11400000, guid: a6165b87cd00e174bae3b3efaa06268e, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
