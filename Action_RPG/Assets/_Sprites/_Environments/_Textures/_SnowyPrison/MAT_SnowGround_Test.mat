@@ -72,13 +72,14 @@ Material:
     m_Ints: []
     m_Floats:
     - _BlendSharpness: 2.59
-    - _BlendValue: 0.506
+    - _BlendValue: 0.277
     - _DetailFadeDistance: 10
+    - _FadeRange: 0.04
     - _HeightBlendMax: 2
     - _HeightBlendMin: -2
     - _HeightBlendStrength: 0.518
-    - _KirakiraIntensity: 1
-    - _KirakiraPower: 4.98
+    - _KirakiraIntensity: 0.972
+    - _KirakiraPower: 4.91
     - _NormalStrength: 1
     - _Normal_Strength: 0
     - _QueueControl: 0
