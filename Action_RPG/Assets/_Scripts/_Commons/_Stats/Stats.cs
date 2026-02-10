@@ -35,7 +35,7 @@ public class Stats : MonoBehaviour
     private float combatTimer = 0f;
 
     [Header("--- Dash & Run Settings ---")]
-    public float baseDashDistance = 1.5f;
+    public float baseDashDistance = 2f;
     public float baseDashRecovery = 1.25f;
     public float dashCost = 15f;
     public float baseDashDuration = 0.2f;
