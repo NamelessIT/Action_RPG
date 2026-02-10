@@ -290,8 +290,8 @@ public class MagePassive : SkillBehavior
 
     private void ApplyDefenseReduction(Stats target, float reductionPercent, float duration)
     {
-        float originalArmor = target.armor;
-        target.armor *= (1f - reductionPercent);
+        float originalArmor = target.magicResist;
+        target.magicResist *= (1f - reductionPercent);
 
         if (!activeDefReductionCoroutines.ContainsKey(target))
         {
@@ -305,7 +305,7 @@ public class MagePassive : SkillBehavior
         yield return new WaitForSeconds(delay);
         if (target != null && target.currentHp > 0 && activeDefReductionCoroutines.ContainsKey(target))
         {
-            target.armor = originalValue;
+            target.magicResist = originalValue;
             activeDefReductionCoroutines.Remove(target);
             Debug.Log($"[Mage] 🛡️ Defense reverted for {target.name}");
         }
@@ -362,10 +362,10 @@ public class MagePassive : SkillBehavior
         {
             addedMoveSpeed += eastMoveSpeedBonus;
             stats.bonusMoveSpeed += eastMoveSpeedBonus;
-       
+        
         }
 
-        if (stats is AllyStats ally) ally.CalculateCombatStatsOnly();
+        if (stats is AllyStats ally) ally.CalculateMoveSpeed();
     }
 
     private void CleanUpStats()

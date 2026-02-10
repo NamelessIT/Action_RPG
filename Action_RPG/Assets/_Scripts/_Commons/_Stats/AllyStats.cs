@@ -225,9 +225,23 @@ public class AllyStats : Stats
         physicalAtk = (flatPhysicalAtk + STR * physicalAtkPerSTR) * (1 + bonusPhysicalAtk);
         //magicAtk = (flatMagicAtk + INT * magicAtkPerINT) * (1 + bonusMagicAtk);
 
+
+
         // 2. Tính Crit (Công thức copy từ RecalculateStats xuống)
         critChance = baseCritChance + critPerDEX * DEX + bonusCritChance;
         critMultiplier = baseCritMultiplier + bonusCritMultiplier;
+        
+    }
+
+    public void CalculateMoveSpeed()
+    {
+        moveSpeed = baseMoveSpeed * (1 + ((0.05f * Mathf.Sqrt(AGI) - VIT * moveSpeedReducePerVIT) * (1 + trueMoveFlexibility) / 2)) * (1 + bonusMoveSpeed);
+    }
+    public void CalculateMoveSpeedOnly()
+    {
+        moveSpeed = baseMoveSpeed * (1 + ((0.05f * Mathf.Sqrt(AGI) - VIT * moveSpeedReducePerVIT) * (1 + trueMoveFlexibility) / 2)) * (1 + bonusMoveSpeed);
+        if (moveSpeed < minSpeed) moveSpeed = minSpeed; // Min speed
+        if (moveSpeed > maxSpeed) moveSpeed = maxSpeed;
     }
     public override void Update()
     {

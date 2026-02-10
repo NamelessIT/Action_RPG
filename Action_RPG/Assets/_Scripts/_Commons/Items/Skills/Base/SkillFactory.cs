@@ -38,10 +38,14 @@ public static class SkillFactory
                 return typeof(ChrisSkill);
             case SkillData.SkillEffectCode.LeoSkill:
                 return typeof(LeoSkill);
-            case SkillData.SkillEffectCode.RougeSkill:
-                return typeof(RougeSkill);
+            case SkillData.SkillEffectCode.WarriorSkill:
+                return typeof(WarriorSkill);
             case SkillData.SkillEffectCode.BloodReaverSkill:
                 return typeof(BloodReaverSkill);
+            case SkillData.SkillEffectCode.RougeSkill:
+                return typeof(RougeSkill);
+            case SkillData.SkillEffectCode.JuggernautSkill:
+                return typeof(JuggernautSkill);
             // ... Thêm các case khác vào đây ...
 
 
