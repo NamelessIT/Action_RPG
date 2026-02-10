@@ -35,6 +35,7 @@ public class SkillData : ScriptableObject
         RougeSkill,
         DuelistSkill,
         MageSkill,
+        JuggernautSkill,
     }
     public string id;
     public string skillName;

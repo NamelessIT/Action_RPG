@@ -22,6 +22,7 @@ public class PlayerController : MonoBehaviour
     public float lastAttackTime = 0f;   // Thời điểm đánh đòn cuối
     public float comboWindow = 2.0f;    // Thời gian cho phép nối combo (nếu quá thì reset về 0)
     public bool isAttacking = false;    // Đang trong animation đánh
+    public bool isStance = false;
 
     // Biến tính toán runtime
     //private float currentAttackCooldown = 0f;
@@ -141,7 +142,7 @@ public class PlayerController : MonoBehaviour
         // --- [MỚI] XỬ LÝ ATTACK INPUT (CHARGE) ---
 
         // 1. Bắt đầu nhấn chuột -> Bắt đầu tính giờ
-        if (Input.GetMouseButtonDown(0) && !isAttacking)
+        if (Input.GetMouseButtonDown(0) && !isAttacking && !isStance)
         {
             isCharging = true;
             chargeTimer = 0f;
