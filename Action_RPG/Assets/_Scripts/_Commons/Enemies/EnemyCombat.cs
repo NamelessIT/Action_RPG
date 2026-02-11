@@ -188,5 +188,10 @@ public class EnemyCombat : MonoBehaviour
         }
     }
 
+    public void SetTarget(Transform newTarget)
+    {
+        target = newTarget;
+    }
+
     // Sau này sẽ có thêm: PerformSkill(string skillID) ...
 }
