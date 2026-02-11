@@ -146,7 +146,7 @@ Transform:
   m_GameObject: {fileID: 39675275}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5.018, y: 1.58, z: -0.95}
+  m_LocalPosition: {x: 1.53, y: 1.58, z: -2.58}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -164,8 +164,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f20b29b3cf784e84fa721ca7704e47ed, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpawnManager
-  enemyVisualPrefab: {fileID: -2253911629886400664, guid: aeacfc3b876278b4887d6336bdd3d16e, type: 3}
-  placeholderAnimator: {fileID: 9100000, guid: 72e2142e0173d364399fc7fe4a85c93e, type: 2}
+  enemyPrefab: {fileID: -2253911629886400664, guid: aeacfc3b876278b4887d6336bdd3d16e, type: 3}
   maxCount: 1
   respawnTime: 10
   spawnRadius: 2

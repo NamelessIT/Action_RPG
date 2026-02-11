@@ -35,7 +35,7 @@ public class Stats : MonoBehaviour
     private float combatTimer = 0f;
 
     [Header("--- Dash & Run Settings ---")]
-    public float baseDashDistance = 1.5f;
+    public float baseDashDistance = 2f;
     public float baseDashRecovery = 1.25f;
     public float dashCost = 15f;
     public float baseDashDuration = 0.2f;
@@ -101,6 +101,9 @@ public class Stats : MonoBehaviour
     [Header("--- Knockback & Effect Res ---")]
     public float resistanceKnockBack = 0.1f; 
     public float resistanceEffect = 0f; //giảm thời gian debuff
+
+    [Header("--- Status ---")]
+    public bool isDead = false; // [MỚI] Kiểm tra đã chết chưa
 
 
     private float stunEndTime = 0f;
@@ -252,11 +255,7 @@ public class Stats : MonoBehaviour
 
     public virtual void TakeDamage(DamageInfo info)
     {
-        if (isInvincible)
-        {
-            Debug.Log($"{gameObject.name} DODGED damage (Invincible)!");
-            return;
-        }
+        if (isInvincible || isDead) return;
 
         EnterCombat();
         currentHp -= info.damageAmount;
@@ -266,7 +265,11 @@ public class Stats : MonoBehaviour
         // --- XỬ LÝ HIỆU ỨNG (CC) ---
         ApplyCrowdControl(info);
 
-        if (currentHp <= 0) Die();
+        if (currentHp <= 0)
+        {
+            currentHp = 0;
+            Die();
+        }
     }
 
     //// Hàm cũ (Overload) để tương thích code cũ chưa kịp sửa
@@ -433,8 +436,52 @@ public class Stats : MonoBehaviour
         // Debug.Log($"{gameObject.name} hết STUN");
     }
 
-    void Die()
+    protected virtual void Die()
     {
-        Debug.Log($"{gameObject.name} đã bị hạ gục!");
+        if (isDead) return; // Chết rồi không chết lại
+        isDead = true;
+
+        Debug.Log($"{gameObject.name} đã chết!");
+
+        // 1. Tắt Collider để không còn là mục tiêu (Raycast/OverlapSphere không thấy nữa)
+        Collider col = GetComponent<Collider>();
+        if (col != null) col.enabled = false;
+
+        // 2. Tắt Physics
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.isKinematic = true; // Để xác không bị trôi
+        }
+
+        // 3. Tắt AI Agent (Nếu là Enemy)
+        if (agent != null)
+        {
+            agent.isStopped = true;
+            agent.enabled = false;
+        }
+
+        // 4. Play Animation Die
+        if (animator != null)
+        {
+            //animator.SetTrigger("Die");
+            // Đảm bảo animator không chuyển sang state khác
+            //animator.SetBool("IsDead", true);
+        }
+
+        // 5. Vô hiệu hóa Script điều khiển
+        // Nếu là Player
+        var playerCtrl = GetComponent<PlayerController>();
+        if (playerCtrl != null) playerCtrl.enabled = false;
+
+        // Nếu là Enemy
+        var enemyAI = GetComponent<EnemyAI>();
+        if (enemyAI != null) enemyAI.enabled = false;
+
+        var enemyCombat = GetComponent<EnemyCombat>();
+        if (enemyCombat != null) enemyCombat.enabled = false;
+
+        // 6. Hủy Object sau 3 giây
+        Destroy(gameObject, 3.0f);
     }
 }

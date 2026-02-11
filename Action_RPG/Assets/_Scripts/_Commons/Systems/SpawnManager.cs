@@ -1,24 +1,22 @@
 ﻿using UnityEngine;
-using System.Collections;
+using UnityEngine.AI;
 using System.Collections.Generic;
 
 public class SpawnManager : MonoBehaviour
 {
     [Header("Spawn Settings")]
-    [Tooltip("Prefab của Enemy cần spawn (Phải có EnemyStats)")]
-    public GameObject enemyPrefab;
+    [Tooltip("Prefab Model (Visual) của Enemy. Nếu để trống, sẽ tự tạo Sprite mặc định.")]
+    public GameObject enemyVisualPrefab;
 
-    [Tooltip("Số lượng Enemy tối đa tại điểm này")]
+    [Tooltip("Animator Controller tạm thời (Kéo Player Animator vào đây)")]
+    public RuntimeAnimatorController placeholderAnimator;
+
+    [Tooltip("Số lượng Enemy tối đa")]
     public int maxCount = 3;
-
-    [Tooltip("Thời gian chờ để spawn lại sau khi bị giết (Giây)")]
     public float respawnTime = 10f;
-
-    [Tooltip("Phạm vi ngẫu nhiên xung quanh điểm spawn (Để enemy không đứng chồng lên nhau)")]
     public float spawnRadius = 2.0f;
 
     [Header("Runtime Info")]
-    // Danh sách theo dõi các enemy do spawner này tạo ra
     public List<GameObject> spawnedEnemies = new List<GameObject>();
 
     private float currentRespawnTimer = 0f;
@@ -26,19 +24,15 @@ public class SpawnManager : MonoBehaviour
 
     void Start()
     {
-        // Spawn lứa đầu tiên ngay lập tức
         SpawnMissingEnemies();
     }
 
     void Update()
     {
-        // 1. Dọn dẹp danh sách (Xóa các enemy đã chết/null khỏi list)
         CleanUpList();
 
-        // 2. Kiểm tra số lượng
         if (spawnedEnemies.Count < maxCount)
         {
-            // Nếu thiếu quân -> Bắt đầu đếm ngược
             if (!isRespawning)
             {
                 currentRespawnTimer += Time.deltaTime;
@@ -51,62 +45,139 @@ public class SpawnManager : MonoBehaviour
         }
         else
         {
-            // Nếu đủ quân -> Reset timer
             currentRespawnTimer = 0f;
         }
     }
 
     void SpawnMissingEnemies()
     {
-        if (enemyPrefab == null) return;
-
         int countNeeded = maxCount - spawnedEnemies.Count;
         if (countNeeded <= 0) return;
 
         isRespawning = true;
-
         for (int i = 0; i < countNeeded; i++)
         {
             SpawnOneEnemy();
         }
-
-        Debug.Log($"[Spawner] Đã spawn lại {countNeeded} enemy tại {gameObject.name}");
         isRespawning = false;
     }
 
     void SpawnOneEnemy()
     {
-        // Tính vị trí ngẫu nhiên xung quanh Spawner
+        // 1. TÍNH VỊ TRÍ SPAWN
         Vector3 randomOffset = Random.insideUnitSphere * spawnRadius;
-        randomOffset.y = 0; // Giữ nguyên độ cao (hoặc chỉnh theo terrain nếu cần)
+        randomOffset.y = 0;
         Vector3 spawnPos = transform.position + randomOffset;
 
-        // Tạo Enemy
-        GameObject newEnemy = Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
+        // 2. TẠO OBJECT CHA (PARENT) - CHỨA LOGIC & PHYSICS
+        GameObject parentObj = new GameObject($"Enemy_{System.Guid.NewGuid().ToString().Substring(0, 4)}");
+        parentObj.transform.position = spawnPos;
 
-        // Setup thông tin Spawn cho EnemyStats
-        EnemyStats stats = newEnemy.GetComponent<EnemyStats>();
-        if (stats != null)
+        // 3. TẠO OBJECT CON (CHILD) - CHỨA VISUALS
+        GameObject childObj;
+        if (enemyVisualPrefab != null)
         {
-            // [QUAN TRỌNG] Gán điểm spawn là vị trí của Spawner (để nó biết đường quay về)
-            stats.spawnPosition = transform.position;
+            // Nếu có prefab model thì dùng nó
+            childObj = Instantiate(enemyVisualPrefab, parentObj.transform);
+        }
+        else
+        {
+            // Nếu không thì tạo object rỗng
+            childObj = new GameObject("Visuals");
+            childObj.transform.SetParent(parentObj.transform);
         }
 
-        // Thêm vào danh sách quản lý
-        spawnedEnemies.Add(newEnemy);
+        // Đặt lại vị trí con về 0 so với cha
+        childObj.transform.localPosition = Vector3.zero;
+        childObj.transform.localRotation = Quaternion.identity;
+
+        // 4. SETUP COMPONENT CHO CHA
+        SetupParentComponents(parentObj);
+
+        // 5. SETUP COMPONENT CHO CON
+        SetupChildComponents(childObj);
+
+        // 6. THÊM VÀO LIST QUẢN LÝ
+        spawnedEnemies.Add(parentObj);
+    }
+
+    // --- SETUP CHA (Logic, Physics, AI) ---
+    void SetupParentComponents(GameObject parent)
+    {
+        // A. Layer & Tag
+        parent.tag = "Enemy";
+        int enemyLayer = LayerMask.NameToLayer("Enemy");
+        if (enemyLayer != -1) parent.layer = enemyLayer;
+
+        // B. Rigidbody (Quan trọng: Freeze Rotation để không bị ngã)
+        Rigidbody rb = parent.AddComponent<Rigidbody>();
+        rb.useGravity = true;
+        rb.isKinematic = true; // AI điều khiển nên để Kinematic hoặc Dynamic tùy logic skill
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        rb.constraints = RigidbodyConstraints.FreezeRotation;
+
+        // C. Capsule Collider (Hitbox)
+        CapsuleCollider col = parent.AddComponent<CapsuleCollider>();
+        col.height = 2.0f;
+        col.center = new Vector3(0, 1.0f, 0); // Đẩy lên để chân chạm đất
+        col.radius = 0.5f;
+
+        // D. NavMesh Agent
+        NavMeshAgent agent = parent.AddComponent<NavMeshAgent>();
+        agent.speed = 3.5f;
+        agent.angularSpeed = 120f;
+        agent.acceleration = 8f;
+        agent.stoppingDistance = 1.5f;
+
+        // E. Scripts Logic
+        // 1. Stats
+        EnemyStats stats = parent.AddComponent<EnemyStats>();
+        stats.spawnPosition = transform.position; // Gán điểm spawn
+
+        // 2. Skill Manager
+        SkillManager sm = parent.AddComponent<SkillManager>();
+        sm.isPlayer = false; // Set cho Enemy
+
+        // 3. Combat
+        parent.AddComponent<EnemyCombat>();
+
+        // 4. AI (Cần thêm cuối cùng)
+        parent.AddComponent<EnemyAI>();
+    }
+
+    // --- SETUP CON (Visuals, Animation) ---
+    void SetupChildComponents(GameObject child)
+    {
+        // A. Sprite Renderer
+        SpriteRenderer sr = child.GetComponent<SpriteRenderer>();
+        if (sr == null) sr = child.AddComponent<SpriteRenderer>();
+
+        // Nếu không có prefab, gán tạm sprite mặc định để nhìn thấy (tròn tròn trắng trắng)
+        if (enemyVisualPrefab == null && sr.sprite == null)
+        {
+            // Tạo texture trắng tạm 
+            // (Thực tế bạn nên gán Sprite trong Inspector của Prefab thì tốt hơn)
+        }
+
+        // B. Animator
+        Animator anim = child.GetComponent<Animator>();
+        if (anim == null) anim = child.AddComponent<Animator>();
+
+        // Gán Controller của Player vào (Tạm thời)
+        if (placeholderAnimator != null)
+        {
+            anim.runtimeAnimatorController = placeholderAnimator;
+        }
     }
 
     void CleanUpList()
     {
-        // Xóa tất cả các phần tử null (đã bị Destroy)
         spawnedEnemies.RemoveAll(item => item == null);
     }
 
-    // Vẽ Gizmos để dễ nhìn trong Editor
     void OnDrawGizmos()
     {
-        Gizmos.color = new Color(0, 1, 0, 0.5f); // Màu xanh lá cây mờ
+        Gizmos.color = new Color(0, 1, 0, 0.5f);
         Gizmos.DrawWireSphere(transform.position, spawnRadius);
-        Gizmos.DrawIcon(transform.position, "d_S_Caver_Icon", true); // Vẽ icon (tùy chọn)
     }
 }
