@@ -1,0 +1,112 @@
+{
+  "asset" : {
+    "generator" : "UE Viewer (umodel) build 1590",
+    "version" : "2.0"
+  },
+  "scene" : 0,
+  "scenes" : [
+    {
+      "nodes" : [ 0 ]
+    }
+  ],
+  "nodes" : [
+    {
+      "name" : "EnvBdgMD_SnowHouse_A_Outdoor_House_Base_G",
+      "mesh" : 0
+    }
+  ],
+  "materials" : [
+    {
+      "name" : "EnvBdgMi_SnowHouse_A_Outdoor",
+      "pbrMetallicRoughness" : {
+        "baseColorFactor" : [ 0.3, 0.3, 0.3, 1.0 ],
+        "metallicFactor" : 0.1,
+        "roughnessFactor" : 0.5
+      }
+    }
+  ],
+  "meshes" : [
+    {
+      "primitives" : [
+        {
+          "attributes" : {
+            "POSITION" : 1,
+            "NORMAL" : 2,
+            "TANGENT" : 3,
+            "TEXCOORD_0" : 4
+          },
+          "indices" : 0,
+          "material" : 0
+        }
+      ],
+      "name" : "EnvBdgMD_SnowHouse_A_Outdoor_House_Base_G"
+    }
+  ],
+  "buffers" : [
+    {
+      "uri" : "EnvBdgMD_SnowHouse_A_Outdoor_House_Base_G.bin",
+      "byteLength" : 17520
+    }
+  ],
+  "bufferViews" : [
+    {
+      "buffer" : 0,
+      "byteOffset" : 0,
+      "byteLength" : 1152
+    },
+    {
+      "buffer" : 0,
+      "byteOffset" : 1152,
+      "byteLength" : 4092
+    },
+    {
+      "buffer" : 0,
+      "byteOffset" : 5244,
+      "byteLength" : 4092
+    },
+    {
+      "buffer" : 0,
+      "byteOffset" : 9336,
+      "byteLength" : 5456
+    },
+    {
+      "buffer" : 0,
+      "byteOffset" : 14792,
+      "byteLength" : 2728
+    }
+  ],
+  "accessors" : [
+    {
+      "bufferView" : 0,
+      "componentType" : 5123,
+      "count" : 576,
+      "type" : "SCALAR"
+    },
+    {
+      "bufferView" : 1,
+      "min" : [ -2.7, -0.75, -8.2 ],
+      "max" : [ 9.7, 1.95944e-16, 3.2 ],
+      "componentType" : 5126,
+      "count" : 341,
+      "type" : "VEC3"
+    },
+    {
+      "bufferView" : 2,
+      "componentType" : 5126,
+      "count" : 341,
+      "type" : "VEC3"
+    },
+    {
+      "bufferView" : 3,
+      "componentType" : 5126,
+      "count" : 341,
+      "type" : "VEC4"
+    },
+    {
+      "bufferView" : 4,
+      "componentType" : 5126,
+      "count" : 341,
+      "type" : "VEC2"
+    }
+  ]
+}
