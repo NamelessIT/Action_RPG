@@ -110,6 +110,8 @@ public class AllyStats : Stats
         // Gọi tính toán lần đầu
         RecalculateStats();
         InitializeClassStats();
+
+        this.tag = "Ally";
     }
 
     // Hàm này phải được gọi mỗi khi: Lên cấp, Đổi đồ, Nhận Buff, Chịu Debuff

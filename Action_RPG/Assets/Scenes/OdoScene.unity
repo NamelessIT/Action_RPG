@@ -636,7 +636,7 @@ GameObject:
   - component: {fileID: 887608984}
   - component: {fileID: 887608983}
   - component: {fileID: 887608985}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -979,7 +979,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c64231f935be08c47a863eed95e77be4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
-  playerTarget: {fileID: 0}
+  nearestTarget: {fileID: 0}
+  scanInterval: 0.5
   currentState: Idle
   isReturningHome: 0
   enablePatrol: 0
@@ -1070,7 +1071,6 @@ MonoBehaviour:
   maxAggro: 100
   aggroDecayRate: 5
   aggroRadius: 20
-  aggroRetentionTime: 5
   detectionRadius: 1
   viewDistance: 1
   viewAngle: 50
@@ -1079,6 +1079,7 @@ MonoBehaviour:
     m_Bits: 0
   spawnPosition: {x: 0, y: 0, z: 0}
   monsterRank: 0
+  aggroRetentionTime: 5
 --- !u!195 &1319874510
 NavMeshAgent:
   m_ObjectHideFlags: 0
