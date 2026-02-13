@@ -18,6 +18,7 @@ public class DoorTeleport : MonoBehaviour
 
     void Start()
     {
+        Debug.Log("Start");
         Collider doorCollider = GetComponent<Collider>();
         if (doorCollider == null)
         {
