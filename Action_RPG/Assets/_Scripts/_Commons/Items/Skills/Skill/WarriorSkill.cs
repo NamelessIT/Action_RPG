@@ -115,9 +115,10 @@ public class WarriorSkill : SkillBehavior
         WeaponData currentWpn = equipmentManager.currentWeapon;
         float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
         bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
+        float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
 
         float damage = CombatMath.CalculateFullDamage(
-            stats, enemyStats, 1.0f, isCrit, data, currentWpn, 1f
+            stats, enemyStats, t, isCrit, data, currentWpn, 1f
         );
 
         DamageInfo info = new DamageInfo();
