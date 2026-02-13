@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: f4106f338e07d0f4c95bedf3e58fc7d0
+guid: 85df6a791dced5642a0095c473dec457
 ScriptedImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -26,6 +26,6 @@ ScriptedImporter:
     sceneObjectCreation: 2
   assetDependencies:
   - type: 0
-    originalUri: Assets\_Sprites\_Environments\_LandScape\_Resources\_Snow\Building\Inn\EnvBdgMD_Mount_A_Outdoor_Pub.bin
-    assetPath: Assets\_Sprites\_Environments\_LandScape\_Resources\_Snow\Building\Inn\EnvBdgMD_Mount_A_Outdoor_Pub.bin
+    originalUri: Assets\_Sprites\_Environments\_LandScape\_Resources\_Snow\Building\Library\Interior\EnvObjMD_Furniture_A_Cupboard_A.bin
+    assetPath: Assets\_Sprites\_Environments\_LandScape\_Resources\_Snow\Building\Library\Interior\EnvObjMD_Furniture_A_Cupboard_A.bin
   reportItems: []
