@@ -159,7 +159,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 39675275}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f20b29b3cf784e84fa721ca7704e47ed, type: 3}
   m_Name: 
@@ -636,7 +636,7 @@ GameObject:
   - component: {fileID: 887608984}
   - component: {fileID: 887608983}
   - component: {fileID: 887608985}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -979,7 +979,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c64231f935be08c47a863eed95e77be4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
-  playerTarget: {fileID: 0}
+  nearestTarget: {fileID: 0}
+  scanInterval: 0.5
   currentState: Idle
   isReturningHome: 0
   enablePatrol: 0
@@ -1070,7 +1071,6 @@ MonoBehaviour:
   maxAggro: 100
   aggroDecayRate: 5
   aggroRadius: 20
-  aggroRetentionTime: 5
   detectionRadius: 1
   viewDistance: 1
   viewAngle: 50
@@ -1079,6 +1079,7 @@ MonoBehaviour:
     m_Bits: 0
   spawnPosition: {x: 0, y: 0, z: 0}
   monsterRank: 0
+  aggroRetentionTime: 5
 --- !u!195 &1319874510
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -1639,7 +1640,7 @@ PrefabInstance:
     - target: {fileID: 8734627235539532154, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: pickUpSkill
       value: 
-      objectReference: {fileID: 11400000, guid: dfcdd47a9f0edfd4bb77a1773b3702a0, type: 2}
+      objectReference: {fileID: 11400000, guid: da51ed57f6dd88e4a8bcf153bda6b808, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

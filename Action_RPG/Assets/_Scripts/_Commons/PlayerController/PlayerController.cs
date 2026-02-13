@@ -72,6 +72,8 @@ public class PlayerController : MonoBehaviour
     public event System.Action<WeaponData> OnWeaponEquipped;      // Gọi khi trang bị vũ khí mới
     public event System.Action<Stats, int, bool, bool> OnHitEnemy;
     // ==================================================================
+
+    private DuelistPassive duelistSkill;
     void Start()
     {
         stats = GetComponent<AllyStats>();
@@ -90,6 +92,8 @@ public class PlayerController : MonoBehaviour
 
         equipmentManager = GetComponent<EquipmentManager>();
         skillManager = GetComponent<SkillManager>();
+
+        duelistSkill = GetComponent<DuelistPassive>();
     }
 
     void FixedUpdate()
@@ -592,51 +596,56 @@ public class PlayerController : MonoBehaviour
     // Tách phần gây damage ra cho gọn
     // [CẬP NHẬT] Thêm tham số stepIndex để biết chính xác đòn này là đòn thứ mấy
     // Thay thế toàn bộ hàm HandleDamageLogic cũ bằng hàm này
+    // Biến cache skill (Khai báo ở đầu class PlayerController nếu chưa có)
+    // private DuelistPassive duelistSkill; 
+
     void HandleDamageLogic(bool isHeavy, int stepIndex)
     {
         bool hitAnything = false;
         Collider[] hitEnemies = Physics.OverlapSphere(transform.position, attackRange, dangerLayer);
         WeaponData currentWpn = equipmentManager.currentWeapon;
 
+
+        bool isDuelistCounter = false;
+        if (duelistSkill != null && hitEnemies.Length > 0)
+        {
+            // Kiểm tra và tiêu thụ buff Counter (nếu có)
+            isDuelistCounter = duelistSkill.TryUseCounterAttack();
+            if (isDuelistCounter) Debug.Log("<color=cyan>>> DUELIST COUNTER ATTACK!</color>");
+        }
+
         foreach (Collider enemy in hitEnemies)
         {
             Stats enemyStats = enemy.GetComponent<Stats>();
             if (enemyStats != null && enemyStats.currentHp > 0)
             {
-                // [MỚI] Lưu trạng thái trước khi đánh
                 bool wasAlive = enemyStats.currentHp > 0;
                 hitAnything = true;
                 stats.EnterCombat();
                 float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
 
-                // --- BƯỚC 1: KHỞI TẠO DAMAGE INFO ---
+                // --- 2. KHỞI TẠO DAMAGE INFO ---
                 DamageInfo info = new DamageInfo();
-                info.sourcePosition = transform.position; // Để tính hướng đẩy lùi
+                info.sourcePosition = transform.position;
+                info.attacker = stats;
                 info.isCrit = false;
                 info.isKnockback = false;
                 info.isStun = false;
 
-                // --- BƯỚC 2: TÍNH TOÁN HIỆU ỨNG (CC) ---
+                // --- 3. TÍNH HIỆU ỨNG (CC) ---
 
-                // A. Logic Trọng Kích (Heavy Attack) -> Mặc định gây Knockback mạnh
+                // A. Từ đòn đánh (Heavy / Combo)
                 if (isHeavy)
                 {
-                    Debug.Log("Trọng Kích -> Gây knockback");
                     info.isKnockback = true;
-                    info.knockbackForce = 15f; // Lực đẩy mạnh cho trọng kích
-                    // info.isStun = true; // Bỏ comment nếu muốn trọng kích gây choáng luôn
+                    info.knockbackForce = 15f;
                     info.impactLevel = 1;
                 }
                 else
                 {
                     info.impactLevel = 0;
-                    // Trừ khi đòn cuối combo mạnh hơn?
-                    //if (stepIndex == maxCombo - 1) info.impactLevel = 1;
-                    // B. Logic Đánh thường (Combo) -> Lấy từ WeaponData
-                    // Kiểm tra xem vũ khí có cấu hình hiệu ứng cho đòn đánh này không
                     if (currentWpn != null && currentWpn.comboEffects != null && stepIndex < currentWpn.comboEffects.Count)
                     {
-                        // Giả sử class AttackEffect bạn đã tạo ở Bước 4.1
                         var effect = currentWpn.comboEffects[stepIndex];
                         info.isKnockback = effect.causesKnockback;
                         info.knockbackForce = effect.knockbackForce;
@@ -645,53 +654,36 @@ public class PlayerController : MonoBehaviour
                     }
                 }
 
-                 // --- BƯỚC 2.5: LOGIC PERFECT DODGE / PARRY (Dành cho tương lai) ---
-                // Khi bạn code xong hệ thống Dodge/Parry, hãy bỏ comment dòng dưới
-                
-                if (stats.isPerfectDodgeSuccess) 
+                // B. Từ Perfect Dodge (Khôi phục lại)
+                if (stats.isPerfectDodgeSuccess)
                 {
-                    // Nếu vừa né hoàn hảo -> Đòn phản công kế tiếp gây Stun
                     info.isStun = true;
-                    info.stunDuration = 1f;
-                    info.impactLevel = 1; // Tăng lực va chạm để xuyên giáp
+                    info.stunDuration = 1.0f;
+                    info.impactLevel = 1; // Tăng impact để xuyên giáp
+                    Debug.Log("<color=yellow>>> DODGE COUNTER!</color>");
 
-                    Debug.Log(">> PHẢN CÔNG PERFECT DODGE!");
-                    stats.isPerfectDodgeSuccess = false; // Reset sau khi dùng
-                }
-                
-                //if (stats.isPerfectParrySuccess)
-                //{
-                //    // Nếu vừa đỡ hoàn hảo -> Đòn phản công knockback cực mạnh
-                //    info.isKnockback = true;
-                //    info.knockbackForce = 20f;
-                //    Debug.Log("Phản công Perfect Parry!");
-                //    stats.isPerfectParrySuccess = false; // Reset
-                //}
-
-                // --- BƯỚC 3: TÍNH TOÁN SÁT THƯƠNG ---
-                float attackMultiplier = 1;
-                if (isHeavy)
-                {
-                    attackMultiplier = currentDamageMultiplier;
-                                    }
-                else
-                {
-                    // stepIndex = 0 (Đòn 1) -> x1.0, stepIndex = 1 (Đòn 2) -> x1.5
-                    attackMultiplier = (stepIndex == 0) ? 1.0f : 1.5f;
+                    // Reset cờ Dodge ngay sau khi đánh trúng 1 mục tiêu (hoặc để cuối vòng lặp nếu muốn đánh lan)
+                    stats.isPerfectDodgeSuccess = false;
                 }
 
-                // Tính Crit
-                float totalCritChance = stats.critChance;
-                if (currentWpn != null) totalCritChance += currentWpn.bonusCritChance;
+                // --- 4. TÍNH DAMAGE ---
+                float attackMultiplier = (isHeavy) ? currentDamageMultiplier : ((stepIndex == 0) ? 1.0f : 1.5f);
 
-                bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-                if (isTestCrit) isCrit = true;
+                // Logic Crit: 
+                // Crit nếu (Duelist Counter) HOẶC (Random theo tỷ lệ)
+                bool isCrit = isDuelistCounter || CombatMath.CheckIsCrit(stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0));
 
-                info.isCrit = isCrit; // Lưu vào info
+                // Logic Ignore Reduction (Xuyên giáp):
+                // Chỉ kích hoạt nếu là Duelist Counter
+                bool ignoreReduction = isDuelistCounter;
 
-                if (isCrit) Debug.Log("<color=red>CRITICAL HIT!</color>");
+                if (isCrit)
+                {
+                    info.isCrit = true;
+                    Debug.Log("<color=red>CRITICAL HIT!</color>");
+                }
 
-                // Tính Damage số học
+                // Gọi hàm tính toán
                 float damage = CombatMath.CalculateFullDamage(
                     stats,
                     enemyStats,
@@ -699,46 +691,35 @@ public class PlayerController : MonoBehaviour
                     isCrit,
                     null,          // SkillData
                     currentWpn,    // WeaponData
-                    attackMultiplier
+                    attackMultiplier,
+                    ignoreReduction // [MỚI] Tham số True Damage
                 );
 
-                info.damageAmount = damage; // Lưu vào info
+                info.damageAmount = damage;
 
-                // --- BƯỚC 4: GỬI GÓI TIN ĐI ---
-                // Gọi hàm TakeDamage mới nhận struct DamageInfo
+                // --- 5. GỬI DAMAGE ---
                 enemyStats.TakeDamage(info);
 
-                if (stats != null)
-                    stats.NotifyOnHitEnemy(enemyStats, t, isCrit);
+                if (stats != null) stats.NotifyOnHitEnemy(enemyStats, t, isCrit);
                 OnHitEnemy?.Invoke(enemyStats, stepIndex, isHeavy, isCrit);
-                // --- [MỚI] KIỂM TRA KẾT LIỄU ---
+
+                // --- 6. KIỂM TRA KILL ---
                 if (wasAlive && enemyStats.currentHp <= 0)
                 {
-                    // Nếu trước đó còn sống, giờ đã chết -> Gọi là Kill
-                    bool isBackstab = (t == 1f); 
-                    if (stats != null)
-                    {
-                        stats.NotifyKillEnemy(enemyStats, isBackstab);
-                    }
-
-                    Debug.Log(">> KẾT LIỄU ĐỊCH!");
+                    bool isBackstab = (t == 1f);
+                    if (stats != null) stats.NotifyKillEnemy(enemyStats, isBackstab);
+                    Debug.Log(">> KILL CONFIRMED!");
                 }
-
-                // --- [MỚI] BÁO CHO STATS BIẾT LÀ VỪA ĐÁNH TRÚNG ---
-                // Truyền t và testIsCrit (hoặc biến crit thật của bạn)
-                if (stats != null) stats.NotifyOnHitEnemy(enemyStats, t, isCrit);
-
-                // Notify stats (hồi máu, buff...)
-                //if (stats != null) stats.NotifyOnHitEnemy(t, isCrit);
             }
         }
+
         if (hitAnything)
         {
-            Debug.Log("Tấn công TRÚNG ĐỊCH -> Vào Combat");
+            Debug.Log("Hit Enemy -> Combat State");
             OnAttackPerformed?.Invoke(stepIndex, isHeavy);
         }
     }
-  
+
     // Hàm trang bị hoặc đổi vũ khí (xài chung)
     void EquipWeapon()
     {

@@ -1,11 +1,11 @@
 using UnityEngine;
 
-public class Player : AllyStats
+public class PlayerStats : AllyStats
 {
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     public override void Start()
     {
-        
+        this.tag = "Player";
     }
 
     // Update is called once per frame
