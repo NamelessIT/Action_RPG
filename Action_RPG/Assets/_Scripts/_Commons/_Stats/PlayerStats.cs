@@ -5,6 +5,7 @@ public class PlayerStats : AllyStats
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     public override void Start()
     {
+        base.Start();
         this.tag = "Player";
     }
 
