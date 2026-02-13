@@ -443,6 +443,32 @@ public class EnemyAI : MonoBehaviour
         else if (dir.x < 0) spriteRenderer.flipX = false;
     }
 
+    // [MỚI] Hàm phản xạ khi bị đánh (Gọi từ EnemyStats)
+    public void OnDamageTaken(Transform attacker)
+    {
+        if (attacker == null) return;
+
+        // 1. Nếu kẻ tấn công thuộc phe mình (Ally đánh Ally) thì bỏ qua (tùy logic game bạn)
+        // Nhưng ở đây ta cứ set target đã, logic IsHostileTo sẽ lọc sau nếu cần.
+
+        // 2. Ép buộc nhận mục tiêu ngay lập tức
+        nearestTarget = attacker;
+
+        // 3. Hủy bỏ trạng thái đang làm (Về nhà/Đi tuần) để chiến đấu ngay
+        isReturningHome = false;
+        if (agent.isOnNavMesh) agent.isStopped = false; // Đảm bảo AI có thể di chuyển/xoay
+
+        // 4. Nếu là Neutral -> Chuyển sang thù địch (Logic này Stats đã lo qua Aggro, nhưng AI cần biết để Update)
+        // Đảm bảo AI quay mặt về phía kẻ tấn công ngay lập tức (Tùy chọn)
+        /*
+        Vector3 dir = (attacker.position - transform.position).normalized;
+        dir.y = 0;
+        if (dir != Vector3.zero) stats.facingDirection = dir;
+        */
+
+        Debug.Log($"[AI] Bị đánh lén bởi {attacker.name}! -> Quay lại trả đũa ngay.");
+    }
+
     // --- GIZMOS CẢI TIẾN (Vẽ hình rẻ quạt) ---
     void OnDrawGizmosSelected()
     {
