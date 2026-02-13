@@ -761,17 +761,6 @@ public class PlayerController : MonoBehaviour
     void LearnSkill()
     {
         skillManager.EquipSkill(skillManager.pickUpSkill);
-        if (duelistSkill == null) // Chỉ tìm nếu chưa có
-        {
-            duelistSkill = GetComponent<DuelistPassive>();
-
-            if (duelistSkill != null)
-            {
-                // Tự động bật isLearned luôn cho chắc chắn (nếu logic bên SkillManager quên bật)
-                duelistSkill.isLearned = true;
-                Debug.Log(">> PlayerController: Đã liên kết thành công skill Duelist!");
-            }
-        }
     }
     void UpdateStat()
     {
