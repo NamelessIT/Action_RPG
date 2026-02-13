@@ -137,6 +137,7 @@ public class EnemyCombat : MonoBehaviour
             info.isKnockback = false;
             info.isStun = false;
             info.impactLevel = stats.monsterRank;
+            info.attacker = stats;
 
             // --- BƯỚC 2: CẤU HÌNH HIỆU ỨNG CỦA ENEMY ---
             // Cách đơn giản: Check tên hoặc ID của Enemy để gán hiệu ứng

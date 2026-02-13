@@ -159,7 +159,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 39675275}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f20b29b3cf784e84fa721ca7704e47ed, type: 3}
   m_Name: 
@@ -1640,7 +1640,7 @@ PrefabInstance:
     - target: {fileID: 8734627235539532154, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: pickUpSkill
       value: 
-      objectReference: {fileID: 11400000, guid: dfcdd47a9f0edfd4bb77a1773b3702a0, type: 2}
+      objectReference: {fileID: 11400000, guid: da51ed57f6dd88e4a8bcf153bda6b808, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

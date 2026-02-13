@@ -49,8 +49,9 @@ public static class CombatMath
     /// <param name="skill">Skill sử dụng (null nếu là đánh thường)</param>
     /// <param name="weapon">Vũ khí đang cầm (để check type khi đánh thường)</param>
     /// <param name="externalMult">Hệ số phụ (Combo, Charge... mặc định là 1)</param>
+    /// Hàm tính damage chính thức (Đã thêm ignoreReduction)
     /// </summary>
-    public static float CalculateFullDamage(Stats attacker, Stats target, float t, bool isCrit, SkillData skill, WeaponData weapon, float externalMult = 1.0f)
+    public static float CalculateFullDamage(Stats attacker, Stats target, float t, bool isCrit, SkillData skill, WeaponData weapon, float externalMult = 1.0f, bool ignoreReduction = false)
     {
         // --- 1. Tính Raw Damage ---
         float critMult = isCrit ? attacker.baseCritMultiplier : 1.0f; //Sửa lại thành critMultiplier 
@@ -89,6 +90,18 @@ public static class CombatMath
 
         // [Source: 68] Raw Magic
         float rawMagic = attacker.magicAtk * magicMult * critMult;
+
+
+        // --- NẾU BỎ QUA GIẢM SÁT THƯƠNG (TRUE DAMAGE) ---
+        if (ignoreReduction)
+        {
+            float trueDamage = rawPhysical + rawMagic;
+            // Vẫn áp dụng Direction Bonus (Thưởng sát thương theo hướng) vì đây là Tăng Damage chứ không phải Giảm
+            float bonus = 1.0f + (0.25f * t);
+
+            Debug.Log($"<color=cyan>TRUE DAMAGE (Counter Attack)! {trueDamage * bonus}</color>");
+            return trueDamage * bonus;
+        }
 
 
         // --- 2. Tính Armor/Resist thực tế theo hướng đánh (Armor Direction) ---

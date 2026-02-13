@@ -1,7 +1,8 @@
 using UnityEngine;
 
-public class Player : AllyStats
+public class PlayerStats : AllyStats
 {
+    public bool isPerfectParrySuccess;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     public override void Start()
     {
