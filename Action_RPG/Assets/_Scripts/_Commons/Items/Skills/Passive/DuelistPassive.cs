@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-public class DuelistPassive : MonoBehaviour
+public class DuelistPassive : SkillBehavior
 {
     [Header("Config")]
     public bool isPlayer = true; // [MỚI] Check xem ai đang dùng
@@ -25,6 +25,17 @@ public class DuelistPassive : MonoBehaviour
     void Start()
     {
         animator = GetComponentInChildren<Animator>();
+    }
+    protected override void OnEquip()
+    {
+        // Đăng ký sự kiện đánh trúng địch
+        isLearned = true;
+        Debug.Log("[Duelist] Có thể Parry");
+    }
+
+    protected override void OnUnequip()
+    {
+        isLearned = false;
     }
 
     void Update()
@@ -52,9 +63,9 @@ public class DuelistPassive : MonoBehaviour
         currentCooldown = parryCooldown;
 
         // Animation (Nếu có)
-        if (animator != null) animator.SetTrigger("Parry");
+        //if (animator != null) animator.SetTrigger("Parry");
 
-        // Debug.Log("Duelist: Parry Stance Active!");
+        Debug.Log("Duelist: Parry Stance Active!");
     }
 
     // --- HÀM GỌI TỪ PLAYER STATS KHI BỊ ĐÁNH ---
@@ -94,7 +105,7 @@ public class DuelistPassive : MonoBehaviour
         // --- NORMAL PARRY ---
         else
         {
-            Debug.Log("<color=white>Normal Parry.</color>");
+            Debug.Log("<color=red>Normal Parry.</color>");
             // Giảm 80% Damage -> Nhận 20%
             return incomingDamage * 0.2f;
         }
