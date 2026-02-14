@@ -136,6 +136,11 @@ public class Stats : MonoBehaviour
     [Tooltip("Bị đánh dấu")]
     public bool IsMarked=false;
 
+    [Header("--- Combat State ---")]
+    public bool isParrying = false;       // Đang trong thế thủ
+    public bool isPerfectParryWindow = false; // Đang trong "khung giờ vàng"
+
+
     private NavMeshAgent agent;
     private Rigidbody rb;
     protected Animator animator;
@@ -291,7 +296,7 @@ public class Stats : MonoBehaviour
         if (isSuperArmor && info.impactLevel <= superArmorLevel)
         {
             // Có thể thêm hiệu ứng visual (ví dụ: người lóe sáng trắng chịu đòn)
-             Debug.Log("Super Armor Blocked CC!");
+             //Debug.Log("Super Armor Blocked CC!");
             return;
         }
 

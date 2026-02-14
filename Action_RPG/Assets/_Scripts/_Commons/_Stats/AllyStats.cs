@@ -110,7 +110,7 @@ public class AllyStats : Stats
         // Gọi tính toán lần đầu
         RecalculateStats();
         InitializeClassStats();
-
+        currentHp = maxHp;
         this.tag = "Ally";
     }
 

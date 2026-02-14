@@ -11,6 +11,7 @@ public enum DetectionMethod
     Both = Sight | Range
 }
 
+
 public class EnemyStats : Stats
 {
     [Header("--- Enemy Identity ---")]
@@ -39,6 +40,9 @@ public class EnemyStats : Stats
     public float aggroRetentionTime = 5.0f;
     private float lastDamageReceivedTime = -100f;
 
+    // [MỚI] Tham chiếu tới AI để báo tin
+    private EnemyAI enemyAI;
+
     public override void Start()
     {
         base.Start();
@@ -54,6 +58,8 @@ public class EnemyStats : Stats
 
         // Đảm bảo tag đúng để hệ thống nhận diện
         if (this.gameObject.tag == "Untagged") this.gameObject.tag = "Enemy";
+
+        enemyAI = GetComponent<EnemyAI>();
     }
 
     void SetupResistances()
@@ -85,6 +91,13 @@ public class EnemyStats : Stats
         base.TakeDamage(info);
         lastDamageReceivedTime = Time.time;
         AddAggro(25f);
+
+        // [MỚI] BÁO CHO AI BIẾT KẺ TẤN CÔNG LÀ AI
+        if (enemyAI != null && info.attacker != null)
+        {
+            // info.attacker là Stats, ta cần Transform
+            enemyAI.OnDamageTaken(info.attacker.transform);
+        }
     }
 
     public void AddAggro(float amount)

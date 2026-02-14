@@ -14,7 +14,7 @@ public class EnemyCombat : MonoBehaviour
     protected float lastAttackTime = -10f;
     // Tầm đánh cơ bản (nếu chưa có skill)
     public float basicAttackRange = 2.0f;
-
+    [Range(0, 360)] public float attackAngle = 90f; // [MỚI] Góc đánh
     private int currentComboStep = 0;
     private int maxCombo = 2;
 
@@ -29,6 +29,7 @@ public class EnemyCombat : MonoBehaviour
         animator = _animator;
     }
 
+
     // Hàm Update để quản lý Cooldown skill (nếu có)
     public virtual void HandleCombatUpdate()
     {
@@ -41,68 +42,63 @@ public class EnemyCombat : MonoBehaviour
     public virtual void PerformBasicAttack()
     {
         if (stats == null || target == null) return;
-        if (isAttacking) return; // Đang đánh thì không đánh đè
+        if (isAttacking) return;
 
-        // [LOGIC MỚI] Tính Cooldown dựa trên Attack Speed của Enemy
-        // Công thức giống Player: 1 / Speed
+        // Tính Cooldown
         float speed = stats.baseAttackSpeed;
         if (speed <= 0) speed = 0.25f;
         float cooldownTime = 1.0f / speed;
 
         if (Time.time < lastAttackTime + cooldownTime) return;
 
-        // Bắt đầu chuỗi hành động đánh
-        currentAttackCoroutine = StartCoroutine(EnemyAttackRoutine());
+        StartCoroutine(EnemyAttackRoutine());
     }
 
-    // [MỚI] Coroutine xử lý Animation và Gây Damage (Giống Player)
     protected IEnumerator EnemyAttackRoutine()
     {
         isAttacking = true;
         lastAttackTime = Time.time;
-
         if (stats != null) stats.EnterCombat();
 
-
-        // 1. Xoay mặt về phía Player ngay trước khi đánh để chính xác hơn
+        // 1. Xoay mặt về phía Player (Chỉ xoay trục Y)
         Vector3 dirToTarget = (target.position - transform.position).normalized;
-        dirToTarget.y = 0; // Giữ thăng bằng
+        dirToTarget.y = 0;
         if (dirToTarget != Vector3.zero)
         {
             stats.facingDirection = dirToTarget;
-            // Nếu muốn xoay model ngay lập tức:
+            // Nếu muốn xoay model luôn thì uncomment dòng dưới (nhưng thường để script Anim lo)
             // transform.rotation = Quaternion.LookRotation(dirToTarget);
         }
 
         // 2. Chạy Animation
         if (animator != null)
         {
-            // Set tốc độ animation khớp với tốc độ đánh
             animator.SetFloat("AttackSpeedMultiplier", stats.baseAttackSpeed);
             animator.SetTrigger("Attack");
         }
 
-        // 3. Chờ giai đoạn "Vung tay" (Wind-up)
-        // Giả sử animation chuẩn dài 0.5s. Ta chờ khoảng 30-40% thời gian để đòn đánh chạm mục tiêu
-        float baseAnimDuration = 0.5f;
+        // 3. Tính toán thời gian chờ
+        float baseAnimDuration = 0.5f; // Thời lượng anim gốc
         float realDuration = baseAnimDuration / stats.baseAttackSpeed;
 
-        // Chờ 40% thời gian animation rồi mới gây damage (tùy chỉnh số này cho khớp hình ảnh)
-        yield return new WaitForSeconds(realDuration * 0.4f);
+        // Thời điểm gây damage (Impact Point): Ví dụ 40% của animation
+        float impactTime = realDuration * 0.4f;
 
-        // 4. Gây Damage (Kiểm tra lại khoảng cách cho chắc ăn)
-        float dist = Vector3.Distance(transform.position, target.position);
-        if (dist <= basicAttackRange + 0.5f) // +0.5f du di một chút
-        {
-            currentComboStep++;
-            if (currentComboStep >= maxCombo) currentComboStep = 0;
-            DealDamage(currentComboStep);
-        }
+        // Chờ đến lúc chém trúng
+        yield return new WaitForSeconds(impactTime);
 
-        // 5. Chờ nốt phần còn lại của Animation (Recovery)
-        yield return new WaitForSeconds(realDuration * 0.6f);
+        // 4. [QUAN TRỌNG] TÌM MỤC TIÊU TRÚNG ĐÒN (CHECK LẠI TẠI THỜI ĐIỂM CHÉM)
+        // Chúng ta không tin tưởng biến 'target' cũ nữa, vì Player có thể đã chạy mất
+        CheckHitAndDealDamage();
+
+        // 5. Chờ nốt animation (Recovery)
+        yield return new WaitForSeconds(realDuration - impactTime);
 
         isAttacking = false;
+
+        // Tăng combo
+        currentComboStep++;
+        if (currentComboStep >= maxCombo) currentComboStep = 0;
     }
 
     // [MỚI] Hàm hỗ trợ Cancel Attack (Để Boss dùng)
@@ -120,78 +116,112 @@ public class EnemyCombat : MonoBehaviour
         }
     }
 
-    // Thay thế hàm DealDamage cũ
-    void DealDamage(int step)
+    // Hàm kiểm tra va chạm và gây damage
+    void CheckHitAndDealDamage()
     {
-        Debug.Log($"{gameObject.name} thực hiện ĐÁNH THƯỜNG vào {target.name}");
+        // Tìm tất cả đối tượng trong tầm đánh (Sphere)
+        Collider[] hits = Physics.OverlapSphere(transform.position, basicAttackRange);
 
-        Stats playerStats = target.GetComponent<Stats>();
-        if (playerStats != null)
+        foreach (var hit in hits)
         {
-            float t = CombatMath.CalculateDirectionFactor(transform, playerStats);
+            // Chỉ quan tâm đến Player hoặc Ally
+            if (hit.CompareTag("Player") || hit.CompareTag("Ally"))
+            {
+                // [MỚI] CHECK GÓC (CONE CHECK)
+                Vector3 dirToHit = (hit.transform.position - transform.position).normalized;
+                Vector3 facingDir = stats.facingDirection != Vector3.zero ? stats.facingDirection : transform.forward;
 
-            // --- BƯỚC 1: KHỞI TẠO DAMAGE INFO ---
+                float angle = Vector3.Angle(facingDir, dirToHit);
+
+                // Nếu nằm ngoài góc đánh -> Bỏ qua
+                if (angle > attackAngle / 2f) continue;
+
+                // Nếu thỏa mãn -> Gây damage
+                DealDamageToTarget(hit.transform, currentComboStep);
+            }
+        }
+    }
+
+    // Hàm tính toán và gửi damage
+    void DealDamageToTarget(Transform victim, int step)
+    {
+        Debug.Log($"{gameObject.name} CHÉM TRÚNG {victim.name}");
+
+        Stats victimStats = victim.GetComponent<Stats>();
+        if (victimStats != null)
+        {
+            float t = CombatMath.CalculateDirectionFactor(transform, victimStats);
+
+            // --- BƯỚC 1: INFO ---
             DamageInfo info = new DamageInfo();
             info.sourcePosition = transform.position;
-            info.isCrit = false;
-            info.isKnockback = false;
-            info.isStun = false;
-            info.impactLevel = stats.monsterRank;
             info.attacker = stats;
+            info.impactLevel = stats.monsterRank;
 
-            // --- BƯỚC 2: CẤU HÌNH HIỆU ỨNG CỦA ENEMY ---
-            // Cách đơn giản: Check tên hoặc ID của Enemy để gán hiệu ứng
-
-            // Ví dụ 1: Boss Golem -> Mọi đòn đánh đều gây Knockback
+            // --- BƯỚC 2: HIỆU ỨNG (CC) ---
+            // Boss Golem
             if (stats.enemyID == "Boss_Golem")
             {
                 info.isKnockback = true;
-                info.knockbackForce = 12f; // Lực đẩy của Boss
+                info.knockbackForce = 12f;
             }
-
-            // Ví dụ 2: Orc -> Đòn thứ 3 (kết thúc combo) gây Stun + Knockback
-            // currentComboStep được tính ở Coroutine EnemyAttackRoutine
-            if (stats.enemyID == "Orc_Warrior" && currentComboStep == 2) // Giả sử maxCombo=3, index 0,1,2
+            // Orc Warrior (Đòn cuối combo)
+            if (stats.enemyID == "Orc_Warrior" && step == 2)
             {
                 info.isStun = true;
                 info.stunDuration = 1.0f;
                 info.isKnockback = true;
                 info.knockbackForce = 8f;
-                Debug.Log("Orc thực hiện đòn đập mạnh gây choáng!");
             }
-            if (stats.enemyID == "Odo" && currentComboStep == 1) // Giả sử maxCombo=3, index 0,1,2
+            // Odo (Đòn 2)
+            if (stats.enemyID == "Odo" && step == 1)
             {
                 info.isKnockback = true;
                 info.knockbackForce = 8f;
-                Debug.Log("Enemy Odo thực hiện đòn đập mạnh gây knockback!");
             }
 
-            // --- BƯỚC 3: TÍNH CRIT & DAMAGE ---
+            // --- BƯỚC 3: TÍNH DAMAGE ---
             bool isCrit = CombatMath.CheckIsCrit(stats.baseCritChance);
+            info.isCrit = isCrit;
             if (isCrit) Debug.Log($"<color=orange>{gameObject.name} CRITS!</color>");
 
-            info.isCrit = isCrit;
-
+            // Gọi CombatMath (Nhớ cập nhật tham số ignoreReduction nếu cần, ở đây Enemy thường ko có True Damage nên để false)
             float damage = CombatMath.CalculateFullDamage(
                 stats,
-                playerStats,
+                victimStats,
                 t,
                 isCrit,
                 null,
                 null,
-                1.0f
+                1.0f,
+                false // Enemy đánh thường không xuyên giáp
             );
 
             info.damageAmount = damage;
 
-            // --- BƯỚC 4: GỬI GÓI TIN ---
-            playerStats.TakeDamage(info);
+            // --- BƯỚC 4: GỬI ---
+            victimStats.TakeDamage(info);
         }
     }
 
     public void SetTarget(Transform newTarget)
     {
         target = newTarget;
+    }
+
+    // Vẽ Gizmos để debug tầm đánh của Enemy
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, basicAttackRange);
+
+        Vector3 forward = (stats != null && stats.facingDirection != Vector3.zero) ? stats.facingDirection : transform.forward;
+        Vector3 leftRay = Quaternion.AngleAxis(-attackAngle / 2, Vector3.up) * forward;
+        Vector3 rightRay = Quaternion.AngleAxis(attackAngle / 2, Vector3.up) * forward;
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawRay(transform.position, leftRay * basicAttackRange);
+        Gizmos.DrawRay(transform.position, rightRay * basicAttackRange);
     }
 
     // Sau này sẽ có thêm: PerformSkill(string skillID) ...
