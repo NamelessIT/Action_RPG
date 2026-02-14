@@ -143,9 +143,10 @@ public class Stats : MonoBehaviour
     [Tooltip("Bị đánh dấu")]
     public bool IsMarked=false;
 
-    [Header("--- Combat State ---")]
+    [Header("Parry Settings")]
     public bool isParrying = false;       // Đang trong thế thủ
     public bool isPerfectParryWindow = false; // Đang trong "khung giờ vàng"
+    [Range(0, 360)] public float parryAngle = 120f;
 
 
     private NavMeshAgent agent;

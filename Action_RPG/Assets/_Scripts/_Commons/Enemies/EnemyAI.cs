@@ -1,4 +1,8 @@
-﻿using UnityEngine;
+﻿using Mono.Cecil.Cil;
+using System.Collections;
+using UnityEditor;
+using UnityEditor.PackageManager.UI;
+using UnityEngine;
 using UnityEngine.AI;
 
 [RequireComponent(typeof(NavMeshAgent))]
@@ -47,6 +51,22 @@ public class EnemyAI : MonoBehaviour
     private bool isPatrolWaiting = false;
     private float nextTurnTimer;
 
+    [Header("--- AI Parry System ---")]
+    [Tooltip("Tỷ lệ phản xạ đỡ đòn (0.8 = 80%)")]
+    public float parryChance = 0.8f;
+
+    [Header("--- AI Defense System ---")]
+    public float projectileDetectionRadius = 8.0f; // Tầm phát hiện đạn
+    public LayerMask projectileLayer; // Layer của mũi tên/đạn player
+
+    [Tooltip("Thời gian nghỉ giữa các lần suy nghĩ có nên đỡ hay không")]
+    public float parryReactionCooldown = 2.0f;
+    private float nextParryCheckTime = 0f;
+
+
+    // Tham chiếu skill
+    private DuelistPassive parrySkill;
+
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
@@ -66,14 +86,35 @@ public class EnemyAI : MonoBehaviour
         nextTurnTimer = Random.Range(randomTurnMinTime, randomTurnMaxTime);
 
         HandleAnimation(stats.facingDirection);
+
+        // Lấy skill Parry (nếu có)
+        parrySkill = GetComponent<DuelistPassive>();
+
+        // Tự động bật canParry nếu có skill
+        if (parrySkill != null)
+        {
+            parrySkill.isPlayer = false; // Báo đây là AI
+            parrySkill.isLearned = true;
+            stats.canParry = true;
+        }
     }
 
     void Update()
     {
-        if (stats.isDead || stats.isStunned)
+        if (stats.isDead || stats.isStunned || stats.isParrying)
         {
             if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
             return;
+        }
+
+        // [MỚI] NẾU ĐANG PARRY -> KHÓA DI CHUYỂN VÀ TẤN CÔNG
+        // Để đảm bảo Enemy đứng yên "gồng" đỡ đòn trong 0.5s
+        if (stats.isParrying)
+        {
+            if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
+            currentState = "Parrying";
+            HandleAnimation(stats.facingDirection); // Vẫn update anim direction nếu cần
+            return; // Thoát Update để không chạy logic di chuyển/tấn công bên dưới
         }
 
         // 1. QUÉT TÌM MỤC TIÊU
@@ -92,6 +133,19 @@ public class EnemyAI : MonoBehaviour
             if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
             stats.EnterCombat();
             return;
+        }
+
+        // LOGIC AI PARRY CẢI TIẾN
+        if (nearestTarget != null && stats.canParry && !stats.isStunned) // [QUAN TRỌNG] Chỉ chạy khi có Target
+        {
+            // 1. Melee Parry (Cận chiến)
+            HandleParryReaction();
+
+            // 2. Projectile Parry (Đỡ đạn) - Chỉ quét khi rảnh tay
+            if (!combat.isAttacking && !stats.isParrying)
+            {
+                HandleProjectileDefense();
+            }
         }
 
         // 3. LOGIC TRẠNG THÁI (STATE MACHINE)
@@ -145,6 +199,141 @@ public class EnemyAI : MonoBehaviour
 
         HandleVisuals();
         combat.HandleCombatUpdate();
+    }
+
+    void HandleParryReaction()
+    {
+        // 1. Nếu đang hồi chiêu phản xạ hoặc đang tấn công/đỡ rồi thì thôi
+        if (Time.time < nextParryCheckTime || combat.isAttacking || stats.isParrying) return;
+
+        // 2. Kiểm tra xem mục tiêu (Player) có đang tấn công mình không?
+        Animator targetAnim = nearestTarget.GetComponentInChildren<Animator>();
+        if (targetAnim != null)
+        {
+            // Lấy thông tin animation hiện tại của Player
+            AnimatorStateInfo stateInfo = targetAnim.GetCurrentAnimatorStateInfo(0);
+
+            // Kiểm tra Tag "Attack" trong Animator của Player (Bạn nhớ set Tag này trong Animator Controller nhé)
+            // Hoặc kiểm tra tên state: stateInfo.IsName("Attack1") ...
+            //Để dòng code stateInfo.IsTag("Attack") trả về true, bạn bắt buộc phải làm bước này:
+            //Mở cửa sổ Animator của Player(Window > Animation > Animator).
+            //Chọn các ô trạng thái tấn công(ví dụ: Attack1, Attack2, HeavyAttack, OdoAttack...).
+            //Nhìn sang bảng Inspector bên phải.
+            //Tìm dòng Tag.
+            //Gõ chữ "Attack" vào ô đó (hoặc chọn nếu đã có sẵn). Lưu ý chữ hoa thường phải chính xác 100% như trong code.
+            if (stateInfo.IsTag("Attack"))
+            {
+                // 3. Kiểm tra khoảng cách (Chỉ đỡ khi Player ở gần)
+                float dist = Vector3.Distance(transform.position, nearestTarget.position);
+                if (dist <= 2.5f) // Tầm gần mới cần đỡ
+                {
+                    // 4. RANDOM CƠ HỘI (80%)
+                    if (Random.value < parryChance)
+                    {
+                        // THỰC HIỆN PARRY
+                        Debug.Log($"<color=orange>[AI] {gameObject.name} phản xạ Parry!</color>");
+
+                        if (parrySkill != null) parrySkill.AI_StartParry();
+
+                        // Giữ trạng thái Parry trong khoảng thời gian (ví dụ 0.5s) rồi thả
+                        StartCoroutine(ParryThenCounterAttack(0.5f));
+                    }
+                    else
+                    {
+                        Debug.Log("[AI] Phản xạ chậm, không đỡ kịp!");
+                    }
+
+                    // Dù đỡ hay không, cũng phải chờ một lúc mới check lại (tránh spam)
+                    nextParryCheckTime = Time.time + parryReactionCooldown;
+                }
+            }
+        }
+    }
+
+
+    // [MỚI] Hàm xử lý đỡ đạn từ xa
+    void HandleProjectileDefense()
+    {
+        // Quét xung quanh xem có mũi tên nào đang bay tới không
+        // [LƯU Ý] Nếu projectileDetectionRadius quá nhỏ (5.0f), AI có thể ko kịp phản xạ đạn nhanh.
+        // Bạn nên tăng lên 8-10f nếu đạn bay nhanh.
+        Collider[] threats = Physics.OverlapSphere(transform.position, projectileDetectionRadius, projectileLayer);
+
+        foreach (var threat in threats)
+        {
+            // Kiểm tra Rigidbody đạn
+            Rigidbody projRb = threat.GetComponent<Rigidbody>();
+            if (projRb != null && projRb.linearVelocity.sqrMagnitude > 0.1f) // Chỉ check đạn đang bay
+            {
+                Vector3 dirToMe = (transform.position - threat.transform.position).normalized;
+                float dot = Vector3.Dot(projRb.linearVelocity.normalized, dirToMe);
+
+                // Dot > 0.8: Đạn đang bay về phía mình
+                if (dot > 0.8f)
+                {
+                    float dist = Vector3.Distance(transform.position, threat.transform.position);
+                    float timeToImpact = dist / projRb.linearVelocity.magnitude;
+
+                    // Nếu sắp trúng (< 0.5s) -> Đỡ ngay!
+                    if (timeToImpact < 0.5f)
+                    {
+                        // Check Cooldown phản xạ (để AI không đỡ liên tục như thần thánh)
+                        if (Time.time < nextParryCheckTime) return;
+
+                        if (Random.value < parryChance)
+                        {
+                            Debug.Log($"<color=cyan>[AI] {name} đỡ đạn!</color>");
+
+                            // Xoay mặt về phía đạn để Angle Check trong Stats hoạt động đúng
+                            Vector3 dirToThreat = (threat.transform.position - transform.position).normalized;
+                            dirToThreat.y = 0;
+                            if (dirToThreat != Vector3.zero) stats.facingDirection = dirToThreat;
+
+                            if (parrySkill != null) parrySkill.AI_StartParry();
+
+                            // Giữ thế thủ 0.5s (hoặc lâu hơn nếu cần)
+                            StartCoroutine(ParryThenCounterAttack(0.5f));
+
+                            // Set cooldown phản xạ
+                            nextParryCheckTime = Time.time + parryReactionCooldown;
+
+                            return;
+                        }
+                        else
+                        {
+                            // AI fail parry -> Set cooldown để ko check lại đạn này ngay lập tức
+                            nextParryCheckTime = Time.time + 0.5f;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+
+    // [MỚI] Coroutine xử lý Parry xong thì Phản công (Counter Attack)
+    IEnumerator ParryThenCounterAttack(float delay)
+    {
+        // 1. Giữ trạng thái Parry trong 0.5s (trong lúc này AI bất động nhờ logic Update)
+        yield return new WaitForSeconds(delay);
+
+        // 2. Tắt Parry
+        if (parrySkill != null) parrySkill.AI_StopParry();
+
+        // 3. [QUAN TRỌNG] Đánh trả ngay lập tức (Riposte)
+        // Kiểm tra xem mục tiêu còn trong tầm đánh không
+        if (nearestTarget != null && !stats.isStunned && !stats.isDead)
+        {
+            float dist = Vector3.Distance(transform.position, nearestTarget.position);
+
+            // Nếu vẫn còn gần -> Vả luôn!
+            if (dist <= combat.basicAttackRange + 0.5f)
+            {
+                Debug.Log("<color=red>[AI] Parry xong -> Phản công ngay!</color>");
+                combat.PerformBasicAttack();
+            }
+        }
     }
 
     void ScanForTarget()

@@ -43,6 +43,9 @@ public class EnemyStats : Stats
     // [MỚI] Tham chiếu tới AI để báo tin
     private EnemyAI enemyAI;
 
+    // [MỚI] Khả năng đỡ đòn (Có khiên không?)
+    public bool canParry = false;
+
     public override void Start()
     {
         base.Start();

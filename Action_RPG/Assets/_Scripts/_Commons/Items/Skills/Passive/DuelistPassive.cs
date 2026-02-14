@@ -11,7 +11,7 @@ public class DuelistPassive : SkillBehavior
     public float maxParryDuration = 0.5f;
 
     [Tooltip("Thời điểm bắt đầu tính là Perfect (0.4s). Tức là từ 0.4s đến 0.5s là Perfect.")]
-    public float perfectParryStartTime = 0.4f;
+    public float perfectParryStartTime = 0.1f;
 
     [Tooltip("Thời gian hồi chiêu sau khi buông nút hoặc hết giờ")]
     public float parryCooldown = 1.0f; // Tăng lên xíu vì skill này mạnh
@@ -67,7 +67,29 @@ public class DuelistPassive : SkillBehavior
             HandleInput();
         }
 
+
+
         // (Nếu muốn Enemy dùng được thì cần viết hàm AI gọi StartHoldParry và StopHoldParry riêng)
+        // 4. Logic Timer Parry (Xử lý việc giữ nút/thời gian hiệu lực)
+        if (isHoldingButton || currentHoldTimer > 0)
+        {
+            UpdateParryState(); // Tách logic đếm giờ ra hàm riêng hoặc để trong Update
+        }
+    }
+
+    // [MỚI] Hàm dành riêng cho AI gọi (Bắt đầu đỡ)
+    public void AI_StartParry()
+    {
+        if (currentCooldown <= 0 && !isHoldingButton)
+        {
+            StartParry();
+        }
+    }
+
+    // [MỚI] Hàm dành riêng cho AI gọi (Ngừng đỡ)
+    public void AI_StopParry()
+    {
+        StopParry();
     }
 
     void HandleInput()
@@ -121,17 +143,17 @@ public class DuelistPassive : SkillBehavior
         // Logic chia giai đoạn
         if (stats != null)
         {
-            // Giai đoạn 1: Normal Parry (0s -> 0.4s)
-            if (currentHoldTimer < perfectParryStartTime)
+            // Giai đoạn 1: Perfect Parry (0.0s -> 0.1s)
+            if (currentHoldTimer <= perfectParryStartTime )
             {
-                stats.isPerfectParryWindow = false;
-            }
-            // Giai đoạn 2: Perfect Parry (0.4s -> 0.5s)
-            else if (currentHoldTimer >= perfectParryStartTime && currentHoldTimer <= maxParryDuration)
-            {
-                // Chỉ log 1 lần khi vừa bước vào giai đoạn Perfect
                 if (!stats.isPerfectParryWindow) Debug.Log("<color=cyan>Duelist: Entering Perfect Window!</color>");
                 stats.isPerfectParryWindow = true;
+            }
+            // Giai đoạn 2: Normal Parry (0.1s -> 0.5s)
+            else if (currentHoldTimer > perfectParryStartTime && currentHoldTimer <= maxParryDuration)
+            {
+                // Chỉ log 1 lần khi vừa bước vào giai đoạn Perfect
+                stats.isPerfectParryWindow = false;
             }
             // Giai đoạn 3: Quá giờ ( > 0.5s) -> Tự ngắt
             else

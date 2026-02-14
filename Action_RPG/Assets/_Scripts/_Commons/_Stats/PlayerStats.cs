@@ -23,53 +23,61 @@ public class PlayerStats : AllyStats
     public override void TakeDamage(DamageInfo info)
     {
         // --- LOGIC DUELIST PARRY ---
-        // Chỉ xử lý nếu đang bật thế thủ (isParrying)
         if (isParrying)
         {
-            // Lưu lại SuperArmor hiện tại để restore sau
-            bool oldSuperArmor = this.isSuperArmor;
-            int oldArmorLevel = this.superArmorLevel;
+            // [MỚI] CHECK GÓC PARRY (ANGLE CHECK)
+            // 1. Xác định hướng đòn đánh tới (Vector từ mình tới kẻ địch)
+            // Lưu ý: info.sourcePosition là vị trí kẻ địch
+            Vector3 dirToAttacker = (info.sourcePosition - transform.position).normalized;
 
-            // Bật SuperArmor cấp cao nhất để không bị ngắt động tác khi đang Parry
-            this.isSuperArmor = true;
-            this.superArmorLevel = 99;
+            // 2. Xác định hướng mặt của mình
+            Vector3 myFacingDir = facingDirection != Vector3.zero ? facingDirection : transform.forward;
 
-            // Tìm component Duelist để báo cáo kết quả
-            DuelistPassive duelist = GetComponent<DuelistPassive>();
+            // 3. Tính góc lệch
+            float angle = Vector3.Angle(myFacingDir, dirToAttacker);
 
-            if (isPerfectParryWindow)
+            // 4. Nếu góc lệch nằm trong phạm vi cho phép (Parry thành công)
+            if (angle <= parryAngle / 2f)
             {
-                // --- PERFECT PARRY ---
-                Debug.Log("<color=yellow>>> PERFECT PARRY! (0 Damage)</color>");
+                // ... (Logic Parry cũ của bạn: Perfect/Normal, SuperArmor...) ...
 
-                info.damageAmount = 0; // Không nhận damage
+                bool oldSuperArmor = this.isSuperArmor;
+                int oldArmorLevel = this.superArmorLevel;
+                this.isSuperArmor = true;
+                this.superArmorLevel = 99;
 
-                // Báo cho Skill biết để Stun địch và Buff Crit
-                if (duelist != null) duelist.OnParrySuccess(true, info.attacker);
+                DuelistPassive duelist = GetComponent<DuelistPassive>();
 
-                // Trả lại trạng thái cũ và thoát luôn
+                if (isPerfectParryWindow)
+                {
+                    Debug.Log("<color=yellow>>> PERFECT PARRY! (0 Damage)</color>");
+                    info.damageAmount = 0;
+                    if (duelist != null) duelist.OnParrySuccess(true, info.attacker);
+
+                    this.isSuperArmor = oldSuperArmor;
+                    this.superArmorLevel = oldArmorLevel;
+                    return;
+                }
+                else
+                {
+                    Debug.Log("<color=white>>> Normal Parry (Giảm 80%)</color>");
+                    info.damageAmount *= 0.2f;
+                    if (duelist != null) duelist.OnParrySuccess(false, info.attacker);
+                }
+
                 this.isSuperArmor = oldSuperArmor;
                 this.superArmorLevel = oldArmorLevel;
-                return;
             }
             else
             {
-                // --- NORMAL PARRY ---
-                Debug.Log("<color=white>>> Normal Parry (Giảm 80%)</color>");
-
-                info.damageAmount *= 0.2f; // Chỉ nhận 20% damage
-
-                // Báo normal parry (không stun)
-                if (duelist != null) duelist.OnParrySuccess(false, info.attacker);
+                // [MỚI] PARRY THẤT BẠI DO SAI HƯỚNG
+                Debug.Log($"<color=red>>> Parry Failed! Wrong Direction (Angle: {angle})</color>");
+                // Có thể thêm hình phạt: Nhận thêm damage (Backstab) hoặc chỉ nhận damage thường
+                // Ở đây ta cứ để nó chạy xuống base.TakeDamage để nhận damage thường
             }
-
-            // Trả lại trạng thái cũ
-            this.isSuperArmor = oldSuperArmor;
-            this.superArmorLevel = oldArmorLevel;
         }
 
         // --- GỌI LOGIC TRỪ MÁU GỐC ---
-        // (Bao gồm trừ máu, check chết, rung chuông OnTakeDamage...)
         base.TakeDamage(info);
     }
 }
