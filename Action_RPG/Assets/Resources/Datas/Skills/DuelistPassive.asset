@@ -21,11 +21,11 @@ MonoBehaviour:
     th\xEC 100% + stun qu\xE1i 0,5s\r\n\u2022 N\u1EBFu Perfect Parry chu\u1EA9n,
     \u0111\xF2n \u0111\xE1nh ti\u1EBFp theo trong v\xF2ng 2s ch\u1EAFc ch\u1EAFn
     Ch\xED M\u1EA1ng v\xE0 b\u1ECF qua Damage Reduction"
-  skillType: 0
+  skillType: 1
   skillPhysicalMultiplier: 0
   skillMagicMultiplier: 0
   cooldown: 0
   sinChargeReq: 0
-  passiveEffectCode: 0
+  passiveEffectCode: 8
   skillEffectCode: 0
   passiveStats: []
