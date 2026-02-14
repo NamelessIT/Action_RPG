@@ -52,6 +52,8 @@ public static class SkillFactory
                 return typeof(JuggernautSkill);
             case SkillData.SkillEffectCode.DarkInquisitorSkill:
                 return typeof(DarkInquisitorSkill);
+            case SkillData.SkillEffectCode.RavagerSkill:
+                return typeof(RavagerSkill);
             // ... Thêm các case khác vào đây ...
 
 

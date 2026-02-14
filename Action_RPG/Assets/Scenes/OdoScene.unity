@@ -390,6 +390,135 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &338991028 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7595386532533513913, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+  m_PrefabInstance: {fileID: 9022525804194762693}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &338991038
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 338991028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: debc12bfde124ec409ff986863c2aba0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerStats
+  maxHp: 0
+  currentHp: 0
+  baseHp: 0
+  baseHpGain: 2
+  level: 1
+  isInvincible: 0
+  maxStamina: 100
+  currentStamina: 0
+  staminaBaseRecovery: 0.5
+  staminaOutCombatRecovery: 15
+  staminaRegenDelay: 1
+  outCombat: 1
+  outCombatTime: 10
+  baseDashDistance: 2
+  baseDashRecovery: 1.25
+  dashCost: 15
+  baseDashDuration: 0.2
+  runCost: 8
+  lastDashTime: -10
+  maxSin: 0
+  currentSin: 0
+  baseSinGain: 5
+  STR: 0
+  DEX: 0
+  INT: 0
+  VIT: 0
+  AGI: 0
+  physicalAtk: 0
+  magicAtk: 0
+  physicalLifeSteal: 0
+  magicLifeSteal: 0
+  baseAttackSpeed: 0
+  comboResetTime: 1
+  heavyAttackChargeTime: 1
+  heavyAttackCharge: 2
+  baseCritChance: 0
+  baseCritMultiplier: 1.5
+  armorBackstabReduce: 0.5
+  magicResistBackstabReduce: 0.5
+  armor: 100
+  magicResist: 100
+  defenseValue: 20
+  blockThreshold: 0.5
+  baseMoveSpeed: 5
+  runSpeedMultiplier: 1.5
+  moveThresholdAngle: 45
+  moveFlexibility: 1
+  turnDuration: 0.1
+  combatTurnDuration: 0
+  resistanceKnockBack: 0.1
+  resistanceEffect: 0
+  isDead: 0
+  isStunned: 0
+  isSuperArmor: 0
+  superArmorLevel: 0
+  buffDurationBonus: 0
+  facingDirection: {x: 0, y: 0, z: -1}
+  stealthFactor: 1
+  isBleeding: 0
+  IsMarked: 0
+  exp: 0
+  H: 200
+  maxHpGainBonus: 10
+  hpPerVIT: 15
+  hpGain: 0
+  bonusHp: 0
+  flatHp: 0
+  sinGain: 0
+  S: 100
+  maxSinBonus: 0.7
+  physicalAtkPerSTR: 2.5
+  magicAtkPerINT: 3
+  maxAttackSpeedBuff: 0.8
+  critPerDEX: 0.015
+  A: 80
+  C: 100
+  K: 0.005
+  bonusPhysicalAtk: 0
+  bonusMagicAtk: 0
+  attackSpeed: 0
+  bonusAttackSpeed: 0
+  flatPhysicalAtk: 0
+  flatMagicAtk: 0
+  critChance: 0
+  bonusCritChance: 0
+  critMultiplier: 0
+  bonusCritMultiplier: 0
+  moveSpeed: 0
+  moveSpeedReducePerVIT: 0.005
+  minSpeed: 3
+  maxSpeed: 9
+  maxReduceBySTR: 0.6
+  M: 150
+  bonusMoveSpeed: 0
+  trueMoveFlexibility: 0
+  dashDistance: 0
+  dashRecovery: 0
+  maxDashReduction: 0.35
+  AGI_ThreshHold: 75
+  R: 80
+  baseCdr: 0
+  cooldownReduction: 0
+  cdrPerAGI: 0.0015
+  bonusCdr: 0
+  className: Warrior
+  isPerfectDodgeSuccess: 0
+  slowMotionFactor: 0.2
+  slowMotionDuration: 0.5
+  isManualGuarding: 0
+  manualGuardReduction: 0
+  isMomentumActive: 0
+  momentumReduction: 0.3
 --- !u!1 &729668870 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7512287450050852087, guid: ffc826fa965aa6444b0b691daeacc1f8, type: 3}
@@ -1707,6 +1836,10 @@ PrefabInstance:
     - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: className
       value: Warrior
+      objectReference: {fileID: 0}
+    - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 444507834702181166, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: baseCritChance

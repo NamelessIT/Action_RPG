@@ -22,7 +22,8 @@ public class PlayerController : MonoBehaviour
     public float lastAttackTime = 0f;   // Thời điểm đánh đòn cuối
     public float comboWindow = 2.0f;    // Thời gian cho phép nối combo (nếu quá thì reset về 0)
     public bool isAttacking = false;    // Đang trong animation đánh
-    public bool isStance = false;
+    public bool isStance = false;       // Juggernaut
+    public bool isBerserk = false;    // Đang điên loạn (Ravager)
 
     // Biến tính toán runtime
     //private float currentAttackCooldown = 0f;
@@ -36,6 +37,7 @@ public class PlayerController : MonoBehaviour
     private bool isCharging = false;
     private float chargeTimer = 0f;
     private float currentDamageMultiplier = 1.0f; // Hệ số sát thương của đòn hiện tại
+
 
     // State variables
     //private int lastDirection = 0;
@@ -822,6 +824,46 @@ public class PlayerController : MonoBehaviour
         Debug.Log($"Odo bị đánh trúng (Test Effect)!");
         if (impulseSource != null) impulseSource.GenerateImpulseWithForce(0.2f);
         if (stats != null) stats.TakeDamage(damage);
+    }
+    // ============================================================
+    // [MỚI] CÁC HÀM HỖ TRỢ AI (CHO RAVAGER SKILL GỌI)
+    // ============================================================
+
+    // Hàm AI tự di chuyển (Bỏ qua Input người chơi)
+    public void AI_MoveTo(Vector3 targetPos)
+    {
+        // 1. Tính hướng
+        Vector3 dir = (targetPos - transform.position).normalized;
+        dir.y = 0;
+
+        // 2. Quay mặt (Cập nhật visual)
+        currentVisualDir = dir;
+        UpdateAnimationDirection(dir);
+
+        // 3. Di chuyển Rigidbody
+        if (!isAttacking && !isDashing)
+        {
+            // Tính tốc độ (có tính sprint nếu cần, hoặc mặc định)
+            float speed = stats.moveSpeed;
+            // Nếu muốn Ravager chạy nhanh như Sprint thì nhân thêm:
+            // float speed = stats.moveSpeed * stats.runSpeedMultiplier; 
+
+            Vector3 targetPosRb = rb.position + dir * speed * Time.fixedDeltaTime;
+            rb.MovePosition(targetPosRb);
+
+            // 4. Bật animation chạy
+            if (animator != null) animator.SetBool("IsWalking", true);
+        }
+    }
+
+    // Hàm AI tự đánh
+    public void AI_Attack()
+    {
+        // 1. Dừng animation chạy để chuyển sang đánh
+        if (animator != null) animator.SetBool("IsWalking", false);
+
+        // 2. Gọi hàm đánh thường (Light Attack)
+        PerformAttack(false);
     }
 
     public void SetTurnSmoothTime(float time) { if (stats != null) stats.turnDuration = time; }

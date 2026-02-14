@@ -12,15 +12,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
   m_Name: DarkInquisitorSkill
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
-  id: 
-  skillName: 
+  id: DarkInquisitorSkill
+  skillName: 'Gravity Guillotine '
   icon: {fileID: 0}
-  skilDesc: 
-  skillType: 0
+  skilDesc: "\"\u2022 H\xE0nh \u0111\u1ED9ng: K\xE9o k\u1EBB \u0111\u1ECBch trong
+    1 v\xF9ng tr\u01B0\u1EDBc m\u1EB7t, vung ki\u1EBFm ch\xE9m b\u1ED5 xu\u1ED1ng
+    c\u1EF1c m\u1EA1nh. H\u1ED3i m\xE1u d\u1EF1a tr\xEAn s\u1ED1 k\u1EBB \u0111\u1ECBch
+    tr\xFAng \u0111\xF2n ch\xE9m.\nK\u1EBB \u0111\u1ECBch tr\xFAng \u0111\xF2n s\u1EBD
+    b\u1ECB gi\u1EA3m gi\xE1p + kh\xE1ng ph\xE9p v\xE0 b\u1ECB cho\xE1ng 1,5 gi\xE2y.\n\n\u2022
+    Hi\u1EC7u \u1EE9ng: Combo 2 nh\u1ECBp: H\xFAt \u0111\u1ECBch l\u1EA1i g\u1EA7n
+    (Pull) -> Ch\xE9m b\u1ED5 d\u1ECDc (Slash).\n\n\u2022 Design: Kh\u1EAFc ph\u1EE5c
+    \u0111i\u1EC3m y\u1EBFu \u0111\xE1nh ch\u1EADm/hay h\u1EE5t c\u1EE7a Warrior
+    b\u1EB1ng kh\u1ED1ng ch\u1EBF.\""
+  skillType: 2
   skillPhysicalMultiplier: 0
   skillMagicMultiplier: 0
   cooldown: 0
   sinChargeReq: 0
   passiveEffectCode: 0
-  skillEffectCode: 0
+  skillEffectCode: 12
   passiveStats: []

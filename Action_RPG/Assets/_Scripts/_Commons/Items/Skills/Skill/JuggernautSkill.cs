@@ -69,7 +69,7 @@ public class JuggernautSkill : SkillBehavior
         // 3. Hiệu ứng Khí đỏ 
 
         // 4. Lắng nghe sự kiện bị đánh
-        stats.OnTakeDamage += OnHitTrigger;
+        stats.OnDamageReceived += OnHitTrigger;
 
         // 5. Đếm ngược 3 giây
         stanceCoroutine = StartCoroutine(StanceTimer());
@@ -85,7 +85,7 @@ public class JuggernautSkill : SkillBehavior
     }
 
     // Hàm này được gọi TỰ ĐỘNG khi Stats bị trừ máu
-    private void OnHitTrigger(float damageTaken)
+    private void OnHitTrigger(float damageTaken, Stats target)
     {
         if (!isStanceActive) return;
 
@@ -104,7 +104,7 @@ public class JuggernautSkill : SkillBehavior
         // 1. Trả lại trạng thái cũ
         player.isStance = false;
         stats.defenseValue -= defenseValueBonus;
-        stats.OnTakeDamage -= OnHitTrigger; // Ngừng lắng nghe
+        stats.OnDamageReceived -= OnHitTrigger; // Ngừng lắng nghe
 
         if (stanceCoroutine != null) StopCoroutine(stanceCoroutine);
         if (currentAuraInstance != null) Destroy(currentAuraInstance);

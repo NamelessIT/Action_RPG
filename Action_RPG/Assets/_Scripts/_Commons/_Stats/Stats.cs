@@ -105,6 +105,13 @@ public class Stats : MonoBehaviour
     [Header("--- Status ---")]
     public bool isDead = false; // [MỚI] Kiểm tra đã chết chưa
 
+    [Header("--- Shield & State ---")]
+    public float currentShield = 0f; // Lớp giáp ảo
+    public bool isHealingBlocked = false; // Cờ chặn hồi máu của Ravager
+
+    // [MỚI] Event báo hiệu bị đánh (Dùng cho JuggernautSkill)
+    // Tham số: (Lượng damage thực nhận, Bản thân Stats bị đánh)
+    public event Action<float, Stats> OnDamageReceived;
 
     private float stunEndTime = 0f;
 
@@ -263,13 +270,40 @@ public class Stats : MonoBehaviour
         if (isInvincible || isDead) return;
 
         EnterCombat();
-        currentHp -= info.damageAmount;
-        if (info.isCrit) Debug.Log($"<color=red>CRIT!</color> {gameObject.name} nhận {info.damageAmount}");
-        else Debug.Log($"{gameObject.name} nhận {info.damageAmount}");
+        // 1. TÍNH TOÁN DAMAGE VÀ SHIELD
+        float damageToTake = info.damageAmount;
 
-        // --- XỬ LÝ HIỆU ỨNG (CC) ---
+        // [MỚI] Trừ vào Shield trước (Nếu có)
+        if (currentShield > 0)
+        {
+            float damageBlocked = Mathf.Min(damageToTake, currentShield);
+            currentShield -= damageBlocked;
+            damageToTake -= damageBlocked;
+
+            Debug.Log($"<color=yellow>Shield blocked: {damageBlocked}. Remaining Shield: {currentShield}");
+        }
+
+        // 2. TRỪ MÁU (Nếu damage vẫn còn sau khi phá shield)
+        if (damageToTake > 0)
+        {
+            currentHp -= damageToTake;
+
+            if (info.isCrit) Debug.Log($"<color=red>Damage nhận lớn hơn Shield</color> {gameObject.name} nhận {damageToTake} (Shield chặn: {info.damageAmount - damageToTake})");
+            else Debug.Log($"{gameObject.name} nhận {damageToTake}");
+
+            // [MỚI] KÍCH HOẠT SỰ KIỆN "BỊ ĐÁNH"
+            // Báo cho JuggernautSkill biết là "Tao bị mất máu rồi!"
+            OnDamageReceived?.Invoke(damageToTake, this);
+        }
+        else
+        {
+            Debug.Log($"{gameObject.name} chặn toàn bộ sát thương bằng Shield!");
+        }
+
+        // 3. XỬ LÝ HIỆU ỨNG (CC)
         ApplyCrowdControl(info);
 
+        // 4. KIỂM TRA CHẾT
         if (currentHp <= 0)
         {
             currentHp = 0;
@@ -289,7 +323,18 @@ public class Stats : MonoBehaviour
         };
         TakeDamage(info);
     }
+    // Sửa hàm hồi máu (nếu bạn có hàm Heal riêng, hoặc sửa trực tiếp chỗ nào cộng máu)
+    public void Heal(float amount)
+    {
+        if (isHealingBlocked)
+        {
+            Debug.Log("Hồi máu bị chặn do Say Máu!");
+            return;
+        }
 
+        currentHp += amount;
+        if (currentHp > maxHp) currentHp = maxHp;
+    }
     // --- LOGIC STUN & KNOCKBACK ---
     void ApplyCrowdControl(DamageInfo info)
     {
