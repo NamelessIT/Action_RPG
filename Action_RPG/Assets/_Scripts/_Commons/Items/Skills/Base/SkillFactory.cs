@@ -54,6 +54,8 @@ public static class SkillFactory
                 return typeof(DarkInquisitorSkill);
             case SkillData.SkillEffectCode.RavagerSkill:
                 return typeof(RavagerSkill);
+            case SkillData.SkillEffectCode.WarlockSkill:
+                return typeof(WarlockSkill);
             // ... Thêm các case khác vào đây ...
 
 
