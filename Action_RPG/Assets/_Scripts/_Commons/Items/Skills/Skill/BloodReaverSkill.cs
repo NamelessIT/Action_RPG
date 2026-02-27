@@ -234,7 +234,7 @@ public class BloodReaverSkill : SkillBehavior
         // Bow thì có thể knockback nhẹ, Melee thì đẩy mạnh (tùy chỉnh sau)
         info.isKnockback = true;
         info.knockbackForce = 0.5f;
-
+        info.attacker = stats;
         enemyStats.TakeDamage(info);
     }
 }

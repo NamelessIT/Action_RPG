@@ -192,6 +192,7 @@ public class LeoSkill : SkillBehavior
         info.isCrit = isCrit;
         info.isKnockback = false;
         info.damageAmount = damage;
+        info.attacker = stats;
 
         enemyStats.TakeDamage(info);
 

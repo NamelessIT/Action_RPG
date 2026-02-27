@@ -282,7 +282,8 @@ public class MagePassive : SkillBehavior
             damageAmount = 0,
             isStun = true,
             stunDuration = duration,
-            sourcePosition = transform.position
+            sourcePosition = transform.position,
+            attacker = stats
         };
         target.TakeDamage(stunInfo);
         Debug.Log($"[Mage] ⚡ STUN APPLIED to {target.name} for {duration}s");

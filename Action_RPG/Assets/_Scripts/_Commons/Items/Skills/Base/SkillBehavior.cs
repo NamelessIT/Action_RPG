@@ -6,8 +6,8 @@ public abstract class SkillBehavior : MonoBehaviour
     protected SkillData data;
     protected PlayerController player;
 
-    // Biến đếm Cooldown (Hồi chiêu) nội bộ của script
-    protected float lastUseTime = -100f;
+    // Đổi chữ 'protected' thành 'public'
+    public float lastUseTime = -100f;
 
     public virtual void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {

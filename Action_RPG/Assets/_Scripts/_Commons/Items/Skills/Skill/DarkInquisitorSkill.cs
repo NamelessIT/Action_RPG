@@ -216,6 +216,7 @@ public class DarkInquisitorSkill : SkillBehavior
         info.isStun = true;
         info.stunDuration = stunDuration;
         info.isKnockback = false; // Đang gom lại chém thì không nên đẩy ra, hoặc đẩy rất nhẹ
+        info.attacker = stats;
 
         enemyStats.TakeDamage(info);
 

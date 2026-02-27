@@ -108,9 +108,8 @@ public class PlayerController : MonoBehaviour
     {
         if (stats == null) return;
 
-        // [TỐI ƯU] Gom check điều kiện di chuyển
-        // Nếu đang dùng Skill HOẶC đang Dash -> Không được di chuyển vật lý thường
-        if (isUsingSpecialSkill || isDashing || stats.isParrying) return;
+        // [SỬA Ở ĐÂY] Khóa di chuyển vật lý nếu đang dùng skill, lướt, parry, hoặc ĐANG GỒNG
+        if (isUsingSpecialSkill || isDashing || stats.isParrying || isCharging) return;
 
         // Logic di chuyển thường
         if (!isTurning && isWalking)
@@ -198,8 +197,14 @@ public class PlayerController : MonoBehaviour
 
     void HandleAttackInput()
     {
+        // [MỚI] Nếu đang Parry thì HỦY LUÔN việc gồng (Ưu tiên đỡ đòn)
+        if (stats.isParrying && isCharging)
+        {
+            isCharging = false;
+        }
+
         // 1. Bắt đầu nhấn chuột -> Bắt đầu tính giờ
-        if (Input.GetMouseButtonDown(0) && !isAttacking && !isStance)
+        if (Input.GetMouseButtonDown(0) && !isAttacking && !isStance && !stats.isParrying)
         {
             isCharging = true;
             chargeTimer = 0f;
@@ -211,10 +216,19 @@ public class PlayerController : MonoBehaviour
             if (Input.GetMouseButton(0))
             {
                 chargeTimer += Time.deltaTime;
+
+                // --- [FIX QUAN TRỌNG] TỰ ĐỘNG TUNG TRỌNG KÍCH QUÁ GIỜ ---
+                // Nếu giữ quá (thời gian chuẩn + 3 giây) thì tự đánh luôn
+                if (chargeTimer >= stats.heavyAttackChargeTime + 2.0f)
+                {
+                    isCharging = false;
+                    PerformAttack(true); // Tự động đánh mạnh
+                    return; // Thoát sớm để không chạy xuống phần nhả chuột nữa
+                }
             }
 
             // 3. Nhả chuột -> Quyết định đánh thường hay đánh mạnh
-            if (Input.GetMouseButtonUp(0))
+            if (Input.GetMouseButtonUp(0) && isCharging)
             {
                 isCharging = false;
                 if (chargeTimer >= stats.heavyAttackChargeTime) PerformAttack(true);
@@ -283,6 +297,14 @@ public class PlayerController : MonoBehaviour
         // --- [MỚI] KIỂM TRA PERFECT DODGE NGAY KHI BẤM DASH ---
         CheckPerfectDodgeCondition();
         // -----------------------------------------------------
+
+        // --- [FIX MỚI] LOGIC CANCEL CHARGE (HỦY GỒNG TRỌNG KÍCH) ---
+        if (isCharging)
+        {
+            isCharging = false;
+            chargeTimer = 0f;
+            //Debug.Log(">> Đã Hủy Gồng Trọng Kích để Dash!");
+        }
 
         // --- LOGIC CANCEL ATTACK ---
         if (isAttacking)
@@ -393,7 +415,7 @@ public class PlayerController : MonoBehaviour
     {
 
         // [MỚI] Nếu đang đánh thì KHÔNG nhận input di chuyển nữa
-        if (isAttacking)
+        if (isAttacking || stats.isParrying || isCharging)
         {
             movementInput = Vector3.zero; // Xóa vector di chuyển
             return; // Thoát hàm ngay, không tính toán xoay hay đi nữa

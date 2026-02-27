@@ -204,6 +204,7 @@ public class DuelistPassive : SkillBehavior
                 stunInfo.isStun = true;
                 stunInfo.stunDuration = 0.5f;
                 stunInfo.damageAmount = 0;
+                stunInfo.attacker = stats;
                 attacker.TakeDamage(stunInfo);
             }
 
