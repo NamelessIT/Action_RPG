@@ -668,7 +668,6 @@ MonoBehaviour:
   skillE_Icon: {fileID: 1260014727}
   skillE_CooldownFill: {fileID: 436343572}
   skillE_CooldownText: {fileID: 978036333}
-  notEnoughStaminaColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   skillQ_Container: {fileID: 640937965}
   skillQ_Icon: {fileID: 312798176}
   skillQ_CooldownFill: {fileID: 2025425009}
@@ -2793,7 +2792,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -79}
   m_SizeDelta: {x: 160, y: 20}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1893556184

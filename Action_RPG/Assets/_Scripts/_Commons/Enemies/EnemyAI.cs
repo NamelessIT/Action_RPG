@@ -642,6 +642,7 @@ public class EnemyAI : MonoBehaviour
 
         // 2. Ép buộc nhận mục tiêu ngay lập tức
         nearestTarget = attacker;
+        Debug.Log("EnemyAI nhận damage từ attaker:"+ attacker.name);
 
         // 3. Hủy bỏ trạng thái đang làm (Về nhà/Đi tuần) để chiến đấu ngay
         isReturningHome = false;

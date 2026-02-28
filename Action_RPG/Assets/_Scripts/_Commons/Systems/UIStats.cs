@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
-using TMPro; // Nhớ import TextMeshPro nếu dùng text xịn, hoặc dùng UnityEngine.UI cho Text thường
+using TMPro;
 
 namespace Systems
 {
@@ -8,23 +8,23 @@ namespace Systems
     {
         [Header("--- References ---")]
         [Tooltip("Kéo PlayerStats vào đây (hoặc để trống tự tìm)")]
-        public AllyStats playerStats;
+        public PlayerStats playerStats;
         [Tooltip("Kéo SkillManager vào đây")]
         public SkillManager skillManager;
 
         [Header("--- Bars Setup ---")]
         public Slider hpSlider;
-        public TextMeshProUGUI hpText; // Tùy chọn: Hiển thị số máu (100/100)
+        public TextMeshProUGUI hpText;
 
         public Slider staminaSlider;
-        public Slider sinSlider; // Thanh Sin (Nghiệp/Mana)
+        public Slider sinSlider;
 
-        [Header("--- Skill E (Normal Skill - Uses Stamina) ---")]
-        public GameObject skillE_Container;      // Parent object để tắt mở nếu chưa học
+        [Header("--- Skill E (Normal Skill - No Cost) ---")]
+        public GameObject skillE_Container;
         public Image skillE_Icon;
-        public Image skillE_CooldownFill;        // Ảnh mờ đè lên (Type: Filled)
+        public Image skillE_CooldownFill;
         public TextMeshProUGUI skillE_CooldownText;
-        public Color notEnoughStaminaColor = new Color(0.5f, 0.5f, 0.5f, 1f); // Màu tối
+        public Color notEnoughStaminaColor = new Color(0.5f, 0.5f, 0.5f, 1f);
 
         [Header("--- Skill Q (Signature/Ult - Uses Sin) ---")]
         public GameObject skillQ_Container;
@@ -35,19 +35,30 @@ namespace Systems
 
         void Start()
         {
-            // Tự động tìm player nếu quên kéo
             if (playerStats == null)
                 playerStats = FindFirstObjectByType<PlayerStats>();
 
             if (skillManager == null && playerStats != null)
                 skillManager = playerStats.GetComponent<SkillManager>();
 
-            // Setup Slider Max Values lúc đầu
+            // Khởi tạo Max Value để thanh không bị rỗng lúc đầu
             if (playerStats != null)
             {
-                if (hpSlider) hpSlider.maxValue = playerStats.maxHp;
-                if (staminaSlider) staminaSlider.maxValue = playerStats.maxStamina;
-                if (sinSlider) sinSlider.maxValue = playerStats.maxSin;
+                if (hpSlider)
+                {
+                    hpSlider.maxValue = playerStats.maxHp;
+                    hpSlider.value = playerStats.currentHp;
+                }
+                if (staminaSlider)
+                {
+                    staminaSlider.maxValue = playerStats.maxStamina;
+                    staminaSlider.value = playerStats.currentStamina;
+                }
+                if (sinSlider)
+                {
+                    sinSlider.maxValue = playerStats.maxSin;
+                    sinSlider.value = playerStats.currentSin;
+                }
             }
         }
 
@@ -59,115 +70,159 @@ namespace Systems
             UpdateSkills();
         }
 
-        // 1. Cập nhật các thanh chỉ số
         void UpdateBars()
         {
-            // --- HP ---
             if (hpSlider)
             {
-                hpSlider.maxValue = playerStats.maxHp; // Cập nhật max đề phòng buff máu
-                hpSlider.value = Mathf.Lerp(hpSlider.value, playerStats.currentHp, Time.deltaTime * 10f); // Hiệu ứng mượt
+                hpSlider.maxValue = playerStats.maxHp;
+                hpSlider.value = Mathf.Lerp(hpSlider.value, playerStats.currentHp, Time.deltaTime * 10f);
             }
             if (hpText) hpText.text = $"{Mathf.Ceil(playerStats.currentHp)} / {playerStats.maxHp}";
 
-            // --- STAMINA ---
             if (staminaSlider)
             {
                 staminaSlider.maxValue = playerStats.maxStamina;
-                staminaSlider.value = playerStats.currentStamina;
+                staminaSlider.value = Mathf.Lerp(staminaSlider.value, playerStats.currentStamina, Time.deltaTime * 10f);
             }
 
-            // --- SIN ---
             if (sinSlider)
             {
                 sinSlider.maxValue = playerStats.maxSin;
-                sinSlider.value = playerStats.currentSin;
+                sinSlider.value = Mathf.Lerp(sinSlider.value, playerStats.currentSin, Time.deltaTime * 10f);
             }
         }
 
-        // 2. Cập nhật trạng thái Skill
         void UpdateSkills()
         {
             if (skillManager == null) return;
 
-            // --- UPDATE SKILL E (Stamina) ---
+            // --- UPDATE SKILL E ---
+            // Gửi thêm chữ "E" vào tham số cuối
             UpdateSingleSkillSlot(
-                skillManager.currentSkill,      // Skill đang trang bị
+                skillManager.currentSkill,
                 skillE_Container,
                 skillE_Icon,
                 skillE_CooldownFill,
                 skillE_CooldownText,
-                playerStats.currentStamina,     // Tài nguyên hiện có
-                notEnoughStaminaColor
+                0,
+                Color.white,
+                "E"
             );
 
-            // --- UPDATE SKILL Q (Sin) ---
+            // --- UPDATE SKILL Q ---
+            // Gửi thêm chữ "Q" vào tham số cuối
             UpdateSingleSkillSlot(
-                skillManager.currentSignature,  // Skill Ultimate
+                skillManager.currentSignature,
                 skillQ_Container,
                 skillQ_Icon,
                 skillQ_CooldownFill,
                 skillQ_CooldownText,
-                playerStats.currentSin,         // Tài nguyên hiện có
-                notEnoughSinColor
+                playerStats.currentSin,
+                notEnoughSinColor,
+                "Q"
             );
         }
 
-        // Hàm chung để xử lý logic hiển thị 1 ô skill
+        // Đã thêm biến "string keyName" vào cuối để biết đang update nút nào
         void UpdateSingleSkillSlot(
-            SkillData activeSkill,
+            SkillData activeSkillData,
             GameObject container,
             Image icon,
             Image cooldownOverlay,
-            TextMeshProUGUI cooldownText,
+            TextMeshProUGUI centerText,
             float currentResource,
-            Color dimColor)
+            Color dimColor,
+            string keyName)
         {
-            // A. Kiểm tra có skill không
-            if (activeSkill == null)
+            // Luôn bật container (không tắt đi nữa để luôn thấy ô trống)
+            if (!container.activeSelf) container.SetActive(true);
+
+            // ============================================
+            // TRƯỜNG HỢP 1: CHƯA CÓ SKILL
+            // ============================================
+            if (activeSkillData == null)
             {
-                if (container.activeSelf) container.SetActive(false);
+                icon.enabled = false; // Tắt Image Icon để tránh bị ô vuông trắng
+
+                // Ép Cooldown Overlay đầy 100% để làm lớp màng đen che kín nút
+                cooldownOverlay.fillAmount = 1f;
+                cooldownOverlay.color = new Color(0f, 0f, 0f, 0.7f); // Đen mờ 70%
+
+                // Hiện chữ E/Q
+                centerText.text = keyName;
+                centerText.gameObject.SetActive(true);
                 return;
             }
 
-            if (!container.activeSelf) container.SetActive(true);
+            // ============================================
+            // TRƯỜNG HỢP 2: ĐÃ CÓ SKILL
+            // ============================================
+            icon.enabled = true; // Bật Image trở lại
+            cooldownOverlay.color = new Color(0f, 0f, 0f, 0.6f); // Trả overlay về màu chuẩn cho việc hồi chiêu
 
-            // B. Hiển thị Icon
-            if (icon.sprite != activeSkill.icon)
-                icon.sprite = activeSkill.icon;
-
-            // C. Xử lý Cooldown
-            float cooldownTimer = 0; // Giả sử trong SkillBehavior bạn để biến này là public
-            float maxCooldown = activeSkill.cooldown;
-
-            if (cooldownTimer > 0)
+            // Xử lý Icon
+            if (activeSkillData.icon != null)
             {
-                // Đang hồi chiêu
-                cooldownOverlay.fillAmount = cooldownTimer / maxCooldown;
-                cooldownText.text = cooldownTimer.ToString("F1"); // Hiển thị 1 số thập phân (ví dụ: 2.5)
-                cooldownText.gameObject.SetActive(true);
-
-                // Khi đang hồi chiêu thì icon tối lại luôn cho dễ nhìn
-                icon.color = Color.gray;
+                icon.sprite = activeSkillData.icon;
+                icon.color = Color.white;
             }
             else
             {
-                // Đã hồi xong -> Check Tài nguyên (Stamina/Sin)
-                cooldownOverlay.fillAmount = 0;
-                cooldownText.gameObject.SetActive(false);
+                icon.sprite = null;
+                icon.color = new Color(0.2f, 0.2f, 0.2f, 1f); // Không có icon thì để màu nền tối
+            }
 
-                // D. Check Resource (Đủ mana/stamina không?)
-                float cost = activeSkill.sinChargeReq; // Giả sử SkillData có biến này
+            // Xử lý Cooldown
+            float cooldownTimer = 0f;
+            SkillBehavior behavior = skillManager.GetActiveSkillBehavior(activeSkillData);
 
-                if (currentResource < cost)
+            if (behavior != null)
+            {
+                float timeSinceLastUse = Time.time - behavior.lastUseTime;
+                if (timeSinceLastUse < activeSkillData.cooldown)
                 {
-                    // Không đủ tiền -> Tối màu
-                    icon.color = dimColor;
+                    cooldownTimer = activeSkillData.cooldown - timeSinceLastUse;
+                }
+            }
+
+            // Tránh lỗi chia cho 0 nếu skill vô tình set cooldown = 0
+            float maxCooldown = activeSkillData.cooldown > 0 ? activeSkillData.cooldown : 1f;
+
+            if (cooldownTimer > 0)
+            {
+                // -- ĐANG HỒI CHIÊU --
+                cooldownOverlay.fillAmount = cooldownTimer / maxCooldown;
+                centerText.text = cooldownTimer.ToString("F1");
+                centerText.gameObject.SetActive(true);
+
+                icon.color = Color.gray; // Icon tối lại
+            }
+            else
+            {
+                // -- ĐÃ HỒI XONG, SẴN SÀNG DÙNG --
+                cooldownOverlay.fillAmount = 0;
+
+                // Nếu có hình Icon, ta ẩn chữ E/Q đi cho icon đẹp. Nếu không có hình, ta hiện chữ E/Q để đỡ trống.
+                if (activeSkillData.icon != null)
+                {
+                    centerText.gameObject.SetActive(false);
                 }
                 else
                 {
-                    // Đủ tiền -> Sáng màu
-                    icon.color = Color.white;
+                    centerText.text = keyName;
+                    centerText.gameObject.SetActive(true);
+                }
+
+                // Check coi có đủ Năng lượng (Sin) để dùng không?
+                float cost = activeSkillData.sinChargeReq;
+
+                if (currentResource < cost)
+                {
+                    icon.color = dimColor; // Thiếu Năng lượng -> Chuyển màu tối (VD: Đỏ sẫm)
+                }
+                else
+                {
+                    if (activeSkillData.icon != null) icon.color = Color.white; // Đủ dùng -> Sáng lên
                 }
             }
         }

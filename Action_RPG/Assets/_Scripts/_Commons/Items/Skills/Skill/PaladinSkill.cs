@@ -177,6 +177,7 @@ public class PaladinSkill : SkillBehavior
         info.isCrit = isCrit;
         info.damageAmount = damage;
         info.isKnockback = false; // Vòng tròn đốt máu không nên đẩy lùi, để quái đứng trong đó mà chịu trận
+        info.attacker = stats;
 
         enemyStats.TakeDamage(info);
     }

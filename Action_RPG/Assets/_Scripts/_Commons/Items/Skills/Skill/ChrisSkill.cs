@@ -188,6 +188,7 @@ public class ChrisSkill : SkillBehavior
         info.isKnockback = false; // Tắt Knockback của hệ thống Stats để tránh xung đột với việc "ủi" tay bo của ta
         info.isStun = true;       // Gây choáng để nó đứng im cho mình ủi
         info.stunDuration = dashDuration + 0.2f; // Choáng suốt quá trình ủi + một chút sau đó
+        info.attacker = stats;
 
         if (angle <= headOnAngle)
         {

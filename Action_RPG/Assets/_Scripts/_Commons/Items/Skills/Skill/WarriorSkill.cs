@@ -127,6 +127,7 @@ public class WarriorSkill : SkillBehavior
         info.damageAmount = damage;
         info.isStun = true;
         info.stunDuration = stunDuration;
+        info.attacker = stats;
 
         enemyStats.TakeDamage(info);
 

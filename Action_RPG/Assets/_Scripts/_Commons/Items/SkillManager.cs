@@ -433,4 +433,17 @@ public class SkillManager : MonoBehaviour
         }
         return null;
     }
+
+    // ... (Cuối file SkillManager.cs) ...
+
+    // [MỚI] Hàm để UI lấy script đang chạy
+    public SkillBehavior GetActiveSkillBehavior(SkillData data)
+    {
+        if (data == null) return null;
+        if (activeSkills.ContainsKey(data))
+        {
+            return activeSkills[data];
+        }
+        return null;
+    }
 }

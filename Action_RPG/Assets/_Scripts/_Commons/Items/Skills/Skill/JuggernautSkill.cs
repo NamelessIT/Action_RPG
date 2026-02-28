@@ -235,6 +235,7 @@ public class JuggernautSkill : SkillBehavior
         info.stunDuration = stunDuration;
         info.isKnockback = true;
         info.knockbackForce = knockbackForce;
+        info.attacker = stats;
 
         enemyStats.TakeDamage(info);
 

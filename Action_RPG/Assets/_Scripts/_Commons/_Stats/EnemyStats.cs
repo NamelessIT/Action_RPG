@@ -95,6 +95,8 @@ public class EnemyStats : Stats
         lastDamageReceivedTime = Time.time;
         AddAggro(25f);
 
+        //Debug.Log("EnemyStats TakeDamage:");
+
         // [MỚI] BÁO CHO AI BIẾT KẺ TẤN CÔNG LÀ AI
         if (enemyAI != null && info.attacker != null)
         {
