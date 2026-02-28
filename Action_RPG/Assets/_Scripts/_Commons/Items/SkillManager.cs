@@ -138,12 +138,12 @@ public class SkillManager : MonoBehaviour
                     // A. Tháo skill cũ ra trước
                     if (currentSignature != null)
                     {
-                        RemoveSkillEffect(currentSignature); // <--- QUAN TRỌNG
+                        RemoveSignatureEffect(currentSignature); // <--- QUAN TRỌNG
                     }
 
                     Debug.Log($"Player trang bị Signature: {newSkill.skillName}");
                     currentSignature = newSkill;
-                    ApplySkillEffect(newSkill);
+                    ApplySignatureEffect(newSkill);
                 }
                 break;
 
@@ -271,6 +271,33 @@ public class SkillManager : MonoBehaviour
             }
         }
     }
+    private void ApplySignatureEffect(SkillData skill)
+    {
+        if (skill == null) return;
+        // 2. Gắn Script Logic (Dựa trên Factory)
+        if (skill.signatureEffectCode != SkillData.SignatureEffectCode.None)
+        {
+            // Hỏi Factory: "Skill này dùng script nào?" (VD: BattleHardened -> ChrisPassive)
+            System.Type componentType = SkillFactory.GetSignatureComponentType(skill.signatureEffectCode);
+
+            if (componentType != null)
+            {
+                if (!activeSkills.ContainsKey(skill))
+                {
+                    Debug.Log($">> Đang gắn script: {componentType.Name} vào Player");
+
+                    // AddComponent: Gắn script đó vào GameObject Player
+                    SkillBehavior behavior = (SkillBehavior)gameObject.AddComponent(componentType);
+
+                    // Khởi tạo (Truyền stats và data vào cho script con dùng)
+                    behavior.Initialize(allyStats, skill, playerController);
+
+                    // Lưu vào danh sách để quản lý
+                    activeSkills.Add(skill, behavior);
+                }
+            }
+        }
+    }
 
     private void RemovePassiveEffect(SkillData skill)
     {
@@ -300,6 +327,21 @@ public class SkillManager : MonoBehaviour
         if (allyStats != null) allyStats.RecalculateStats();
     }
     private void RemoveSkillEffect(SkillData skill)
+    {
+        if (skill == null) return;
+        // 2. Hủy Script Logic
+        if (activeSkills.ContainsKey(skill))
+        {
+            SkillBehavior behaviorToRemove = activeSkills[skill];
+
+            // Gọi hàm Terminate để script tự dọn dẹp và tự hủy
+            if (behaviorToRemove != null) behaviorToRemove.Terminate();
+
+            // Xóa khỏi danh sách quản lý
+            activeSkills.Remove(skill);
+        }
+    }
+    private void RemoveSignatureEffect(SkillData skill)
     {
         if (skill == null) return;
         // 2. Hủy Script Logic

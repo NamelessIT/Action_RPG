@@ -63,4 +63,19 @@ public static class SkillFactory
                 return null;
         }
     }
+    public static Type GetSignatureComponentType(SkillData.SignatureEffectCode code)
+    {
+        switch (code)
+        {
+            case SkillData.SignatureEffectCode.ChrisSignature:
+                return typeof(ChrisSignature);
+            case SkillData.SignatureEffectCode.BloodReaverLiteSignature:
+                return typeof(BloodReaverLiteSignature);
+            // ... Thêm các case khác vào đây ...
+
+
+            default:
+                return null;
+        }
+    }
 }

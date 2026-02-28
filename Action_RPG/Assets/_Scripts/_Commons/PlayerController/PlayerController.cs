@@ -133,6 +133,9 @@ public class PlayerController : MonoBehaviour
         // Nếu đang dùng Skill đặc biệt -> Chặn toàn bộ Input điều khiển
         if (isUsingSpecialSkill) return;
 
+        // [MỚI] Nếu đang Berserk (Say máu) -> Bỏ qua toàn bộ Input người chơi
+        if (isBerserk) return;
+
         // Nếu đang Dash -> Chặn toàn bộ Input điều khiển (trừ khi bạn muốn cho phép cancel dash?)
         if (isDashing) return;
 
