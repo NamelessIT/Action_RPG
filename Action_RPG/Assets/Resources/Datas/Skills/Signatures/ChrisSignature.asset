@@ -12,15 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
   m_Name: ChrisSignature
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
-  id: 
-  skillName: 
+  id: ChrisSignature
+  skillName: "Ti\u1EBFng Th\xE9t Chi\u1EBFn Tr\u1EADn"
   icon: {fileID: 0}
-  skilDesc: 
-  skillType: 0
+  skilDesc: "\"H\xE0nh \u0111\u1ED9ng: G\u1ED3ng m\xECnh h\xE9t l\u1EDBn t\u1EA1o
+    s\xF3ng xung k\xEDch nh\u1ECF.\n\nHi\u1EC7u \u1EE9ng: \u0110\u1EA9y l\xF9i (Pushback)
+    nh\u1EB9 k\u1EBB \u0111\u1ECBch xung quanh v\xE0 t\u0103ng 15% Physical Attack
+    trong 8s.\""
+  skillType: 3
   skillPhysicalMultiplier: 0
   skillMagicMultiplier: 0
   cooldown: 0
   sinChargeReq: 0
   passiveEffectCode: 0
   skillEffectCode: 0
+  signatureEffectCode: 1
   passiveStats: []

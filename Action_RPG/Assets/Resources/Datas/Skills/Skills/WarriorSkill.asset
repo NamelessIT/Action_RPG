@@ -12,15 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
   m_Name: WarriorSkill
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
-  id: 
-  skillName: 
+  id: WarriorPassive
+  skillName: "C\xFA n\u1EC7n t\xE0n kh\xF3c"
   icon: {fileID: 0}
-  skilDesc: 
-  skillType: 0
-  skillPhysicalMultiplier: 0
+  skilDesc: "Vung v\u0169 kh\xED l\xEAn cao v\xE0 b\u1ED5 xu\u1ED1ng m\u1ED9t nh\xE1t
+    c\u1EF1c m\u1EA1nh theo ph\u01B0\u01A1ng d\u1ECDc."
+  skillType: 2
+  skillPhysicalMultiplier: 2
   skillMagicMultiplier: 0
   cooldown: 0
   sinChargeReq: 0
   passiveEffectCode: 0
-  skillEffectCode: 0
+  skillEffectCode: 4
+  signatureEffectCode: 0
   passiveStats: []
