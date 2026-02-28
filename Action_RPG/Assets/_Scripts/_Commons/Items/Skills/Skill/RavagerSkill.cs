@@ -22,7 +22,7 @@ public class RavagerSkill : SkillBehavior
     public float stunDuration = 1.5f;
 
     [Header("VFX")]
-    public GameObject rageVfxPrefab;
+    public GameObject berserkerVfxPrefab;
     public GameObject finisherVfxPrefab;
 
     private EquipmentManager equipmentManager;
@@ -78,7 +78,7 @@ public class RavagerSkill : SkillBehavior
 
         // VFX Bắt đầu
         //GameObject currentVfx = null;
-        //if (rageVfxPrefab) currentVfx = Instantiate(rageVfxPrefab, transform);
+        //if (berserkerVfxPrefab) currentVfx = Instantiate(berserkerVfxPrefab, transform);
 
         Debug.Log("<color=red>WARLORD: SAY MÁU!!!</color>");
 

@@ -12,16 +12,16 @@ public class SkillData : ScriptableObject
     public enum PassiveEffectCode
     {
         None, //Skill hoặc signature
-        Chris, // Cơ bản ChrisDon
-        Leo, // Cơ bản Leo
-        Vanguard,  // Vanguard
-        Warrior,  // Warrior
-        BattleMage,  // Battle-Mage
-        BloodReaver,  // Blood Reaver
+        Chris, 
+        Leo, 
+        Vanguard,  
+        Warrior,  
+        BattleMage,  
+        BloodReaver, 
         Rouge,
         Duelist,
         Mage,
-        Hermit,
+        Catalyst,
     }
     public enum SkillEffectCode
     {
@@ -35,7 +35,7 @@ public class SkillData : ScriptableObject
         RougeSkill,
         DuelistSkill,
         MageSkill,
-        HermitSkill,
+        CatalystSkill,
         WardenSkill,
         PaladinSkill,
         JuggernautSkill,
@@ -49,6 +49,28 @@ public class SkillData : ScriptableObject
         TacticianSkill,
         SpellbinderSkill,
     }
+    public enum SignatureEffectCode
+    {
+        None, //Passive hoặc Skill
+        ChrisSignature,
+        LeoSignature,
+        VanguardLiteSignature,
+        WarriorLiteSignature,
+        BattleMageLiteSignature,
+        BloodReaverLiteSignature,
+        RougeLiteSignature,
+        DuelistLiteSignature,
+        MageLiteSignature,
+        CatalystLiteSignature,
+        VanguardSignature,
+        WarriorSignature,
+        BattleMageSignature,
+        BloodReaverSignature,
+        RougeSignature,
+        DuelistSignature,
+        MageSignature,
+        CatalystSignature,
+    }
     public string id;
     public string skillName;
     public Sprite icon;
@@ -61,6 +83,7 @@ public class SkillData : ScriptableObject
     [Header("Special Logic ID")]
     public PassiveEffectCode passiveEffectCode; // <-- Quan trọng: Chọn logic ở đây
     public SkillEffectCode skillEffectCode;
+    public SignatureEffectCode signatureEffectCode;
 
     [Header("Passive Stat Modifiers")]
     // Dùng để cộng chỉ số tĩnh (VD: +10% HP, +Crit) mà không cần viết code
