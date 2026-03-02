@@ -91,18 +91,61 @@ public class EnemyStats : Stats
 
     public override void TakeDamage(DamageInfo info)
     {
-        base.TakeDamage(info);
+        // 1. Cập nhật Aggro và gọi AI (Giữ nguyên)
         lastDamageReceivedTime = Time.time;
         AddAggro(25f);
 
-        //Debug.Log("EnemyStats TakeDamage:");
-
-        // [MỚI] BÁO CHO AI BIẾT KẺ TẤN CÔNG LÀ AI
         if (enemyAI != null && info.attacker != null)
         {
-            // info.attacker là Stats, ta cần Transform
             enemyAI.OnDamageTaken(info.attacker.transform);
         }
+
+        Debug.Log("-----EnemyStats TakeDamage-----");
+        // --- 2. LOGIC PARRY CỦA ENEMY ---
+        if (isParrying)
+        {
+            // Tính toán hướng kẻ địch
+            Vector3 dirToAttacker = (info.sourcePosition - transform.position).normalized;
+            Vector3 myFacingDir = facingDirection != Vector3.zero ? facingDirection : transform.forward;
+            float angle = Vector3.Angle(myFacingDir, dirToAttacker);
+
+            // Kiểm tra góc đỡ (Enemy đỡ thành công)
+            if (angle <= parryAngle / 2f)
+            {
+                Debug.Log($"<color=white>>> {gameObject.name} PARRY thành công! (Giảm 80% sát thương)</color>");
+
+                // Normal Parry: Giảm 80% sát thương
+                info.damageAmount *= 0.2f;
+
+                DuelistPassive duelist = GetComponent<DuelistPassive>();
+                if (duelist != null) duelist.OnParrySuccess(false, info.attacker);
+
+                // --- BẬT SUPER ARMOR BẢO VỆ ---
+                bool oldSuperArmor = this.isSuperArmor;
+                int oldArmorLevel = this.superArmorLevel;
+
+                this.isSuperArmor = true;
+                this.superArmorLevel = 99; // Chống mọi Stun/Knockback (trừ skill có Impact >= 100)
+
+                // [QUAN TRỌNG NHẤT] Gọi TakeDamage GỐC ngay lúc Super Armor đang level 99
+                base.TakeDamage(info);
+
+                // Xử lý xong mới trả lại chỉ số giáp cũ
+                this.isSuperArmor = oldSuperArmor;
+                this.superArmorLevel = oldArmorLevel;
+
+                return; // Đã xử lý xong, KHÔNG chạy xuống dưới nữa
+            }
+            else
+            {
+                // Parry thất bại do bị đánh sau lưng / tạt sườn
+                Debug.Log($"<color=red>>> {gameObject.name} Parry thất bại! (Bị đánh ngoài góc {parryAngle} độ)</color>");
+            }
+        }
+
+        // --- 3. KHÔNG PARRY / PARRY TRƯỢT ---
+        // Ăn trọn sát thương và hiệu ứng (Stun/Knockback)
+        base.TakeDamage(info);
     }
 
     public void AddAggro(float amount)

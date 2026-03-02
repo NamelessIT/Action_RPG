@@ -766,8 +766,16 @@ public class PlayerController : MonoBehaviour
         );
         info.damageAmount = damage;
 
-        // 6. Send
+        // --- 6. Send ---
         enemyStats.TakeDamage(info);
+
+        // --- 7 BÁO CHO THÚ CƯNG BIẾT ĐỂ GHI SỔ ĐEN ---
+        CompanionAI myCompanion = FindFirstObjectByType<CompanionAI>();
+        if (myCompanion != null)
+        {
+            myCompanion.AddMarkedTarget(enemyStats.transform);
+        }
+        // -------------------------------------------------
 
         // Notify
         if (stats != null) stats.NotifyOnHitEnemy(enemyStats, t, isCrit);

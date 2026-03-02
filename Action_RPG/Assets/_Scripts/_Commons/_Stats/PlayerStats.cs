@@ -53,10 +53,6 @@ public class PlayerStats : AllyStats
                     Debug.Log("<color=yellow>>> PERFECT PARRY! (0 Damage)</color>");
                     info.damageAmount = 0;
                     if (duelist != null) duelist.OnParrySuccess(true, info.attacker);
-
-                    this.isSuperArmor = oldSuperArmor;
-                    this.superArmorLevel = oldArmorLevel;
-                    return;
                 }
                 else
                 {
@@ -64,9 +60,11 @@ public class PlayerStats : AllyStats
                     info.damageAmount *= 0.2f;
                     if (duelist != null) duelist.OnParrySuccess(false, info.attacker);
                 }
-
+                // [FIX LỖI] Gọi base.TakeDamage Ở ĐÂY khi Super Armor đang bật
+                base.TakeDamage(info);  
                 this.isSuperArmor = oldSuperArmor;
                 this.superArmorLevel = oldArmorLevel;
+                return; // Thoát luôn
             }
             else
             {

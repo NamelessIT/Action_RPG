@@ -63,6 +63,11 @@ public class EnemyAI : MonoBehaviour
     public float parryReactionCooldown = 2.0f;
     private float nextParryCheckTime = 0f;
 
+    // [MỚI] Biến đếm thời gian chờ phản công
+    [Tooltip("Thời gian chờ không nhận sát thương mới được phản công")]
+    public float cooldownTimerReceiveDame = 5.0f;
+    public float receiveDamageTimer = 0f;
+
 
     // Tham chiếu skill
     private DuelistPassive parrySkill;
@@ -87,34 +92,53 @@ public class EnemyAI : MonoBehaviour
 
         HandleAnimation(stats.facingDirection);
 
-        // Lấy skill Parry (nếu có)
         parrySkill = GetComponent<DuelistPassive>();
 
-        // Tự động bật canParry nếu có skill
+        if (parrySkill == null && stats.canParry)
+        {
+            parrySkill = gameObject.AddComponent<DuelistPassive>();
+        }
+
         if (parrySkill != null)
         {
-            parrySkill.isPlayer = false; // Báo đây là AI
+            parrySkill.isPlayer = false;
             parrySkill.isLearned = true;
             stats.canParry = true;
+            // [MỚI] Ép cứng 5 giây cho Enemy ngay từ lúc bắt đầu
+            parrySkill.maxParryDuration = 15f;
         }
     }
 
     void Update()
     {
-        if (stats.isDead || stats.isStunned || stats.isParrying)
+        if (stats.isDead || stats.isStunned)
         {
             if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
             return;
         }
 
+        // [MỚI] Giảm thời gian chờ phản công liên tục
+        if (receiveDamageTimer > 0) receiveDamageTimer -= Time.deltaTime;
+
         // [MỚI] NẾU ĐANG PARRY -> KHÓA DI CHUYỂN VÀ TẤN CÔNG
         // Để đảm bảo Enemy đứng yên "gồng" đỡ đòn trong 0.5s
         if (stats.isParrying)
         {
-            if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
-            currentState = "Parrying";
-            HandleAnimation(stats.facingDirection); // Vẫn update anim direction nếu cần
-            return; // Thoát Update để không chạy logic di chuyển/tấn công bên dưới
+            // Nếu đang cầm khiên MÀ đã hết 2 giây không ai đánh -> HẠ KHIÊN ĐỂ PHẢN CÔNG NGAY!
+            if (receiveDamageTimer <= 0f)
+            {
+                Debug.Log("<color=green>[AI] Đã hết 2s an toàn, tự động hạ khiên phản công!</color>");
+                if (parrySkill != null) parrySkill.AI_StopParry();
+                // Không "return" ở đây để code tiếp tục chạy xuống dưới và lao vào đánh
+            }
+            else
+            {
+                // Nếu vẫn đang trong 2 giây chờ -> Đứng im cầm khiên
+                if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
+                currentState = "Parrying";
+                HandleAnimation(stats.facingDirection);
+                return; // Thoát Update để không chạy logic di chuyển/tấn công bên dưới
+            }
         }
 
         // 1. QUÉT TÌM MỤC TIÊU
@@ -236,7 +260,7 @@ public class EnemyAI : MonoBehaviour
                         if (parrySkill != null) parrySkill.AI_StartParry();
 
                         // Giữ trạng thái Parry trong khoảng thời gian (ví dụ 0.5s) rồi thả
-                        StartCoroutine(ParryThenCounterAttack(0.5f));
+                        StartCoroutine(ParryRoutine(parrySkill.maxParryDuration));
                     }
                     else
                     {
@@ -292,7 +316,7 @@ public class EnemyAI : MonoBehaviour
                             if (parrySkill != null) parrySkill.AI_StartParry();
 
                             // Giữ thế thủ 0.5s (hoặc lâu hơn nếu cần)
-                            StartCoroutine(ParryThenCounterAttack(0.5f));
+                            StartCoroutine(ParryRoutine(parrySkill.maxParryDuration));
 
                             // Set cooldown phản xạ
                             nextParryCheckTime = Time.time + parryReactionCooldown;
@@ -313,27 +337,12 @@ public class EnemyAI : MonoBehaviour
 
 
     // [MỚI] Coroutine xử lý Parry xong thì Phản công (Counter Attack)
-    IEnumerator ParryThenCounterAttack(float delay)
+    IEnumerator ParryRoutine(float delay)
     {
         // 1. Giữ trạng thái Parry trong 0.5s (trong lúc này AI bất động nhờ logic Update)
         yield return new WaitForSeconds(delay);
 
-        // 2. Tắt Parry
         if (parrySkill != null) parrySkill.AI_StopParry();
-
-        // 3. [QUAN TRỌNG] Đánh trả ngay lập tức (Riposte)
-        // Kiểm tra xem mục tiêu còn trong tầm đánh không
-        if (nearestTarget != null && !stats.isStunned && !stats.isDead)
-        {
-            float dist = Vector3.Distance(transform.position, nearestTarget.position);
-
-            // Nếu vẫn còn gần -> Vả luôn!
-            if (dist <= combat.basicAttackRange + 0.5f)
-            {
-                Debug.Log("<color=red>[AI] Parry xong -> Phản công ngay!</color>");
-                combat.PerformBasicAttack();
-            }
-        }
     }
 
     void ScanForTarget()
@@ -444,8 +453,71 @@ public class EnemyAI : MonoBehaviour
 
     void HandleCombatBehavior(float distToTarget)
     {
-        if (distToTarget <= combat.basicAttackRange) State_Attack();
-        else State_Chase();
+        // ==========================================
+        // 1. LOGIC QUYẾT ĐỊNH PHÒNG THỦ HAY TẤN CÔNG
+        // ==========================================
+        bool shouldDefend = false;
+
+        if (stats.canParry && parrySkill != null)
+        {
+            // Nếu khiên KHÔNG TRONG COOLDOWN (Sẵn sàng dùng)
+            if (parrySkill.currentCooldown <= 0)
+            {
+                // Nếu vừa bị đánh (Timer > 0) -> Đứng thủ chờ thời
+                if (receiveDamageTimer > 0f)
+                {
+                    shouldDefend = true;
+                }
+                // Nếu đã qua 2 giây an toàn (Timer <= 0) -> Chuyển sang tấn công
+                else
+                {
+                    shouldDefend = false;
+                }
+            }
+            // Nếu khiên ĐANG TRONG COOLDOWN (Vỡ khiên) -> Liều mạng tấn công
+            else
+            {
+                shouldDefend = false;
+                // Có thể tắt luôn timer nhận damage để ép nó đánh (như bạn yêu cầu)
+                receiveDamageTimer = 0f;
+            }
+        }
+
+        // ==========================================
+        // 2. THỰC THI HÀNH ĐỘNG
+        // ==========================================
+
+        if (shouldDefend)
+        {
+            // --- HÀNH ĐỘNG PHÒNG THỦ (CHỜ ĐỢI) ---
+            if (distToTarget <= combat.basicAttackRange * 1.5f) // Cho tầm nhìn rộng hơn chút để nó biết xoay mặt
+            {
+                currentState = "Defending (Waiting)";
+                if (agent.isOnNavMesh) agent.isStopped = true;
+
+                // Liên tục quay mặt nhìn Player đề phòng bị chém lén
+                Vector3 dir = (nearestTarget.position - transform.position).normalized;
+                dir.y = 0;
+                if (dir != Vector3.zero) stats.facingDirection = dir;
+            }
+            else
+            {
+                // Dù muốn thủ nhưng xa quá thì vẫn phải chạy lại gần
+                State_Chase();
+            }
+        }
+        else
+        {
+            // --- HÀNH ĐỘNG TẤN CÔNG ---
+            if (distToTarget <= combat.basicAttackRange)
+            {
+                State_Attack();
+            }
+            else
+            {
+                State_Chase();
+            }
+        }
     }
 
     void HandleFleeBehavior()
@@ -642,6 +714,7 @@ public class EnemyAI : MonoBehaviour
 
         // 2. Ép buộc nhận mục tiêu ngay lập tức
         nearestTarget = attacker;
+        receiveDamageTimer = cooldownTimerReceiveDame;
         Debug.Log("EnemyAI nhận damage từ attaker:"+ attacker.name);
 
         // 3. Hủy bỏ trạng thái đang làm (Về nhà/Đi tuần) để chiến đấu ngay

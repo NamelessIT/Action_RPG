@@ -14,7 +14,7 @@ public class DuelistPassive : SkillBehavior
     public float perfectParryStartTime = 0.1f;
 
     [Tooltip("Thời gian hồi chiêu sau khi buông nút hoặc hết giờ")]
-    public float parryCooldown = 1.0f; // Tăng lên xíu vì skill này mạnh
+    public float parryCooldown = 3.0f; // Tăng lên xíu vì skill này mạnh
 
     [Header("Counter Attack Settings")]
     [Tooltip("Thời gian tồn tại của Buff Phản công (5s)")]
@@ -22,13 +22,13 @@ public class DuelistPassive : SkillBehavior
 
     // --- State ---
     private float currentHoldTimer = 0f;    // Đếm thời gian đã giữ nút
-    private float currentCooldown = 0f;
+    public float currentCooldown = 0f;
     private float currentCounterBuffTimer = 0f; // Đếm ngược buff Crit
 
     private bool isHoldingButton = false;   // Trạng thái đang giữ nút
 
     private Animator animator;
-
+    private EnemyStats enemyStats;
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
         base.Initialize(myStats, myData, myPlayer);
@@ -39,6 +39,10 @@ public class DuelistPassive : SkillBehavior
     {
         if (animator == null) animator = GetComponentInChildren<Animator>();
         if (stats == null) stats = GetComponent<AllyStats>();
+        if (!isPlayer)
+        {
+            enemyStats= GetComponent<EnemyStats>();
+        }
     }
 
     protected override void OnEquip()
@@ -120,12 +124,20 @@ public class DuelistPassive : SkillBehavior
     {
         isHoldingButton = true;
         currentHoldTimer = 0f; // Reset đếm giờ
-
+        Debug.Log("DuelistPassive StartParry enemyStats: " + enemyStats);
         // Báo cho Stats biết là bắt đầu đỡ
-        if (stats != null)
+        if (stats != null || enemyStats!=null)
         {
-            stats.isParrying = true;
-            stats.isPerfectParryWindow = false; // Mới bấm chưa phải perfect
+            if (isPlayer) {
+                stats.isParrying = true;
+                Debug.Log("DuelistPassive StartParry isParrying "+stats.isParrying);
+                stats.isPerfectParryWindow = false;
+            }
+            else
+            {
+                Debug.Log("DuelistPassive StartParry isParrying enemyStats " + enemyStats.isParrying);
+                enemyStats.isParrying = true;
+            }
         }
 
         // Trigger Animation (Vào thế thủ)
@@ -137,29 +149,38 @@ public class DuelistPassive : SkillBehavior
 
     void UpdateParryState()
     {
-        // Tăng thời gian giữ
         currentHoldTimer += Time.deltaTime;
 
-        // Logic chia giai đoạn
         if (stats != null)
         {
-            // Giai đoạn 1: Perfect Parry (0.0s -> 0.1s)
-            if (currentHoldTimer <= perfectParryStartTime )
+            // CHỈ XỬ LÝ PERFECT PARRY CHO PLAYER
+            if (isPlayer)
             {
-                if (!stats.isPerfectParryWindow) Debug.Log("<color=cyan>Duelist: Entering Perfect Window!</color>");
-                stats.isPerfectParryWindow = true;
+                if (currentHoldTimer <= perfectParryStartTime)
+                {
+                    if (!stats.isPerfectParryWindow) Debug.Log("<color=cyan>Duelist: Entering Perfect Window!</color>");
+                    stats.isPerfectParryWindow = true;
+                }
+                else if (currentHoldTimer > perfectParryStartTime && currentHoldTimer <= maxParryDuration)
+                {
+                    stats.isPerfectParryWindow = false;
+                }
+                else // Quá giờ
+                {
+                    Debug.Log("Duelist: Parry Overloaded (Too long)!");
+                    StopParry();
+                }
             }
-            // Giai đoạn 2: Normal Parry (0.1s -> 0.5s)
-            else if (currentHoldTimer > perfectParryStartTime && currentHoldTimer <= maxParryDuration)
-            {
-                // Chỉ log 1 lần khi vừa bước vào giai đoạn Perfect
-                stats.isPerfectParryWindow = false;
-            }
-            // Giai đoạn 3: Quá giờ ( > 0.5s) -> Tự ngắt
             else
             {
-                Debug.Log("Duelist: Parry Overloaded (Too long)!");
-                StopParry();
+                // NẾU LÀ AI (ENEMY)
+                // Cứ giữ khiên thoải mái, EnemyAI (Coroutine) sẽ gọi StopParry() khi nó muốn.
+                // Nếu muốn AI cũng có giới hạn tuyệt đối (ví dụ lỡ Coroutine lỗi), thì cứ check maxParryDuration
+                if (currentHoldTimer > maxParryDuration)
+                {
+                    Debug.Log("Duelist (AI): Parry Overloaded! Forcing Stop.");
+                    StopParry();
+                }
             }
         }
     }
@@ -175,16 +196,24 @@ public class DuelistPassive : SkillBehavior
         currentCooldown = parryCooldown;
 
         // Reset Stats
-        if (stats != null)
+        if (stats != null || enemyStats!=null )
         {
-            stats.isParrying = false;
-            stats.isPerfectParryWindow = false;
+            if (isPlayer)
+            {
+                stats.isParrying = false;
+                stats.isPerfectParryWindow = false;
+            }
+            else
+            {
+                enemyStats.isParrying = false;
+            }
         }
+
 
         // Tắt Animation
         // if (animator != null) animator.SetBool("IsParrying", false);
 
-        // Debug.Log("Duelist: End Parry.");
+            // Debug.Log("Duelist: End Parry.");
     }
 
     // --- HÀM XỬ LÝ KHI PARRY THÀNH CÔNG (GỌI TỪ STATS) ---
