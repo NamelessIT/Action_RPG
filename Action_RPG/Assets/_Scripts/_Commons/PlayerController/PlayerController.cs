@@ -25,6 +25,7 @@ public class PlayerController : MonoBehaviour
     public bool isAttacking = false;    // Đang trong animation đánh
     public bool isStance = false;       // Juggernaut
     public bool isBerserk = false;    // Đang điên loạn (Ravager)
+    public bool isSkillBlocked = false; // [MỚI] Cờ chặn dùng skill (Blood Reaver Signature)
 
     // Biến tính toán runtime
     //private float currentAttackCooldown = 0f;
@@ -249,6 +250,9 @@ public class PlayerController : MonoBehaviour
 
     void HandleSkillInput()
     {
+        // [MỚI] Nếu đang bị khóa skill thì không nhận lệnh
+        if (isSkillBlocked) return;
+
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
             if (skillManager.currentSkill != null)

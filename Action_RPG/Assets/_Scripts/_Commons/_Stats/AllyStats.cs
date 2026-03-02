@@ -234,11 +234,6 @@ public class AllyStats : Stats
         critMultiplier = baseCritMultiplier + bonusCritMultiplier;
         
     }
-
-    public void CalculateMoveSpeed()
-    {
-        moveSpeed = baseMoveSpeed * (1 + ((0.05f * Mathf.Sqrt(AGI) - VIT * moveSpeedReducePerVIT) * (1 + trueMoveFlexibility) / 2)) * (1 + bonusMoveSpeed);
-    }
     public void CalculateMoveSpeedOnly()
     {
         moveSpeed = baseMoveSpeed * (1 + ((0.05f * Mathf.Sqrt(AGI) - VIT * moveSpeedReducePerVIT) * (1 + trueMoveFlexibility) / 2)) * (1 + bonusMoveSpeed);

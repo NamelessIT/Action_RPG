@@ -366,7 +366,7 @@ public class MagePassive : SkillBehavior
         
         }
 
-        if (stats is AllyStats ally) ally.CalculateMoveSpeed();
+        if (stats is AllyStats ally) ally.CalculateMoveSpeedOnly();
     }
 
     private void CleanUpStats()
