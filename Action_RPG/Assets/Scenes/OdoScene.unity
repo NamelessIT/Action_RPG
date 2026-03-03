@@ -660,6 +660,7 @@ MonoBehaviour:
   isParrying: 0
   isPerfectParryWindow: 0
   parryAngle: 120
+  isResonated: 0
   exp: 0
   H: 200
   maxHpGainBonus: 10
@@ -739,6 +740,11 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: 0, y: 0, z: 0}
   m_TimeToStationary: 0.5
+--- !u!4 &338991049 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7318812970211550158, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+  m_PrefabInstance: {fileID: 9022525804194762693}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &342005155
 GameObject:
   m_ObjectHideFlags: 0
@@ -2579,6 +2585,7 @@ MonoBehaviour:
   isParrying: 0
   isPerfectParryWindow: 0
   parryAngle: 120
+  isResonated: 0
   enemyID: Odo
   enemyType: 0
   detectionMethod: 1
@@ -2869,6 +2876,7 @@ MonoBehaviour:
   isParrying: 0
   isPerfectParryWindow: 0
   parryAngle: 120
+  isResonated: 0
 --- !u!65 &1439149635
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -3584,7 +3592,7 @@ GameObject:
   - component: {fileID: 1995522836}
   m_Layer: 0
   m_Name: Companion
-  m_TagString: Untagged
+  m_TagString: Ally
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -3716,7 +3724,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b410f924152f11b448df0a2fe28ffb4b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CompanionAI
-  player: {fileID: 0}
+  player: {fileID: 338991049}
   distanceFollow: 8
   teleportDistance: 15
   wanderRadius: 5
@@ -3782,12 +3790,12 @@ MonoBehaviour:
   maxSin: 0
   currentSin: 0
   baseSinGain: 5
-  STR: 0
+  STR: 5
   DEX: 0
   INT: 0
   VIT: 0
   AGI: 0
-  physicalAtk: 0
+  physicalAtk: 10
   magicAtk: 0
   physicalLifeSteal: 0
   magicLifeSteal: 0
@@ -3825,6 +3833,7 @@ MonoBehaviour:
   isParrying: 0
   isPerfectParryWindow: 0
   parryAngle: 120
+  isResonated: 0
   exp: 0
   H: 200
   maxHpGainBonus: 10
