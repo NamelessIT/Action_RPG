@@ -48,6 +48,8 @@ public static class SkillFactory
                 return typeof(BloodReaverSkill);
             case SkillData.SkillEffectCode.RougeSkill:
                 return typeof(RougeSkill);
+            case SkillData.SkillEffectCode.DuelistSkill:
+                return typeof(DuelistSkill);
             case SkillData.SkillEffectCode.PaladinSkill:
                 return typeof(PaladinSkill);
             case SkillData.SkillEffectCode.JuggernautSkill:

@@ -148,6 +148,10 @@ public class Stats : MonoBehaviour
     public bool isPerfectParryWindow = false; // Đang trong "khung giờ vàng"
     [Range(0, 360)] public float parryAngle = 120f;
 
+    [Header("--- Duelist Challenge ---")]
+    public bool isChallenged = false; // Cờ báo hiệu bị thách đấu
+    private Coroutine challengeCoroutine;
+
     [Header("--- Resonance Mark (Catalyst) ---")]
     public bool isResonated = false;
     private Coroutine resonanceCoroutine;
@@ -253,6 +257,23 @@ public class Stats : MonoBehaviour
         // Hết giờ -> Xóa Coroutine để lần sau Start lại được
         isBleeding = false;
         bleedCoroutine = null;
+    }
+
+    // Hàm gắn ấn thách đấu
+    public void ApplyChallengeMark(float duration)
+    {
+        isChallenged = true;
+
+        // Nếu đang có ấn rồi thì đập đi tính lại thời gian mới
+        if (challengeCoroutine != null) StopCoroutine(challengeCoroutine);
+        challengeCoroutine = StartCoroutine(ChallengeRoutine(duration));
+    }
+
+    private IEnumerator ChallengeRoutine(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        isChallenged = false;
+        challengeCoroutine = null;
     }
 
     // [MỚI] Hàm dùng để gắn dấu ấn Cộng Hưởng
