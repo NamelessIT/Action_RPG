@@ -26,6 +26,8 @@ public static class SkillFactory
                 return typeof(DuelistPassive);
             case SkillData.PassiveEffectCode.Mage:
                 return typeof(MagePassive);
+            case SkillData.PassiveEffectCode.Catalyst:
+                return typeof(CatalystPassive);
             // ... Thêm các case khác vào đây ...
 
             default:
