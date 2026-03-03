@@ -73,6 +73,8 @@ public class PlayerController : MonoBehaviour
 
     // [MỚI] Biến trạng thái dùng Skill đặc biệt
     public bool isUsingSpecialSkill = false;
+    // [MỚI] Biến kiểm tra đòn đánh cường hóa DuelistSkill
+    private bool isDuelistEmpoweredAttackActive = false; // Cache trạng thái Thách đấu
 
     // ============ CLASS-NEUTRAL EVENTS (Minimal Integration) ============
     public event System.Action<Vector2> OnMovementInputChanged;   // Gọi khi input di chuyển thay đổi
@@ -563,9 +565,11 @@ public class PlayerController : MonoBehaviour
         if (duelistSkill != null)
         {
             // Check xem có địch xung quanh không để đỡ phí buff?
-            // Hoặc cứ bật luôn. Ở đây ta check đơn giản:
             isDuelistCounterActive = duelistSkill.TryUseCounterAttack();
-            if (isDuelistCounterActive) Debug.Log("<color=cyan>>> DUELIST COUNTER READY FOR SWEEP!</color>");
+            isDuelistEmpoweredAttackActive = duelistSkill.ConsumeEmpoweredAttack(); // Lấy buff Thách Đấu
+
+            if (isDuelistCounterActive) Debug.Log("<color=cyan>>> DUELIST COUNTER READY!</color>");
+            if (isDuelistEmpoweredAttackActive) Debug.Log("<color=magenta>>> DUELIST EMPOWERED (CHALLENGE) READY!</color>");
         }
 
         // Setup Multiplier
@@ -748,13 +752,24 @@ public class PlayerController : MonoBehaviour
 
         // 3. Multiplier
         float attackMultiplier = isHeavy ? currentDamageMultiplier : ((stepIndex == 0) ? 1.0f : 1.5f);
+        // [MỚI] Áp dụng Sức mạnh Thách Đấu
+        if (isDuelistEmpoweredAttackActive)
+        {
+            attackMultiplier *= 2.0f; // x2 Sát thương
+            info.isStun = true;
+            info.stunDuration = 3.0f; // Choáng 3 giây
+            info.impactLevel = 1;     // Phá luôn Super Armor
+        }
 
         // 4. Crit & Counter Logic (Dùng biến cache isDuelistCounterActive)
         float totalCritChance = stats.critChance;
         if (currentWpn != null) totalCritChance += currentWpn.bonusCritChance;
 
-        bool isCrit = isDuelistCounterActive || CombatMath.CheckIsCrit(totalCritChance);
-        bool ignoreReduction = isDuelistCounterActive;
+        // Gộp cả 2 loại buff (Perfect Parry Counter VÀ Challenge đều auto Crit và xuyên giáp)
+        bool forceCritOrTrueDamage = isDuelistCounterActive || isDuelistEmpoweredAttackActive;
+
+        bool isCrit = forceCritOrTrueDamage || CombatMath.CheckIsCrit(totalCritChance);
+        bool ignoreReduction = forceCritOrTrueDamage;
 
         if (isTestCrit) isCrit = true;
         info.isCrit = isCrit;
