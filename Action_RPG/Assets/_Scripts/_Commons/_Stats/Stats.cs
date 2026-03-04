@@ -148,6 +148,13 @@ public class Stats : MonoBehaviour
     public bool isPerfectParryWindow = false; // Đang trong "khung giờ vàng"
     [Range(0, 360)] public float parryAngle = 120f;
 
+    [Header("--- Duelist Challenge ---")]
+    public bool isChallenged = false; // Cờ báo hiệu bị thách đấu
+    private Coroutine challengeCoroutine;
+
+    [Header("--- Resonance Mark (Catalyst) ---")]
+    public bool isResonated = false;
+    private Coroutine resonanceCoroutine;
 
     private NavMeshAgent agent;
     private Rigidbody rb;
@@ -251,6 +258,41 @@ public class Stats : MonoBehaviour
         isBleeding = false;
         bleedCoroutine = null;
     }
+
+    // Hàm gắn ấn thách đấu
+    public void ApplyChallengeMark(float duration)
+    {
+        isChallenged = true;
+
+        // Nếu đang có ấn rồi thì đập đi tính lại thời gian mới
+        if (challengeCoroutine != null) StopCoroutine(challengeCoroutine);
+        challengeCoroutine = StartCoroutine(ChallengeRoutine(duration));
+    }
+
+    private IEnumerator ChallengeRoutine(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        isChallenged = false;
+        challengeCoroutine = null;
+    }
+
+    // [MỚI] Hàm dùng để gắn dấu ấn Cộng Hưởng
+    public void ApplyResonanceMark(float duration)
+    {
+        isResonated = true;
+
+        // Nếu đang có dấu ấn rồi thì reset lại thời gian
+        if (resonanceCoroutine != null) StopCoroutine(resonanceCoroutine);
+        resonanceCoroutine = StartCoroutine(ResonanceRoutine(duration));
+    }
+
+    private IEnumerator ResonanceRoutine(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        isResonated = false;
+        resonanceCoroutine = null;
+    }
+
     // [CẬP NHẬT] Hàm tiêu hao thể lực dùng chung cho Dash và Run
     public bool TryConsumeStamina(float amount)
     {
@@ -274,6 +316,14 @@ public class Stats : MonoBehaviour
         // 1. TÍNH TOÁN DAMAGE VÀ SHIELD
         float damageToTake = info.damageAmount;
 
+        // [MỚI] KIỂM TRA CỘNG HƯỞNG TỪ COMPANION
+        // Giả sử Companion của bạn có tag là "Companion" và khi đánh có truyền info.attacker = stats của nó
+        if (isResonated && info.attacker != null && info.attacker.CompareTag("Ally"))
+        {
+            damageToTake *= 1.30f; // Tăng 30% sát thương
+            Debug.Log($"<color=orange>Cộng Hưởng!</color> Sát thương từ Companion tăng lên: {damageToTake}");
+        }
+
         // [MỚI] Trừ vào Shield trước (Nếu có)
         if (currentShield > 0)
         {
@@ -289,9 +339,9 @@ public class Stats : MonoBehaviour
         {
             currentHp -= damageToTake;
 
-            if (info.isCrit) Debug.Log($"<color=red>Damage nhận lớn hơn Shield</color> {gameObject.name} nhận {damageToTake} (Shield chặn: {info.damageAmount - damageToTake})");
-            else Debug.Log($"{gameObject.name} nhận {damageToTake}");
-
+            //if (info.isCrit) Debug.Log($"<color=red>Damage nhận lớn hơn Shield</color> {gameObject.name} nhận {damageToTake} (Shield chặn: {info.damageAmount - damageToTake})");
+            //else Debug.Log($"{gameObject.name} nhận {damageToTake}");
+            Debug.Log($"{gameObject.name} nhận {damageToTake}");
             // [MỚI] KÍCH HOẠT SỰ KIỆN "BỊ ĐÁNH"
             // Báo cho JuggernautSkill biết là "Tao bị mất máu rồi!"
             OnDamageReceived?.Invoke(damageToTake, this);

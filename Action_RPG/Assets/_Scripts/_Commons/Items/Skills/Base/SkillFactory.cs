@@ -26,6 +26,8 @@ public static class SkillFactory
                 return typeof(DuelistPassive);
             case SkillData.PassiveEffectCode.Mage:
                 return typeof(MagePassive);
+            case SkillData.PassiveEffectCode.Catalyst:
+                return typeof(CatalystPassive);
             // ... Thêm các case khác vào đây ...
 
             default:
@@ -46,6 +48,8 @@ public static class SkillFactory
                 return typeof(BloodReaverSkill);
             case SkillData.SkillEffectCode.RougeSkill:
                 return typeof(RougeSkill);
+            case SkillData.SkillEffectCode.DuelistSkill:
+                return typeof(DuelistSkill);
             case SkillData.SkillEffectCode.PaladinSkill:
                 return typeof(PaladinSkill);
             case SkillData.SkillEffectCode.JuggernautSkill:

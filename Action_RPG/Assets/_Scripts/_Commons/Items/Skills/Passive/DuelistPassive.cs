@@ -24,6 +24,7 @@ public class DuelistPassive : SkillBehavior
     private float currentHoldTimer = 0f;    // Đếm thời gian đã giữ nút
     public float currentCooldown = 0f;
     private float currentCounterBuffTimer = 0f; // Đếm ngược buff Crit
+    public bool hasEmpoweredAttack = false; // Báo hiệu đòn đánh tiếp theo được Cường hóa
 
     private bool isHoldingButton = false;   // Trạng thái đang giữ nút
 
@@ -245,6 +246,27 @@ public class DuelistPassive : SkillBehavior
             Debug.Log("<color=white>Normal Parry Hit.</color>");
             // Normal Parry thì vẫn giữ thế thủ được đến khi hết giờ hoặc thả tay
         }
+
+        // [MỚI] KIỂM TRA ẤN THÁCH ĐẤU
+        if (attacker != null && attacker.isChallenged)
+        {
+            Debug.Log("<color=magenta>Duelist: Kẻ địch Thách Đấu đã sập bẫy! Đòn tiếp theo x2 Sát thương!</color>");
+            hasEmpoweredAttack = true; // Nhận buff Cường hóa đòn đánh
+            
+            // Xóa ấn trên đầu kẻ địch luôn để không lạm dụng
+            attacker.isChallenged = false; 
+        }
+    }
+
+    // [MỚI] Hàm để PlayerController lấy và tiêu hao Buff
+    public bool ConsumeEmpoweredAttack()
+    {
+        if (hasEmpoweredAttack)
+        {
+            hasEmpoweredAttack = false;
+            return true;
+        }
+        return false;
     }
 
     // --- HÀM CHECK BUFF COUNTER ---
