@@ -509,12 +509,13 @@ public class EnemyAI : MonoBehaviour
         else
         {
             // --- HÀNH ĐỘNG TẤN CÔNG ---
-            if (distToTarget <= combat.basicAttackRange)
+            if (distToTarget <= combat.basicAttackRange + 0.5f)
             {
                 State_Attack();
             }
             else
             {
+                Debug.Log("EnemyAI HandleCombatBehavior do không đủ combat.basicAttackRange");
                 State_Chase();
             }
         }
@@ -583,6 +584,14 @@ public class EnemyAI : MonoBehaviour
     void State_Chase()
     {
         if (nearestTarget == null) return;
+        if (agent.isOnNavMesh)
+        {
+            agent.stoppingDistance = combat.basicAttackRange * 0.9f;
+        }
+        else
+        {
+            Debug.Log("EnemyAI State_Chase tầm đánh không đủ");
+        }
         State_MoveTo(nearestTarget.position, "Chasing");
         stats.EnterCombat();
     }

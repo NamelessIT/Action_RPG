@@ -114,6 +114,14 @@ public class ChrisSkill : SkillBehavior
                 // [FIX] Chờ nhịp vật lý tiếp theo thay vì chờ Frame màn hình
                 yield return waitFixed;
             }
+            // --- [MỚI] TÍNH TOÁN SIN SAU KHI KẾT THÚC ỦI ---
+            // Lúc này alreadyDamagedList đã chứa TẤT CẢ những con quái bị tông trúng trong 1.5s qua
+            if (stats != null && alreadyDamagedList.Count > 0)
+            {
+                stats.GainSinFromAttack(alreadyDamagedList.Count);
+                Debug.Log($"[ChrisSkill] Kết thúc ủi. Tông trúng tổng cộng {alreadyDamagedList.Count} mục tiêu -> Tích Sin!");
+            }
+            // -----------------------------------------------
         }
         finally
         {

@@ -626,6 +626,13 @@ public class PlayerController : MonoBehaviour
         if (hitAnyInSweep)
         {
             Debug.Log("Tấn công TRÚNG ĐỊCH -> Vào Combat");
+
+            // [MỚI] TÍNH TOÁN SIN DỰA TRÊN SỐ QUÁI TRÚNG ĐÒN
+            if (stats != null && hitTargets.Count > 0)
+            {
+                Debug.Log("PlayerController AttackRoutine chạy  stats.GainSinFromAttack");
+                stats.GainSinFromAttack(hitTargets.Count);
+            }
         }
 
         // 6. Recovery (Chờ nốt animation)

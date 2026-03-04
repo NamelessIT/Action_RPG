@@ -289,4 +289,20 @@ public class AllyStats : Stats
         yield return new WaitForSecondsRealtime(5.0f);
         isPerfectDodgeSuccess = false;
     }
+
+    // --- [MỚI] HÀM TÍNH TOÁN VÀ CỘNG SIN ---
+    public void GainSinFromAttack(int enemiesHitCount)
+    {
+        if (enemiesHitCount <= 0) return;
+
+        // Công thức: y = 2 * sinGain - sinGain * (0.5)^(x - 1)
+        // Lưu ý dùng Mathf.Pow cho số mũ
+        float totalSinEarned = (2f * sinGain) - (sinGain * Mathf.Pow(0.5f, enemiesHitCount - 1));
+
+        // Cộng vào currentSin và giới hạn ở mức maxSin
+        currentSin += totalSinEarned;
+        if (currentSin > maxSin) currentSin = maxSin;
+
+        Debug.Log($"<color=purple>Đánh trúng {enemiesHitCount} địch -> Hồi {totalSinEarned:F2} Sin (Current: {currentSin:F1}/{maxSin})</color>");
+    }
 }

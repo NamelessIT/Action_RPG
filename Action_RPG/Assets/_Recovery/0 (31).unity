@@ -2484,6 +2484,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 0
   parryReactionCooldown: 2
+  cooldownTimerReceiveDame: 2
 --- !u!114 &1319874509
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2577,7 +2578,7 @@ MonoBehaviour:
   spawnPosition: {x: 0, y: 0, z: 0}
   monsterRank: 0
   aggroRetentionTime: 5
-  canParry: 0
+  canParry: 1
 --- !u!195 &1319874510
 NavMeshAgent:
   m_ObjectHideFlags: 0
