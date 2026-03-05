@@ -23,7 +23,11 @@ public class EnemyStats : Stats
     public float currentAggro = 0f;
     public float maxAggro = 100f;
     public float aggroDecayRate = 5f;
-    public float aggroRadius = 20f;
+    public float aggroRadius = 5f;
+
+    [Header("--- Target Focus Settings ---")]
+    [Tooltip("Thời gian kiên nhẫn: Nếu mục tiêu hiện tại không gây sát thương trong X giây, Enemy sẽ đổi mục tiêu nếu bị kẻ khác đánh.")]
+    public float targetPatienceTime = 15f;
 
     [Header("--- Perception (Detection) ---")]
     public float detectionRadius = 10f;

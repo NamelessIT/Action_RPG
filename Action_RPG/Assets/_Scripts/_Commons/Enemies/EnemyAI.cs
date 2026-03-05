@@ -68,6 +68,9 @@ public class EnemyAI : MonoBehaviour
     public float cooldownTimerReceiveDame = 5.0f;
     public float receiveDamageTimer = 0f;
 
+    // Đặt chung chỗ với các biến đếm timer khác (vd: dưới receiveDamageTimer)
+    private float lastTimeCurrentTargetDamagedMe = -100f;
+
 
     // Tham chiếu skill
     private DuelistPassive parrySkill;
@@ -357,6 +360,7 @@ public class EnemyAI : MonoBehaviour
             }
             else
             {
+                Debug.Log($"[AI] Đã mất dấu {nearestTarget.name} (Chết hoặc chạy xa).");
                 nearestTarget = null;
             }
         }
@@ -393,7 +397,13 @@ public class EnemyAI : MonoBehaviour
         }
 
         fleeTarget = bestPredator;
-        nearestTarget = bestTarget;
+        // --- [MỚI] GÁN MỤC TIÊU VÀ RESET ĐỒNG HỒ ---
+        if (nearestTarget == null && bestTarget != null)
+        {
+            nearestTarget = bestTarget;
+            // Vừa tự phát hiện ra mục tiêu mới -> Reset đồng hồ 15s cho nó
+            lastTimeCurrentTargetDamagedMe = Time.time;
+        }
 
         // Hostile tự tăng Aggro khi thấy mồi ở gần nhà
         if (nearestTarget != null && stats.enemyType == EnemyType.Hostile)
@@ -515,7 +525,7 @@ public class EnemyAI : MonoBehaviour
             }
             else
             {
-                Debug.Log("EnemyAI HandleCombatBehavior do không đủ combat.basicAttackRange");
+                //Debug.Log("EnemyAI HandleCombatBehavior do không đủ combat.basicAttackRange");
                 State_Chase();
             }
         }
@@ -718,27 +728,48 @@ public class EnemyAI : MonoBehaviour
     {
         if (attacker == null) return;
 
-        // 1. Nếu kẻ tấn công thuộc phe mình (Ally đánh Ally) thì bỏ qua (tùy logic game bạn)
-        // Nhưng ở đây ta cứ set target đã, logic IsHostileTo sẽ lọc sau nếu cần.
-
-        // 2. Ép buộc nhận mục tiêu ngay lập tức
-        nearestTarget = attacker;
-        receiveDamageTimer = cooldownTimerReceiveDame;
-        Debug.Log("EnemyAI nhận damage từ attaker:"+ attacker.name);
-
-        // 3. Hủy bỏ trạng thái đang làm (Về nhà/Đi tuần) để chiến đấu ngay
+        // Đánh thức AI
         isReturningHome = false;
-        if (agent.isOnNavMesh) agent.isStopped = false; // Đảm bảo AI có thể di chuyển/xoay
+        if (agent.isOnNavMesh) agent.isStopped = false;
 
-        // 4. Nếu là Neutral -> Chuyển sang thù địch (Logic này Stats đã lo qua Aggro, nhưng AI cần biết để Update)
-        // Đảm bảo AI quay mặt về phía kẻ tấn công ngay lập tức (Tùy chọn)
-        /*
-        Vector3 dir = (attacker.position - transform.position).normalized;
-        dir.y = 0;
-        if (dir != Vector3.zero) stats.facingDirection = dir;
-        */
-
-        Debug.Log($"[AI] Bị đánh lén bởi {attacker.name}! -> Quay lại trả đũa ngay.");
+        // --- LOGIC KHÓA MỤC TIÊU (STICKY AGGRO) ---
+        if (nearestTarget == null)
+        {
+            // Trường hợp 1: Chưa có mục tiêu -> Kẻ nào đánh trước, kẻ đó làm mục tiêu
+            nearestTarget = attacker;
+            lastTimeCurrentTargetDamagedMe = Time.time; // Reset bộ đếm 15s
+            receiveDamageTimer = cooldownTimerReceiveDame;
+            Debug.Log($"[AI] Bị đánh lén! Khóa mục tiêu mới: {attacker.name}");
+        }
+        else
+        {
+            // Trường hợp 2: ĐÃ CÓ MỤC TIÊU
+            if (attacker == nearestTarget)
+            {
+                // Người đánh chính là mục tiêu đang truy đuổi -> Cập nhật lại thời điểm bị đánh
+                lastTimeCurrentTargetDamagedMe = Time.time;
+                receiveDamageTimer = cooldownTimerReceiveDame;
+            }
+            else
+            {
+                // Người đánh LÀ MỘT KẺ KHÁC (Ví dụ: Pet cắn)
+                // Kiểm tra xem mục tiêu hiện tại (Player) có đang "bỏ trốn/không đánh" quá 15s không?
+                if (Time.time > lastTimeCurrentTargetDamagedMe + stats.targetPatienceTime)
+                {
+                    // Chuyển mục tiêu sang kẻ vừa đánh!
+                    Debug.Log($"[AI] {nearestTarget.name} không đánh quá {stats.targetPatienceTime}s. Chuyển mục tiêu sang {attacker.name}!");
+                    nearestTarget = attacker;
+                    lastTimeCurrentTargetDamagedMe = Time.time;
+                    receiveDamageTimer = cooldownTimerReceiveDame;
+                }
+                else
+                {
+                    // Mục tiêu hiện tại vẫn đang "nóng" (mới đánh mình gần đây)
+                    // -> Mặc kệ kẻ vừa đánh lén, quyết tâm đuổi mục tiêu chính!
+                    Debug.Log($"[AI] Bị {attacker.name} cắn, nhưng vẫn quyết tâm đuổi {nearestTarget.name}!");
+                }
+            }
+        }
     }
 
     // --- GIZMOS CẢI TIẾN (Vẽ hình rẻ quạt) ---

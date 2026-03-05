@@ -660,6 +660,7 @@ MonoBehaviour:
   isParrying: 0
   isPerfectParryWindow: 0
   parryAngle: 120
+  isChallenged: 0
   isResonated: 0
   exp: 0
   H: 200
@@ -2585,6 +2586,7 @@ MonoBehaviour:
   isParrying: 0
   isPerfectParryWindow: 0
   parryAngle: 120
+  isChallenged: 0
   isResonated: 0
   enemyID: Odo
   enemyType: 0
@@ -2602,7 +2604,7 @@ MonoBehaviour:
   spawnPosition: {x: 0, y: 0, z: 0}
   monsterRank: 0
   aggroRetentionTime: 5
-  canParry: 1
+  canParry: 0
 --- !u!195 &1319874510
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -2876,6 +2878,7 @@ MonoBehaviour:
   isParrying: 0
   isPerfectParryWindow: 0
   parryAngle: 120
+  isChallenged: 0
   isResonated: 0
 --- !u!65 &1439149635
 BoxCollider:
@@ -3833,6 +3836,7 @@ MonoBehaviour:
   isParrying: 0
   isPerfectParryWindow: 0
   parryAngle: 120
+  isChallenged: 0
   isResonated: 0
   exp: 0
   H: 200
