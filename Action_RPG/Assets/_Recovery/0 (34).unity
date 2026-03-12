@@ -2595,7 +2595,6 @@ MonoBehaviour:
   maxAggro: 100
   aggroDecayRate: 5
   aggroRadius: 20
-  targetPatienceTime: 15
   detectionRadius: 1
   viewDistance: 1
   viewAngle: 50
@@ -2605,7 +2604,7 @@ MonoBehaviour:
   spawnPosition: {x: 0, y: 0, z: 0}
   monsterRank: 0
   aggroRetentionTime: 5
-  canParry: 0
+  canParry: 1
 --- !u!195 &1319874510
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -3594,7 +3593,6 @@ GameObject:
   - component: {fileID: 1995522838}
   - component: {fileID: 1995522837}
   - component: {fileID: 1995522836}
-  - component: {fileID: 1995522839}
   m_Layer: 0
   m_Name: Companion
   m_TagString: Ally
@@ -3735,6 +3733,7 @@ MonoBehaviour:
   wanderRadius: 5
   wanderWaitTime: 3
   attackRange: 2
+  attackCooldown: 1.5
   currentTarget: {fileID: 0}
   scanInterval: 0.5
   scanRadius: 15
@@ -3891,28 +3890,6 @@ MonoBehaviour:
   manualGuardReduction: 0
   isMomentumActive: 0
   momentumReduction: 0.3
---- !u!114 &1995522839
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1995522831}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3d9e1d9e78e2b1f489c06dae141ef40f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EquipmentManager
-  pickUpWeapon: {fileID: 0}
-  currentWeapon: {fileID: 0}
-  pickUpCoreShield: {fileID: 0}
-  currentCoreShield: {fileID: 0}
-  pickUpAccessory: {fileID: 0}
-  currentCoreShard: {fileID: 0}
-  currentMarkOfSin: {fileID: 0}
-  currentRelicOfMemory: {fileID: 0}
-  currentParasite: {fileID: 0}
-  currentChain: {fileID: 0}
 --- !u!1 &2025425007
 GameObject:
   m_ObjectHideFlags: 0
