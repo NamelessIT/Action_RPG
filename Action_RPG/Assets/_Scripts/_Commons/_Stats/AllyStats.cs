@@ -117,6 +117,13 @@ public class AllyStats : Stats
     // Hàm này phải được gọi mỗi khi: Lên cấp, Đổi đồ, Nhận Buff, Chịu Debuff
     public void RecalculateStats()
     {
+        // 0. Tính Attribute Stat 
+        // Công thức: Tổng = (Base * % Tăng thêm) + Điểm cộng thẳng từ đồ
+        STR = (baseSTR * (1 + bonusSTR)) + flatSTR;
+        INT = (baseINT * (1 + bonusINT)) + flatINT;
+        DEX = (baseDEX * (1 + bonusDEX)) + flatDEX;
+        AGI = (baseAGI * (1 + bonusAGI)) + flatAGI;
+        VIT = (baseVIT * (1 + bonusVIT)) + flatVIT;
         // 1. Tính HP
         // Công thức: baseHp = 100 + 20*level
         baseHp = 100 + 20 * level;
@@ -128,6 +135,22 @@ public class AllyStats : Stats
 
         // 2. Tính Sin
         sinGain = baseSinGain * (1 + maxSinBonus * INT / (INT + S));
+
+        // [MỚI] Cập nhật maxSin dựa theo Signature đang trang bị
+        SkillManager skillManager = GetComponent<SkillManager>();
+        if (skillManager != null && skillManager.currentSignature != null)
+        {
+            // Tùy thuộc vào việc biến currentSignature của bạn đang khai báo là kiểu SkillData hay SkillBehavior
+            // Nếu currentSignature là loại SkillData:
+            maxSin = skillManager.currentSignature.sinChargeReq;
+        }
+        else
+        {
+            maxSin = 40f; // Giá trị mặc định an toàn nếu nhân vật chưa gắn Signature nào
+        }
+
+        // Đảm bảo currentSin không bị lố qua mức max mới
+        currentSin = Mathf.Clamp(currentSin, 0, maxSin);
 
         // 3. Tính Damage
         physicalAtk = (flatPhysicalAtk + STR * physicalAtkPerSTR) * (1 + bonusPhysicalAtk);
@@ -225,15 +248,14 @@ public class AllyStats : Stats
     {
         // 1. Tính Damage (Công thức copy từ RecalculateStats xuống)
         physicalAtk = (flatPhysicalAtk + STR * physicalAtkPerSTR) * (1 + bonusPhysicalAtk);
-        //magicAtk = (flatMagicAtk + INT * magicAtkPerINT) * (1 + bonusMagicAtk);
-
-
+        magicAtk = (flatMagicAtk + INT * magicAtkPerINT) * (1 + bonusMagicAtk);
 
         // 2. Tính Crit (Công thức copy từ RecalculateStats xuống)
         critChance = baseCritChance + critPerDEX * DEX + bonusCritChance;
         critMultiplier = baseCritMultiplier + bonusCritMultiplier;
 
         // 3. Tính AttackSpeed
+        bonusAttackSpeed = maxAttackSpeedBuff * AGI / (AGI + A);
         attackSpeed = baseAttackSpeed * (1 + bonusAttackSpeed);
 
     }

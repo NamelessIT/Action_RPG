@@ -363,16 +363,16 @@ public class SkillManager : MonoBehaviour
 
         switch (mod.stat)
         {
-            case StatModifier.StatType.STR: allyStats.STR += value; break;
-            case StatModifier.StatType.DEX: allyStats.DEX += value; break;
-            case StatModifier.StatType.INT: allyStats.INT += value; break;
-            case StatModifier.StatType.VIT: allyStats.VIT += value; break;
-            case StatModifier.StatType.AGI: allyStats.AGI += value; break;
-            case StatModifier.StatType.BonusSTR: allyStats.STR += value; break;
-            case StatModifier.StatType.BonusDEX: allyStats.DEX += value; break;
-            case StatModifier.StatType.BonusINT: allyStats.INT += value; break;
-            case StatModifier.StatType.BonusVIT: allyStats.VIT += value; break;
-            case StatModifier.StatType.BonusAGI: allyStats.AGI += value; break;
+            case StatModifier.StatType.STR: allyStats.flatSTR += value; break;
+            case StatModifier.StatType.DEX: allyStats.flatDEX += value; break;
+            case StatModifier.StatType.INT: allyStats.flatINT += value; break;
+            case StatModifier.StatType.VIT: allyStats.flatVIT += value; break;
+            case StatModifier.StatType.AGI: allyStats.flatAGI += value; break;
+            case StatModifier.StatType.BonusSTR: allyStats.bonusSTR += value; break;
+            case StatModifier.StatType.BonusDEX: allyStats.bonusDEX += value; break;
+            case StatModifier.StatType.BonusINT: allyStats.bonusINT += value; break;
+            case StatModifier.StatType.BonusVIT: allyStats.bonusVIT += value; break;
+            case StatModifier.StatType.BonusAGI: allyStats.bonusAGI += value; break;
 
             case StatModifier.StatType.FlatHP: allyStats.flatHp += value; break;
             case StatModifier.StatType.BonusHP: allyStats.bonusHp += value; break;
