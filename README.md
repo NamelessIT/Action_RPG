@@ -21,6 +21,8 @@ Hiệu quả chiến đấu phụ thuộc vào:
 - Thưởng cho người chơi **đánh thông minh**, không phải bấm nhanh
 - Người chơi giỏi luôn chơi hiệu quả hơn người chơi thường, ngay cả khi chỉ số tương đương
 
+## Docs
+Google Sheet: https://docs.google.com/spreadsheets/d/1JXstEUVSJqGH6ZNCWPK1aHXyYl7XqevFAI5u9oLZcuA/edit?usp=sharing
 ---
 
 ## Trụ cột Gameplay
