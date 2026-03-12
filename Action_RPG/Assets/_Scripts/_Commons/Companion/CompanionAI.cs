@@ -28,8 +28,8 @@ public class CompanionAI : MonoBehaviour
 
     [Header("--- Combat Settings ---")]
     public float attackRange = 2.0f;
-    public float attackCooldown = 1.5f;
-    private float lastAttackTime = 0f;
+    //public float attackCooldown = 1.5f;
+    private float lastAttackTime = 0f; 
     private bool isAttacking = false;
 
     [Header("--- Target Memory ---")]
@@ -40,6 +40,10 @@ public class CompanionAI : MonoBehaviour
     public float scanInterval = 0.5f;
     private float nextScanTime;
     public float scanRadius = 15f;
+
+    [Header("Catalyst Buff")]
+    private float focusBuffTimer = 0f;
+    private float currentFocusBuffAmount = 0f;
 
     private Vector3 currentVisualDir;
 
@@ -69,6 +73,19 @@ public class CompanionAI : MonoBehaviour
         {
             if (agent.isOnNavMesh) agent.isStopped = true;
             return;
+        }
+
+        // [MỚI] XỬ LÝ HẾT HẠN BUFF TỐC ĐÁNH TỪ CATALYST
+        if (focusBuffTimer > 0)
+        {
+            focusBuffTimer -= Time.deltaTime;
+            if (focusBuffTimer <= 0)
+            {
+                stats.bonusAttackSpeed -= currentFocusBuffAmount;
+                stats.CalculateCombatStatsOnly();
+                currentFocusBuffAmount = 0f;
+                Debug.Log("<color=gray>[Companion] Đã hết thời gian Buff Tốc Đánh từ Catalyst.</color>");
+            }
         }
 
         CleanDeadTargets();
@@ -299,9 +316,12 @@ public class CompanionAI : MonoBehaviour
         if (distToTarget <= attackRange)
         {
             agent.isStopped = true;
-            if (Time.time >= lastAttackTime + attackCooldown)
+            // [MỚI] Tính toán Cooldown dựa trên attackSpeed
+            float speed = stats.attackSpeed > 0 ? stats.attackSpeed : 1.0f;
+            float currentAttackCooldown = 1.0f / speed;
+            if (Time.time >= lastAttackTime + currentAttackCooldown)
             {
-                StartCoroutine(AttackRoutine());
+                StartCoroutine(AttackRoutine(speed));
             }
 
             Vector3 dir = (currentTarget.position - transform.position).normalized;
@@ -321,15 +341,27 @@ public class CompanionAI : MonoBehaviour
         }
     }
 
-    IEnumerator AttackRoutine()
+    IEnumerator AttackRoutine(float currentAttackSpeed)
     {
         isAttacking = true;
         lastAttackTime = Time.time;
         stats.EnterCombat();
 
-        if (animator != null) animator.SetTrigger("Attack");
+        if (animator != null)
+        {
+            // Tăng tốc độ chạy animation (nếu Animator của Companion có param này)
+            animator.SetFloat("AttackSpeedMultiplier", currentAttackSpeed);
+            animator.SetTrigger("Attack");
+        }
 
-        yield return new WaitForSeconds(0.3f);
+        // [MỚI] Chia tỉ lệ thời gian chờ gây sát thương dựa trên tốc độ đánh
+        float totalAnimTime = 1.0f / currentAttackSpeed;
+
+        // Cắn/chém ở mốc ~37.5% thời gian animation (tương đương 0.3s trong 0.8s cũ của bạn)
+        float timeToHit = totalAnimTime * 0.375f;
+        float timeToRecover = totalAnimTime - timeToHit;
+
+        yield return new WaitForSeconds(timeToHit);
 
         if (currentTarget != null)
         {
@@ -346,7 +378,8 @@ public class CompanionAI : MonoBehaviour
             }
         }
 
-        yield return new WaitForSeconds(0.5f);
+        // Đợi nốt phần animation còn lại thu tay về
+        yield return new WaitForSeconds(timeToRecover);
 
         isAttacking = false;
     }
@@ -399,5 +432,43 @@ public class CompanionAI : MonoBehaviour
 
         Gizmos.color = Color.magenta;
         Gizmos.DrawWireSphere(transform.position, teleportDistance);
+    }
+    // ==========================================================
+    // [MỚI] CHỨC NĂNG DÀNH CHO CATALYST SKILL
+    // ==========================================================
+
+    // Hàm ép buộc đổi mục tiêu và nhận Buff
+    public void ForceFocusTarget(Transform newTarget, float attackSpeedBuff, float buffDuration)
+    {
+        if (newTarget == null || stats.isDead) return;
+
+        // 1. Nhận mục tiêu mới
+        markedTargets.Clear();
+        markedTargets.Add(newTarget);
+        currentTarget = newTarget;
+
+        if (agent.isOnNavMesh)
+        {
+            agent.ResetPath();
+            agent.isStopped = false;
+        }
+
+        // 2. Cấp Buff an toàn (Chống cộng dồn)
+        if (focusBuffTimer <= 0)
+        {
+            // Nếu chưa có Buff -> Cộng Buff mới
+            currentFocusBuffAmount = attackSpeedBuff;
+            stats.bonusAttackSpeed += currentFocusBuffAmount;
+            stats.CalculateCombatStatsOnly();
+            Debug.Log($"<color=cyan>[Companion]</color> Đổi mục tiêu: {newTarget.name} và NHẬN Buff Tốc Đánh!");
+        }
+        else
+        {
+            // Nếu đang có Buff rồi -> Chỉ Làm Mới thời gian, KHÔNG cộng thêm
+            Debug.Log($"<color=cyan>[Companion]</color> Đổi mục tiêu: {newTarget.name} và LÀM MỚI thời gian Buff!");
+        }
+
+        // 3. Reset đồng hồ đếm ngược
+        focusBuffTimer = buffDuration;
     }
 }

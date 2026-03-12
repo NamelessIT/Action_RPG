@@ -232,7 +232,10 @@ public class AllyStats : Stats
         // 2. Tính Crit (Công thức copy từ RecalculateStats xuống)
         critChance = baseCritChance + critPerDEX * DEX + bonusCritChance;
         critMultiplier = baseCritMultiplier + bonusCritMultiplier;
-        
+
+        // 3. Tính AttackSpeed
+        attackSpeed = baseAttackSpeed * (1 + bonusAttackSpeed);
+
     }
     public void CalculateMoveSpeedOnly()
     {

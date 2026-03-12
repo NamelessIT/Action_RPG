@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: CatalystSkill
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: CatalystSkill
+  skillName: "Tia s\xE1ng "
+  icon: {fileID: 0}
+  skilDesc: "B\u1EAFn m\u1ED9t tia s\xE1ng \u0111\xE1nh d\u1EA5u (Focus) l\xEAn m\u1ED9t
+    k\u1EBB \u0111\u1ECBch.\nPet Focus: Companion s\u1EBD b\u1ECF m\u1ECDi vi\u1EC7c
+    \u0111ang l\xE0m \u0111\u1EC3 lao v\xE0o t\u1EA5n c\xF4ng k\u1EBB \u0111\u1ECBch
+    b\u1ECB \u0111\xE1nh d\u1EA5u n\xE0y v\u1EDBi +20% t\u1ED1c \u0111\u1ED9 \u0111\xE1nh."
+  skillType: 2
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 1
+  cooldown: 0
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 10
+  signatureEffectCode: 0
+  passiveStats: []
