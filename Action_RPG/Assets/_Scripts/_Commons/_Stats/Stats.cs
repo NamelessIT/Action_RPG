@@ -51,6 +51,9 @@ public class Stats : MonoBehaviour
     public float baseSinGain = 5f;
 
     [Header("--- Base Stats ---")]
+    public float baseSTR; public float baseDEX; public float baseINT; public float baseVIT; public float baseAGI;
+    public float flatSTR; public float flatDEX; public float flatINT; public float flatVIT; public float flatAGI;
+    public float bonusSTR; public float bonusDEX; public float bonusINT; public float bonusVIT; public float bonusAGI;
     public float STR; public float DEX; public float INT; public float VIT; public float AGI;
 
     [Header("--- Attack Stats ---")]
