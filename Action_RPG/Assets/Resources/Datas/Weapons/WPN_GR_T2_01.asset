@@ -26,6 +26,9 @@ MonoBehaviour:
   moveFlexibility: 0.9
   defenseValue: 5
   bonusCritChance: 0
+  attackRange: 8
+  isRanged: 1
+  projectilePrefab: {fileID: 5323527255875736035, guid: 322996f6bc69fd34d89e0fbe2d6ba4f7, type: 3}
   substats:
   - stat: 2
     val: 10
@@ -36,3 +39,4 @@ MonoBehaviour:
   reqVit: 0
   reqAgi: 5
   playerOnly: 0
+  comboEffects: []

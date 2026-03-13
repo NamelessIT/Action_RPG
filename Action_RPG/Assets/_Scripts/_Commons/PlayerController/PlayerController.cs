@@ -35,6 +35,15 @@ public class PlayerController : MonoBehaviour
     private bool nextAttackQueued = false; // Đã bấm chuột cho đòn tiếp theo chưa?
     [Range(0, 360)] public float attackAngle = 90f;
 
+    // --- [MỚI] Cờ đánh xa (Do EquipmentManager gán vào) ---
+    [HideInInspector] public bool isRangedAttack = false;
+
+    [HideInInspector] public GameObject projectilePrefab; // [MỚI]
+
+    // --- [MỚI] BIẾN CHỈNH ĐỘ CAO ĐẠN ---
+    [Tooltip("Độ cao tính từ chân nhân vật để sinh ra đạn")]
+    public float projectileSpawnOffsetY = 0.5f;
+
     // [MỚI] Danh sách kẻ địch đã trúng đòn trong nhịp chém hiện tại
     private List<Transform> hitTargets = new List<Transform>();
 
@@ -607,35 +616,47 @@ public class PlayerController : MonoBehaviour
         yield return new WaitForSeconds(startDamageTime);
 
         // 5. VÒNG LẶP QUÉT (SWEEPING)
-        float currentSweepTime = 0f;
-        bool hitAnyInSweep = false;
-
-        while (currentSweepTime < swingDuration)
+        // --- [SỬA Ở ĐÂY] CHIA NHÁNH ĐÁNH GẦN VÀ BẮN XA ---
+        if (isRangedAttack && projectilePrefab != null)
         {
-            currentSweepTime += Time.deltaTime;
-            float t = currentSweepTime / swingDuration;
+            // BẮN ĐẠN
+            Vector3 spawnPos = transform.position + Vector3.up * projectileSpawnOffsetY; // Sinh đạn ở ngang ngực (cao 1m)
+            Vector3 fireDir = (stats != null && stats.facingDirection != Vector3.zero) ? stats.facingDirection : transform.forward;
 
-            // Tính góc kiếm hiện tại
-            float currentAngle = Mathf.Lerp(startAngle, endAngle, t);
+            GameObject projObj = Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
+            Projectile projScript = projObj.GetComponent<Projectile>();
 
-            // Thực hiện quét
-            if (PerformPlayerSweep(currentAngle, isHeavy, currentStep))
+            if (projScript != null)
             {
-                hitAnyInSweep = true;
+                // Truyền dữ liệu cho viên đạn tự xử lý
+                projScript.Setup(this, fireDir, attackRange, isHeavy, currentStep);
+            }
+        }
+        else
+        {
+            // ĐÁNH CẬN CHIẾN (Quét hình quạt như cũ)
+            float currentSweepTime = 0f;
+            bool hitAnyInSweep = false;
+
+            while (currentSweepTime < swingDuration)
+            {
+                currentSweepTime += Time.deltaTime;
+                float t = currentSweepTime / swingDuration;
+                float currentAngle = Mathf.Lerp(startAngle, endAngle, t);
+
+                if (PerformPlayerSweep(currentAngle, isHeavy, currentStep))
+                {
+                    hitAnyInSweep = true;
+                }
+                yield return null;
             }
 
-            yield return null; // Chờ frame tiếp theo
-        }
-
-        if (hitAnyInSweep)
-        {
-            Debug.Log("Tấn công TRÚNG ĐỊCH -> Vào Combat");
-
-            // [MỚI] TÍNH TOÁN SIN DỰA TRÊN SỐ QUÁI TRÚNG ĐÒN
-            if (stats != null && hitTargets.Count > 0)
+            if (hitAnyInSweep)
             {
-                Debug.Log("PlayerController AttackRoutine chạy  stats.GainSinFromAttack");
-                stats.GainSinFromAttack(hitTargets.Count);
+                if (stats != null && hitTargets.Count > 0)
+                {
+                    stats.GainSinFromAttack(hitTargets.Count); // Tích Sin cho đánh gần
+                }
             }
         }
 
@@ -711,7 +732,7 @@ public class PlayerController : MonoBehaviour
     }
 
     // --- HÀM TÍNH TOÁN DAMAGE (Tách ra từ HandleDamageLogic cũ) ---
-    void ApplyDamageToTarget(Stats enemyStats, bool isHeavy, int stepIndex)
+    public void ApplyDamageToTarget(Stats enemyStats, bool isHeavy, int stepIndex)
     {
         if (enemyStats == null || enemyStats.currentHp <= 0) return;
 

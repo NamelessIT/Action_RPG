@@ -134,8 +134,16 @@ public class EquipmentManager : MonoBehaviour
         allyStats.bonusCritChance -= weaponToRemove.bonusCritChance;
 
         // Reset các biến dạng override (Gán đè)
-        // Lưu ý: Các biến này sẽ được set lại khi EquipInternal(baseWeapon) chạy ngay sau đó
         allyStats.moveFlexibility = 0;
+
+        // --- [MỚI] TRẢ TẦM ĐÁNH VỀ MẶC ĐỊNH (TAY KHÔNG) ---
+        PlayerController pc = GetComponent<PlayerController>();
+        if (pc != null)
+        {
+            pc.attackRange = 1.0f; // Trả về tầm đánh mặc định của tay không
+            pc.isRangedAttack = false; // Tắt cờ đánh xa
+            pc.projectilePrefab = null;
+        }
 
         // Xóa tham chiếu
         currentWeapon = null;
@@ -169,8 +177,18 @@ public class EquipmentManager : MonoBehaviour
 
         allyStats.baseAttackSpeed = newWeapon.baseAttackSpeed;
         allyStats.moveFlexibility = newWeapon.moveFlexibility;
-        allyStats.defenseValue += newWeapon.defenseValue; // Sửa lỗi cú pháp: dùng baseDefenseValue
+        allyStats.defenseValue += newWeapon.defenseValue;
         allyStats.bonusCritChance += newWeapon.bonusCritChance;
+
+        // --- [MỚI] GÁN TẦM ĐÁNH TỪ VŨ KHÍ SANG PLAYER ---
+        PlayerController pc = GetComponent<PlayerController>();
+        if (pc != null)
+        {
+            // Lấy từ file WeaponData (cái mà OnValidate đã tự sinh ra)
+            pc.attackRange = newWeapon.attackRange > 0 ? newWeapon.attackRange : 1.0f;
+            pc.isRangedAttack = newWeapon.isRanged;
+            pc.projectilePrefab = newWeapon.projectilePrefab; // [MỚI] Nạp đạn
+        }
 
         allyStats.RecalculateStats();
     }
