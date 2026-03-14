@@ -25,7 +25,7 @@ public class WeaponData : ScriptableObject
         Grimoire,
     }
     public enum WeaponAtkType
-    { 
+    {
         Physical,
         Magic,
         Both,
@@ -55,8 +55,16 @@ public class WeaponData : ScriptableObject
     public float defenseValue;
     public float bonusCritChance;
 
+    // --- [MỚI] THÊM THÔNG SỐ TẦM ĐÁNH ---
+    [Header("Combat Reach")]
+    [Tooltip("Tầm đánh thực tế trong game (Tính bằng mét)")]
+    public float attackRange;
+    [Tooltip("Vũ khí đánh xa (Tạo đạn/Projectile) hay Cận chiến?")]
+    public bool isRanged;
+    // [MỚI] Chứa Prefab của viên đạn (Mũi tên, Cầu phép...)
+    public GameObject projectilePrefab;
+
     [Header("Substats")]
-    // Đổi từ string sang List để Inspector hiển thị đẹp và code đọc được luôn
     public List<StatModifier> substats = new List<StatModifier>();
 
     [Header("Requirements")]
@@ -67,25 +75,40 @@ public class WeaponData : ScriptableObject
     public float reqAgi;
 
     public bool playerOnly;
-    // public string effectConfig; // Để sau
 
     [Header("Combo Effects")]
     [Tooltip("Index 0 = Đòn 1, Index 1 = Đòn 2...")]
     public List<AttackEffect> comboEffects;
 
-    // Hàm này chạy ngay lập tức khi bạn chỉnh sửa trong Inspector
     private void OnValidate()
     {
+        // 1. Tự động set Substats powerMod
         if (substats != null)
         {
             foreach (var sub in substats)
             {
-                // Nếu thấy powerMod bằng 0 (do Unity tạo mặc định), tự sửa thành 1
-                // Lưu ý: Dùng 0f để so sánh float chuẩn xác
                 if (sub.powerMod == 0f)
                 {
                     sub.powerMod = 1.0f;
                 }
+            }
+        }
+
+        // 2. [MỚI] TỰ ĐỘNG GÁN TẦM ĐÁNH THEO LOẠI VŨ KHÍ
+        // Chỉ tự động gán nếu attackRange đang bằng 0 (chưa thiết lập)
+        // Nhờ vậy, nếu bạn cố tình chỉnh tay một cây kiếm dài 3m, code sẽ không đè lại thành 2m.
+        if (attackRange == 0f)
+        {
+            switch (weaponType)
+            {
+                case WeaponType.Hand: attackRange = 1.0f; isRanged = false; break;
+                case WeaponType.Dagger: attackRange = 1.2f; isRanged = false; break;
+                case WeaponType.Sword: attackRange = 2.0f; isRanged = false; break;
+                case WeaponType.GreatSword: attackRange = 2.5f; isRanged = false; break;
+                case WeaponType.Spear: attackRange = 3.5f; isRanged = false; break;
+                case WeaponType.Staff: attackRange = 3.0f; isRanged = true; break; // Đánh xa vừa
+                case WeaponType.Grimoire: attackRange = 8.0f; isRanged = true; break; // Đánh xa
+                case WeaponType.Bow: attackRange = 15.0f; isRanged = true; break; // Xa nhất
             }
         }
     }

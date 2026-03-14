@@ -192,4 +192,10 @@ public class EnemyStats : Stats
 
         return false;
     }
+
+    protected override void Die()
+    {
+        base.Die();
+        //effect gạch đá vỡ vụn
+    }
 }
