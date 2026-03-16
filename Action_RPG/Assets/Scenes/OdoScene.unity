@@ -643,6 +643,7 @@ MonoBehaviour:
   AGI: 0
   physicalAtk: 0
   magicAtk: 0
+  damageOutputMultiplier: 1
   physicalLifeSteal: 0
   magicLifeSteal: 0
   baseAttackSpeed: 0
@@ -2607,6 +2608,7 @@ MonoBehaviour:
   AGI: 1
   physicalAtk: 1
   magicAtk: 1
+  damageOutputMultiplier: 1
   physicalLifeSteal: 0
   magicLifeSteal: 0
   baseAttackSpeed: 0
@@ -2915,6 +2917,7 @@ MonoBehaviour:
   AGI: 0
   physicalAtk: 120
   magicAtk: 60
+  damageOutputMultiplier: 1
   physicalLifeSteal: 0
   magicLifeSteal: 0
   baseAttackSpeed: 0
@@ -3796,7 +3799,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1995522831}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b410f924152f11b448df0a2fe28ffb4b, type: 3}
   m_Name: 
@@ -3888,6 +3891,7 @@ MonoBehaviour:
   AGI: 0
   physicalAtk: 10
   magicAtk: 0
+  damageOutputMultiplier: 1
   physicalLifeSteal: 0
   magicLifeSteal: 0
   baseAttackSpeed: 0

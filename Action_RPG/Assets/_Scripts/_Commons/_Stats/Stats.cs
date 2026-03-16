@@ -60,6 +60,9 @@ public class Stats : MonoBehaviour
     public float physicalAtk ;
     public float magicAtk ;
 
+    [Header("--- Modifiers ---")]
+    public float damageOutputMultiplier = 1.0f; // % sát thương gây ra, default là 100%
+
     [Header("--- LifeSteal ---")]
     public float physicalLifeSteal;
     public float magicLifeSteal;
@@ -115,6 +118,9 @@ public class Stats : MonoBehaviour
     // [MỚI] Event báo hiệu bị đánh (Dùng cho JuggernautSkill)
     // Tham số: (Lượng damage thực nhận, Bản thân Stats bị đánh)
     public event Action<float, Stats> OnDamageReceived;
+
+    // [MỚI] Cổng cho phép các Kỹ năng can thiệp trước khi nhận sát thương (DuelistSignature)
+    public Func<DamageInfo, bool> damageInterceptor;
 
     private float stunEndTime = 0f;
 
@@ -314,6 +320,12 @@ public class Stats : MonoBehaviour
     public virtual void TakeDamage(DamageInfo info)
     {
         if (isInvincible || isDead) return;
+
+        // [MỚI] Cho phép Signature chặn sát thương
+        if (damageInterceptor != null && damageInterceptor.Invoke(info))
+        {
+            return; // Nếu Interceptor trả về true -> Kẻ địch đã sập bẫy, HỦY việc mất máu!
+        }
 
         EnterCombat();
         // 1. TÍNH TOÁN DAMAGE VÀ SHIELD

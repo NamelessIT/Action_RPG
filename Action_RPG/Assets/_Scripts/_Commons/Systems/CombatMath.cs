@@ -85,11 +85,9 @@ public static class CombatMath
         // Nhân thêm hệ số phụ (Combo step / Charge attack)
         physMult *= externalMult;
         magicMult *= externalMult;
-        // [Source: 67] Raw Phys
-        float rawPhysical = attacker.physicalAtk * physMult * critMult;
-
-        // [Source: 68] Raw Magic
-        float rawMagic = attacker.magicAtk * magicMult * critMult;
+        // Raw Phys + Raw Magic
+        float rawPhysical = attacker.physicalAtk * physMult * critMult * attacker.damageOutputMultiplier; //buff hay debuff giảm damage apply vào đây
+        float rawMagic = attacker.magicAtk * magicMult * critMult * attacker.damageOutputMultiplier;
 
 
         // --- NẾU BỎ QUA GIẢM SÁT THƯƠNG (TRUE DAMAGE) ---

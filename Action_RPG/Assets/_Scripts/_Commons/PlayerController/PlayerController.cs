@@ -971,6 +971,22 @@ public class PlayerController : MonoBehaviour
         // 2. Gọi hàm đánh thường (Light Attack)
         PerformAttack(false);
     }
+    
+    // ÉP HƯỚNG NHÌN TỨC THỜI (DÙNG CHO KỸ NĂNG DỊCH CHUYỂN)
+    public void ForceFaceDirection(Vector3 dir)
+    {
+        dir.y = 0;
+        if (dir == Vector3.zero) return;
+
+        // Cập nhật biến nội bộ của PlayerController
+        currentVisualDir = dir.normalized;
+
+        // Ép Animator và Sprite quay ngay lập tức
+        UpdateAnimationDirection(currentVisualDir);
+
+        // Đồng bộ ngược lại cho Stats
+        if (stats != null) stats.facingDirection = currentVisualDir;
+    }
 
     public void SetTurnSmoothTime(float time) { if (stats != null) stats.turnDuration = time; }
     void OnDrawGizmosSelected() {
