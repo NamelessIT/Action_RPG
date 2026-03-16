@@ -42,7 +42,7 @@ public class PlayerController : MonoBehaviour
 
     // --- [MỚI] BIẾN CHỈNH ĐỘ CAO ĐẠN ---
     [Tooltip("Độ cao tính từ chân nhân vật để sinh ra đạn")]
-    public float projectileSpawnOffsetY = 0.5f;
+    public float projectileSpawnOffsetY = 0f;
 
     // [MỚI] Danh sách kẻ địch đã trúng đòn trong nhịp chém hiện tại
     private List<Transform> hitTargets = new List<Transform>();

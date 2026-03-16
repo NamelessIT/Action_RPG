@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: WarriorLiteSignature
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: WarriorLiteSignature
+  skillName: Rage
+  icon: {fileID: 0}
+  skilDesc: "H\xE0nh \u0111\u1ED9ng: Chuy\u1EC3n sang tr\u1EA1ng th\xE1i Rage, nh\u1EADn
+    buff trong 5 gi\xE2y\n\nHi\u1EC7u \u1EE9ng: Ngay l\u1EADp t\u1EE9c tho\xE1t kh\u1ECFi
+    m\u1ECDi hi\u1EC7u \u1EE9ng kh\u1ED1ng ch\u1EBF, t\u0103ng 50% bonusMoveSpeed,
+    30% bonusPhysicalAttack, 50% attackRange, v\xE0 mi\u1EC5n nhi\u1EC5m kh\u1ED1ng
+    ch\u1EBF trong 5 gi\xE2y."
+  skillType: 3
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 0
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 0
+  signatureEffectCode: 4
+  passiveStats: []
