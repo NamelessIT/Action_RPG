@@ -77,6 +77,8 @@ public static class SkillFactory
                 return typeof(ChrisSignature);
             case SkillData.SignatureEffectCode.LeoSignature:
                 return typeof(LeoSignature);
+            case SkillData.SignatureEffectCode.WarriorLiteSignature:
+                return typeof(WarriorLiteSignature);
             case SkillData.SignatureEffectCode.WarriorSignature:
                 return typeof(WarriorSignature);
             case SkillData.SignatureEffectCode.BattleMageLiteSignature:

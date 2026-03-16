@@ -588,4 +588,32 @@ public class Stats : MonoBehaviour
         // 6. Hủy Object sau 3 giây
         Destroy(gameObject, 3.0f);
     }
+    // [MỚI] Hàm giải phóng nhân vật khỏi mọi trạng thái khống chế hiện tại
+    public void BreakCrowdControl()
+    {
+        isStunned = false;
+        stunEndTime = 0f;
+
+        // Ngắt Coroutine Stun nếu đang chạy
+        if (currentStunCoroutine != null)
+        {
+            StopCoroutine(currentStunCoroutine);
+            currentStunCoroutine = null;
+        }
+
+        // Triệt tiêu động lượng (Lực đẩy lùi Knockback)
+        if (rb != null && !isDead)
+        {
+            rb.linearVelocity = Vector3.zero;
+        }
+
+        // Đảm bảo bật lại NavMeshAgent nếu lỡ bị KnockbackRoutine tắt đi
+        if (agent != null && !agent.enabled && !isDead)
+        {
+            agent.enabled = true;
+            if (agent.isOnNavMesh) agent.isStopped = false;
+        }
+
+        Debug.Log($"<color=orange>{gameObject.name} đã THOÁT KHỎI KHỐNG CHẾ!</color>");
+    }
 }
