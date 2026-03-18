@@ -75,6 +75,21 @@ public class CompanionAI : MonoBehaviour
             return;
         }
 
+        // [MỚI THÊM] NẾU ĐANG BỊ ÉP ĐỨNG YÊN THÌ KHÔNG LÀM GÌ CẢ
+        if (forceWaitTimer > 0)
+        {
+            forceWaitTimer -= Time.deltaTime;
+
+            // Xoay mặt nhìn theo hướng của Player cho ngầu (Cùng nhìn về phía trước)
+            Stats playerStats = player.GetComponent<Stats>();
+            if (playerStats != null && currentVisualDir != playerStats.facingDirection)
+            {
+                currentVisualDir = playerStats.facingDirection;
+                UpdateAnimationDirection(currentVisualDir);
+            }
+            return; // Thoát hàm Update, không chạy AI đuổi/đánh nữa
+        }
+
         // [MỚI] XỬ LÝ HẾT HẠN BUFF TỐC ĐÁNH TỪ CATALYST
         if (focusBuffTimer > 0)
         {
@@ -470,5 +485,27 @@ public class CompanionAI : MonoBehaviour
 
         // 3. Reset đồng hồ đếm ngược
         focusBuffTimer = buffDuration;
+    }
+    // ==========================================================
+    // [MỚI] CHỨC NĂNG ÉP ĐỨNG YÊN (CHO VANGUARD SKILL)
+    // ==========================================================
+    private float forceWaitTimer = 0f;
+
+    public void ForceWait(float duration)
+    {
+        forceWaitTimer = duration;
+
+        // Dừng NavMeshAgent
+        if (agent != null && agent.isOnNavMesh)
+        {
+            agent.ResetPath();
+            agent.isStopped = true;
+        }
+
+        // Xóa trạng thái đang đánh và ép về dáng đứng im
+        isAttacking = false;
+        if (animator != null) animator.SetBool("IsWalking", false);
+
+        Debug.Log($"<color=cyan>[Companion]</color> Đứng im nấp sau khiên trong {duration}s!");
     }
 }

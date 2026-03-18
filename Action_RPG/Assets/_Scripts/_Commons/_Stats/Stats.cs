@@ -600,6 +600,42 @@ public class Stats : MonoBehaviour
         // 6. Hủy Object sau 3 giây
         Destroy(gameObject, 3.0f);
     }
+    // [ĐÃ SỬA] Hàm Hồi Sinh an toàn vật lý
+    public virtual void Revive(float hpPercent)
+    {
+        if (!isDead) return;
+        isDead = false;
+        currentHp = maxHp * hpPercent;
+
+        // 1. Reset sạch động lượng (Tránh việc bị lưu lực đẩy từ lúc chết)
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+
+            // Tự động nhận diện: 
+            // Nếu là AI (có NavMeshAgent) -> Khóa vật lý (isKinematic = true)
+            // Nếu là Player điều khiển -> Mở vật lý (isKinematic = false)
+            rb.isKinematic = (GetComponent<UnityEngine.AI.NavMeshAgent>() != null);
+        }
+
+        // 2. Bật lại NavMeshAgent TRƯỚC
+        UnityEngine.AI.NavMeshAgent agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (agent != null) agent.enabled = true;
+
+        // 3. Bật lại Collider SAU (Để an toàn)
+        Collider col = GetComponent<Collider>();
+        if (col != null) col.enabled = true;
+
+        // Reset Animation
+        if (animator != null)
+        {
+            animator.Rebind();
+            animator.Update(0f);
+        }
+
+        Debug.Log($"<color=green>{gameObject.name} ĐÃ ĐƯỢC HỒI SINH!</color>");
+    }
     // [MỚI] Hàm giải phóng nhân vật khỏi mọi trạng thái khống chế hiện tại
     public void BreakCrowdControl()
     {
