@@ -98,7 +98,7 @@ namespace Game.Features.Vision.Core
             // [004-C] Log for debugging
             int newCount = playerVisible?.Count ?? 0;
             int companionCount = companionVisible?.Count ?? 0;
-            Debug.Log($"[004-C] Merged vision: Player={newCount} + Companion={companionCount} = {_mergedVisibleObjects.Count} total");
+            //Debug.Log($"[004-C] Merged vision: Player={newCount} + Companion={companionCount} = {_mergedVisibleObjects.Count} total");
 
             // [004-C] Publish merged vision
             OnMergedVisionChanged?.Invoke(_mergedVisibleObjects);

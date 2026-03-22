@@ -44,8 +44,8 @@ namespace Game.Features.Player
             // [002-A] Validate config
             if (_visionConfig == null)
             {
-                Debug.LogError("[PlayerVisionManager] VisionConfig is not assigned. Aborting vision initialization.");
-                return;
+                // Runtime fallback for auto-added component: create config with script defaults.
+                _visionConfig = ScriptableObject.CreateInstance<VisionConfig>();
             }
 
             // [002-A] Create and initialize service
@@ -97,7 +97,7 @@ namespace Game.Features.Player
         private void TryInitializeFadeEffects()
         {
             // [005-E] Find or create FadeEffectManager
-            _fadeEffectManager = FindObjectOfType<FadeEffectManager>();
+            _fadeEffectManager = FindFirstObjectByType<FadeEffectManager>();
             if (_fadeEffectManager == null)
             {
                 var fadeObj = new GameObject("VisionFadeEffectManager");
@@ -119,7 +119,7 @@ namespace Game.Features.Player
             // [004-C] Try to find companion manager
             if (_companionVisionManager == null)
             {
-                _companionVisionManager = FindObjectOfType<CompanionVisionManager>();
+                _companionVisionManager = FindFirstObjectByType<CompanionVisionManager>();
             }
 
             // [004-C] Create coordinator if not exists
@@ -168,7 +168,7 @@ namespace Game.Features.Player
         private void OnVisibleObjectsChanged(List<Collider> visibleObjects)
         {
             // [002-A] Log for debugging
-            Debug.Log($"[002-A] Player sees {visibleObjects.Count} objects");
+            //Debug.Log($"[002-A] Player sees {visibleObjects.Count} objects");
             
             // [005-E] Update fade effects when vision changes
             if (_fadeEffectManager != null && _visionConfig != null)
@@ -236,8 +236,6 @@ namespace Game.Features.Player
         {
             return _fadeEffectManager;
         }
-    }
-}
 
         /// <summary>
         /// Get list of currently visible objects.

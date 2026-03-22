@@ -36,8 +36,7 @@ namespace Game.Features.Companion
             // [003-A] Validate config
             if (_visionConfig == null)
             {
-                Debug.LogError("[CompanionVisionManager] VisionConfig is not assigned. Aborting vision initialization.");
-                return;
+                _visionConfig = ScriptableObject.CreateInstance<VisionConfig>();
             }
 
             // [003-A] Create and initialize service
@@ -95,7 +94,7 @@ namespace Game.Features.Companion
         private void OnCompanionVisibleObjectsChanged(List<Collider> visibleObjects)
         {
             // [003-A] Log for debugging
-            Debug.Log($"[003-A] Companion sees {visibleObjects.Count} objects");
+            //Debug.Log($"[003-A] Companion sees {visibleObjects.Count} objects");
             
             // Will be merged with player vision in TASK-004
         }

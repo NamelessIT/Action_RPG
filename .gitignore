@@ -36,3 +36,6 @@ mono_crash.*
 
 .github
 .gitnexus
+AGENTS.md
+CLAUDE.md
+agent_workspace.md

@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
+using UnityEngine.Rendering;
 
 namespace Game.Features.Vision.Systems
 {
@@ -11,12 +12,29 @@ namespace Game.Features.Vision.Systems
     /// </summary>
     public class FadeEffectManager : MonoBehaviour
     {
+        private struct MaterialState
+        {
+            public int SrcBlend;
+            public int DstBlend;
+            public int ZWrite;
+            public int RenderQueue;
+            public float Surface;
+            public float Mode;
+            public bool HasSurface;
+            public bool HasMode;
+        }
+
         [Header("Fade Parameters")]
         [SerializeField] private float _transitionSpeed = 2f; // [005-D] Alpha lerp speed
         [SerializeField] private AnimationCurve _fadeFalloff = AnimationCurve.EaseInOut(0, 1, 1, 0); // [005-B] Fade curve
+        [SerializeField] private float _rendererCacheRefreshInterval = 1f;
 
         private Dictionary<Renderer, float> _targetAlphas = new Dictionary<Renderer, float>();
         private Dictionary<Renderer, Coroutine> _activeCoroutines = new Dictionary<Renderer, Coroutine>();
+        private HashSet<Material> _preparedTransparentMaterials = new HashSet<Material>();
+        private Dictionary<Material, MaterialState> _materialStates = new Dictionary<Material, MaterialState>();
+        private Renderer[] _cachedRenderers = new Renderer[0];
+        private float _nextRendererCacheRefreshTime = 0f;
         private float _lastUpdateTime = 0f;
         private const float UPDATE_INTERVAL = 0.1f; // Throttle updates
 
@@ -40,8 +58,14 @@ namespace Game.Features.Vision.Systems
             if (visibleObjects == null)
                 visibleObjects = new List<Collider>();
 
-            // [005-A] Get all objects in scene with renderers
-            var allRenderers = FindObjectsOfType<Renderer>();
+            RefreshRendererCacheIfNeeded();
+
+            // Build visible roots so multi-renderer prefabs fade as one object.
+            var visibleRoots = BuildVisibleRoots(visibleObjects);
+            var visibleColliderSet = new HashSet<Collider>(visibleObjects);
+
+            // [006-H] Use cached renderer array to reduce scene scan overhead.
+            var allRenderers = _cachedRenderers;
 
             for (int i = 0; i < allRenderers.Length; i++)
             {
@@ -52,11 +76,11 @@ namespace Game.Features.Vision.Systems
                     continue;
 
                 // [005-B] Check if visible
-                bool isVisible = IsObjectVisible(renderer, visibleObjects);
+                bool isVisible = IsObjectVisible(renderer, visibleColliderSet, visibleRoots);
 
                 // [005-B] Calculate target alpha based on distance and visibility
                 float targetAlpha = CalculateTargetAlpha(
-                    renderer.transform.position,
+                    renderer.bounds,
                     playerPosition,
                     isVisible,
                     fadeStartDist,
@@ -91,22 +115,64 @@ namespace Game.Features.Vision.Systems
         /// Check if a renderer's collider is in visible objects list.
         /// [005-A] Matches renderer to collider safely
         /// </summary>
-        private bool IsObjectVisible(Renderer renderer, List<Collider> visibleObjects)
+        private bool IsObjectVisible(Renderer renderer, HashSet<Collider> visibleColliders, HashSet<Transform> visibleRoots)
         {
-            if (renderer == null || visibleObjects == null || visibleObjects.Count == 0)
+            if (renderer == null || visibleColliders == null || visibleColliders.Count == 0)
                 return false;
+
+            Transform root = GetRootTransform(renderer.transform);
+            if (root != null && visibleRoots.Contains(root))
+                return true;
 
             // [005-A] Try to get collider from renderer's gameobject
             Collider collider = renderer.GetComponent<Collider>();
-            if (collider != null && visibleObjects.Contains(collider))
+            if (collider != null && visibleColliders.Contains(collider))
                 return true;
 
             // [005-A] Also check parent colliders
             collider = renderer.GetComponentInParent<Collider>();
-            if (collider != null && visibleObjects.Contains(collider))
+            if (collider != null && visibleColliders.Contains(collider))
                 return true;
 
             return false;
+        }
+
+        private void RefreshRendererCacheIfNeeded()
+        {
+            if (Time.time < _nextRendererCacheRefreshTime && _cachedRenderers.Length > 0)
+                return;
+
+            _cachedRenderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+            _nextRendererCacheRefreshTime = Time.time + Mathf.Max(0.1f, _rendererCacheRefreshInterval);
+        }
+
+        private HashSet<Transform> BuildVisibleRoots(List<Collider> visibleObjects)
+        {
+            var roots = new HashSet<Transform>();
+            for (int i = 0; i < visibleObjects.Count; i++)
+            {
+                Collider col = visibleObjects[i];
+                if (col == null)
+                    continue;
+
+                Transform root = GetRootTransform(col.transform);
+                if (root != null)
+                    roots.Add(root);
+            }
+
+            return roots;
+        }
+
+        private Transform GetRootTransform(Transform t)
+        {
+            if (t == null)
+                return null;
+
+            Rigidbody rb = t.GetComponentInParent<Rigidbody>();
+            if (rb != null)
+                return rb.transform;
+
+            return t.root;
         }
 
         /// <summary>
@@ -114,7 +180,7 @@ namespace Game.Features.Vision.Systems
         /// [005-B] Smooth falloff between fadeStartDistance and fadeCompleteDistance
         /// </summary>
         private float CalculateTargetAlpha(
-            Vector3 objectPos,
+            Bounds objectBounds,
             Vector3 playerPos,
             bool isVisible,
             float fadeStartDist,
@@ -124,8 +190,8 @@ namespace Game.Features.Vision.Systems
             if (isVisible)
                 return 1f;
 
-            // [005-B] Calculate distance
-            float distance = Vector3.Distance(objectPos, playerPos);
+            // [005-B] Calculate distance from player to nearest bounds point.
+            float distance = Vector3.Distance(objectBounds.ClosestPoint(playerPos), playerPos);
 
             // [005-B] If inside fade start distance, full alpha
             if (distance < fadeStartDist)
@@ -210,10 +276,18 @@ namespace Game.Features.Vision.Systems
             if (renderer == null || renderer.material == null)
                 return 1f;
 
-            // [005-C] Check for _Color property
-            if (renderer.material.HasProperty("_Color"))
+            Material mat = renderer.material;
+
+            // URP/HDRP Lit and many custom shaders
+            if (mat.HasProperty("_BaseColor"))
             {
-                return renderer.material.color.a;
+                return mat.GetColor("_BaseColor").a;
+            }
+
+            // [005-C] Check for _Color property
+            if (mat.HasProperty("_Color"))
+            {
+                return mat.color.a;
             }
 
             return 1f;
@@ -228,13 +302,96 @@ namespace Game.Features.Vision.Systems
             if (renderer == null || renderer.material == null)
                 return;
 
-            // [005-C] Modify _Color.a property
-            if (renderer.material.HasProperty("_Color"))
+            float clampedAlpha = Mathf.Clamp01(alpha);
+            Material mat = renderer.material;
+
+            if (clampedAlpha < 0.99f)
             {
-                Color color = renderer.material.color;
-                color.a = Mathf.Clamp01(alpha);
-                renderer.material.color = color;
+                PrepareMaterialForTransparency(mat);
             }
+            else
+            {
+                RestoreOpaqueMaterial(mat);
+            }
+
+            // URP/HDRP Lit and many custom shaders
+            if (mat.HasProperty("_BaseColor"))
+            {
+                Color baseColor = mat.GetColor("_BaseColor");
+                baseColor.a = clampedAlpha;
+                mat.SetColor("_BaseColor", baseColor);
+            }
+
+            // [005-C] Modify _Color.a property
+            if (mat.HasProperty("_Color"))
+            {
+                Color color = mat.color;
+                color.a = clampedAlpha;
+                mat.color = color;
+            }
+
+            // Keep objects loaded but hidden visually when fully faded.
+            renderer.enabled = clampedAlpha > 0.02f;
+        }
+
+        private void PrepareMaterialForTransparency(Material mat)
+        {
+            if (mat == null)
+                return;
+
+            if (!_materialStates.ContainsKey(mat))
+            {
+                var state = new MaterialState
+                {
+                    SrcBlend = mat.HasProperty("_SrcBlend") ? mat.GetInt("_SrcBlend") : (int)BlendMode.One,
+                    DstBlend = mat.HasProperty("_DstBlend") ? mat.GetInt("_DstBlend") : (int)BlendMode.Zero,
+                    ZWrite = mat.HasProperty("_ZWrite") ? mat.GetInt("_ZWrite") : 1,
+                    RenderQueue = mat.renderQueue,
+                    HasSurface = mat.HasProperty("_Surface"),
+                    HasMode = mat.HasProperty("_Mode"),
+                    Surface = mat.HasProperty("_Surface") ? mat.GetFloat("_Surface") : 0f,
+                    Mode = mat.HasProperty("_Mode") ? mat.GetFloat("_Mode") : 0f
+                };
+                _materialStates[mat] = state;
+            }
+
+            if (_preparedTransparentMaterials.Contains(mat))
+                return;
+
+            // URP/HDRP style surface controls
+            if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1f);
+            if (mat.HasProperty("_AlphaClip")) mat.SetFloat("_AlphaClip", 0f);
+
+            // Built-in Standard shader style mode controls
+            if (mat.HasProperty("_Mode")) mat.SetFloat("_Mode", 2f);
+
+            mat.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+            mat.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
+            mat.SetInt("_ZWrite", 0);
+            mat.DisableKeyword("_ALPHATEST_ON");
+            mat.EnableKeyword("_ALPHABLEND_ON");
+            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            mat.renderQueue = (int)RenderQueue.Transparent;
+
+            _preparedTransparentMaterials.Add(mat);
+        }
+
+        private void RestoreOpaqueMaterial(Material mat)
+        {
+            if (mat == null || !_preparedTransparentMaterials.Contains(mat))
+                return;
+
+            if (_materialStates.TryGetValue(mat, out MaterialState state))
+            {
+                if (mat.HasProperty("_SrcBlend")) mat.SetInt("_SrcBlend", state.SrcBlend);
+                if (mat.HasProperty("_DstBlend")) mat.SetInt("_DstBlend", state.DstBlend);
+                if (mat.HasProperty("_ZWrite")) mat.SetInt("_ZWrite", state.ZWrite);
+                if (state.HasSurface && mat.HasProperty("_Surface")) mat.SetFloat("_Surface", state.Surface);
+                if (state.HasMode && mat.HasProperty("_Mode")) mat.SetFloat("_Mode", state.Mode);
+                mat.renderQueue = state.RenderQueue;
+            }
+
+            _preparedTransparentMaterials.Remove(mat);
         }
 
         /// <summary>
@@ -255,6 +412,8 @@ namespace Game.Features.Vision.Systems
 
             _targetAlphas.Clear();
             _activeCoroutines.Clear();
+            _preparedTransparentMaterials.Clear();
+            _materialStates.Clear();
             Debug.Log("[005-A] FadeEffectManager: Cleared all fade states.");
         }
 

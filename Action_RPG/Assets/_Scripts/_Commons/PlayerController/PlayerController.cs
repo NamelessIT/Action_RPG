@@ -4,6 +4,7 @@ using System.Collections;
 using UnityEngine.Rendering;
 using System;
 using System.Collections.Generic; // [MỚI]
+using Game.Features.Player;
 
 // nhiệm vụ: làm thêm attack cooldown dựa trên attack speed AllyStats.attackSpeed (có kết hợp animator) và hoàn thiện animator
 public class PlayerController : MonoBehaviour
