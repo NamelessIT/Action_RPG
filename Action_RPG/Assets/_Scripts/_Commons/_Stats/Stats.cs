@@ -60,6 +60,9 @@ public class Stats : MonoBehaviour
     public float physicalAtk ;
     public float magicAtk ;
 
+    [Header("--- Modifiers ---")]
+    public float damageOutputMultiplier = 1.0f; // % sát thương gây ra, default là 100%
+
     [Header("--- LifeSteal ---")]
     public float physicalLifeSteal;
     public float magicLifeSteal;
@@ -115,6 +118,9 @@ public class Stats : MonoBehaviour
     // [MỚI] Event báo hiệu bị đánh (Dùng cho JuggernautSkill)
     // Tham số: (Lượng damage thực nhận, Bản thân Stats bị đánh)
     public event Action<float, Stats> OnDamageReceived;
+
+    // [MỚI] Cổng cho phép các Kỹ năng can thiệp trước khi nhận sát thương (DuelistSignature)
+    public Func<DamageInfo, bool> damageInterceptor;
 
     private float stunEndTime = 0f;
 
@@ -314,6 +320,12 @@ public class Stats : MonoBehaviour
     public virtual void TakeDamage(DamageInfo info)
     {
         if (isInvincible || isDead) return;
+
+        // [MỚI] Cho phép Signature chặn sát thương
+        if (damageInterceptor != null && damageInterceptor.Invoke(info))
+        {
+            return; // Nếu Interceptor trả về true -> Kẻ địch đã sập bẫy, HỦY việc mất máu!
+        }
 
         EnterCombat();
         // 1. TÍNH TOÁN DAMAGE VÀ SHIELD
@@ -587,5 +599,69 @@ public class Stats : MonoBehaviour
 
         // 6. Hủy Object sau 3 giây
         Destroy(gameObject, 3.0f);
+    }
+    // [ĐÃ SỬA] Hàm Hồi Sinh an toàn vật lý
+    public virtual void Revive(float hpPercent)
+    {
+        if (!isDead) return;
+        isDead = false;
+        currentHp = maxHp * hpPercent;
+
+        // 1. Reset sạch động lượng (Tránh việc bị lưu lực đẩy từ lúc chết)
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+
+            // Tự động nhận diện: 
+            // Nếu là AI (có NavMeshAgent) -> Khóa vật lý (isKinematic = true)
+            // Nếu là Player điều khiển -> Mở vật lý (isKinematic = false)
+            rb.isKinematic = (GetComponent<UnityEngine.AI.NavMeshAgent>() != null);
+        }
+
+        // 2. Bật lại NavMeshAgent TRƯỚC
+        UnityEngine.AI.NavMeshAgent agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (agent != null) agent.enabled = true;
+
+        // 3. Bật lại Collider SAU (Để an toàn)
+        Collider col = GetComponent<Collider>();
+        if (col != null) col.enabled = true;
+
+        // Reset Animation
+        if (animator != null)
+        {
+            animator.Rebind();
+            animator.Update(0f);
+        }
+
+        Debug.Log($"<color=green>{gameObject.name} ĐÃ ĐƯỢC HỒI SINH!</color>");
+    }
+    // [MỚI] Hàm giải phóng nhân vật khỏi mọi trạng thái khống chế hiện tại
+    public void BreakCrowdControl()
+    {
+        isStunned = false;
+        stunEndTime = 0f;
+
+        // Ngắt Coroutine Stun nếu đang chạy
+        if (currentStunCoroutine != null)
+        {
+            StopCoroutine(currentStunCoroutine);
+            currentStunCoroutine = null;
+        }
+
+        // Triệt tiêu động lượng (Lực đẩy lùi Knockback)
+        if (rb != null && !isDead)
+        {
+            rb.linearVelocity = Vector3.zero;
+        }
+
+        // Đảm bảo bật lại NavMeshAgent nếu lỡ bị KnockbackRoutine tắt đi
+        if (agent != null && !agent.enabled && !isDead)
+        {
+            agent.enabled = true;
+            if (agent.isOnNavMesh) agent.isStopped = false;
+        }
+
+        Debug.Log($"<color=orange>{gameObject.name} đã THOÁT KHỎI KHỐNG CHẾ!</color>");
     }
 }

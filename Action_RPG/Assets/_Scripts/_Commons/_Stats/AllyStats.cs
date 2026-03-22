@@ -330,4 +330,39 @@ public class AllyStats : Stats
 
         Debug.Log($"<color=purple>Đánh trúng {enemiesHitCount} địch -> Hồi {totalSinEarned:F2} Sin (Current: {currentSin:F1}/{maxSin})</color>");
     }
+    // [MỚI] Phe Ally chết thì không bị Destroy để còn Hồi sinh
+    protected override void Die()
+    {
+        if (isDead) return;
+        isDead = true;
+        Debug.Log($"{gameObject.name} đã gục ngã (Chờ hồi sinh)!");
+        // [QUAN TRỌNG NHẤT] Hủy mọi Coroutine (Knockback/Stun/Buff) đang chạy ngầm trên Stats
+        StopAllCoroutines();
+        Collider col = GetComponent<Collider>();
+        if (col != null) col.enabled = false;
+
+        Rigidbody myRb = GetComponent<Rigidbody>();
+        if (myRb != null)
+        {
+            myRb.linearVelocity = Vector3.zero;
+            //myRb.angularVelocity = Vector3.zero;
+            myRb.isKinematic = true; // Đóng băng vật lý ngay lập tức
+        }
+
+        var agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (agent != null)
+        {
+            agent.isStopped = true;
+            agent.enabled = false;
+        }
+
+        // Tắt các Script điều khiển
+        var playerCtrl = GetComponent<PlayerController>();
+        if (playerCtrl != null) playerCtrl.enabled = false;
+
+        var companionAI = GetComponent<CompanionAI>();
+        if (companionAI != null) companionAI.enabled = false;
+
+        // ĐẶC BIỆT: KHÔNG GỌI Destroy(gameObject) Ở ĐÂY
+    }
 }

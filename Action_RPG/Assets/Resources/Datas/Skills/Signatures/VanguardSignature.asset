@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: VanguardSignature
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: VanguardSignature
+  skillName: "Ph\xE1o \u0110\xE0i Titan"
+  icon: {fileID: 0}
+  skilDesc: "\"H\xE0nh \u0111\u1ED9ng: C\u1EAFm khi\xEAn xu\u1ED1ng \u0111\u1EA5t,
+    tele companion v\u1EC1 ch\u1ED7 player (n\u1EBFu \u0111\xE3 ch\u1EBFt th\xEC
+    h\u1ED3i sinh v\u1EDBi 30% m\xE1u), tri\u1EC7u h\u1ED3i m\u1ED9t b\u1EE9c t\u01B0\u1EDDng
+    n\u0103ng l\u01B0\u1EE3ng kh\u1ED5ng l\u1ED3 h\xECnh b\xE1n nguy\u1EC7t.\n\nHi\u1EC7u
+    \u1EE9ng: Ch\u1EB7n 100% s\xE1t th\u01B0\u01A1ng t\u1EEB ph\xEDa tr\u01B0\u1EDBc
+    cho b\u1EA3n th\xE2n v\xE0 \u0111\u1ED3ng minh (Companion). Ph\u1EA3n l\u1EA1i
+    30% s\xE1t th\u01B0\u01A1ng nh\u1EADn v\xE0o l\xEAn k\u1EBB \u0111\u1ECBch g\xE2y
+    s\xE1t th\u01B0\u01A1ng.\""
+  skillType: 3
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 0
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 0
+  signatureEffectCode: 11
+  passiveStats: []

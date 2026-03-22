@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: DuelistSignature
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: DuelistSignature
+  skillName: Grand Riposte
+  icon: {fileID: 0}
+  skilDesc: "H\xE0nh \u0111\u1ED9ng: Ch\u1EC9 khi k\xEDch ho\u1EA1t ngay khi b\u1ECB
+    \u0111\xE1nh tr\xFAng (gi\u1ED1ng parry) th\xEC m\u1EDBi c\xF3 hi\u1EC7u qu\u1EA3.
+    N\u1EBFu k\xEDch ho\u1EA1t sai th\xEC coi nh\u01B0 m\u1EA5t chi\xEAu lu\xF4n.\r\n\r\n\r\n\r\nHi\u1EC7u
+    \u1EE9ng: L\xE0m ng\u01B0ng \u0111\u1ECDng th\u1EDDi gian trong 1s, Leonard l\u01B0\u1EDBt
+    xuy\xEAn qua k\u1EBB \u0111\u1ECBch t\u1EA5n c\xF4ng m\xECnh, g\xE2y s\xE1t th\u01B0\u01A1ng
+    c\u1EF1c l\u1EDBn + V\xF4 hi\u1EC7u h\xF3a v\u0169 kh\xED c\u1EE7a \u0111\u1ECBch
+    trong 10s (gi\u1EA3m 50% damage c\u1EE7a \u0111\u1ECBch)."
+  skillType: 3
+  skillPhysicalMultiplier: 5
+  skillMagicMultiplier: 0
+  cooldown: 0
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 0
+  signatureEffectCode: 16
+  passiveStats: []
