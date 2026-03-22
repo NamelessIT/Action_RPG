@@ -4219,7 +4219,7 @@ PrefabInstance:
     - target: {fileID: 1448595461306789732, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: pickUpWeapon
       value: 
-      objectReference: {fileID: 11400000, guid: 2e858d6a1b8033f4391318d509b45af8, type: 2}
+      objectReference: {fileID: 11400000, guid: e5a367ad3ee28ed4a926ada3901390b8, type: 2}
     - target: {fileID: 4658667183789246777, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: attackAngle
       value: 90

@@ -33,3 +33,6 @@ mono_crash.*
 *.app
 *.exe
 *.unitypackage
+
+.github
+.gitnexus

@@ -114,6 +114,26 @@ public class PlayerController : MonoBehaviour
         equipmentManager = GetComponent<EquipmentManager>();
         skillManager = GetComponent<SkillManager>();
 
+        // [002-E] Initialize player vision manager
+        InitializeVisionManager();
+    }
+
+    /// <summary>
+    /// Initialize player vision manager. Called in Start().
+    /// </summary>
+    private void InitializeVisionManager()
+    {
+        // [002-E] Get or create PlayerVisionManager component
+        PlayerVisionManager visionManager = GetComponent<PlayerVisionManager>();
+        if (visionManager == null)
+        {
+            visionManager = gameObject.AddComponent<PlayerVisionManager>();
+            Debug.Log("[002-E] PlayerVisionManager component added automatically.");
+        }
+        else
+        {
+            Debug.Log("[002-E] PlayerVisionManager already exists on Player GameObject.");
+        }
     }
 
     void FixedUpdate()
