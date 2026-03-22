@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using Game.Features.Companion; // [003-E] For CompanionVisionManager
 
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(AllyStats))] // Thú cưng thuộc phe Ally
@@ -13,6 +14,9 @@ public class CompanionAI : MonoBehaviour
     private AllyStats stats;
     private Animator animator;
     private SpriteRenderer spriteRenderer;
+    
+    // [003-E] Vision system integration
+    private CompanionVisionManager _visionManager;
 
     [Header("--- Follow Settings ---")]
     [Tooltip("Khoảng cách bắt đầu chạy theo Player")]
@@ -65,6 +69,19 @@ public class CompanionAI : MonoBehaviour
         }
 
         currentVisualDir = Vector3.back;
+        
+        // [003-E] Initialize companion vision manager
+        _visionManager = GetComponent<CompanionVisionManager>();
+        if (_visionManager == null)
+        {
+            // [003-E] Auto-create if not present
+            _visionManager = gameObject.AddComponent<CompanionVisionManager>();
+            Debug.Log("[003-E] CompanionVisionManager was auto-created and attached to Companion.");
+        }
+        else
+        {
+            Debug.Log("[003-E] CompanionVisionManager already attached to Companion.");
+        }
     }
 
     void Update()

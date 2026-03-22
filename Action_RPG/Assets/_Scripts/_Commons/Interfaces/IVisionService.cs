@@ -42,5 +42,18 @@ namespace Game.Features.Vision.Interfaces
         /// Event triggered when visible objects list changes.
         /// </summary>
         event System.Action<List<Collider>> OnVisibleObjectsChanged;
+
+        /// <summary>
+        /// Event triggered when merged vision changes (player + companion).
+        /// [004-B] Published by VisionCoordinator for UI/Fade integration.
+        /// </summary>
+        event System.Action<List<Collider>> OnMergedVisionChanged;
+
+        /// <summary>
+        /// Publish merged vision update to subscribers.
+        /// [004-B] Used by VisionCoordinator to notify UI/Fade systems.
+        /// </summary>
+        /// <param name="mergedObjects">List of merged visible objects</param>
+        void PublishMergedVision(List<Collider> mergedObjects);
     }
 }

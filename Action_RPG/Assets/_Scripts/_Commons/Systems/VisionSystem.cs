@@ -129,5 +129,54 @@ namespace Game.Features.Vision.Core
 
             return _model;
         }
+
+        /// <summary>
+        /// Create a merged vision result from multiple vision sources.
+        /// [004-A] Combines player + companion visible objects without duplicates.
+        /// </summary>
+        /// <param name="playerVisible">List of objects visible to player</param>
+        /// <param name="companionVisible">List of objects visible to companion</param>
+        /// <returns>Combined list of all visible objects (no duplicates)</returns>
+        public static List<Collider> MergeVisionResults(
+            List<Collider> playerVisible,
+            List<Collider> companionVisible)
+        {
+            // [004-A] Validate inputs
+            if (playerVisible == null)
+                playerVisible = new List<Collider>();
+            if (companionVisible == null)
+                companionVisible = new List<Collider>();
+
+            // [004-A] Create merged list starting with player visible
+            var merged = new List<Collider>(playerVisible);
+
+            // [004-A] Add companion objects (avoid duplicates)
+            foreach (var obj in companionVisible)
+            {
+                if (obj != null && !merged.Contains(obj))
+                {
+                    merged.Add(obj);
+                }
+            }
+
+            return merged;
+        }
+
+        /// <summary>
+        /// Publish merged vision update to subscribers.
+        /// [004-B] Used by VisionCoordinator to notify UI/Fade systems.
+        /// </summary>
+        /// <param name="mergedObjects">List of merged visible objects</param>
+        public void PublishMergedVision(List<Collider> mergedObjects)
+        {
+            // [004-B] Notify subscribers
+            OnMergedVisionChanged?.Invoke(mergedObjects);
+        }
+
+        /// <summary>
+        /// Event fired when merged vision changes (player + companion combined).
+        /// [004-B] Listeners: FadeEffectManager, UI systems, etc.
+        /// </summary>
+        public event System.Action<List<Collider>> OnMergedVisionChanged;
     }
 }

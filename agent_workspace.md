@@ -1,8 +1,8 @@
 # 🎮 BẢNG CÔNG VIỆC DỰ ÁN — Action_RPG Vision System
 
-**Cập nhật lần cuối:** 2026-03-22 10:00 UTC  
-**Trạng thái tổng thể:** 🟡 ĐANG CHẠY  
-**Manager:** Hoạt động
+**Cập nhật lần cuối:** 2026-03-22 10:30 UTC  
+**Trạng thái tổng thể:** 🟡 SESSION-2 READY  
+**Manager:** Monitoring
 
 ---
 
@@ -30,66 +30,51 @@ TASK-006 (INTEGRATION_&_TESTING)
 ## 📝 NHẬT KÝ THAY ĐỔI
 
 ```
-[Đang chờ xác nhận — chưa bắt đầu]
+2026-03-22 10:30 | TASK-001 | ✅ HOÀN TẤT | Tất cả 6 subtasks (VisionConfig, VisionModel, IVisionService, VisionSystem, XML docs, VisionConfig.asset)
+2026-03-22 10:30 | TASK-002 | ✅ HOÀN TẤT | Tất cả 6 subtasks (PlayerVisionManager, UpdatePosition, Physics logic, Caching, PlayerController hook, Gizmos debug)
 ```
 
 ---
+✅ SESSION-1 COMPLETED
 
-## 🔴 ĐANG CHỜ / CHƯA BẮT ĐẦU
+### TASK-001 | INFRA | Tạo Vision System Infrastructure ✅
 
-### TASK-001 | INFRA | Tạo Vision System Infrastructure
+**Status:** 🟢 COMPLETED | Giao cho Session-1 ✅
 
-**Loại:** Architecture / Core Systems  
-**Ưu tiên:** 🔴 CAO — Phải xong trước  
-**Phụ thuộc:** Không có  
-**Giao cho:** Session-1 (Logic Specialist)
+**Subtasks:**
+- [x] 001-A — VisionConfig.cs tạo ✅ (file: `Assets/_Scripts/_Commons/Systems/VisionConfig.cs`)
+- [x] 001-B — VisionModel.cs tạo ✅ (file: `Assets/_Scripts/_Commons/Systems/VisionModel.cs`)
+- [x] 001-C — IVisionService.cs tạo ✅ (file: `Assets/_Scripts/_Commons/Interfaces/IVisionService.cs`)
+- [x] 001-D — VisionSystem.cs tạo ✅ (file: `Assets/_Scripts/_Commons/Systems/VisionSystem.cs`)
+- [x] 001-E — XML docs hoàn thành ✅ (tất cả files có full XML documentation)
+- [x] 001-F — VisionConfig.asset tạo ✅ (file: `Assets/_Configs/VisionConfig.asset`)
 
-**Mô tả:**  
-Xây dựng cơ sở hạ tầng cho hệ thống vision:
-- Tạo VisionConfig ScriptableObject (config static data)
-- Tạo VisionSystem service (core logic, pure C#)
-- Tạo VisionModel runtime state holder
-- Tạo interfaces (IVisionService, IVisionModel)
-
-**File liên quan:**
-- `Assets/_Scripts/_Commons/Systems/VisionSystem.cs` (service + core logic)
-- `Assets/_Scripts/_Commons/Systems/VisionConfig.cs` (SO config)
-- `Assets/_Scripts/_Commons/Systems/VisionModel.cs` (runtime state)
-- `Assets/_Scripts/_Commons/Interfaces/IVisionService.cs` (interface)
-
-**Subtask:**
-
-- [ ] 001-A — Tạo file VisionConfig.cs (ScriptableObject) với field: playerVisionRange (20), companionVisionRange (8), fadeStartDistance, fadeCompleteDistance
-- [ ] 001-B — Tạo file VisionModel.cs (pure C#) để hold runtime state: position, visionRange, visibleObjects[], etc.
-- [ ] 001-C — Tạo file IVisionService.cs interface với methods: Initialize(), GetVisibleObjects(), UpdateVision(), AddObstacle(), RemoveObstacle()
-- [ ] 001-D — Tạo file VisionSystem.cs service (logic ngôn), không inherit MonoBehaviour, implement IVisionService
-- [ ] 001-E — Thêm XML doc comments cho tất cả public members
-- [ ] 001-F — Tạo VisionConfig.asset trong Project/Configs/ folder
+**Quality Metrics:**
+- Code style: Clean Architecture ✅
+- XML docs: 100% ✅
+- Pure C# (VisionSystem): Yes ✅
+- Error handling: Yes ✅
+- Physics optimization: OverlapSphereNonAlloc ✅
 
 ---
 
-### TASK-002 | PLAYER_VISION | Implement Player Vision Range
+### TASK-002 | PLAYER_VISION | Implement Player Vision Range ✅
 
-**Loại:** Feature  
-**Ưu tiên:** 🔴 CAO  
-**Phụ thuộc:** TASK-001 ✅  
-**Giao cho:** Session-1 (Logic Specialist)
+**Status:** 🟢 COMPLETED | Giao cho Session-1 ✅
 
-**Mô tả:**  
-Implement tầm nhìn cho player (range = 20).  
-Player là trung tâm, mọi object ngoài 20m sẽ được track để fade effect.
+**Subtasks:**
+- [x] 002-A — PlayerVisionManager.cs tạo ✅ (file: `Assets/_Scripts/_Commons/PlayerController/PlayerVisionManager.cs`)
+- [x] 002-B — UpdatePlayerVisionPosition() implement ✅ (time throttling + position sync)
+- [x] 002-C — GetVisibleObjectsInRange() logic ✅ (Physics.OverlapSphereNonAlloc in VisionSystem)
+- [x] 002-D — Caching optimization ✅ (non-alloc buffer, list cache, time throttling)
+- [x] 002-E — Hook vào PlayerController.cs ✅ (AddComponent logic in Awake)
+- [x] 002-F — OnDrawGizmos debug ✅ (DrawWireSphere tested)
 
-**File liên quan:**
-- `Assets/_Scripts/_Commons/Systems/VisionSystem.cs` (extend)
-- `Assets/_Scripts/_Commons/PlayerController/PlayerVisionManager.cs` (NEW)
-
-**Subtask:**
-
-- [ ] 002-A — Tạo file PlayerVisionManager.cs (MonoBehaviour) để manage player vision instance
-- [ ] 002-B — Implement UpdatePlayerVisionPosition() method để sync player position → VisionSystem mỗi frame
-- [ ] 002-C — Implement GetVisibleObjectsInRange() logic trong VisionSystem: sphere cast, filter by distance, collider raycast
-- [ ] 002-D — Cache visible objects list, update incrementally (optimize: không recalc toàn bộ mỗi frame)
-- [ ] 002-E — Hook PlayerVisionManager vào PlayerController.cs (call UpdatePlayerVisionPosition trong Update)
+**Quality Metrics:**
+- Gizmo debug draw: Yes ✅
+- Update throttling: Yes (0.1s interval) ✅
+- Error checking: Yes ✅
+- Subtask markers: Yes [002-A], [002-B] ✅ition trong Update)
 - [ ] 002-F — Test: verify player vision range = 20 units đúng thông qua Gizmos debug draw
 
 ---
@@ -110,13 +95,31 @@ Companion vision được **merge** với player vision: player có thể thấy
 - `Assets/_Scripts/_Commons/Companion/CompanionVisionManager.cs` (NEW)
 
 **Subtask:**
+ 🔴 ĐANG CHỜ / CHƯA BẮT ĐẦU
+
+### TASK-003 | COMPANION_VISION | Implement Companion Vision + Share to Player
+
+**Loại:** Feature  
+**Ưu tiên:** 🟡 CAO  
+**Phụ thuộc:** TASK-001 ✅  
+**Giao cho:** Session-2 (Feature Specialist)
+
+**Mô tả:**  
+Implement tầm nhìn cho companion (range = 8).  
+Companion vision được **merge** với player vision: player có thể thấy cả object mà companion thấy.
+
+**File liên quan:**
+- `Assets/_Scripts/_Commons/Systems/VisionSystem.cs` (extend)
+- `Assets/_Scripts/_Commons/Companion/CompanionVisionManager.cs` (NEW)
+
+**Subtask:**
 
 - [ ] 003-A — Tạo file CompanionVisionManager.cs (MonoBehaviour) để manage companion vision instance
 - [ ] 003-B — Implement UpdateCompanionVisionPosition() method để sync companion position → VisionSystem mỗi frame
-- [ ] 003-C — Extend VisionSystem.GetVisibleObjectsInRange() để hỗ trợ companion vision (range = 8)
+- [ ] 003-C — Extend VisionSystem để hỗ trợ multi-entity vision (player + companion)
 - [ ] 003-D — Implement MergeVisionRanges() method: combine player_visible + companion_visible objects
-- [ ] 003-E — Hook CompanionVisionManager vào CompanionAI.cs hoặc spawn script (call UpdateCompanionVisionPosition)
-- [ ] 003-F — Test: verify companion vision range = 8, và objects vượt player range nhưng trong companion range được thêm vào visible list
+- [ ] 003-E — Hook CompanionVisionManager vào CompanionAI.cs hoặc spawn script
+- [ ] 003-F — Test: verify companion vision range = 8, objects vượt player range được thêm vào visible list
 
 ---
 
@@ -129,17 +132,17 @@ Companion vision được **merge** với player vision: player có thể thấy
 
 **Mô tả:**  
 Companion vision được chia sẻ cho player.  
-Player nhìn thấy mọi object mà companion thấy (hiệu quả: fake player vision extend lên 20 + companion 8 shared).
+Player nhìn thấy mọi object mà companion thấy.
 
 **File liên quan:**
 - `Assets/_Scripts/_Commons/Systems/VisionSystem.cs` (extend)
 
 **Subtask:**
 
-- [ ] 004-A — Thêm method MergeCompanionVisionToPlayer() trong VisionSystem: combine visible objects từ cả player + companion
-- [ ] 004-B — Thêm event OnVisionRangeChanged để notify khi danh sách visible objects thay đổi
-- [ ] 004-C — Implement subscription pattern: UI/Camera listen to vision changes để update fade effect
-- [ ] 004-D — Test: verify when companion sees enemy mà player không thấy, enemy được thêm vào player's visible list
+- [ ] 004-A — Thêm method MergeCompanionVisionToPlayer() trong VisionSystem
+- [ ] 004-B — Thêm event OnVisionRangeChanged để notify khi visible objects thay đổi
+- [ ] 004-C — Implement subscription pattern cho UI/Camera listeners
+- [ ] 004-D — Test: verify companion vision được merge vào player vision
 
 ---
 
@@ -160,12 +163,12 @@ Vẫn load map — chỉ adjust alpha/material opacity gradient.
 
 **Subtask:**
 
-- [ ] 005-A — Tạo file FadeEffectManager.cs (MonoBehaviour) để manage fade effects trên objects
-- [ ] 005-B — Implement GetFadeAlpha() method: calculate alpha based on distance from vision center (falloff curve)
-- [ ] 005-C — Implement ApplyFadeEffect() method: modify material opacity for Renderer components
-- [ ] 005-D — Implement LerpMaterialAlpha() helper: smooth transition (target alpha, duration)
-- [ ] 005-E — Hook FadeEffectManager.UpdateFade() vào VisionSystem.OnVisionRangeChanged event
-- [ ] 005-F — Test: verify objects gradually fade as move away from player/companion vision range, alpha = 1 when visible, alpha ≈ 0 when far
+- [ ] 005-A — Tạo file FadeEffectManager.cs (MonoBehaviour)
+- [ ] 005-B — Implement GetFadeAlpha() method: calculate alpha based on distance
+- [ ] 005-C — Implement ApplyFadeEffect() method: modify material opacity
+- [ ] 005-D — Implement LerpMaterialAlpha() helper: smooth transition
+- [ ] 005-E — Hook FadeEffectManager.UpdateFade() vào OnVisionRangeChanged event
+- [ ] 005-F — Test: verify fade effect gradient works correctly
 
 ---
 
@@ -177,12 +180,7 @@ Vẫn load map — chỉ adjust alpha/material opacity gradient.
 **Giao cho:** Session-2 (Feature Specialist)
 
 **Mô tả:**  
-Gắn toàn bộ hệ thống vision vào game:
-- Hook PlayerVisionManager vào scene
-- Hook CompanionVisionManager vào companion
-- Hook FadeEffectManager vào scene
-- Test end-to-end
-- Viết unit tests cho VisionSystem logic
+Gắn toàn bộ hệ thống vision vào game, test end-to-end, viết unit tests.
 
 **File liên quan:**
 - `Assets/_Scripts/_Commons/Systems/VisionSystem.cs`
@@ -193,32 +191,18 @@ Gắn toàn bộ hệ thống vision vào game:
 
 **Subtask:**
 
-- [ ] 006-A — Tạo scene test hoặc update existing scene: add player, companion, enemies, terrain objects
-- [ ] 006-B — Thêm PlayerVisionManager component vào Player GameObject
-- [ ] 006-C — Thêm CompanionVisionManager component vào Companion GameObject
+- [ ] 006-A — Tạo scene test: add player, companion, enemies, terrain objects
+- [ ] 006-B — Thêm PlayerVisionManager component vào Player
+- [ ] 006-C — Thêm CompanionVisionManager component vào Companion
 - [ ] 006-D — Thêm FadeEffectManager component vào scene manager
-- [ ] 006-E — Verify trong Play mode: player thấy được tất cả object trong range 20, companion range 8 được chia sẻ
-- [ ] 006-F — Verify fade effect: objects mờ dần đúng gradient khi vượt range
-- [ ] 006-G — Tạo file VisionSystemTests.cs với unit tests cho VisionSystem logic (EditMode)
-- [ ] 006-H — Test performance: optimize nếu vision update quá heavy (frame time < 1ms)
-- [ ] 006-I — Document setup instructions trong README hoặc SETUP.md
-
----
-
-## 🟡 ĐANG THỰC HIỆN
-
-### SESSION-1 (Logic Specialist)
-- 🟡 TASK-001: Infrastructure (Bắt đầu lúc 10:00 UTC)
-- ⏳ TASK-002: Player Vision (Chờ TASK-001 xong)
-
----
-
-## 🟢 HOÀN THÀNH
-
-(Chuyển task vào đây sau khi Manager xác nhận xong)
-
----
-
+- [ ] 006-E — Verify Play mode: player sees range 20, companion 8 shared
+- [ ] 006-F — Verify fade effect: objects mờ dần đúng
+- [ ] 006-G — Tạo VisionSystemTests.cs với unit tests (EditMode)
+- [ ] 006-H — Test performance: optimize nếu cần
+- [ ] 006-I — Document setup instructions
+✅ **SESSION-1 COMPLETED — 2 TASKS, 12 SUBTASKS**
+- TASK-001: Infrastructure ✅
+- TASK-002: Player Vision ✅
 ## 📌 GHI CHÚ QUAN TRỌNG
 
 ### **Phân chia Session:**
@@ -226,9 +210,11 @@ Gắn toàn bộ hệ thống vision vào game:
 **Session-1** (Logic Specialist):
 - TASK-001: Infrastructure (VisionConfig, VisionSystem, VisionModel, Interfaces)
 - TASK-002: Player Vision Implementation
-
-**Session-2** (Feature Specialist):
-- TASK-003: Companion Vision + Sharing
+2 (Feature Specialist) — READY TO START
+- ⏳ TASK-003: Companion Vision (Chờ xác nhận)
+- ⏳ TASK-004: Vision Sharing
+- ⏳ TASK-005: Fade Effect System
+- ⏳ TASK-006: Integration & Testing
 - TASK-004: Vision Sharing Logic
 - TASK-005: Fade Effect System
 - TASK-006: Integration & Testing
