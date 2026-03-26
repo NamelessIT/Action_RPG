@@ -13,21 +13,16 @@ namespace Game.Features.Vision.Rendering
     /// </summary>
     public class FogOfWarPass : ScriptableRenderPass
     {
-        private static readonly int _VisionSources = Shader.PropertyToID("_VisionSources");
-        private static readonly int _VisionRanges = Shader.PropertyToID("_VisionRanges");
-        private static readonly int _FogColor = Shader.PropertyToID("_FogColor");
-        private static readonly int _FogEdgeSoftness = Shader.PropertyToID("_FogEdgeSoftness");
-        private static readonly int _DepthTexture = Shader.PropertyToID("_CameraDepthTexture");
 
         private Material _fogMaterial;
         private VisionConfig _visionConfig;
-        private VisionCoordinator _visionCoordinator;
+        private Vector4[] _visionSources = new Vector4[2];
+        private Vector2 _visionRanges;
         private RenderTextureDescriptor _descriptor;
 
-        public FogOfWarPass(VisionConfig config, VisionCoordinator coordinator)
+        public FogOfWarPass(VisionConfig config)
         {
             _visionConfig = config ?? throw new System.ArgumentNullException(nameof(config));
-            _visionCoordinator = coordinator ?? throw new System.ArgumentNullException(nameof(coordinator));
 
             // Create material from shader
             Shader shader = Shader.Find("Game/Vision/FogOfWar");
@@ -38,6 +33,11 @@ namespace Game.Features.Vision.Rendering
             }
 
             _fogMaterial = new Material(shader);
+            
+            // [008-C] Initialize vision sources with default values
+            _visionSources[0] = Vector3.zero;
+            _visionSources[1] = Vector3.zero;
+            _visionRanges = new Vector2(20f, 8f);
             
             // Set render pass event (after transparent rendering, before UI)
             renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
@@ -61,6 +61,19 @@ namespace Game.Features.Vision.Rendering
         }
 
         /// <summary>
+        /// Set vision sources and ranges for fog shader.
+        /// Called by FogOfWarFeature when transforms initialized.
+        /// </summary>
+        public void SetVisionSources(Vector3[] sourcePositions, Vector2 visionRanges)
+        {
+            for (int i = 0; i < sourcePositions.Length && i < 2; i++)
+            {
+                _visionSources[i] = sourcePositions[i];
+            }
+            _visionRanges = visionRanges;
+        }
+
+        /// <summary>
         /// Execute fog rendering pass.
         /// </summary>
         [System.Obsolete]
@@ -72,15 +85,16 @@ namespace Game.Features.Vision.Rendering
             CommandBuffer cmd = CommandBufferPool.Get(name: "FogOfWarPass");
             try
             {
-                // [008-C] Set vision sources
-                SetVisionSourcesInMaterial();
+                // [008-C] Set vision sources and ranges in shader
+                _fogMaterial.SetVectorArray("_VisionSources", _visionSources);
+                _fogMaterial.SetVector("_VisionRanges", _visionRanges);
 
                 // [008-C] Set fog color + softness
-                _fogMaterial.SetColor(_FogColor, _visionConfig.FogColor);
-                _fogMaterial.SetFloat(_FogEdgeSoftness, _visionConfig.FogEdgeSoftness);
+                _fogMaterial.SetColor("_FogColor", _visionConfig.FogColor);
+                _fogMaterial.SetFloat("_FogEdgeSoftness", _visionConfig.FogEdgeSoftness);
 
-                // [008-C] Execute blit
-                RenderingUtils.FinalBlit(cmd, _fogMaterial, 0);
+                // [008-C] Blit fog material to screen
+                cmd.Blit(renderingData.cameraData.renderer.cameraColorTargetHandle, renderingData.cameraData.renderer.cameraColorTargetHandle, _fogMaterial);
 
                 context.ExecuteCommandBuffer(cmd);
             }
@@ -88,34 +102,6 @@ namespace Game.Features.Vision.Rendering
             {
                 CommandBufferPool.Release(cmd);
             }
-        }
-
-        /// <summary>
-        /// Set vision sources (player + companion positions) in shader.
-        /// </summary>
-        private void SetVisionSourcesInMaterial()
-        {
-            if (_visionCoordinator == null)
-                return;
-
-            Vector4[] sources = new Vector4[2];
-            Vector2 ranges = new Vector2(_visionConfig.PlayerVisionRange, _visionConfig.CompanionVisionRange);
-
-            // [008-C] Get vision source positions from coordinator
-            var visibleSources = _visionCoordinator.GetVisibleSources();
-            for (int i = 0; i < visibleSources.Count && i < 2; i++)
-            {
-                sources[i] = new Vector4(visibleSources[i].x, visibleSources[i].y, visibleSources[i].z, 1.0f);
-            }
-
-            // [008-C] Pad with zero if only one source
-            if (visibleSources.Count < 2)
-            {
-                sources[1] = Vector4.zero;
-            }
-
-            _fogMaterial.SetVectorArray(_VisionSources, sources);
-            _fogMaterial.SetVector(_VisionRanges, ranges);
         }
 
         /// <summary>

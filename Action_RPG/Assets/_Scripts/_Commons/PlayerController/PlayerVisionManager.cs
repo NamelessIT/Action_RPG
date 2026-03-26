@@ -149,8 +149,7 @@ namespace Game.Features.Player
 
         /// <summary>
         /// Try to initialize fog of war system.
-        /// [008-F] Finds or creates FogOfWarFeature for rendering.
-        /// FogOfWarFeature needs to be added to renderer asset in Inspector.
+        /// [008-F] Finds FogOfWarFeature and sets vision source transforms.
         /// </summary>
         private void TryInitializeFogOfWar()
         {
@@ -160,7 +159,7 @@ namespace Game.Features.Player
                 return;
             }
 
-            // [008-F] Find or create fog feature
+            // [008-F] Find fog feature in renderer
             _fogOfWarFeature = FindFirstObjectByType<FogOfWarFeature>();
             if (_fogOfWarFeature == null)
             {
@@ -169,15 +168,16 @@ namespace Game.Features.Player
                 return;
             }
 
-            // [008-F] Set vision coordinator reference for fog feature
-            if (_visionCoordinator != null)
+            // [008-F] Set vision source transforms for fog shader
+            if (_companionVisionManager != null && _companionVisionManager.gameObject.activeInHierarchy)
             {
-                _fogOfWarFeature.SetVisionCoordinator(_visionCoordinator);
-                Debug.Log("[008-F] FogOfWar initialized with vision coordinator.");
+                _fogOfWarFeature.SetVisionSources(transform, _companionVisionManager.transform);
+                Debug.Log("[008-F] FogOfWar initialized with player + companion as vision sources.");
             }
             else
             {
-                Debug.LogWarning("[008-F] Vision coordinator not ready yet. Fog may not initialize properly.");
+                _fogOfWarFeature.SetVisionSources(transform);
+                Debug.Log("[008-F] FogOfWar initialized with player as sole vision source.");
             }
         }
 

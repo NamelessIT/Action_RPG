@@ -14,15 +14,17 @@ namespace Game.Features.Vision.Rendering
         [SerializeField] private VisionConfig _visionConfig;
         
         private FogOfWarPass _pass;
-        private VisionCoordinator _visionCoordinator;
+        private Transform _playerTransform;
+        private Transform _companionTransform;
 
         /// <summary>
-        /// Optional: Set vision coordinator reference (called externally).
-        /// If not set, pass will try to find at runtime.
+        /// Set vision source transforms (player + companion).
+        /// Called by PlayerVisionManager to provide position data for fog shader.
         /// </summary>
-        public void SetVisionCoordinator(VisionCoordinator coordinator)
+        public void SetVisionSources(Transform playerTransform, Transform companionTransform = null)
         {
-            _visionCoordinator = coordinator;
+            _playerTransform = playerTransform;
+            _companionTransform = companionTransform;
         }
 
         /// <summary>
@@ -36,8 +38,8 @@ namespace Game.Features.Vision.Rendering
                 return;
             }
 
-            // [008-D] Create pass (coordinator can be found/injected later)
-            _pass = new FogOfWarPass(_visionConfig, _visionCoordinator);
+            // [008-D] Create pass (vision sources can be set later)
+            _pass = new FogOfWarPass(_visionConfig);
         }
 
         /// <summary>
@@ -49,16 +51,15 @@ namespace Game.Features.Vision.Rendering
             if (_pass == null || !_visionConfig.EnableFogOfWar)
                 return;
 
-            // [008-D] Lazy-load vision coordinator if not set
-            if (_visionCoordinator == null)
+            // [008-D] Update vision sources in pass every frame
+            if (_playerTransform != null && _pass != null)
             {
-                _visionCoordinator = FindObjectOfType<VisionCoordinator>();
-                if (_visionCoordinator == null)
-                {
-                    Debug.LogWarning("[008-D] FogOfWarFeature: VisionCoordinator not found in scene!");
-                    return;
-                }
-                _pass = new FogOfWarPass(_visionConfig, _visionCoordinator);
+                Vector3[] sources = _companionTransform != null
+                    ? new Vector3[] { _playerTransform.position, _companionTransform.position }
+                    : new Vector3[] { _playerTransform.position, _playerTransform.position };
+                
+                Vector2 ranges = new Vector2(_visionConfig.PlayerVisionRange, _visionConfig.CompanionVisionRange);
+                _pass.SetVisionSources(sources, ranges);
             }
 
             // [008-D] Enqueue pass
