@@ -4,7 +4,7 @@ using Game.Features.Vision.Interfaces;
 using Game.Features.Vision.Core;
 using Game.Features.Vision.Data;
 using Game.Features.Vision.Systems; // [005-E] For FadeEffectManager
-using Game.Features.Vision.Rendering; // [008-F] For FogOfWarFeature
+using Game.Features.Vision.Rendering; // [008-F] For FogOfWarController
 using Game.Features.Companion; // [004-C] For companion integration
 
 namespace Game.Features.Player
@@ -23,7 +23,7 @@ namespace Game.Features.Player
         private VisionCoordinator _visionCoordinator;
         private CompanionVisionManager _companionVisionManager;
         private FadeEffectManager _fadeEffectManager; // [005-E] Fade system
-        private FogOfWarFeature _fogOfWarFeature; // [008-F] Fog of war system
+        private FogOfWarController _fogOfWarController; // [008-F] Fog of war controller
         private float _nextUpdateTime;
         private float _coordinatorInitTime; // [004-C] For delayed initialization
         private float _fadeInitTime; // [005-E] For delayed fade initialization
@@ -93,7 +93,7 @@ namespace Game.Features.Player
             }
 
             // [008-F] Try to initialize fog of war system
-            if (_fogOfWarFeature == null && Time.time >= _fogInitTime && _visionConfig.EnableFogOfWar)
+            if (_fogOfWarController == null && Time.time >= _fogInitTime && _visionConfig.EnableFogOfWar)
             {
                 TryInitializeFogOfWar();
             }
@@ -149,7 +149,8 @@ namespace Game.Features.Player
 
         /// <summary>
         /// Try to initialize fog of war system.
-        /// [008-F] Finds FogOfWarFeature and sets vision source transforms.
+        /// [008-F] Creates FogOfWarController MonoBehaviour that sets shader globals.
+        /// FogOfWarFeature (on renderer asset) reads these globals automatically.
         /// </summary>
         private void TryInitializeFogOfWar()
         {
@@ -159,26 +160,22 @@ namespace Game.Features.Player
                 return;
             }
 
-            // [008-F] Find fog feature in renderer
-            _fogOfWarFeature = FindFirstObjectByType<FogOfWarFeature>();
-            if (_fogOfWarFeature == null)
+            // [008-F] Find or create FogOfWarController MonoBehaviour
+            _fogOfWarController = FindFirstObjectByType<FogOfWarController>();
+            if (_fogOfWarController == null)
             {
-                Debug.LogWarning("[008-F] FogOfWarFeature not found in scene. Add the FogOfWarFeature renderer feature to your UniversalRendererData asset in Inspector.");
-                _fogInitTime = float.PositiveInfinity; // Don't retry
-                return;
+                var fowObj = new GameObject("FogOfWarController");
+                _fogOfWarController = fowObj.AddComponent<FogOfWarController>();
+                Debug.Log("[008-F] FogOfWarController auto-created.");
             }
 
-            // [008-F] Set vision source transforms for fog shader
-            if (_companionVisionManager != null && _companionVisionManager.gameObject.activeInHierarchy)
-            {
-                _fogOfWarFeature.SetVisionSources(transform, _companionVisionManager.transform);
-                Debug.Log("[008-F] FogOfWar initialized with player + companion as vision sources.");
-            }
-            else
-            {
-                _fogOfWarFeature.SetVisionSources(transform);
-                Debug.Log("[008-F] FogOfWar initialized with player as sole vision source.");
-            }
+            // [008-F] Initialize with player, companion, and config
+            Transform companionTransform = _companionVisionManager != null
+                ? _companionVisionManager.transform
+                : null;
+
+            _fogOfWarController.Initialize(transform, companionTransform, _visionConfig);
+            Debug.Log("[008-F] FogOfWarController initialized with vision sources.");
         }
 
         /// <summary>
@@ -246,7 +243,7 @@ namespace Game.Features.Player
         private void OnVisibleObjectsChanged(List<Collider> visibleObjects)
         {
             // [002-A] Log for debugging
-            Debug.Log($"[002-A] Player sees {visibleObjects.Count} objects");
+            //Debug.Log($"[002-A] Player sees {visibleObjects.Count} objects");
             
             // Fade system is now self-managed — no action needed here
         }
@@ -298,8 +295,11 @@ namespace Game.Features.Player
                 Destroy(_fadeEffectManager.gameObject);
             }
 
-            // [008-F] Cleanup fog of war (feature itself is managed by renderer)
-            _fogOfWarFeature = null;
+            // [008-F] Cleanup fog of war controller
+            if (_fogOfWarController != null)
+            {
+                Destroy(_fogOfWarController.gameObject);
+            }
         }
 
         /// <summary>

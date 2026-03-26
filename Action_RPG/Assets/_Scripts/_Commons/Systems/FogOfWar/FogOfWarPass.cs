@@ -1,118 +1,85 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using Game.Features.Vision.Data;
-using Game.Features.Vision.Core;
+using UnityEngine.Rendering.RenderGraphModule;
 
 namespace Game.Features.Vision.Rendering
 {
     /// <summary>
-    /// [008-C] ScriptableRenderPass for fog of war post-processing.
-    /// Executes after opaque/transparent rendering to overlay fog effect.
-    /// Reads depth texture and reconstructs world positions for vision checks.
+    /// [008-C] ScriptableRenderPass for fog of war fullscreen effect.
+    /// Uses RenderGraph API (URP 17+) to blit scene through FogOfWar shader.
     /// </summary>
     public class FogOfWarPass : ScriptableRenderPass
     {
-
         private Material _fogMaterial;
-        private VisionConfig _visionConfig;
-        private Vector4[] _visionSources = new Vector4[2];
-        private Vector2 _visionRanges;
-        private RenderTextureDescriptor _descriptor;
+        private const string PassName = "FogOfWarPass";
 
-        public FogOfWarPass(VisionConfig config)
+        public FogOfWarPass(Material material)
         {
-            _visionConfig = config ?? throw new System.ArgumentNullException(nameof(config));
-
-            // Create material from shader
-            Shader shader = Shader.Find("Game/Vision/FogOfWar");
-            if (shader == null)
-            {
-                Debug.LogError("[008-C] FogOfWar shader not found!");
-                return;
-            }
-
-            _fogMaterial = new Material(shader);
-            
-            // [008-C] Initialize vision sources with default values
-            _visionSources[0] = Vector3.zero;
-            _visionSources[1] = Vector3.zero;
-            _visionRanges = new Vector2(20f, 8f);
-            
-            // Set render pass event (after transparent rendering, before UI)
+            _fogMaterial = material;
             renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
-
-            // Initialize descriptor
-            _descriptor = new RenderTextureDescriptor(Screen.width, Screen.height, RenderTextureFormat.Default)
-            {
-                msaaSamples = 1
-            };
+            requiresIntermediateTexture = true;
         }
 
         /// <summary>
-        /// Configure pass for frame execution.
-        /// Called every frame by the renderer feature.
+        /// [008-C] RenderGraph implementation for URP 17+.
+        /// Blits camera color through fog material using fullscreen pass.
         /// </summary>
-        [System.Obsolete]
-        public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
+        public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
-            _descriptor.width = renderingData.cameraData.cameraTargetDescriptor.width;
-            _descriptor.height = renderingData.cameraData.cameraTargetDescriptor.height;
-        }
+            if (_fogMaterial == null) return;
 
-        /// <summary>
-        /// Set vision sources and ranges for fog shader.
-        /// Called by FogOfWarFeature when transforms initialized.
-        /// </summary>
-        public void SetVisionSources(Vector3[] sourcePositions, Vector2 visionRanges)
-        {
-            for (int i = 0; i < sourcePositions.Length && i < 2; i++)
-            {
-                _visionSources[i] = sourcePositions[i];
-            }
-            _visionRanges = visionRanges;
-        }
+            var resourceData = frameData.Get<UniversalResourceData>();
 
-        /// <summary>
-        /// Execute fog rendering pass.
-        /// </summary>
-        [System.Obsolete]
-        public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
-        {
-            if (_fogMaterial == null || !_visionConfig.EnableFogOfWar)
+            // [008-C] Skip if no valid camera color
+            if (resourceData.isActiveTargetBackBuffer)
                 return;
 
-            CommandBuffer cmd = CommandBufferPool.Get(name: "FogOfWarPass");
-            try
+            var source = resourceData.activeColorTexture;
+
+            // [008-C] Create temp texture matching source
+            var desc = renderGraph.GetTextureDesc(source);
+            desc.name = "_FoWTemp";
+            desc.clearBuffer = false;
+            var tempTexture = renderGraph.CreateTexture(desc);
+
+            // [008-C] Pass 1: Blit source → temp with fog shader
+            using (var builder = renderGraph.AddRasterRenderPass<PassData>(PassName + "_Apply", out var passData))
             {
-                // [008-C] Set vision sources and ranges in shader
-                _fogMaterial.SetVectorArray("_VisionSources", _visionSources);
-                _fogMaterial.SetVector("_VisionRanges", _visionRanges);
+                passData.source = source;
+                passData.material = _fogMaterial;
 
-                // [008-C] Set fog color + softness
-                _fogMaterial.SetColor("_FogColor", _visionConfig.FogColor);
-                _fogMaterial.SetFloat("_FogEdgeSoftness", _visionConfig.FogEdgeSoftness);
+                builder.UseTexture(source, AccessFlags.Read);
+                builder.SetRenderAttachment(tempTexture, 0, AccessFlags.Write);
 
-                // [008-C] Blit fog material to screen
-                cmd.Blit(renderingData.cameraData.renderer.cameraColorTargetHandle, renderingData.cameraData.renderer.cameraColorTargetHandle, _fogMaterial);
-
-                context.ExecuteCommandBuffer(cmd);
+                builder.SetRenderFunc((PassData data, RasterGraphContext ctx) =>
+                {
+                    Blitter.BlitTexture(ctx.cmd, data.source, new Vector4(1, 1, 0, 0), data.material, 0);
+                });
             }
-            finally
+
+            // [008-C] Pass 2: Copy temp → source (result back to screen)
+            using (var builder = renderGraph.AddRasterRenderPass<PassData>(PassName + "_Copy", out var passData))
             {
-                CommandBufferPool.Release(cmd);
+                passData.source = tempTexture;
+                passData.material = null;
+
+                builder.UseTexture(tempTexture, AccessFlags.Read);
+                builder.SetRenderAttachment(source, 0, AccessFlags.Write);
+
+                builder.SetRenderFunc((PassData data, RasterGraphContext ctx) =>
+                {
+                    Blitter.BlitTexture(ctx.cmd, data.source, new Vector4(1, 1, 0, 0), 0, false);
+                });
             }
         }
 
-        /// <summary>
-        /// Cleanup pass resources.
-        /// </summary>
-        public void Cleanup()
+        private class PassData
         {
-            if (_fogMaterial != null)
-            {
-                Object.Destroy(_fogMaterial);
-            }
+            public TextureHandle source;
+            public Material material;
         }
+
+        public void Dispose() { }
     }
 }

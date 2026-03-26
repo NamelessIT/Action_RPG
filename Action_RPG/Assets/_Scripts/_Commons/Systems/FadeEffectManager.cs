@@ -293,7 +293,10 @@ namespace Game.Features.Vision.Systems
             if (distance >= fadeCompleteDist) return 0f;
 
             float normalizedDist = (distance - fadeStartDist) / (fadeCompleteDist - fadeStartDist);
-            return Mathf.Clamp01(1f - _fadeFalloff.Evaluate(normalizedDist));
+            // [FIX] _fadeFalloff EaseInOut(0,1,1,0) already goes from 1→0 as distance increases
+            // Previously "1 - curveValue" inverted the result causing alpha to DROP at fadeStart
+            // then RISE back near fadeComplete — producing bounce/flicker effect
+            return Mathf.Clamp01(_fadeFalloff.Evaluate(normalizedDist));
         }
 
         private float GetMaterialAlpha(Renderer renderer)
