@@ -92,8 +92,8 @@ namespace Game.Features.Player
 
         /// <summary>
         /// Try to initialize fade effect manager.
-        /// [005-E] Safe initialization after vision system is ready.
-        /// [007-F] Also sets excluded transforms when fade manager is ready.
+        /// [009-E] Simplified: calls SetVisionSources() + SetFadeDistances() once.
+        /// FadeEffectManager now self-manages evaluation based on distance only.
         /// </summary>
         private void TryInitializeFadeEffects()
         {
@@ -110,15 +110,36 @@ namespace Game.Features.Player
                 Debug.Log("[005-E] FadeEffectManager found in scene.");
             }
 
-            // [007-F] Set excluded transforms once fade manager is ready
+            // [009-E] Configure vision sources (player + companion)
+            if (_companionVisionManager != null && _companionVisionManager.gameObject.activeInHierarchy)
+            {
+                _fadeEffectManager.SetVisionSources(transform, _companionVisionManager.transform);
+                Debug.Log("[009-E] Fade system set to use player + companion as vision sources.");
+            }
+            else
+            {
+                _fadeEffectManager.SetVisionSources(transform);
+                Debug.Log("[009-E] Fade system set to use player as vision source.");
+            }
+
+            // [009-E] Configure fade distances
+            if (_visionConfig != null)
+            {
+                _fadeEffectManager.SetFadeDistances(
+                    _visionConfig.FadeStartDistance,
+                    _visionConfig.FadeCompleteDistance
+                );
+            }
+
+            // [007-F] Set excluded transforms so player + companion never fade
             TrySetExcludedTransforms();
         }
 
         /// <summary>
         /// Try to initialize vision coordinator (merges player + companion vision).
         /// [004-C] Safe initialization that waits for companion manager if needed.
-        /// [007-D] Subscribe to merged vision for fade system.
-        /// [007-F] Set excluded transforms for player + companion.
+        /// [009-F] Simplified: no longer subscribes to OnMergedVisionChanged.
+        /// FadeEffectManager now self-manages via vision sources.
         /// </summary>
         private void TryInitializeCoordinator()
         {
@@ -139,10 +160,7 @@ namespace Game.Features.Player
             if (_visionCoordinator != null && _visionService != null)
             {
                 _visionCoordinator.Initialize(_visionService, _companionVisionManager);
-
-                // [007-D] Subscribe to merged vision changes for fade system
-                _visionCoordinator.OnMergedVisionChanged += OnMergedVisionChanged;
-
+                // [009-F] No longer subscribe to OnMergedVisionChanged — fade system is now self-managed
                 Debug.Log("[004-C] VisionCoordinator initialized in PlayerVisionManager.");
             }
 
@@ -174,63 +192,17 @@ namespace Game.Features.Player
         }
 
         /// <summary>
-        /// Callback when merged vision (player + companion) changes.
-        /// [007-D] Uses merged visible objects and multi-source positions for fade.
-        /// </summary>
-        /// <param name="mergedObjects">Merged visible colliders from player + companion</param>
-        private void OnMergedVisionChanged(List<Collider> mergedObjects)
-        {
-            if (_fadeEffectManager == null || _visionConfig == null)
-                return;
-
-            // [007-E] Build vision sources array: player + companion positions
-            Vector3[] visionSources = BuildVisionSources();
-
-            // [007-D] Update fade with merged vision and multi-source positions
-            _fadeEffectManager.UpdateFadeEffects(
-                mergedObjects,
-                visionSources,
-                _visionConfig.FadeStartDistance,
-                _visionConfig.FadeCompleteDistance
-            );
-        }
-
-        /// <summary>
         /// Callback when player-only visible objects list changes.
-        /// [007-D] Only triggers fade as fallback when coordinator is NOT initialized.
+        /// [009-F] Simplified: no fade logic here anymore.
+        /// FadeEffectManager is now self-managed via vision sources.
         /// </summary>
         /// <param name="visibleObjects">List of currently visible colliders</param>
         private void OnVisibleObjectsChanged(List<Collider> visibleObjects)
         {
-            // [007-D] Only use player-only fade if coordinator hasn't been set up yet (fallback)
-            if (_visionCoordinator != null)
-                return;
-
-            // [005-E] Fallback: update fade with player-only vision
-            if (_fadeEffectManager != null && _visionConfig != null)
-            {
-                _fadeEffectManager.UpdateFadeEffects(
-                    visibleObjects,
-                    new Vector3[] { transform.position },
-                    _visionConfig.FadeStartDistance,
-                    _visionConfig.FadeCompleteDistance
-                );
-            }
-        }
-
-        /// <summary>
-        /// Build array of vision source positions (player + companion if available).
-        /// [007-E] Used to determine fade distance from nearest vision source.
-        /// </summary>
-        private Vector3[] BuildVisionSources()
-        {
-            // [007-E] Always include player position
-            if (_companionVisionManager != null && _companionVisionManager.gameObject.activeInHierarchy)
-            {
-                return new Vector3[] { transform.position, _companionVisionManager.transform.position };
-            }
-
-            return new Vector3[] { transform.position };
+            // [002-A] Log for debugging
+            Debug.Log($"[002-A] Player sees {visibleObjects.Count} objects");
+            
+            // Fade system is now self-managed — no action needed here
         }
 
         /// <summary>
@@ -267,10 +239,9 @@ namespace Game.Features.Player
                 _visionService.OnVisibleObjectsChanged -= OnVisibleObjectsChanged;
             }
 
-            // [007-D] Cleanup merged vision subscription
+            // [009-F] Cleanup coordinator (no OnMergedVisionChanged unsubscribe — fade is now self-managed)
             if (_visionCoordinator != null)
             {
-                _visionCoordinator.OnMergedVisionChanged -= OnMergedVisionChanged;
                 Destroy(_visionCoordinator.gameObject);
             }
 
