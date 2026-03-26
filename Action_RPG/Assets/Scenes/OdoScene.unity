@@ -3670,6 +3670,7 @@ GameObject:
   - component: {fileID: 1995522837}
   - component: {fileID: 1995522836}
   - component: {fileID: 1995522839}
+  - component: {fileID: 1995522840}
   m_Layer: 0
   m_Name: Companion
   m_TagString: Ally
@@ -4004,6 +4005,19 @@ MonoBehaviour:
   currentRelicOfMemory: {fileID: 0}
   currentParasite: {fileID: 0}
   currentChain: {fileID: 0}
+--- !u!114 &1995522840
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1995522831}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea9fee22a23078349b04d4842835eaeb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Features.Companion.CompanionVisionManager
+  _visionConfig: {fileID: 0}
 --- !u!1 &2025425007
 GameObject:
   m_ObjectHideFlags: 0

@@ -202,7 +202,7 @@ public class MagePassive : SkillBehavior
         if (fireballCD > 0f)
         {
             Debug.Log($"[Mage] 🔥 Fireball on cooldown ({fireballCD:F1}s remaining) - applying light burn");
-            ApplyBurnToNearbyEnemies(2f, stats.physicalAtk * 0.05f);
+            ApplyBurnToNearbyEnemies(2f, stats.magicAtk * 0.05f);
             return;
         }
 

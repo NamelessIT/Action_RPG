@@ -1,7 +1,7 @@
 # 🎮 BẢNG CÔNG VIỆC DỰ ÁN — Action_RPG Vision System
 
-**Cập nhật lần cuối:** 2026-03-22 10:30 UTC  
-**Trạng thái tổng thể:** 🟡 SESSION-2 READY  
+**Cập nhật lần cuối:** 2026-03-26 10:00 UTC  
+**Trạng thái tổng thể:** 🔴 BUGFIX SESSION-3 READY  
 **Manager:** Monitoring
 
 ---
@@ -35,6 +35,7 @@ TASK-006 (INTEGRATION_&_TESTING)
 2026-03-22 11:00 | TASK-003 | ✅ HOÀN TẤT | Tất cả 6 subtasks (CompanionVisionManager, UpdateCompanionPosition, Multi-entity support, Merging logic, CompanionAI hook, Testing)
 2026-03-22 11:00 | TASK-004 | ✅ HOÀN TẤT | Tất cả 4 subtasks (MergeVisionResults method, OnMergedVisionChanged event, VisionCoordinator, Testing)
 2026-03-22 11:00 | TASK-005 | ✅ HOÀN TẤT | Tất cả 6 subtasks (FadeEffectManager, GetFadeAlpha, ApplyFadeEffect, LerpMaterialAlpha, Integration, Testing)
+2026-03-26 10:00 | TASK-007 | 🔴 BUG PHÁT HIỆN | Companion vision không hoạt động — fade dùng player-only data thay vì merged vision
 ```
 
 ---
@@ -109,75 +110,97 @@ Final integration + end-to-end testing.
 - [ ] 006-I — Document setup instructions
 
 ---
-**Ưu tiên:** 🟡 TRUNG BÌNH  
-**Phụ thuộc:** TASK-004 ✅  
-**Giao cho:** Session-2 (Feature Specialist)
 
-**Mô tả:**  
-Object ngoài tầm nhìn sẽ **mờ dần** (fade), không biến mất hoàn toàn.  
-Vẫn load map — chỉ adjust alpha/material opacity gradient.
+## 🔴 BUGFIX — TASK-007 | COMPANION_VISION_FIX | Sửa tầm nhìn companion không hoạt động
 
-**File liên quan:**
-- `Assets/_Scripts/_Commons/Systems/FadeEffectManager.cs` (NEW)
-- `Assets/_Scripts/_Commons/Systems/VisionSystem.cs` (integrate)
+**Loại:** Bugfix / Critical  
+**Ưu tiên:** 🔴 HIGH  
+**Phụ thuộc:** TASK-004, TASK-005  
+**Giao cho:** Session-3 (Bugfix Specialist)
 
-**Subtask:**
+### 🐛 BUG REPORT
 
-- [ ] 005-A — Tạo file FadeEffectManager.cs (MonoBehaviour)
-- [ ] 005-B — Implement GetFadeAlpha() method: calculate alpha based on distance
-- [ ] 005-C — Implement ApplyFadeEffect() method: modify material opacity
-- [ ] 005-D — Implement LerpMaterialAlpha() helper: smooth transition
-- [ ] 005-E — Hook FadeEffectManager.UpdateFade() vào OnVisionRangeChanged event
-- [ ] 005-F — Test: verify fade effect gradient works correctly
+**Triệu chứng:**
+1. Khi player chạy xa companion → companion bị mờ dần (fade) → SAI
+2. Các vật thể xung quanh companion (trong range=8 của companion) không nhìn thấy → SAI
+3. Tầm nhìn companion hoàn toàn không chia sẻ với player → SAI
+
+### 🔍 NGUYÊN NHÂN GỐC (Root Cause Analysis)
+
+**3 lỗi kiến trúc trong data flow:**
+
+```
+HIỆN TẠI (SAI):
+PlayerVisionManager.OnVisibleObjectsChanged()
+    → nhận visibleObjects = CHỈ từ player's VisionSystem (range=20)
+    → gửi thẳng tới FadeEffectManager.UpdateFadeEffects(playerOnlyObjects, playerPos, ...)
+    → FadeEffectManager dùng playerPos để tính khoảng cách
+    → Companion nằm ngoài range 20 → bị fade
+    → Objects gần companion nhưng xa player → bị fade
+
+CẦN SỬA THÀNH:
+VisionCoordinator.OnMergedVisionChanged()
+    → nhận mergedObjects = player (range=20) + companion (range=8)
+    → gửi tới FadeEffectManager.UpdateFadeEffects(mergedObjects, [playerPos, companionPos], ...)
+    → FadeEffectManager dùng khoảng cách TỚI NGUỒN GẦN NHẤT (player HOẶC companion)
+    → Companion nằm trong merged list → không bị fade
+    → Objects gần companion → visible trong merged list → không bị fade
+```
+
+**Lỗi 1 — FadeEffectManager nhận player-only data thay vì merged data:**
+- File: `PlayerVisionManager.cs` line `OnVisibleObjectsChanged()`
+- Hiện tại: `_fadeEffectManager.UpdateFadeEffects(visibleObjects, ...)` với `visibleObjects` = chỉ player OverlapSphere
+- Fix: Đổi sang dùng `_visionCoordinator.OnMergedVisionChanged` để nhận merged list
+
+**Lỗi 2 — FadeEffectManager chỉ dùng playerPosition cho distance:**
+- File: `FadeEffectManager.cs` method `UpdateFadeEffects()` và `CalculateTargetAlpha()`
+- Hiện tại: `CalculateTargetAlpha(bounds, playerPosition, ...)` — chỉ 1 vị trí
+- Fix: Truyền danh sách `Vector3[] visionSourcePositions` (player + companion), tính distance tới nguồn gần nhất
+
+**Lỗi 3 — Companion bản thân không được loại trừ khỏi fade:**
+- File: `FadeEffectManager.cs`
+- Hiện tại: Companion là 1 GameObject có Renderer → bị fade như mọi object khác
+- Fix: Thêm exclusion list cho vision owners (player + companion Transforms)
+
+### 📁 FILE CẦN SỬA
+
+| File | Thay đổi | Mức độ |
+|------|----------|--------|
+| `FadeEffectManager.cs` | Thêm multi-source distance, exclusion list | **MAJOR** |
+| `PlayerVisionManager.cs` | Đổi data source sang merged vision | **MAJOR** |
+| `VisionCoordinator.cs` | Expose companion position | **MINOR** |
+| `CompanionVisionManager.cs` | Không đổi | — |
+
+### ✅ SUBTASKS
+
+- [ ] 007-A — Sửa `FadeEffectManager.UpdateFadeEffects()`: thêm tham số `Vector3[] visionSources` thay vì chỉ `Vector3 playerPosition`
+- [ ] 007-B — Sửa `FadeEffectManager.CalculateTargetAlpha()`: tính distance tới nguồn gần nhất trong `visionSources`
+- [ ] 007-C — Thêm exclusion system: `FadeEffectManager.SetExcludedTransforms(Transform[])` — các transform không bao giờ bị fade (player, companion)
+- [ ] 007-D — Sửa `PlayerVisionManager`: subscribe `_visionCoordinator.OnMergedVisionChanged` thay vì dùng player-only `OnVisibleObjectsChanged` cho fade
+- [ ] 007-E — Sửa `PlayerVisionManager`: truyền cả companion position vào FadeEffectManager khi gọi `UpdateFadeEffects()`
+- [ ] 007-F — Sửa `PlayerVisionManager`: gọi `_fadeEffectManager.SetExcludedTransforms()` với player + companion transforms
+- [ ] 007-G — Verify: companion KHÔNG bị fade khi player chạy xa
+- [ ] 007-H — Verify: objects gần companion (trong range 8) vẫn hiển thị rõ
+- [ ] 007-I — Verify: fade gradient hoạt động đúng với cả 2 nguồn vision
 
 ---
 
-### TASK-006 | INTEGRATION_&_TESTING | Integrate All Components + Testing
-
-**Loại:** Integration / QA  
-**Ưu tiên:** 🟢 MEDIUM  
-**Phụ thuộc:** TASK-005 ✅  
-**Giao cho:** Session-2 (Feature Specialist)
-
-**Mô tả:**  
-Gắn toàn bộ hệ thống vision vào game, test end-to-end, viết unit tests.
-
-**File liên quan:**
-- `Assets/_Scripts/_Commons/Systems/VisionSystem.cs`
-- `Assets/_Scripts/_Commons/PlayerController/PlayerVisionManager.cs`
-- `Assets/_Scripts/_Commons/Companion/CompanionVisionManager.cs`
-- `Assets/_Scripts/_Commons/Systems/FadeEffectManager.cs`
-- `Assets/Tests/VisionSystemTests.cs` (NEW)
-
-**Subtask:**
-
-- [x] 006-A — Tạo scene test: add player, companion, enemies, terrain objects
-- [x] 006-B — Thêm PlayerVisionManager component vào Player
-- [x] 006-C — Thêm CompanionVisionManager component vào Companion
-- [x] 006-D — Thêm FadeEffectManager component vào scene manager
-- [-] 006-E — Verify Play mode: player sees range 20, companion 8 shared (Bỏ theo yêu cầu)
-- [-] 006-F — Verify fade effect: objects mờ dần đúng (Bỏ theo yêu cầu)
-- [-] 006-G — Tạo VisionSystemTests.cs với unit tests (EditMode) (Bỏ theo yêu cầu)
-- [x] 006-H — Test performance: optimize nếu cần (Đã tối ưu FadeEffectManager: renderer cache + HashSet lookup)
-- [ ] 006-I — Document setup instructions
-✅ **SESSION-1 COMPLETED — 2 TASKS, 12 SUBTASKS**
-- TASK-001: Infrastructure ✅
-- TASK-002: Player Vision ✅
 ## 📌 GHI CHÚ QUAN TRỌNG
 
 ### **Phân chia Session:**
 
-**Session-1** (Logic Specialist):
-- TASK-001: Infrastructure (VisionConfig, VisionSystem, VisionModel, Interfaces)
-- TASK-002: Player Vision Implementation
-2 (Feature Specialist) — READY TO START
-- ⏳ TASK-003: Companion Vision (Chờ xác nhận)
-- ⏳ TASK-004: Vision Sharing
-- ⏳ TASK-005: Fade Effect System
-- ⏳ TASK-006: Integration & Testing
-- TASK-004: Vision Sharing Logic
-- TASK-005: Fade Effect System
-- TASK-006: Integration & Testing
+**Session-1** (Logic Specialist) ✅:
+- TASK-001: Infrastructure ✅
+- TASK-002: Player Vision ✅
+
+**Session-2** (Feature Specialist) ✅:
+- TASK-003: Companion Vision ✅
+- TASK-004: Vision Sharing ✅
+- TASK-005: Fade Effect System ✅
+- TASK-006: Integration & Testing (partial) ✅
+
+**Session-3** (Bugfix Specialist) ⏳:
+- TASK-007: Companion Vision Bugfix — Sửa 3 lỗi kiến trúc trong data flow
 
 ### **Quy tắc vàng:**
 
@@ -196,25 +219,9 @@ Gắn toàn bộ hệ thống vision vào game, test end-to-end, viết unit tes
 
 ---
 
-## 📈 KPI THEO DÕI
+## 📈 TRẠNG THÁI
 
-| Metric | Target | Current |
-|--------|--------|---------|
-| Subtasks completed | 50 | 28 |
-| Code coverage (VisionSystem) | 80%+ | 0% |
-| Frame time overhead | <1ms | TBD |
-| Integration tests | +5 | 0 |
-
----� **RUNNING**
-
-✅ Xác nhận nhận được. Session-1 được gọi để bắt đầu TASK-001 & TASK-002.
-
-*Manager đang chờ bạn xác nhận trước khi bắt đầu.*
-
-
-✅ **SESSION-2 COMPLETED — 3 TASKS, 16 SUBTASKS**
-- TASK-003: Companion Vision ✅
-- TASK-004: Vision Sharing ✅
-- TASK-005: Fade Effect System ✅
-
-🔴 **TASK-006: Integration & Testing — WAITING FOR USER**
+✅ **SESSION-1 COMPLETED** — TASK-001, TASK-002 (12 subtasks)
+✅ **SESSION-2 COMPLETED** — TASK-003, TASK-004, TASK-005 (16 subtasks)
+✅ **POST-SESSION FIXES** — TASK-006 partial (006-A/B/C/D/H done, 006-E/F/G skipped)
+🔴 **SESSION-3 READY** — TASK-007: Companion Vision Bugfix (9 subtasks)

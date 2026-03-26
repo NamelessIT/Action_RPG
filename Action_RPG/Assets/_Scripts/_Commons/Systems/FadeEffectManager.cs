@@ -33,18 +33,21 @@ namespace Game.Features.Vision.Systems
         private Dictionary<Renderer, Coroutine> _activeCoroutines = new Dictionary<Renderer, Coroutine>();
         private HashSet<Material> _preparedTransparentMaterials = new HashSet<Material>();
         private Dictionary<Material, MaterialState> _materialStates = new Dictionary<Material, MaterialState>();
+        // [007-C] Transforms that should never be faded (player, companion, etc.)
+        private HashSet<Transform> _excludedTransforms = new HashSet<Transform>();
         private Renderer[] _cachedRenderers = new Renderer[0];
         private float _nextRendererCacheRefreshTime = 0f;
         private float _lastUpdateTime = 0f;
         private const float UPDATE_INTERVAL = 0.1f; // Throttle updates
 
         /// <summary>
-        /// Update fade effect based on visible objects list and player position.
-        /// [005-A] Main entry point - called by PlayerVisionManager when vision updates
+        /// Update fade effect based on visible objects list and vision source positions.
+        /// [005-A] Main entry point - called by PlayerVisionManager when vision updates.
+        /// [007-A] Changed: accepts array of vision sources (player + companion) instead of single playerPosition.
         /// </summary>
         public void UpdateFadeEffects(
             List<Collider> visibleObjects,
-            Vector3 playerPosition,
+            Vector3[] visionSources,
             float fadeStartDist,
             float fadeCompleteDist)
         {
@@ -75,13 +78,24 @@ namespace Game.Features.Vision.Systems
                 if (renderer == null || !renderer.gameObject.activeInHierarchy)
                     continue;
 
+                // [007-C] Skip excluded transforms (player, companion, etc.) — always full alpha
+                if (IsExcludedTransform(renderer.transform))
+                {
+                    if (_targetAlphas.ContainsKey(renderer) && _targetAlphas[renderer] < 1f)
+                    {
+                        _targetAlphas[renderer] = 1f;
+                        LerpMaterialAlpha(renderer, 1f);
+                    }
+                    continue;
+                }
+
                 // [005-B] Check if visible
                 bool isVisible = IsObjectVisible(renderer, visibleColliderSet, visibleRoots);
 
-                // [005-B] Calculate target alpha based on distance and visibility
+                // [007-A] Calculate target alpha based on distance to NEAREST vision source
                 float targetAlpha = CalculateTargetAlpha(
                     renderer.bounds,
-                    playerPosition,
+                    visionSources,
                     isVisible,
                     fadeStartDist,
                     fadeCompleteDist
@@ -176,12 +190,38 @@ namespace Game.Features.Vision.Systems
         }
 
         /// <summary>
-        /// Calculate target alpha based on visibility and distance.
-        /// [005-B] Smooth falloff between fadeStartDistance and fadeCompleteDistance
+        /// Check if a transform or any of its parents/roots is in the excluded set.
+        /// [007-C] Used to prevent fading player/companion objects.
+        /// </summary>
+        private bool IsExcludedTransform(Transform t)
+        {
+            if (t == null || _excludedTransforms.Count == 0)
+                return false;
+
+            // Check the transform itself
+            if (_excludedTransforms.Contains(t))
+                return true;
+
+            // Check parents up the hierarchy
+            Transform current = t.parent;
+            while (current != null)
+            {
+                if (_excludedTransforms.Contains(current))
+                    return true;
+                current = current.parent;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Calculate target alpha based on visibility and distance to nearest vision source.
+        /// [005-B] Smooth falloff between fadeStartDistance and fadeCompleteDistance.
+        /// [007-B] Changed: uses MIN distance across all vision sources — object near ANY source stays visible.
         /// </summary>
         private float CalculateTargetAlpha(
             Bounds objectBounds,
-            Vector3 playerPos,
+            Vector3[] visionSources,
             bool isVisible,
             float fadeStartDist,
             float fadeCompleteDist)
@@ -190,8 +230,17 @@ namespace Game.Features.Vision.Systems
             if (isVisible)
                 return 1f;
 
-            // [005-B] Calculate distance from player to nearest bounds point.
-            float distance = Vector3.Distance(objectBounds.ClosestPoint(playerPos), playerPos);
+            // [007-B] Find minimum distance to ANY vision source
+            float distance = float.MaxValue;
+            if (visionSources != null)
+            {
+                for (int i = 0; i < visionSources.Length; i++)
+                {
+                    float d = Vector3.Distance(objectBounds.ClosestPoint(visionSources[i]), visionSources[i]);
+                    if (d < distance)
+                        distance = d;
+                }
+            }
 
             // [005-B] If inside fade start distance, full alpha
             if (distance < fadeStartDist)
@@ -392,6 +441,22 @@ namespace Game.Features.Vision.Systems
             }
 
             _preparedTransparentMaterials.Remove(mat);
+        }
+
+        /// <summary>
+        /// Set transforms that should never be faded (e.g. player, companion).
+        /// [007-C] Excluded transforms always keep alpha=1.
+        /// </summary>
+        /// <param name="transforms">Transforms to exclude from fade effects</param>
+        public void SetExcludedTransforms(params Transform[] transforms)
+        {
+            _excludedTransforms.Clear();
+            if (transforms == null) return;
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                if (transforms[i] != null)
+                    _excludedTransforms.Add(transforms[i]);
+            }
         }
 
         /// <summary>

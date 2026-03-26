@@ -92,7 +92,8 @@ namespace Game.Features.Player
 
         /// <summary>
         /// Try to initialize fade effect manager.
-        /// [005-E] Safe initialization after vision system is ready
+        /// [005-E] Safe initialization after vision system is ready.
+        /// [007-F] Also sets excluded transforms when fade manager is ready.
         /// </summary>
         private void TryInitializeFadeEffects()
         {
@@ -108,11 +109,16 @@ namespace Game.Features.Player
             {
                 Debug.Log("[005-E] FadeEffectManager found in scene.");
             }
+
+            // [007-F] Set excluded transforms once fade manager is ready
+            TrySetExcludedTransforms();
         }
 
         /// <summary>
         /// Try to initialize vision coordinator (merges player + companion vision).
         /// [004-C] Safe initialization that waits for companion manager if needed.
+        /// [007-D] Subscribe to merged vision for fade system.
+        /// [007-F] Set excluded transforms for player + companion.
         /// </summary>
         private void TryInitializeCoordinator()
         {
@@ -133,8 +139,15 @@ namespace Game.Features.Player
             if (_visionCoordinator != null && _visionService != null)
             {
                 _visionCoordinator.Initialize(_visionService, _companionVisionManager);
+
+                // [007-D] Subscribe to merged vision changes for fade system
+                _visionCoordinator.OnMergedVisionChanged += OnMergedVisionChanged;
+
                 Debug.Log("[004-C] VisionCoordinator initialized in PlayerVisionManager.");
             }
+
+            // [007-F] Set excluded transforms so player + companion never fade
+            TrySetExcludedTransforms();
         }
 
         /// <summary>
@@ -161,24 +174,84 @@ namespace Game.Features.Player
         }
 
         /// <summary>
-        /// Callback when visible objects list changes.
-        /// [005-E] Triggers fade effect updates
+        /// Callback when merged vision (player + companion) changes.
+        /// [007-D] Uses merged visible objects and multi-source positions for fade.
+        /// </summary>
+        /// <param name="mergedObjects">Merged visible colliders from player + companion</param>
+        private void OnMergedVisionChanged(List<Collider> mergedObjects)
+        {
+            if (_fadeEffectManager == null || _visionConfig == null)
+                return;
+
+            // [007-E] Build vision sources array: player + companion positions
+            Vector3[] visionSources = BuildVisionSources();
+
+            // [007-D] Update fade with merged vision and multi-source positions
+            _fadeEffectManager.UpdateFadeEffects(
+                mergedObjects,
+                visionSources,
+                _visionConfig.FadeStartDistance,
+                _visionConfig.FadeCompleteDistance
+            );
+        }
+
+        /// <summary>
+        /// Callback when player-only visible objects list changes.
+        /// [007-D] Only triggers fade as fallback when coordinator is NOT initialized.
         /// </summary>
         /// <param name="visibleObjects">List of currently visible colliders</param>
         private void OnVisibleObjectsChanged(List<Collider> visibleObjects)
         {
-            // [002-A] Log for debugging
-            //Debug.Log($"[002-A] Player sees {visibleObjects.Count} objects");
-            
-            // [005-E] Update fade effects when vision changes
+            // [007-D] Only use player-only fade if coordinator hasn't been set up yet (fallback)
+            if (_visionCoordinator != null)
+                return;
+
+            // [005-E] Fallback: update fade with player-only vision
             if (_fadeEffectManager != null && _visionConfig != null)
             {
                 _fadeEffectManager.UpdateFadeEffects(
                     visibleObjects,
-                    transform.position,
+                    new Vector3[] { transform.position },
                     _visionConfig.FadeStartDistance,
                     _visionConfig.FadeCompleteDistance
                 );
+            }
+        }
+
+        /// <summary>
+        /// Build array of vision source positions (player + companion if available).
+        /// [007-E] Used to determine fade distance from nearest vision source.
+        /// </summary>
+        private Vector3[] BuildVisionSources()
+        {
+            // [007-E] Always include player position
+            if (_companionVisionManager != null && _companionVisionManager.gameObject.activeInHierarchy)
+            {
+                return new Vector3[] { transform.position, _companionVisionManager.transform.position };
+            }
+
+            return new Vector3[] { transform.position };
+        }
+
+        /// <summary>
+        /// Set excluded transforms on FadeEffectManager so player + companion never fade.
+        /// [007-F] Called after coordinator and fade manager are initialized.
+        /// </summary>
+        private void TrySetExcludedTransforms()
+        {
+            if (_fadeEffectManager == null)
+                return;
+
+            // [007-F] Build exclusion list: player + companion
+            if (_companionVisionManager != null)
+            {
+                _fadeEffectManager.SetExcludedTransforms(transform, _companionVisionManager.transform);
+                Debug.Log("[007-F] Excluded player + companion from fade.");
+            }
+            else
+            {
+                _fadeEffectManager.SetExcludedTransforms(transform);
+                Debug.Log("[007-F] Excluded player from fade (no companion found).");
             }
         }
 
@@ -194,9 +267,10 @@ namespace Game.Features.Player
                 _visionService.OnVisibleObjectsChanged -= OnVisibleObjectsChanged;
             }
 
-            // [004-C] Cleanup coordinator
+            // [007-D] Cleanup merged vision subscription
             if (_visionCoordinator != null)
             {
+                _visionCoordinator.OnMergedVisionChanged -= OnMergedVisionChanged;
                 Destroy(_visionCoordinator.gameObject);
             }
 
