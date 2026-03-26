@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using Game.Features.Vision.Data;
-using Game.Features.Vision.Interfaces;
+using Game.Features.Vision.Core;
 
 namespace Game.Features.Vision.Rendering
 {
@@ -21,10 +21,10 @@ namespace Game.Features.Vision.Rendering
 
         private Material _fogMaterial;
         private VisionConfig _visionConfig;
-        private IVisionCoordinator _visionCoordinator;
+        private VisionCoordinator _visionCoordinator;
         private RenderTextureDescriptor _descriptor;
 
-        public FogOfWarPass(VisionConfig config, IVisionCoordinator coordinator)
+        public FogOfWarPass(VisionConfig config, VisionCoordinator coordinator)
         {
             _visionConfig = config ?? throw new System.ArgumentNullException(nameof(config));
             _visionCoordinator = coordinator ?? throw new System.ArgumentNullException(nameof(coordinator));
@@ -53,6 +53,7 @@ namespace Game.Features.Vision.Rendering
         /// Configure pass for frame execution.
         /// Called every frame by the renderer feature.
         /// </summary>
+        [System.Obsolete]
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
         {
             _descriptor.width = renderingData.cameraData.cameraTargetDescriptor.width;
@@ -62,6 +63,7 @@ namespace Game.Features.Vision.Rendering
         /// <summary>
         /// Execute fog rendering pass.
         /// </summary>
+        [System.Obsolete]
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             if (_fogMaterial == null || !_visionConfig.EnableFogOfWar)

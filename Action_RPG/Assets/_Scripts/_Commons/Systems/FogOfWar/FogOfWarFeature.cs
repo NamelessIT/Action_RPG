@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using Game.Features.Vision.Data;
-using Game.Features.Vision.Interfaces;
+using Game.Features.Vision.Core;
 
 namespace Game.Features.Vision.Rendering
 {
@@ -14,13 +14,13 @@ namespace Game.Features.Vision.Rendering
         [SerializeField] private VisionConfig _visionConfig;
         
         private FogOfWarPass _pass;
-        private IVisionCoordinator _visionCoordinator;
+        private VisionCoordinator _visionCoordinator;
 
         /// <summary>
         /// Optional: Set vision coordinator reference (called externally).
         /// If not set, pass will try to find at runtime.
         /// </summary>
-        public void SetVisionCoordinator(IVisionCoordinator coordinator)
+        public void SetVisionCoordinator(VisionCoordinator coordinator)
         {
             _visionCoordinator = coordinator;
         }

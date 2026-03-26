@@ -95,24 +95,6 @@ namespace Game.Features.Vision.Systems
             LerpAllRenderers();
         }
 
-        private void Update()
-        {
-            // [009-B] Check if vision sources are configured
-            if (_visionSourceTransforms == null || _visionSourceTransforms.Length == 0)
-                return;
-
-            // [009-B] Phase 1: Evaluate targets periodically (not every frame)
-            if (Time.time - _lastEvaluationTime >= EVALUATION_INTERVAL)
-            {
-                _lastEvaluationTime = Time.time;
-                RefreshRendererCacheIfNeeded();
-                EvaluateAllRenderers();
-            }
-
-            // [009-B] Phase 2: Smooth lerp every frame (flicker-free)
-            LerpAllRenderers();
-        }
-
         /// <summary>
         /// [009-B] Evaluate target alpha for all cached renderers based on distance to vision sources.
         /// Called every EVALUATION_INTERVAL, NOT every frame.
