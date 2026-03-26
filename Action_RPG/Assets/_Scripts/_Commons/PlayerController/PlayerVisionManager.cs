@@ -4,6 +4,7 @@ using Game.Features.Vision.Interfaces;
 using Game.Features.Vision.Core;
 using Game.Features.Vision.Data;
 using Game.Features.Vision.Systems; // [005-E] For FadeEffectManager
+using Game.Features.Vision.Rendering; // [008-F] For FogOfWarFeature
 using Game.Features.Companion; // [004-C] For companion integration
 
 namespace Game.Features.Player
@@ -22,9 +23,11 @@ namespace Game.Features.Player
         private VisionCoordinator _visionCoordinator;
         private CompanionVisionManager _companionVisionManager;
         private FadeEffectManager _fadeEffectManager; // [005-E] Fade system
+        private FogOfWarFeature _fogOfWarFeature; // [008-F] Fog of war system
         private float _nextUpdateTime;
         private float _coordinatorInitTime; // [004-C] For delayed initialization
         private float _fadeInitTime; // [005-E] For delayed fade initialization
+        private float _fogInitTime; // [008-F] For delayed fog initialization
 
         /// <summary>
         /// Awake is called when the script instance is being loaded.
@@ -64,6 +67,9 @@ namespace Game.Features.Player
 
             // [005-E] Setup fade manager initialization
             _fadeInitTime = Time.time + 0.15f;
+
+            // [008-F] Setup fog of war initialization (delayed until coordinator ready)
+            _fogInitTime = Time.time + 0.2f;
             
             Debug.Log("[002-A] PlayerVisionManager initialized successfully.");
         }
@@ -84,6 +90,12 @@ namespace Game.Features.Player
             if (_fadeEffectManager == null && Time.time >= _fadeInitTime)
             {
                 TryInitializeFadeEffects();
+            }
+
+            // [008-F] Try to initialize fog of war system
+            if (_fogOfWarFeature == null && Time.time >= _fogInitTime && _visionConfig.EnableFogOfWar)
+            {
+                TryInitializeFogOfWar();
             }
 
             // [002-B] Update player vision position
@@ -133,6 +145,40 @@ namespace Game.Features.Player
 
             // [007-F] Set excluded transforms so player + companion never fade
             TrySetExcludedTransforms();
+        }
+
+        /// <summary>
+        /// Try to initialize fog of war system.
+        /// [008-F] Finds or creates FogOfWarFeature for rendering.
+        /// FogOfWarFeature needs to be added to renderer asset in Inspector.
+        /// </summary>
+        private void TryInitializeFogOfWar()
+        {
+            if (!_visionConfig.EnableFogOfWar)
+            {
+                Debug.Log("[008-F] Fog of war disabled in config.");
+                return;
+            }
+
+            // [008-F] Find or create fog feature
+            _fogOfWarFeature = FindFirstObjectByType<FogOfWarFeature>();
+            if (_fogOfWarFeature == null)
+            {
+                Debug.LogWarning("[008-F] FogOfWarFeature not found in scene. Add the FogOfWarFeature renderer feature to your UniversalRendererData asset in Inspector.");
+                _fogInitTime = float.PositiveInfinity; // Don't retry
+                return;
+            }
+
+            // [008-F] Set vision coordinator reference for fog feature
+            if (_visionCoordinator != null)
+            {
+                _fogOfWarFeature.SetVisionCoordinator(_visionCoordinator);
+                Debug.Log("[008-F] FogOfWar initialized with vision coordinator.");
+            }
+            else
+            {
+                Debug.LogWarning("[008-F] Vision coordinator not ready yet. Fog may not initialize properly.");
+            }
         }
 
         /// <summary>
@@ -251,6 +297,9 @@ namespace Game.Features.Player
                 _fadeEffectManager.ClearFadeState();
                 Destroy(_fadeEffectManager.gameObject);
             }
+
+            // [008-F] Cleanup fog of war (feature itself is managed by renderer)
+            _fogOfWarFeature = null;
         }
 
         /// <summary>
