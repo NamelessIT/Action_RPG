@@ -3,7 +3,11 @@ using System;
 using System.Collections;
 public class AllyStats : Stats
 {
-    public float exp;
+    [Header("--- Attribute Point---")]
+    public int attributePointRemain;
+    [Header("--- Skill Point---")]
+    public int skillPointRemain;
+
     [Header("--- Sub-Health ---")]
     public float H = 200f;
     public float maxHpGainBonus = 10f;

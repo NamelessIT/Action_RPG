@@ -15,10 +15,12 @@ MonoBehaviour:
   id: WPN_GR_T2_01
   weaponType: 7
   weaponAtkType: 1
-  weaponName: "S\xE1ch H\u1ECDc Gi\u1EA3"
+  weaponName: Scholar Grimoire
   lore: "Ch\u1EE9a c\xE1c c\xE2u th\u1EA7n ch\xFA ph\u1EE9c t\u1EA1p h\u01A1n, thi
     tri\u1EC3n nhanh."
-  description: 
+  description: a neatly bound grimoire with a reinforced cover and carefully inscribed
+    symbols, its well-organized pages contain structured and reliable incantations,
+    reflecting disciplined study and controlled magical practice
   icon: {fileID: 0}
   rarity: 1
   baseAtk: 30

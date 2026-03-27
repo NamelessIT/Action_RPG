@@ -15,9 +15,11 @@ MonoBehaviour:
   id: WPN_BW_T1_01
   weaponType: 3
   weaponAtkType: 0
-  weaponName: "Cung Th\u1EE3 S\u0103n"
+  weaponName: Hunter Bow
   lore: "C\xE2y cung g\u1ED7 \u0111\u01A1n s\u01A1. B\u1EAFn xa v\xE0 c\u01A1 \u0111\u1ED9ng."
-  description: 
+  description: a simple wooden bow with a slightly curved frame and a worn grip,
+    its surface marked by small scratches from frequent use, designed for basic hunting
+    rather than precision or power
   icon: {fileID: 0}
   rarity: 0
   baseAtk: 18

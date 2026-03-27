@@ -15,10 +15,12 @@ MonoBehaviour:
   id: WPN_SP_T1_01
   weaponType: 4
   weaponAtkType: 0
-  weaponName: "Th\u01B0\u01A1ng L\xEDnh"
+  weaponName: Soldier Spear
   lore: "C\xE2y th\u01B0\u01A1ng ti\xEAu chu\u1EA9n c\u1EE7a l\xEDnh g\xE1c. T\u1EA7m
     \u0111\xE1nh t\u1ED1t."
-  description: 
+  description: a plain, battle-worn spear with a slightly dulled iron tip and a simple
+    wooden shaft, showing small scratches and signs of frequent use, built for practicality
+    rather than elegance
   icon: {fileID: 0}
   rarity: 0
   baseAtk: 20
@@ -26,6 +28,9 @@ MonoBehaviour:
   moveFlexibility: 0.75
   defenseValue: 20
   bonusCritChance: 0
+  attackRange: 3.5
+  isRanged: 0
+  projectilePrefab: {fileID: 0}
   substats: []
   reqStr: 0
   reqDex: 0
@@ -33,3 +38,4 @@ MonoBehaviour:
   reqVit: 0
   reqAgi: 0
   playerOnly: 0
+  comboEffects: []

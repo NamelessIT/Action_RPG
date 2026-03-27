@@ -16,7 +16,10 @@ MonoBehaviour:
   coreShieldName: Wooden Shield
   icon: {fileID: 0}
   lore: "Khi\xEAn g\u1ED7 d\u1EC5 ch\xE1y"
-  description: 
+  description: a reinforced circular core shield crafted from sturdy wood and bound
+    with simple metal bands, featuring a stable hollow center to house the core,
+    offering improved structural support and reliable protection compared to basic
+    models
   rarity: 1
   setId: 0
   armor: 25

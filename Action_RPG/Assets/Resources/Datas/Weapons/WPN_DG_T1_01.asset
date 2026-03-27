@@ -15,9 +15,11 @@ MonoBehaviour:
   id: WPN_DG_T1_01
   weaponType: 2
   weaponAtkType: 0
-  weaponName: "Dao G\u0103m M\u1EBB"
+  weaponName: Chipped Dagger
   lore: "Con dao nh\u1ECF v\xE0 nh\u1EB9. T\u1ED1c \u0111\u1ED9 c\u1EF1c nhanh."
-  description: 
+  description: a small, worn dagger with a visibly chipped blade and a rough, simple
+    handle, its edge uneven from repeated use, clearly a basic weapon made for survival
+    rather than precision
   icon: {fileID: 0}
   rarity: 0
   baseAtk: 10
@@ -25,6 +27,9 @@ MonoBehaviour:
   moveFlexibility: 0.95
   defenseValue: 5
   bonusCritChance: 0
+  attackRange: 1.2
+  isRanged: 0
+  projectilePrefab: {fileID: 0}
   substats: []
   reqStr: 0
   reqDex: 0
@@ -32,3 +37,4 @@ MonoBehaviour:
   reqVit: 0
   reqAgi: 0
   playerOnly: 0
+  comboEffects: []

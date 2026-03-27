@@ -15,10 +15,12 @@ MonoBehaviour:
   id: WPN_ST_T2_01
   weaponType: 5
   weaponAtkType: 1
-  weaponName: "G\u1EADy Ng\u1ECDc B\xEDch"
+  weaponName: Jade Staff
   lore: "T\u0103ng c\u01B0\u1EDDng kh\u1EA3 n\u0103ng c\u1ED9ng h\u01B0\u1EDFng ma
     thu\u1EADt."
-  description: 
+  description: a refined staff adorned with a smooth jade core set at its tip, its
+    polished shaft and balanced form channel a steady flow of gentle magical energy,
+    offering greater control and stability to its wielder
   icon: {fileID: 0}
   rarity: 1
   baseAtk: 38
@@ -26,6 +28,9 @@ MonoBehaviour:
   moveFlexibility: 0.7
   defenseValue: 15
   bonusCritChance: 0
+  attackRange: 3
+  isRanged: 1
+  projectilePrefab: {fileID: 0}
   substats:
   - stat: 2
     val: 5
@@ -39,3 +44,4 @@ MonoBehaviour:
   reqVit: 10
   reqAgi: 0
   playerOnly: 0
+  comboEffects: []

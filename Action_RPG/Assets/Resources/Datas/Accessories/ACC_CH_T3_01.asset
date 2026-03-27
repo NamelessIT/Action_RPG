@@ -14,10 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
   id: ACC_CH_T3_01
   accessoryType: 4
-  AccessoryName: "X\xEDch K\xECm H\xE3m"
+  AccessoryName: Restraining Chain
   lore: "S\u1EE3i x\xEDch l\u1EA1nh l\u1EBDo d\xF9ng \u0111\u1EC3 tr\xF3i bu\u1ED9c
     t\xF9 nh\xE2n."
-  description: 
+  description: a cold, heavy chain once used to bind prisoners, its rigid links carry
+    a suppressive presence, subtly restricting movement while enhancing controlled
+    and deliberate actions
   icon: {fileID: 0}
   rarity: 2
   setId: 0

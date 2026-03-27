@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: VanguardSkill
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: VanguardSkill
+  skillName: Bulwark Bash
+  icon: {fileID: 0}
+  skilDesc: "Gi\u01A1 khi\xEAn (ho\u1EB7c m\u1EB7t ph\u1EB3ng v\u0169 kh\xED) l\xEAn
+    che ch\u1EAFn v\xE0 lao t\u1EDBi \u0111\u1EADp m\u1EA1nh.\nBlock & Hit: Ch\u1EB7n
+    s\xE1t th\u01B0\u01A1ng ph\xEDa tr\u01B0\u1EDBc trong khi \u0111ang lao t\u1EDBi.
+    Khi k\u1EBFt th\xFAc s\u1EBD \u0111\u1EADp xu\u1ED1ng 1 c\xE1i, g\xE2y s\xE1t
+    th\u01B0\u01A1ng v\xE0 l\xE0m cho\xE1ng 1,5 gi\xE2y"
+  skillType: 2
+  skillPhysicalMultiplier: 1.5
+  skillMagicMultiplier: 0
+  cooldown: 0
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 3
+  signatureEffectCode: 0
+  passiveStats: []

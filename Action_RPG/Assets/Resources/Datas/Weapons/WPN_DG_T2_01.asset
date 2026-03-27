@@ -15,10 +15,12 @@ MonoBehaviour:
   id: WPN_DG_T2_01
   weaponType: 2
   weaponAtkType: 0
-  weaponName: "Dao S\xE1t Th\u1EE7"
+  weaponName: Assassin Dagger
   lore: "Nh\u1EB9 t\u1EF1a l\xF4ng h\u1ED3ng, th\xEDch h\u1EE3p cho vi\u1EC7c \xE1m
     s\xE1t."
-  description: 
+  description: a sleek, well-crafted dagger with a narrow, sharply honed blade and
+    a balanced grip, designed for swift and precise strikes, its darkened metal reducing
+    glare to remain unnoticed in the shadows
   icon: {fileID: 0}
   rarity: 1
   baseAtk: 18
@@ -26,6 +28,9 @@ MonoBehaviour:
   moveFlexibility: 0.95
   defenseValue: 5
   bonusCritChance: 0.05
+  attackRange: 1.2
+  isRanged: 0
+  projectilePrefab: {fileID: 0}
   substats:
   - stat: 4
     val: 10
@@ -36,3 +41,4 @@ MonoBehaviour:
   reqVit: 0
   reqAgi: 5
   playerOnly: 0
+  comboEffects: []

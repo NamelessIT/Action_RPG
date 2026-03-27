@@ -14,10 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
   id: ACC_RM_T2_02
   accessoryType: 2
-  AccessoryName: "Nh\u1EADt K\xFD H\u1ECDc Gi\u1EA3"
+  AccessoryName: Scholar's Journal
   lore: "Cu\u1ED1n s\u1ED5 tay ghi ch\xE9p ngu\u1EC7ch ngo\u1EA1c c\xE1c c\xF4ng
     th\u1EE9c ma ph\xE1p."
-  description: 
+  description: a worn notebook filled with hastily scribbled arcane formulas, its
+    pages cluttered with chaotic notes and unfinished thoughts, faint traces of accumulated
+    knowledge linger within, enhancing understanding through fragmented memory
   icon: {fileID: 0}
   rarity: 1
   setId: 0

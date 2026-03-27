@@ -16,10 +16,12 @@ MonoBehaviour:
   coreShieldName: Broken Core Shield
   icon: {fileID: 0}
   lore: 
-  description: "1 chi\u1EBFc khi\xEAn b\u1ECB v\u1EE5n v\u1EE1"
+  description: a damaged circular chest-mounted shield made of worn metal, with a
+    partially cracked outer ring and an exposed hollow center meant to house a core,
+    showing clear signs of structural weakness and heavy use
   rarity: 0
   setId: 0
   armor: 10
   magicResist: 10
-  stats: []
+  substats: []
   playerOnly: 0

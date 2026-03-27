@@ -15,10 +15,12 @@ MonoBehaviour:
   id: WPN_SP_T2_01
   weaponType: 4
   weaponAtkType: 0
-  weaponName: "Th\u01B0\u01A1ng Hi\u1EC7p S\u0129"
+  weaponName: Knight Spear
   lore: "M\u0169i th\u01B0\u01A1ng s\u1EAFc b\xE9n, c\xE1n l\xE0m b\u1EB1ng g\u1ED7
     s\u1ED3i b\u1ECDc th\xE9p."
-  description: 
+  description: a sturdy spear with a sharpened steel tip and a reinforced shaft,
+    bearing simple engravings near the base of the blade, designed for disciplined
+    combat and reliable performance on the battlefield
   icon: {fileID: 0}
   rarity: 1
   baseAtk: 35
@@ -26,6 +28,9 @@ MonoBehaviour:
   moveFlexibility: 0.75
   defenseValue: 20
   bonusCritChance: 0
+  attackRange: 3.5
+  isRanged: 0
+  projectilePrefab: {fileID: 0}
   substats:
   - stat: 0
     val: 10
@@ -36,3 +41,4 @@ MonoBehaviour:
   reqVit: 0
   reqAgi: 0
   playerOnly: 0
+  comboEffects: []
