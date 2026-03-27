@@ -604,8 +604,6 @@ MonoBehaviour:
   baseHp: 0
   baseHpGain: 2
   level: 1
-  exp: 0
-  percentExpReceive: 1
   isInvincible: 0
   maxStamina: 100
   currentStamina: 0
@@ -645,7 +643,6 @@ MonoBehaviour:
   AGI: 0
   physicalAtk: 0
   magicAtk: 0
-  damageOutputMultiplier: 1
   physicalLifeSteal: 0
   magicLifeSteal: 0
   baseAttackSpeed: 0
@@ -684,8 +681,7 @@ MonoBehaviour:
   parryAngle: 120
   isChallenged: 0
   isResonated: 0
-  attributePointRemain: 0
-  skillPointRemain: 0
+  exp: 0
   H: 200
   maxHpGainBonus: 10
   hpPerVIT: 15
@@ -2572,8 +2568,6 @@ MonoBehaviour:
   baseHp: 1000
   baseHpGain: 2
   level: 1
-  exp: 0
-  percentExpReceive: 1
   isInvincible: 0
   maxStamina: 100
   currentStamina: 0
@@ -2613,7 +2607,6 @@ MonoBehaviour:
   AGI: 1
   physicalAtk: 1
   magicAtk: 1
-  damageOutputMultiplier: 1
   physicalLifeSteal: 0
   magicLifeSteal: 0
   baseAttackSpeed: 0
@@ -2883,8 +2876,6 @@ MonoBehaviour:
   baseHp: 1000000
   baseHpGain: 2
   level: 1
-  exp: 0
-  percentExpReceive: 1
   isInvincible: 0
   maxStamina: 100
   currentStamina: 0
@@ -2924,7 +2915,6 @@ MonoBehaviour:
   AGI: 0
   physicalAtk: 120
   magicAtk: 60
-  damageOutputMultiplier: 1
   physicalLifeSteal: 0
   magicLifeSteal: 0
   baseAttackSpeed: 0
@@ -3677,7 +3667,6 @@ GameObject:
   - component: {fileID: 1995522837}
   - component: {fileID: 1995522836}
   - component: {fileID: 1995522839}
-  - component: {fileID: 1995522840}
   m_Layer: 0
   m_Name: Companion
   m_TagString: Ally
@@ -3807,7 +3796,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1995522831}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b410f924152f11b448df0a2fe28ffb4b, type: 3}
   m_Name: 
@@ -3860,8 +3849,6 @@ MonoBehaviour:
   baseHp: 0
   baseHpGain: 2
   level: 1
-  exp: 0
-  percentExpReceive: 1
   isInvincible: 0
   maxStamina: 100
   currentStamina: 0
@@ -3901,7 +3888,6 @@ MonoBehaviour:
   AGI: 0
   physicalAtk: 10
   magicAtk: 0
-  damageOutputMultiplier: 1
   physicalLifeSteal: 0
   magicLifeSteal: 0
   baseAttackSpeed: 0
@@ -3940,8 +3926,7 @@ MonoBehaviour:
   parryAngle: 120
   isChallenged: 0
   isResonated: 0
-  attributePointRemain: 0
-  skillPointRemain: 0
+  exp: 0
   H: 200
   maxHpGainBonus: 10
   hpPerVIT: 15
@@ -4015,19 +4000,6 @@ MonoBehaviour:
   currentRelicOfMemory: {fileID: 0}
   currentParasite: {fileID: 0}
   currentChain: {fileID: 0}
---- !u!114 &1995522840
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1995522831}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ea9fee22a23078349b04d4842835eaeb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Game.Features.Companion.CompanionVisionManager
-  _visionConfig: {fileID: 0}
 --- !u!1 &2025425007
 GameObject:
   m_ObjectHideFlags: 0

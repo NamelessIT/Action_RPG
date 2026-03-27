@@ -330,6 +330,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EnvBdgMD_Forest_MothersGarden_A
       objectReference: {fileID: 0}
+    - target: {fileID: 7512287450050852087, guid: ffc826fa965aa6444b0b691daeacc1f8, type: 3}
+      propertyPath: m_TagString
+      value: Obstacle
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1272,9 +1276,10 @@ GameObject:
   - component: {fileID: 781032362}
   - component: {fileID: 781032361}
   - component: {fileID: 781032360}
+  - component: {fileID: 781032363}
   m_Layer: 0
   m_Name: EnvBdgMD_Forest_A_Outdoor_House_A
-  m_TagString: Untagged
+  m_TagString: Obstacle
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1351,6 +1356,28 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!64 &781032363
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 781032359}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 6682846157171046443, guid: 35c4a2a0e118a5d4d9b3f4581ced571c, type: 3}
 --- !u!1 &791941691
 GameObject:
   m_ObjectHideFlags: 0
@@ -2826,7 +2853,7 @@ Transform:
   m_GameObject: {fileID: 1439149632}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.11, z: 0}
+  m_LocalPosition: {x: 0, y: 1.54, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4189,6 +4216,10 @@ PrefabInstance:
       propertyPath: baseDashRecovery
       value: 1.25
       objectReference: {fileID: 0}
+    - target: {fileID: 1448595461306789732, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: pickUpWeapon
+      value: 
+      objectReference: {fileID: 11400000, guid: e5a367ad3ee28ed4a926ada3901390b8, type: 2}
     - target: {fileID: 4658667183789246777, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: attackAngle
       value: 90

@@ -29,7 +29,7 @@ MonoBehaviour:
   bonusCritChance: 0
   attackRange: 15
   isRanged: 1
-  projectilePrefab: {fileID: 0}
+  projectilePrefab: {fileID: 6918126946625875329, guid: 387620a8a279e8e48a8558a9d9612de0, type: 3}
   substats: []
   reqStr: 0
   reqDex: 0

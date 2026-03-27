@@ -33,3 +33,9 @@ mono_crash.*
 *.app
 *.exe
 *.unitypackage
+
+.github
+.gitnexus
+AGENTS.md
+CLAUDE.md
+agent_workspace.md

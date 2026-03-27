@@ -604,8 +604,6 @@ MonoBehaviour:
   baseHp: 0
   baseHpGain: 2
   level: 1
-  exp: 0
-  percentExpReceive: 1
   isInvincible: 0
   maxStamina: 100
   currentStamina: 0
@@ -684,8 +682,7 @@ MonoBehaviour:
   parryAngle: 120
   isChallenged: 0
   isResonated: 0
-  attributePointRemain: 0
-  skillPointRemain: 0
+  exp: 0
   H: 200
   maxHpGainBonus: 10
   hpPerVIT: 15
@@ -2572,8 +2569,6 @@ MonoBehaviour:
   baseHp: 1000
   baseHpGain: 2
   level: 1
-  exp: 0
-  percentExpReceive: 1
   isInvincible: 0
   maxStamina: 100
   currentStamina: 0
@@ -2883,8 +2878,6 @@ MonoBehaviour:
   baseHp: 1000000
   baseHpGain: 2
   level: 1
-  exp: 0
-  percentExpReceive: 1
   isInvincible: 0
   maxStamina: 100
   currentStamina: 0
@@ -3860,8 +3853,6 @@ MonoBehaviour:
   baseHp: 0
   baseHpGain: 2
   level: 1
-  exp: 0
-  percentExpReceive: 1
   isInvincible: 0
   maxStamina: 100
   currentStamina: 0
@@ -3940,8 +3931,7 @@ MonoBehaviour:
   parryAngle: 120
   isChallenged: 0
   isResonated: 0
-  attributePointRemain: 0
-  skillPointRemain: 0
+  exp: 0
   H: 200
   maxHpGainBonus: 10
   hpPerVIT: 15
