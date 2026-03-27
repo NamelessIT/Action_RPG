@@ -14,11 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
   id: ACC_PA_T5_01
   accessoryType: 3
-  AccessoryName: "Huy\u1EBFt Tr\xF9ng"
+  AccessoryName: Blood Parasite
   lore: "Sinh v\u1EADt nh\u1EA7y nh\u1EE5a c\u1EAFm s\xE2u v\xE0o m\u1EA1ch m\xE1u,
     h\xFAt m\xE1u v\u1EADt ch\u1EE7 \u0111\u1EC3 c\u01B0\u1EDDng h\xF3a c\u01A1 b\u1EAFp
     \u0111\u1EBFn c\u1EF1c h\u1EA1n."
-  description: 
+  description: "a grotesque, fleshy organism embedded deep within the host\u2019s
+    veins, constantly feeding on blood while pulsating with violent energy, drastically
+    amplifying physical strength at the cost of continuous internal strain"
   icon: {fileID: 0}
   rarity: 4
   setId: 0

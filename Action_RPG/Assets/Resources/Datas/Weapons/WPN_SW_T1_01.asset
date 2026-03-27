@@ -15,10 +15,11 @@ MonoBehaviour:
   id: WPN_SW_T1_01
   weaponType: 1
   weaponAtkType: 0
-  weaponName: "Ki\u1EBFm R\u1EC9"
+  weaponName: Rusty Sword
   lore: "Thanh ki\u1EBFm \u0111\xE3 r\u1EC9 s\xE9t nh\u01B0ng v\u1EABn c\xF2n b\xE9n.
     C\xE2n b\u1EB1ng."
-  description: 
+  description: a simple iron longsword with a slightly chipped blade and worn handle,
+    looks old and used
   icon: {fileID: 0}
   rarity: 0
   baseAtk: 16
@@ -26,6 +27,9 @@ MonoBehaviour:
   moveFlexibility: 0.8
   defenseValue: 30
   bonusCritChance: 0
+  attackRange: 2
+  isRanged: 0
+  projectilePrefab: {fileID: 0}
   substats: []
   reqStr: 0
   reqDex: 0
@@ -33,3 +37,4 @@ MonoBehaviour:
   reqVit: 0
   reqAgi: 0
   playerOnly: 0
+  comboEffects: []

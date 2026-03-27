@@ -14,10 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
   id: ACC_RM_T2_01
   accessoryType: 2
-  AccessoryName: "Di V\u1EADt L\xEDnh Gi\xE0"
+  AccessoryName: Veteran's Relic
   lore: "Chi\u1EBFc huy hi\u1EC7u d\xEDnh m\xE1u c\u1EE7a ng\u01B0\u1EDDi l\xEDnh
     v\xF4 danh."
-  description: 
+  description: a worn military badge stained with dried blood, once carried by an
+    unknown soldier, faint echoes of past battles linger within it, subtly guiding
+    its bearer through instinct and experience
   icon: {fileID: 0}
   rarity: 1
   setId: 0

@@ -15,10 +15,12 @@ MonoBehaviour:
   id: WPN_GR_T1_01
   weaponType: 7
   weaponAtkType: 1
-  weaponName: "S\xE1ch Ph\xE9p Ai C\u1EADp"
+  weaponName: Ancient Grimoire
   lore: "Quy\u1EC3n s\xE1ch ma thu\u1EADt r\xE1ch n\xE1t. Nh\u1EB9 v\xE0 thi tri\u1EC3n
     nhanh."
-  description: 
+  description: a worn, dust-covered spellbook with a cracked leather cover and faded
+    symbols barely visible on its surface, its fragile pages filled with incomplete
+    and weakened incantations from a forgotten era
   icon: {fileID: 0}
   rarity: 0
   baseAtk: 18

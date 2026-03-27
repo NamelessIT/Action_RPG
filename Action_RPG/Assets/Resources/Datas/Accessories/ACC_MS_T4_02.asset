@@ -14,9 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
   id: ACC_MS_T4_02
   accessoryType: 1
-  AccessoryName: "D\u1EA5u \u1EA4n Ph\xF9 Th\u1EE7y"
+  AccessoryName: Witch's Mark
   lore: "H\xECnh x\u0103m con m\u1EAFt lu\xF4n m\u1EDF tr\u1EEBng tr\u1EEBng."
-  description: 
+  description: a tattoo of a wide-open eye etched into the soul, its unblinking gaze
+    radiating an unsettling presence, granting heightened perception and insight
+    while triggering unstable surges of power under precise conditions
   icon: {fileID: 0}
   rarity: 3
   setId: 0

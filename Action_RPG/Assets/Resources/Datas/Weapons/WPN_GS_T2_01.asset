@@ -15,10 +15,12 @@ MonoBehaviour:
   id: WPN_GS_T2_01
   weaponType: 6
   weaponAtkType: 0
-  weaponName: "\u0110\u1EA1i Ki\u1EBFm Th\xE9p"
+  weaponName: Steel Greatsword
   lore: "L\u01B0\u1EE1i ki\u1EBFm b\u1EB1ng th\xE9p t\xF4i luy\u1EC7n, n\u1EB7ng
     nh\u01B0ng c\u1EAFt s\u1EAFt nh\u01B0 b\xF9n."
-  description: 
+  description: a heavy greatsword forged from solid steel, featuring a broad, well-tempered
+    blade and a sturdy two-handed grip, built for strength and durability, capable
+    of delivering powerful and reliable strikes
   icon: {fileID: 0}
   rarity: 1
   baseAtk: 45
@@ -26,6 +28,9 @@ MonoBehaviour:
   moveFlexibility: 0.6
   defenseValue: 50
   bonusCritChance: 0
+  attackRange: 2.5
+  isRanged: 0
+  projectilePrefab: {fileID: 0}
   substats:
   - stat: 3
     val: 10

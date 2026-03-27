@@ -7,7 +7,7 @@ public class MagePassive : SkillBehavior
 {
     [Header("Core Requirements")]
     public string requiredWeaponName = "Grimoire";
-    public bool bypassWeaponCheck = true; // ✅ DEBUG MODE: Bật để test không cần Grimoire
+    public bool bypassWeaponCheck = false; // ✅ DEBUG MODE: Bật để test không cần Grimoire
     public float baseMoveSpeedBonus = 0.05f;
     public float xpBonusPercent = 0.2f;
 

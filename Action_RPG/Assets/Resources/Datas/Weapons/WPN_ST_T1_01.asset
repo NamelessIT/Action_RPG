@@ -15,9 +15,11 @@ MonoBehaviour:
   id: WPN_ST_T1_01
   weaponType: 5
   weaponAtkType: 1
-  weaponName: "G\u1EADy T\u1EADp S\u1EF1"
+  weaponName: Apprentice Staff
   lore: "C\xE2y g\u1EADy g\u1ED7 s\u1ED3i d\xE0nh cho h\u1ECDc vi\xEAn ph\xE1p s\u01B0."
-  description: 
+  description: a simple wooden staff with a slightly uneven shaft and a small, dull
+    crystal set at its tip, showing signs of early practice use, imbued with only
+    a faint trace of unstable magical energy
   icon: {fileID: 0}
   rarity: 0
   baseAtk: 22
@@ -25,6 +27,9 @@ MonoBehaviour:
   moveFlexibility: 0.7
   defenseValue: 15
   bonusCritChance: 0
+  attackRange: 3
+  isRanged: 1
+  projectilePrefab: {fileID: 0}
   substats: []
   reqStr: 0
   reqDex: 0
@@ -32,3 +37,4 @@ MonoBehaviour:
   reqVit: 0
   reqAgi: 0
   playerOnly: 0
+  comboEffects: []

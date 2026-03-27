@@ -15,10 +15,12 @@ MonoBehaviour:
   id: WPN_GS_T1_01
   weaponType: 6
   weaponAtkType: 0
-  weaponName: "\u0110\u1EA1i Ki\u1EBFm C\u1ED5 X\u01B0a"
+  weaponName: Ancient Greatsword
   lore: "Thanh ki\u1EBFm kh\u1ED5ng l\u1ED3 c\u0169 k\u1EF9. N\u1EB7ng n\u1EC1 nh\u01B0ng
     uy l\u1EF1c."
-  description: 
+  description: a large, timeworn greatsword with a heavy, slightly dulled blade and
+    faded engravings barely visible along its surface, its worn grip and aged metal
+    hinting at a long-forgotten past rather than true power
   icon: {fileID: 0}
   rarity: 0
   baseAtk: 25
@@ -26,6 +28,9 @@ MonoBehaviour:
   moveFlexibility: 0.6
   defenseValue: 50
   bonusCritChance: 0
+  attackRange: 2.5
+  isRanged: 0
+  projectilePrefab: {fileID: 0}
   substats: []
   reqStr: 0
   reqDex: 0
@@ -33,3 +38,4 @@ MonoBehaviour:
   reqVit: 0
   reqAgi: 0
   playerOnly: 0
+  comboEffects: []

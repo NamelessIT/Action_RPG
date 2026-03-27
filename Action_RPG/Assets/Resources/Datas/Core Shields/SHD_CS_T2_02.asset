@@ -16,7 +16,10 @@ MonoBehaviour:
   coreShieldName: Spike Shield
   icon: {fileID: 0}
   lore: "1 chi\u1EBFc khi\xEAn s\u1EAFc l\u1EB9m"
-  description: 
+  description: a reinforced circular core shield fitted with short metal spikes along
+    its outer ring, built from solid materials to enhance durability while maintaining
+    a stable hollow center for the core, giving it a more aggressive yet still defensive
+    design
   rarity: 1
   setId: 0
   armor: 15

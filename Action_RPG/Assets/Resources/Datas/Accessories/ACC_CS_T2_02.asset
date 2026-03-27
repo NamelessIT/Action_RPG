@@ -14,9 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
   id: ACC_CS_T2_02
   accessoryType: 0
-  AccessoryName: "M\u1EA3nh L\xF5i S\u1EAFt Nh\u1ECDn"
+  AccessoryName: Spiked Iron Core Fragment
   lore: "nh\u1ECDn vcl"
-  description: 
+  description: a jagged iron core fragment with sharp protrusions across its surface,
+    forged from a hardened structure, emitting a faint but stable energy while its
+    spiked form serves as both a defensive deterrent and a symbol of raw, concentrated
+    power
   icon: {fileID: 0}
   rarity: 1
   setId: 0

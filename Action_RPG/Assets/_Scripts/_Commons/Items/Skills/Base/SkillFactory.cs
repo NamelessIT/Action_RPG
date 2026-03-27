@@ -42,6 +42,8 @@ public static class SkillFactory
                 return typeof(ChrisSkill);
             case SkillData.SkillEffectCode.LeoSkill:
                 return typeof(LeoSkill);
+            case SkillData.SkillEffectCode.VanguardSkill:
+                return typeof(VanguardSkill);
             case SkillData.SkillEffectCode.WarriorSkill:
                 return typeof(WarriorSkill);
             case SkillData.SkillEffectCode.BloodReaverSkill:
@@ -87,6 +89,8 @@ public static class SkillFactory
                 return typeof(WarriorSignature);
             case SkillData.SignatureEffectCode.BattleMageLiteSignature:
                 return typeof(BattleMageLiteSignature);
+            case SkillData.SignatureEffectCode.BattleMageSignature:
+                return typeof(BattleMageSignature);
             case SkillData.SignatureEffectCode.BloodReaverLiteSignature:
                 return typeof(BloodReaverLiteSignature);
             case SkillData.SignatureEffectCode.BloodReaverSignature:

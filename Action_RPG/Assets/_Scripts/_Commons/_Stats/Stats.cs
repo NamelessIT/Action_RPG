@@ -11,7 +11,11 @@ public class Stats : MonoBehaviour
     public float currentHp;
     public float baseHp;
     public float baseHpGain = 2f;
+
+    [Header("--- Level---")]
     public float level = 1f;
+    public float exp;
+    public float percentExpReceive = 1f; // Tỷ lệ nhận EXP (Có thể bị tăng hoặc giảm bởi buffs/debuffs)
 
     public bool isInvincible = false;
 

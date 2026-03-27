@@ -14,9 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
   id: ACC_CH_T3_02
   accessoryType: 4
-  AccessoryName: "D\xE2y Bu\u1ED9c Th\u1EC3 L\u1EF1c"
+  AccessoryName: Stamina Binding Strap
   lore: "D\xE2y \u0111ai da bu\u1ED9c ch\u1EB7t c\xE1c b\xF3 c\u01A1."
-  description: 
+  description: a tight leather strap wrapped firmly around key muscle groups, acting
+    as a restrictive binding that regulates physical exertion while improving endurance
+    control and stabilizing stamina usage during sustained activity
   icon: {fileID: 0}
   rarity: 2
   setId: 0

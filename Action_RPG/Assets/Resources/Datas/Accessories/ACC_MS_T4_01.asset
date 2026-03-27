@@ -14,9 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
   id: ACC_MS_T4_01
   accessoryType: 1
-  AccessoryName: "D\u1EA5u \u1EA4n Ph\u1EABn N\u1ED9"
+  AccessoryName: Mark of Wrath
   lore: "M\u1ED9t v\u1EBFt s\u1EB9o n\xF3ng r\u1EF1c h\xECnh ng\u1ECDn l\u1EEDa."
-  description: 
+  description: a searing scar shaped like a blazing flame, etched deep into the soul,
+    radiating intense heat and volatile energy, unleashing bursts of overwhelming
+    power under extreme emotional states
   icon: {fileID: 0}
   rarity: 3
   setId: 0

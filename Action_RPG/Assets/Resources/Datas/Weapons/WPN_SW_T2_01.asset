@@ -15,10 +15,12 @@ MonoBehaviour:
   id: WPN_SW_T2_01
   weaponType: 1
   weaponAtkType: 0
-  weaponName: "Ki\u1EBFm Tinh Luy\u1EC7n"
+  weaponName: Refined Sword
   lore: "C\xE2n b\u1EB1ng ho\xE0n h\u1EA3o gi\u1EEFa t\u1EA5n c\xF4ng v\xE0 ph\xF2ng
     th\u1EE7."
-  description: 
+  description: a well-balanced sword with a clean, polished blade and a reinforced
+    hilt, crafted with improved precision and care, offering a reliable edge and
+    smoother handling compared to basic weapons
   icon: {fileID: 0}
   rarity: 1
   baseAtk: 28
@@ -26,6 +28,9 @@ MonoBehaviour:
   moveFlexibility: 0.8
   defenseValue: 30
   bonusCritChance: 0
+  attackRange: 2
+  isRanged: 0
+  projectilePrefab: {fileID: 0}
   substats:
   - stat: 0
     val: 10
@@ -36,3 +41,4 @@ MonoBehaviour:
   reqVit: 0
   reqAgi: 0
   playerOnly: 0
+  comboEffects: []
