@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: MageSkill
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: MageSkill
+  skillName: Arcane Empowerment
+  icon: {fileID: 0}
+  skilDesc: "C\u01B0\u1EDDng h\xF3a cho \u0111\xF2n \u0111\xE1nh ti\u1EBFp theo.\r\n[Default]
+    Kh\xF4ng Grimoire: Arcane Blast - N\u1ED5 s\xE1t th\u01B0\u01A1ng ph\xE9p di\u1EC7n
+    r\u1ED9ng tr\u01B0\u1EDBc m\u1EB7t v\xE0 G\xE2y cho\xE1ng 1.5s c\u1EE9ng.\r\n\r\n[N]
+    Fireball: Hellfire - Qu\u1EA3 c\u1EA7u l\u1EEDa kh\u1ED5ng l\u1ED3, ph\xE1t n\u1ED5
+    g\xE2y s\xE1t th\u01B0\u01A1ng x3 v\xE0 Thi\xEAu \u0111\u1ED1t (Bleed) tr\xEAn
+    di\u1EC7n r\u1ED9ng.\r\n\r\n[NE] Tornado: Grand Hurricane - L\u1ED1c xo\xE1y
+    to h\u01A1n, h\xFAt t\u1EA5t c\u1EA3 k\u1EBB \u0111\u1ECBch xung quanh v\xE0o
+    t\xE2m b\xE3o.\r\n\r\n[E] Wind: Tailwind - Kh\xF4ng g\xE2y s\xE1t th\u01B0\u01A1ng
+    ngay, nh\u01B0ng buff cho b\u1EA3n th\xE2n +50% T\u1ED1c \u0111\xE1nh v\xE0 T\u1ED1c
+    ch\u1EA1y trong 5 gi\xE2y.\r\n\r\n[SE] Ice Crystals: Blizzard - G\u1ECDi m\u1ED9t
+    c\u01A1n m\u01B0a b\u0103ng gi\xE1 li\xEAn t\u1EE5c r\u01A1i xu\u1ED1ng khu v\u1EF1c
+    ch\u1EC9 \u0111\u1ECBnh.\r\n\r\n[S] Ice: Absolute Zero - \u0110\xF3ng b\u0103ng
+    (Stun) NGAY L\u1EACP T\u1EE8C to\xE0n b\u1ED9 k\u1EBB \u0111\u1ECBch xung quanh
+    trong 3s m\xE0 kh\xF4ng c\u1EA7n t\xEDch \u0111\u1EE7 hit.\r\n\r\n[SW] Ice Path:
+    Flash Frost - V\u1EE5 n\u1ED5 b\u0103ng l\xE0m ch\u1EADm (Slow) 80% k\u1EBB \u0111\u1ECBch
+    trong v\xF9ng r\u1ED9ng.\r\n\r\n[W] Earth: Earthquake - \u0110\u1EADp \u0111\u1EA5t
+    t\u1EA1o ch\u1EA5n \u0111\u1ED9ng, l\xE0m ph\xE1 v\u1EE1 30% Gi\xE1p/Kh\xE1ng
+    ph\xE9p c\u1EE7a \u0111\u1ECBch ngay l\u1EADp t\u1EE9c.\r\n\r\n[NW] Fire Path:
+    Magma Eruption - T\u1EA1o m\u1ED9t v\xF9ng dung nham n\u1ED5 tung, v\u1EEBa Stun
+    v\u1EEBa Burn."
+  skillType: 2
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 0
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 9
+  signatureEffectCode: 0
+  passiveStats: []

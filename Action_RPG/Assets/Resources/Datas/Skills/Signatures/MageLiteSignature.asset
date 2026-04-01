@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: MageLiteSignature
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: 'MageLiteSignature '
+  skillName: Elemental Convergence
+  icon: {fileID: 0}
+  skilDesc: "\"H\xE0nh \u0111\u1ED9ng: B\u1EAFn ra 4 lu\u1ED3ng \u0111\u1EA1n: L\u1EEDa,
+    B\u0103ng, Gi\xF3, \u0110\u1EA5t c\xF9ng l\xFAc v\xE0o h\u01B0\u1EDBng tr\u01B0\u1EDBc
+    m\u1EB7t\n\nHi\u1EC7u \u1EE9ng: G\xE2y s\xE1t th\u01B0\u01A1ng h\u1ED7n h\u1EE3p
+    v\xE0 \xE1p d\u1EE5ng m\u1ECDi hi\u1EC7u \u1EE9ng (Thi\xEAu \u0111\u1ED1t, T\xEA
+    t\xE1i, Gi\u1EA3m gi\xE1p v\xE0 kh\xE1ng ph\xE9p) l\xEAn k\u1EBB \u0111\u1ECBch
+    tr\xFAng \u0111\xF2n, t\u0103ng t\u1ED1c \u0111\u1ED9 cho b\u1EA3n th\xE2n (Gi\xF3)\""
+  skillType: 3
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 3
+  cooldown: 0
+  sinChargeReq: 80
+  passiveEffectCode: 0
+  skillEffectCode: 0
+  signatureEffectCode: 9
+  passiveStats: []
