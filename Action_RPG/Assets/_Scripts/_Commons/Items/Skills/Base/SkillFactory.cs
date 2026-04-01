@@ -95,6 +95,10 @@ public static class SkillFactory
                 return typeof(BloodReaverLiteSignature);
             case SkillData.SignatureEffectCode.BloodReaverSignature:
                 return typeof(BloodReaverSignature);
+            case SkillData.SignatureEffectCode.RougeLiteSignature:
+                return typeof(RougeLiteSignature);
+            case SkillData.SignatureEffectCode.RougeSignature:
+                return typeof(RougeSignature);
             case SkillData.SignatureEffectCode.DuelistSignature:
                 return typeof(DuelistSignature);
             // ... Thêm các case khác vào đây ...
