@@ -109,6 +109,7 @@ public class MagePassive : SkillBehavior
         activeDefReductionCoroutines.Clear();
 
         CleanUpStats();
+        if (stats is AllyStats ally) ally.CalculateMoveSpeedOnly(); // Cập nhật lại tốc độ lần cuối
         iceHitCounter.Clear();
         earthHitCounter.Clear();
         isGrimoireEquipped = false;
@@ -120,7 +121,6 @@ public class MagePassive : SkillBehavior
     {
         if (fireballCD > 0f) fireballCD -= Time.deltaTime;
         if (currentTornadoICD > 0f) currentTornadoICD -= Time.deltaTime;
-        ApplyDirectionalMoveSpeed();
     }
 
     // ========================================================
@@ -133,9 +133,21 @@ public class MagePassive : SkillBehavior
 
         if (!isGrimoireEquipped || input == Vector2.zero) return;
 
+        // Xử lý khi người chơi dừng lại
+        if (input == Vector2.zero)
+        {
+            if (currentDirection != Direction8.None)
+            {
+                currentDirection = Direction8.None;
+                ApplyDirectionalMoveSpeed(); // Trả tốc độ về bình thường
+            }
+            return;
+        }
+
         float angle = Mathf.Atan2(input.y, input.x) * Mathf.Rad2Deg;
         if (angle < 0) angle += 360f;
 
+        Direction8 newDirection = Direction8.None;
         // Map to 8 directions
         if (angle >= 337.5f || angle < 22.5f) currentDirection = Direction8.E;
         else if (angle >= 22.5f && angle < 67.5f) currentDirection = Direction8.NE;
@@ -145,8 +157,13 @@ public class MagePassive : SkillBehavior
         else if (angle >= 202.5f && angle < 247.5f) currentDirection = Direction8.SW;
         else if (angle >= 247.5f && angle < 292.5f) currentDirection = Direction8.S;
         else if (angle >= 292.5f && angle < 337.5f) currentDirection = Direction8.SE;
-        else currentDirection = Direction8.None;
 
+        // [ĐÃ SỬA] Chỉ áp dụng lại Tốc độ chạy khi hướng bấm THỰC SỰ thay đổi
+        if (newDirection != currentDirection)
+        {
+            currentDirection = newDirection;
+            ApplyDirectionalMoveSpeed();
+        }
         // ✅ DEBUG: Log detected direction
         //Debug.Log($"[Mage] 🧭 Direction DETECTED: {currentDirection} (Angle: {angle:F1}°)");
     }
@@ -291,22 +308,24 @@ public class MagePassive : SkillBehavior
 
     private void ApplyDefenseReduction(Stats target, float reductionPercent, float duration)
     {
-        float originalArmor = target.magicResist;
-        target.magicResist *= (1f - reductionPercent);
+        // [ĐÃ SỬA] Trừ một lượng cụ thể thay vì lưu giá trị tuyệt đối
+        float reducedAmount = target.magicResist * reductionPercent;
+        target.magicResist -= reducedAmount;
 
         if (!activeDefReductionCoroutines.ContainsKey(target))
         {
-            Coroutine coro = StartCoroutine(RevertDefenseAfterDelay(target, originalArmor, duration));
+            Coroutine coro = StartCoroutine(RevertDefenseAfterDelay(target, reducedAmount, duration));
             activeDefReductionCoroutines[target] = coro;
         }
     }
 
-    private IEnumerator RevertDefenseAfterDelay(Stats target, float originalValue, float delay)
+    private IEnumerator RevertDefenseAfterDelay(Stats target, float reducedAmount, float delay)
     {
         yield return new WaitForSeconds(delay);
         if (target != null && target.currentHp > 0 && activeDefReductionCoroutines.ContainsKey(target))
         {
-            target.magicResist = originalValue;
+            // [ĐÃ SỬA] Cộng trả lại lượng đã trừ để không đè lên các buff khác
+            target.magicResist += reducedAmount;
             activeDefReductionCoroutines.Remove(target);
             Debug.Log($"[Mage] 🛡️ Defense reverted for {target.name}");
         }
@@ -315,14 +334,16 @@ public class MagePassive : SkillBehavior
     private void ApplyBurnToNearbyEnemies(float duration, float dps)
     {
         float range = playerController != null ? playerController.attackRange : 2f;
-        Collider[] hits = Physics.OverlapSphere(transform.position, range, LayerMask.GetMask("Enemy"));
+        // [ĐÃ SỬA] Dùng dangerLayer của hệ thống thay vì hardcode chuỗi "Enemy"
+        LayerMask targetLayer = playerController != null ? playerController.dangerLayer : LayerMask.GetMask("Enemy");
+
+        Collider[] hits = Physics.OverlapSphere(transform.position, range, targetLayer);
         foreach (var col in hits)
         {
             var enemyStats = col.GetComponent<Stats>();
             if (enemyStats != null && enemyStats.currentHp > 0)
             {
                 enemyStats.ApplyBleed(dps, duration);
-                Debug.Log($"[Mage] 🔥 Burn applied to {enemyStats.name} ({dps:F1} DPS for {duration}s)");
             }
         }
     }

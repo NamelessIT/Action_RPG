@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: BattleMageSkill
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: BattleMageSkill
+  skillName: Judgment Ring
+  icon: {fileID: 0}
+  skilDesc: "D\u1EADm ch\xE2n, t\u1EA1o m\u1ED9t v\xF2ng tr\xF2n n\u0103ng l\u01B0\u1EE3ng
+    t\u1ECFa ra xung quanh ng\u01B0\u1EDDi.\nAoE: L\xE0m cho\xE1ng k\u1EBB \u0111\u1ECBch
+    xung quanh v\xE0 g\xE2y s\xE1t th\u01B0\u01A1ng ph\xE9p. H\u1ED3i m\u1ED9t l\u01B0\u1EE3ng
+    nh\u1ECF HP n\u1EBFu tr\xFAng nhi\u1EC1u \u0111\u1ECBch."
+  skillType: 2
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 1.8
+  cooldown: 0
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 5
+  signatureEffectCode: 0
+  passiveStats: []

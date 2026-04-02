@@ -46,12 +46,16 @@ public static class SkillFactory
                 return typeof(VanguardSkill);
             case SkillData.SkillEffectCode.WarriorSkill:
                 return typeof(WarriorSkill);
+            case SkillData.SkillEffectCode.BattleMageSkill:
+                return typeof(BattleMageSkill);
             case SkillData.SkillEffectCode.BloodReaverSkill:
                 return typeof(BloodReaverSkill);
             case SkillData.SkillEffectCode.RougeSkill:
                 return typeof(RougeSkill);
             case SkillData.SkillEffectCode.DuelistSkill:
                 return typeof(DuelistSkill);
+            case SkillData.SkillEffectCode.MageSkill:
+                return typeof(MageSkill);
             case SkillData.SkillEffectCode.CatalystSkill:
                 return typeof(CatalystSkill);
             case SkillData.SkillEffectCode.PaladinSkill:
@@ -99,10 +103,18 @@ public static class SkillFactory
                 return typeof(RougeLiteSignature);
             case SkillData.SignatureEffectCode.RougeSignature:
                 return typeof(RougeSignature);
+            case SkillData.SignatureEffectCode.DuelistLiteSignature:
+                return typeof(DuelistLiteSignature);
             case SkillData.SignatureEffectCode.DuelistSignature:
                 return typeof(DuelistSignature);
-            // ... Thêm các case khác vào đây ...
-
+            case SkillData.SignatureEffectCode.MageLiteSignature:
+                return typeof(MageLiteSignature);
+            case SkillData.SignatureEffectCode.MageSignature:
+                return typeof(MageSignature);
+            case SkillData.SignatureEffectCode.CatalystLiteSignature:
+                return typeof(CatalystLiteSignature);
+            case SkillData.SignatureEffectCode.CatalystSignature:
+                return typeof(CatalystSignature);
 
             default:
                 return null;
