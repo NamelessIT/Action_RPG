@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: CatalystSignature
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: CatalystSignature
+  skillName: 'Soul Link: Awakening'
+  icon: {fileID: 0}
+  skilDesc: "\"H\xE0nh \u0111\u1ED9ng: Leonard truy\u1EC1n to\xE0n b\u1ED9 Sin Charge
+    v\xE0o Companion. Companion h\xF3a t\u1ECFa ra lu\u1ED3ng kh\xED m\xE0u \u0111en
+    d\xE0y \u0111\u1EB7c.\n\nHi\u1EC7u \u1EE9ng: Trong 10s, Companion b\u1EA5t t\u1EED,
+    t\u0103ng 200% Damage v\xE0 T\u1ED1c \u0111\u1ED9 \u0111\xE1nh. \u0110\xF2n \u0111\xE1nh
+    c\u1EE7a Leonard II s\u1EBD g\xE2y th\xEAm s\xE1t th\u01B0\u01A1ng d\u1EF1a tr\xEAn
+    kho\u1EA3ng c\xE1ch gi\u1EEFa Leonard v\xE0 companion, c\xE0ng g\u1EA7n c\xE0ng
+    m\u1EA1nh.\""
+  skillType: 3
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 0
+  sinChargeReq: 120
+  passiveEffectCode: 0
+  skillEffectCode: 0
+  signatureEffectCode: 18
+  passiveStats: []
