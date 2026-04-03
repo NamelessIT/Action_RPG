@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: SwordMasterSkill
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: SwordMasterSkill
+  skillName: Swiftness Counter
+  icon: {fileID: 0}
+  skilDesc: "\"\u2022 H\xE0nh \u0111\u1ED9ng: X\xF3a m\u1ECDi hi\u1EC7u \u1EE9ng
+    b\u1EA5t l\u1EE3i hi\u1EC7n c\xF3, v\xE0o tr\u1EA1ng th\xE1i Swiftness, Dash
+    s\u1EBD kh\xF4ng t\u1ED1n stamina trong 4 gi\xE2y. \n\n\u2022 Hi\u1EC7u \u1EE9ng:
+    N\u1EBFu l\u01B0\u1EDBt \u0111\xFAng l\xFAc \u0111\u1ECBch ra \u0111\xF2n ->
+    \u0110\u1EC3 l\u1EA1i \u1EA3o \u1EA3nh g\xE2y cho\xE1ng (Duelist) + Hi\u1EC7n
+    sau l\u01B0ng \u0111\u1ECBch \u0111\u1EC3 Backstab, g\xE2y s\xE1t th\u01B0\u01A1ng
+    l\u1EDBn (Rouge). \n\n\u2022 Design: Th\u01B0\u1EDFng l\u1EDBn cho ph\u1EA3n
+    x\u1EA1 (Frame perfect). K\u1EBFt h\u1EE3p N\xE9 & Ph\u1EA3n \u0111\xF2n.\""
+  skillType: 2
+  skillPhysicalMultiplier: 4
+  skillMagicMultiplier: 0
+  cooldown: 0
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 17
+  signatureEffectCode: 0
+  passiveStats: []

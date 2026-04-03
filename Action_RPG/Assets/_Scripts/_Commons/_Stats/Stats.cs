@@ -146,6 +146,9 @@ public class Stats : MonoBehaviour
     [Header("--- Stealth ---")]
     public float stealthFactor = 1.0f; // 1 = Bình thường, 0.5 = Giảm 50% tầm địch
 
+    // [MỚI] Cờ báo hiệu trạng thái Tàng Hình
+    public bool isInvisible = false;
+
     // --- HIỆU ỨNG CHẢY MÁU (BLEED) ---
     [Header("--- Bleed ---")]
     public bool isBleeding = false;

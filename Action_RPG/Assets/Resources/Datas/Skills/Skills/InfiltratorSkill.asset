@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: InfiltratorSkill
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: InfiltratorSkill
+  skillName: Synchronized Strike
+  icon: {fileID: 0}
+  skilDesc: "\"\u2022 H\xE0nh \u0111\u1ED9ng: Leonard t\xE0ng h\xECnh trong 4 gi\xE2y,
+    \u0111\xF2n \u0111\xE1nh ti\u1EBFp theo s\u1EBD l\u01B0\u1EDBt t\u1EDBi ch\xE9m
+    gi\u1EA3m Armor v\xE0 MS, \u0111\xE1nh d\u1EA5u m\u1EE5c ti\xEAu (Mark).\n\n\u2022
+    Hi\u1EC7u \u1EE9ng: Companion l\u1EADp t\u1EE9c Dash t\u1EDBi l\xE0m cho\xE1ng
+    v\xE0 g\xE2y s\xE1t th\u01B0\u01A1ng (Knock-up) m\u1EE5c ti\xEAu \u0111\xF3.
+    Leonard l\u01B0\u1EDBt ra sau, b\u1ED3i th\xEAm 1 \u0111\xF2n backstab.\n\n\u2022
+    Design: D\u1ED3n damage \u0111\u01A1n m\u1EE5c ti\xEAu c\u1EF1c nhanh (Burst).\""
+  skillType: 2
+  skillPhysicalMultiplier: 3.5
+  skillMagicMultiplier: 0
+  cooldown: 0
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 19
+  signatureEffectCode: 0
+  passiveStats: []
