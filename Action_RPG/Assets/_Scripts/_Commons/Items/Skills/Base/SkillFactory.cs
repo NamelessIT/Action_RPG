@@ -58,6 +58,8 @@ public static class SkillFactory
                 return typeof(MageSkill);
             case SkillData.SkillEffectCode.CatalystSkill:
                 return typeof(CatalystSkill);
+            case SkillData.SkillEffectCode.WardenSkill:
+                return typeof(WardenSkill);
             case SkillData.SkillEffectCode.PaladinSkill:
                 return typeof(PaladinSkill);
             case SkillData.SkillEffectCode.JuggernautSkill:
@@ -68,6 +70,12 @@ public static class SkillFactory
                 return typeof(RavagerSkill);
             case SkillData.SkillEffectCode.WarlockSkill:
                 return typeof(WarlockSkill);
+            case SkillData.SkillEffectCode.SwordMasterSkill:
+                return typeof(SwordMasterSkill);
+            case SkillData.SkillEffectCode.TricksterSkill:
+                return typeof(TricksterSkill);
+            case SkillData.SkillEffectCode.InfiltratorSkill:
+                return typeof(InfiltratorSkill);
             // ... Thêm các case khác vào đây ...
 
 

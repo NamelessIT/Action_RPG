@@ -360,7 +360,7 @@ public class EnemyAI : MonoBehaviour
             }
             else
             {
-                Debug.Log($"[AI] Đã mất dấu {nearestTarget.name} (Chết hoặc chạy xa).");
+                Debug.Log($"[AI] Đã mất dấu {nearestTarget.name} (Chết, tàng hình hoặc chạy quá xa).");
                 nearestTarget = null;
             }
         }
@@ -376,7 +376,7 @@ public class EnemyAI : MonoBehaviour
             if (t == transform) continue;
 
             // Check kẻ thù để bỏ chạy (Cho Friendly)
-            if (stats.IsScaredOf(t))
+            if (stats.IsScaredOf(t) && IsValidTarget(t)) // [MỚI] Thêm check IsValidTarget (tàng hình)
             {
                 bestPredator = t;
             }
@@ -420,7 +420,7 @@ public class EnemyAI : MonoBehaviour
     {
         if (t == null) return false;
         Stats tStats = t.GetComponent<Stats>();
-        if (tStats == null || tStats.isDead) return false;
+        if (tStats == null || tStats.isDead || tStats.isInvisible) return false;
         return stats.IsHostileTo(t);
     }
 
@@ -727,6 +727,10 @@ public class EnemyAI : MonoBehaviour
     public void OnDamageTaken(Transform attacker)
     {
         if (attacker == null) return;
+
+        // [MỚI] Không khóa mục tiêu nếu kẻ tấn công vô hình
+        Stats attackerStats = attacker.GetComponent<Stats>();
+        if (attackerStats != null && attackerStats.isInvisible) return;
 
         // Đánh thức AI
         isReturningHome = false;
