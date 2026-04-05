@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: SpellbladeSkill
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: SpellbladeSkill
+  skillName: Arcane Crescent
+  icon: {fileID: 0}
+  skilDesc: "\"\u2022 H\xE0nh \u0111\u1ED9ng: Ph\u1EE7 ph\xE9p l\xEAn v\u0169 kh\xED,
+    ch\xE9m ra \u0111\u01B0\u1EDDng ki\u1EBFm kh\xED (Wave) bay xa.\n\n\u2022 Hi\u1EC7u
+    \u1EE9ng: Ki\u1EBFm kh\xED xuy\xEAn th\u1EA5u, gi\u1EA3m d\u1EA7n s\xE1t th\u01B0\u01A1ng.
+    N\u1EBFu k\u1EBB \u0111\u1ECBch t\u1EA5n c\xF4ng ho\u1EB7c s\u1EED d\u1EE5ng
+    skill trong 2s sau khi tr\xFAng \u0111\xF2n -> G\xE2y th\xEAm 1 l\u1EA7n s\xE1t
+    th\u01B0\u01A1ng n\u1EEFa, l\xE0m cho\xE1ng 1,5s.\n\n\u2022 Design: Mang c\u01A1
+    ch\u1EBF Counter (Ph\u1EA3n \u0111\xF2n) l\xEAn t\u1EA7m xa, nh\u01B0ng d\u1EF1
+    \u0111o\xE1n tr\u01B0\u1EDBc \u0111\xF2n t\u1EA5n c\xF4ng, thay v\xEC parry.\""
+  skillType: 2
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 1
+  cooldown: 0
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 20
+  signatureEffectCode: 0
+  passiveStats: []
