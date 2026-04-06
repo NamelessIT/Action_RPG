@@ -29,5 +29,6 @@ MonoBehaviour:
   cooldown: 0
   sinChargeReq: 0
   passiveEffectCode: 0
-  skillEffectCode: 10
+  skillEffectCode: 12
+  signatureEffectCode: 0
   passiveStats: []

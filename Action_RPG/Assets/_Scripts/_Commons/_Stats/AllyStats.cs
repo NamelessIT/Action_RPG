@@ -161,8 +161,11 @@ public class AllyStats : Stats
         magicAtk = (flatMagicAtk + INT * magicAtkPerINT) * (1 + bonusMagicAtk);
 
         // 4. Tính Attack Speed (Giới hạn buff tối đa bởi AGI)
-        bonusAttackSpeed = maxAttackSpeedBuff * AGI / (AGI + A);
-        attackSpeed = baseAttackSpeed * (1 + bonusAttackSpeed); 
+        // [ĐÃ SỬA] Tạo biến tạm để lưu tốc đánh từ AGI, không ghi đè lên bonusAttackSpeed
+        float agiAttackSpeedBonus = maxAttackSpeedBuff * AGI / (AGI + A);
+
+        // Tổng tốc đánh = Gốc * (1 + Buff_Từ_AGI + Buff_Từ_Skill)
+        attackSpeed = baseAttackSpeed * (1 + agiAttackSpeedBonus + bonusAttackSpeed);
         // (Lưu ý: baseAttackSpeed nên lấy từ Weapon đang cầm)
 
         // 5. Tính Crit
@@ -259,9 +262,9 @@ public class AllyStats : Stats
         critMultiplier = baseCritMultiplier + bonusCritMultiplier;
 
         // 3. Tính AttackSpeed
-        bonusAttackSpeed = maxAttackSpeedBuff * AGI / (AGI + A);
-        attackSpeed = baseAttackSpeed * (1 + bonusAttackSpeed);
-
+        // [ĐÃ SỬA] Tính lại tương tự như trên RecalculateStats
+        float agiAttackSpeedBonus = maxAttackSpeedBuff * AGI / (AGI + A);
+        attackSpeed = baseAttackSpeed * (1 + agiAttackSpeedBonus + bonusAttackSpeed);
     }
     public void CalculateMoveSpeedOnly()
     {
