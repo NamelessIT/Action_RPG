@@ -1,8 +1,8 @@
 # 🎮 BẢNG CÔNG VIỆC DỰ ÁN — Action_RPG Vision System
 
-**Cập nhật lần cuối:** 2026-03-26 14:00 UTC  
-**Trạng thái tổng thể:** 🔴 SESSION-4 READY  
-**Manager:** Monitoring
+**Cập nhật lần cuối:** 2026-03-26 18:00 UTC  
+**Trạng thái tổng thể:** ✅ ALL TASKS COMPLETED  
+**Manager:** Done
 
 ---
 
@@ -33,8 +33,10 @@ TASK-008 (FOG_OF_WAR)      ← Ưu tiên 2 — tính năng mới
 2026-03-22 11:00 | TASK-004 | ✅ HOÀN TẤT | Vision Sharing (MergeVisionResults, VisionCoordinator)
 2026-03-22 11:00 | TASK-005 | ✅ HOÀN TẤT | Fade Effect System (FadeEffectManager)
 2026-03-26 10:00 | TASK-007 | ✅ HOÀN TẤT | Companion Vision Bugfix (merged vision, exclusion, multi-source)
-2026-03-26 14:00 | TASK-009 | 🔴 MỚI | Fix flickering objects — loại bỏ OverlapSphere dependency khỏi fade
-2026-03-26 14:00 | TASK-008 | 🔴 MỚI | Fog of War — vùng xám ngoài tầm nhìn (URP Fullscreen Shader)
+2026-03-26 14:00 | TASK-009 | ✅ HOÀN TẤT | Fix flickering objects — loại bỏ OverlapSphere dependency khỏi fade
+2026-03-26 14:00 | TASK-008 | ✅ HOÀN TẤT | Fog of War — URP fullscreen shader + RenderGraph API (URP 17)
+2026-03-26 16:00 | TASK-010 | ✅ HOÀN TẤT | Fix fade bouncing (AnimationCurve inversion) + FoW rewrite (shader/pass/feature/controller)
+2026-03-26 18:00 | ALL      | ✅ HOÀN TẤT | Tất cả task hoàn tất — user confirmed working
 ```
 
 ---
@@ -100,13 +102,13 @@ Hiện tại `UpdateFadeEffects()` được gọi từ event `OnMergedVisionChan
 
 ### ✅ SUBTASKS
 
-- [ ] 009-A — `FadeEffectManager.cs`: Thêm `SetVisionSources(Transform[])` + `SetFadeDistances(float start, float complete)` — FadeEffectManager lưu tham chiếu tới vision source transforms
-- [ ] 009-B — `FadeEffectManager.cs`: Refactor `Update()` — tách thành 2 phase: (1) evaluation mỗi `EVALUATION_INTERVAL` tính target alpha bằng distance, (2) mỗi frame lerp current → target
-- [ ] 009-C — `FadeEffectManager.cs`: Xóa `UpdateFadeEffects(List<Collider>, ...)` + xóa `IsObjectVisible()` + xóa `BuildVisibleRoots()` — không cần OverlapSphere data nữa
-- [ ] 009-D — `FadeEffectManager.cs`: Sửa `CalculateTargetAlpha()` — bỏ param `isVisible`, chỉ dùng distance tới `_visionSourceTransforms` gần nhất
-- [ ] 009-E — `PlayerVisionManager.cs`: Bỏ subscribe `OnMergedVisionChanged` cho fade. Trong `TryInitializeFadeEffects()` gọi `_fadeEffectManager.SetVisionSources(transform, companionTransform)` + `SetFadeDistances(config.FadeStartDistance, config.FadeCompleteDistance)` 1 lần
-- [ ] 009-F — `PlayerVisionManager.cs`: Xóa method `OnMergedVisionChanged()` cũ (chỉ dùng cho fade), xóa `BuildVisionSources()` cũ — FadeEffectManager tự đọc position từ Transform references
-- [ ] 009-G — Verify: chạy Play mode, di chuyển qua biên vision → object mờ dần smooth, không nhấp nháy
+- [x] 009-A — `FadeEffectManager.cs`: Thêm `SetVisionSources(Transform[])` + `SetFadeDistances(float start, float complete)` ✅
+- [x] 009-B — `FadeEffectManager.cs`: Refactor `Update()` — tách thành 2 phase: evaluation + lerp ✅
+- [x] 009-C — `FadeEffectManager.cs`: Xóa `UpdateFadeEffects`, `IsObjectVisible`, `BuildVisibleRoots` ✅
+- [x] 009-D — `FadeEffectManager.cs`: Sửa `CalculateTargetAlpha()` — 100% distance-based ✅
+- [x] 009-E — `PlayerVisionManager.cs`: Đơn giản hóa — chỉ gọi SetVisionSources + SetFadeDistances 1 lần ✅
+- [x] 009-F — `PlayerVisionManager.cs`: Xóa OnMergedVisionChanged, BuildVisionSources ✅
+- [x] 009-G — Verify: User confirmed — fade smooth, không nhấp nháy ✅
 
 ---
 
@@ -148,14 +150,14 @@ Ngoài tầm nhìn player (range=20) và companion (range=8), khu vực sẽ ph�
 
 ### ✅ SUBTASKS
 
-- [ ] 008-A — `VisionConfig.cs`: Thêm fields — `_fogColor` (Color, default dark gray 0.1,0.1,0.1,0.85), `_fogEdgeSoftness` (float, default 3f — gradient width ở biên), `_enableFogOfWar` (bool, default true)
-- [ ] 008-B — Tạo `FogOfWar.shader`: URP fullscreen shader — input: `_PlayerPos`, `_CompanionPos`, `_PlayerRange`, `_CompanionRange`, `_FogColor`, `_EdgeSoftness`, `_HasCompanion`. Logic: reconstruct world pos từ depth → tính XZ distance tới source gần nhất → smoothstep fade → lerp scene color với fogColor
-- [ ] 008-C — Tạo `FogOfWarPass.cs`: ScriptableRenderPass — setup RTHandle, configure Blit target, override Execute() để draw fullscreen quad với FogOfWar material
-- [ ] 008-D — Tạo `FogOfWarFeature.cs`: ScriptableRendererFeature — Create() tạo FogOfWarPass, AddRenderPasses() thêm pass vào renderer. Expose shader reference + settings
-- [ ] 008-E — Tạo `FogOfWarController.cs`: MonoBehaviour — giữ reference tới FogOfWarFeature material. Trong Update(): set `_PlayerPos`, `_CompanionPos`, `_PlayerRange`, `_CompanionRange` từ player/companion transforms + VisionConfig
-- [ ] 008-F — `PlayerVisionManager.cs`: Trong `TryInitializeFadeEffects()` hoặc `Awake()`, tìm/tạo FogOfWarController và truyền player transform + companion transform + VisionConfig
-- [ ] 008-G — **MANUAL** (User): Trong Unity Editor, mở `Assets/Settings/PC_Renderer.asset` → Add Renderer Feature → chọn FogOfWarFeature → assign shader
-- [ ] 008-H — Verify: Play mode → vùng ngoài range 20 bị phủ xám, biên mềm, companion range 8 cũng tạo vùng sáng riêng
+- [x] 008-A — `VisionConfig.cs`: Thêm FoW config fields (fogColor, fogEdgeSoftness, enableFogOfWar) ✅
+- [x] 008-B — Tạo `FogOfWar.shader`: URP fullscreen shader — depth reconstruct + fog overlay ✅
+- [x] 008-C — Tạo `FogOfWarPass.cs`: ScriptableRenderPass — RenderGraph API (URP 17 compatible) ✅
+- [x] 008-D — Tạo `FogOfWarFeature.cs`: ScriptableRendererFeature — Create + AddRenderPasses ✅
+- [x] 008-E — Tạo `FogOfWarController.cs`: MonoBehaviour — Shader.SetGlobalXXX mỗi frame ✅
+- [x] 008-F — `PlayerVisionManager.cs`: Tạo FogOfWarController + truyền player/companion/config ✅
+- [x] 008-G — **MANUAL** (User): Đã setup Renderer Feature trong PC_Renderer.asset ✅
+- [x] 008-H — Verify: User confirmed — FoW hoạt động, vùng ngoài range bị phủ xám ✅
 
 ---
 
@@ -175,9 +177,10 @@ Ngoài tầm nhìn player (range=20) và companion (range=8), khu vực sẽ ph�
 **Session-3** (Bugfix Specialist) ✅:
 - TASK-007: Companion Vision Bugfix ✅
 
-**Session-4** (Anti-Flicker + FoW) ⏳:
-- TASK-009: Fix Flickering (sửa trước)
-- TASK-008: Fog of War (thêm sau)
+**Session-4** (Anti-Flicker + FoW) ✅:
+- TASK-009: Fix Flickering ✅
+- TASK-008: Fog of War ✅
+- TASK-010: Hotfix (fade bouncing + FoW rewrite + URP 17 RenderGraph) ✅
 
 ### **Quy tắc vàng:**
 
@@ -204,7 +207,7 @@ Ngoài tầm nhìn player (range=20) và companion (range=8), khu vực sẽ ph�
 ✅ **SESSION-1 COMPLETED** — TASK-001, TASK-002
 ✅ **SESSION-2 COMPLETED** — TASK-003, TASK-004, TASK-005
 ✅ **SESSION-3 COMPLETED** — TASK-007 (Companion Vision Bugfix)
-🔴 **SESSION-4 READY** — TASK-009 (Fix Flickering) → TASK-008 (Fog of War)
+✅ **SESSION-4 COMPLETED** — TASK-009 (Fix Flickering) + TASK-008 (Fog of War) + TASK-010 (Hotfix)
 
 ---
 
