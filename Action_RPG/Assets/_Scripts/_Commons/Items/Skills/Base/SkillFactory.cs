@@ -76,6 +76,12 @@ public static class SkillFactory
                 return typeof(TricksterSkill);
             case SkillData.SkillEffectCode.InfiltratorSkill:
                 return typeof(InfiltratorSkill);
+            case SkillData.SkillEffectCode.SpellbladeSkill:
+                return typeof(SpellbladeSkill);
+            case SkillData.SkillEffectCode.TacticianSkill:
+                return typeof(TacticianSkill);
+            case SkillData.SkillEffectCode.SpellbinderSkill:
+                return typeof(SpellbinderSkill);
             // ... Thêm các case khác vào đây ...
 
 

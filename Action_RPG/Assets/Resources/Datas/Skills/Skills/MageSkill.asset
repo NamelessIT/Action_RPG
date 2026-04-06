@@ -37,7 +37,7 @@ MonoBehaviour:
     v\u1EEBa Burn."
   skillType: 2
   skillPhysicalMultiplier: 0
-  skillMagicMultiplier: 0
+  skillMagicMultiplier: 1
   cooldown: 0
   sinChargeReq: 0
   passiveEffectCode: 0
