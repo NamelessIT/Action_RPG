@@ -2339,6 +2339,7 @@ MonoBehaviour:
   baseHp: 0
   baseHpGain: 2
   level: 1
+  maxLevel: 60
   exp: 0
   percentExpReceive: 1
   isInvincible: 0
@@ -2421,7 +2422,6 @@ MonoBehaviour:
   isChallenged: 0
   isResonated: 0
   attributePointRemain: 0
-  skillPointRemain: 0
   H: 200
   maxHpGainBonus: 10
   hpPerVIT: 15
@@ -2473,6 +2473,7 @@ MonoBehaviour:
   manualGuardReduction: 0
   isMomentumActive: 0
   momentumReduction: 0.3
+  skillPointRemain: 0
 --- !u!114 &338991040 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8734627235539532154, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
@@ -8578,6 +8579,7 @@ MonoBehaviour:
   baseHp: 1000
   baseHpGain: 2
   level: 1
+  maxLevel: 60
   exp: 0
   percentExpReceive: 1
   isInvincible: 0
@@ -9745,6 +9747,7 @@ MonoBehaviour:
   baseHp: 1000000
   baseHpGain: 2
   level: 1
+  maxLevel: 60
   exp: 0
   percentExpReceive: 1
   isInvincible: 0
@@ -13494,6 +13497,7 @@ MonoBehaviour:
   baseHp: 0
   baseHpGain: 2
   level: 1
+  maxLevel: 60
   exp: 0
   percentExpReceive: 1
   isInvincible: 0
@@ -13576,7 +13580,6 @@ MonoBehaviour:
   isChallenged: 0
   isResonated: 0
   attributePointRemain: 0
-  skillPointRemain: 0
   H: 200
   maxHpGainBonus: 10
   hpPerVIT: 15

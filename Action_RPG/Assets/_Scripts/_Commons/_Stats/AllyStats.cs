@@ -5,8 +5,6 @@ public class AllyStats : Stats
 {
     [Header("--- Attribute Point---")]
     public int attributePointRemain;
-    [Header("--- Skill Point---")]
-    public int skillPointRemain;
 
     [Header("--- Sub-Health ---")]
     public float H = 200f;
@@ -111,6 +109,9 @@ public class AllyStats : Stats
     public override void Start()
     {
         base.Start();
+        // [MỚI] Khởi tạo điểm ban đầu. 
+        // Nếu bắt đầu game ở level 1 -> 5 điểm. Nếu setup level 10 -> 50 điểm.
+        if (attributePointRemain == 0) attributePointRemain = level * 5;
         // Gọi tính toán lần đầu
         RecalculateStats();
         InitializeClassStats();
@@ -118,6 +119,22 @@ public class AllyStats : Stats
         this.tag = "Ally";
     }
 
+    // [MỚI] Ghi đè hàm thăng cấp của Stats cha
+    protected override void LevelUp()
+    {
+        base.LevelUp(); // Cập nhật số level ở file cha
+
+        attributePointRemain += 5; // Cấp 5 điểm tiềm năng
+
+        // Gọi tính toán lại chỉ số (Giúp baseHp tăng lên nhờ công thức: 100 + 20 * level)
+        RecalculateStats();
+
+        // Đặc ân khi lên cấp: Hồi đầy máu
+        currentHp = maxHp;
+
+        Debug.Log($"<color=cyan>[AllyStats]</color> {gameObject.name} nhận 5 Attribute Points (Tổng: {attributePointRemain})");
+        Debug.Log($"<color=gray>Lưu ý UI sau này: Chỉ số tối đa được cộng là {(level * 3) + 10}</color>");
+    }
     // Hàm này phải được gọi mỗi khi: Lên cấp, Đổi đồ, Nhận Buff, Chịu Debuff
     public void RecalculateStats()
     {

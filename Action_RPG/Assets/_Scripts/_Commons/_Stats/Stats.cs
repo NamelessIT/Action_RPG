@@ -13,7 +13,8 @@ public class Stats : MonoBehaviour
     public float baseHpGain = 2f;
 
     [Header("--- Level---")]
-    public float level = 1f;
+    public int level = 1;
+    public int maxLevel = 60; // Giới hạn cấp độ
     public float exp;
     public float percentExpReceive = 1f; // Tỷ lệ nhận EXP (Có thể bị tăng hoặc giảm bởi buffs/debuffs)
 
@@ -670,5 +671,40 @@ public class Stats : MonoBehaviour
         }
 
         Debug.Log($"<color=orange>{gameObject.name} đã THOÁT KHỎI KHỐNG CHẾ!</color>");
+    }
+    // ==========================================
+    // [MỚI] HỆ THỐNG KINH NGHIỆM VÀ LÊN CẤP
+    // ==========================================
+    public float GetNextLevelExp()
+    {
+        // Công thức đường cong EXP: 100 * (level ^ 1.1)
+        return Mathf.Floor(100f * Mathf.Pow(level, 1.1f));
+    }
+
+    public void AddExp(float amount)
+    {
+        if (level >= maxLevel) return;
+
+        float finalExp = amount * percentExpReceive;
+        exp += finalExp;
+
+        // Dùng vòng lặp while đề phòng trường hợp nhận 1 cục EXP khổng lồ lên liền mấy cấp
+        while (exp >= GetNextLevelExp() && level < maxLevel)
+        {
+            exp -= GetNextLevelExp();
+            LevelUp();
+        }
+
+        if (level >= maxLevel)
+        {
+            exp = 0; // Max cấp thì không tích lũy EXP thừa nữa
+            Debug.Log($"<color=orange>{gameObject.name} đã đạt Cấp Tối Đa ({maxLevel})!</color>");
+        }
+    }
+
+    protected virtual void LevelUp()
+    {
+        level++;
+        Debug.Log($"<color=yellow>LEVEL UP!</color> {gameObject.name} đã đạt cấp {level}!");
     }
 }
