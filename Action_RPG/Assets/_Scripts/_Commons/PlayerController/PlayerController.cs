@@ -316,6 +316,15 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.N)) EquipPickedAccessory();
         if (Input.GetKeyDown(KeyCode.M)) DropPickedAccessory();
         if (Input.GetKeyDown(KeyCode.R)) UpdateStat();
+        if (Input.GetKeyDown(KeyCode.V))
+        {
+            if (stats != null)
+            {
+                Debug.Log(">> HACK: ÉP LÊN CẤP <<");
+                // Bơm chính xác lượng EXP còn thiếu để chạm ngưỡng level tiếp theo
+                stats.AddExp(stats.GetNextLevelExp() - stats.exp);
+            }
+        }
     }
 
     void PerformDash()
