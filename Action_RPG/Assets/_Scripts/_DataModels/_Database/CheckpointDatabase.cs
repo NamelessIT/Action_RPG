@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 [CreateAssetMenu(
@@ -11,6 +11,10 @@ public class CheckpointDatabase : ScriptableObject
 
     private Dictionary<int, CheckpointDB> cache;
 
+    /// <summary>
+    /// [DAO Layer] Get checkpoint data by ID with caching.
+    /// Only called from InAppPlayerStateDAO.LoadCheckpoint().
+    /// </summary>
     public CheckpointDB GetCheckpoint(int id)
     {
         if (cache == null)

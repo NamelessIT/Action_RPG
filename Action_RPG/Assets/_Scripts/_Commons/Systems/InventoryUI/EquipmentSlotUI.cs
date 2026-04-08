@@ -1,0 +1,276 @@
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+public class EquipmentSlotUI : MonoBehaviour, IDropHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
+{
+    [SerializeField] private InventoryItemRecord.EquipmentSlotKind _slotKind;
+    [SerializeField] private EquipmentManager _equipmentManager;
+    [SerializeField] private InventoryController _inventoryController;
+    [SerializeField] private Image _slotIcon;
+    [SerializeField] private CanvasGroup _slotCanvasGroup;
+
+    private RectTransform _ghostRect;
+    private InventoryItemRecord _lastBoundItem;
+
+    private void Awake()
+    {
+        if (_equipmentManager == null)
+        {
+            _equipmentManager = FindFirstObjectByType<EquipmentManager>();
+        }
+
+        if (_inventoryController == null)
+        {
+            _inventoryController = FindFirstObjectByType<InventoryController>();
+        }
+    }
+
+    private void OnEnable()
+    {
+        RefreshSlotVisual();
+    }
+
+    private void Update()
+    {
+        InventoryItemRecord currentItem = GetCurrentItem();
+        if (!ReferenceEquals(currentItem?.WeaponData, _lastBoundItem?.WeaponData)
+            || !ReferenceEquals(currentItem?.ShieldData, _lastBoundItem?.ShieldData)
+            || !ReferenceEquals(currentItem?.AccessoryData, _lastBoundItem?.AccessoryData))
+        {
+            RefreshSlotVisual();
+        }
+    }
+
+    public void OnDrop(PointerEventData eventData)
+    {
+        InventoryItemRecord draggedItem = InventoryDragContext.ActiveItem;
+        if (draggedItem == null || !draggedItem.CanEquipTo(_slotKind))
+        {
+            return;
+        }
+
+        // Drag-and-drop flow:
+        // 1. Validate item type against the slot.
+        // 2. Equip the new item through EquipmentManager.
+        // 3. Remove the dragged item from the bag (or clear previous slot source).
+        // 4. If the slot already had an item, push that old item back into inventory.
+        InventoryItemRecord previousItem = GetCurrentItem();
+        if (!TryEquip(draggedItem))
+        {
+            return;
+        }
+
+        if (InventoryDragContext.ActiveInventorySource != null)
+        {
+            _inventoryController.RemoveItemFromInventory(draggedItem);
+        }
+        else if (InventoryDragContext.ActiveEquipmentSource != null && InventoryDragContext.ActiveEquipmentSource != this)
+        {
+            InventoryDragContext.ActiveEquipmentSource.ClearSlotWithoutReturningToInventory();
+        }
+
+        if (previousItem != null)
+        {
+            _inventoryController.ReturnItemToInventory(previousItem);
+        }
+
+        RefreshSlotVisual();
+    }
+
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        InventoryItemRecord currentItem = GetCurrentItem();
+        if (currentItem == null || _inventoryController == null)
+        {
+            return;
+        }
+
+        InventoryDragContext.BeginFromEquipment(currentItem, this);
+        CreateGhostIcon(currentItem.Icon);
+
+        if (_slotCanvasGroup != null)
+        {
+            _slotCanvasGroup.alpha = 0.35f;
+            _slotCanvasGroup.blocksRaycasts = false;
+        }
+
+        _ghostRect.position = eventData.position;
+    }
+
+    public void OnDrag(PointerEventData eventData)
+    {
+        if (_ghostRect != null)
+        {
+            _ghostRect.position = eventData.position;
+        }
+    }
+
+    public void OnEndDrag(PointerEventData eventData)
+    {
+        bool endedOverSlot = eventData.pointerEnter != null
+            && eventData.pointerEnter.GetComponentInParent<EquipmentSlotUI>() != null;
+
+        // Dragging an equipped item to empty space means unequip and return it to the bag.
+        // If the pointer ended over another equipment slot, let that slot decide whether it accepts the drop.
+        if (!endedOverSlot && InventoryDragContext.ActiveEquipmentSource == this)
+        {
+            UnequipCurrentToInventory();
+        }
+
+        if (_slotCanvasGroup != null)
+        {
+            _slotCanvasGroup.alpha = 1f;
+            _slotCanvasGroup.blocksRaycasts = true;
+        }
+
+        DestroyGhostIcon();
+        InventoryDragContext.Clear();
+        RefreshSlotVisual();
+    }
+
+    public void RefreshSlotVisual()
+    {
+        InventoryItemRecord currentItem = GetCurrentItem();
+        _lastBoundItem = currentItem;
+
+        if (_slotIcon == null)
+        {
+            return;
+        }
+
+        _slotIcon.sprite = currentItem != null ? currentItem.Icon : null;
+        _slotIcon.enabled = currentItem != null && currentItem.Icon != null;
+    }
+
+    public void ClearSlotWithoutReturningToInventory()
+    {
+        UnequipInternal();
+        RefreshSlotVisual();
+    }
+
+    private void UnequipCurrentToInventory()
+    {
+        InventoryItemRecord currentItem = GetCurrentItem();
+        if (currentItem != null)
+        {
+            _inventoryController.ReturnItemToInventory(currentItem);
+        }
+
+        UnequipInternal();
+        RefreshSlotVisual();
+    }
+
+    private bool TryEquip(InventoryItemRecord item)
+    {
+        if (_equipmentManager == null || item == null)
+        {
+            return false;
+        }
+
+        if (item.WeaponData != null)
+        {
+            _equipmentManager.EquipWeapon(item.WeaponData);
+            return true;
+        }
+
+        if (item.ShieldData != null)
+        {
+            _equipmentManager.EquipCoreShield(item.ShieldData);
+            return true;
+        }
+
+        if (item.AccessoryData != null)
+        {
+            _equipmentManager.EquipAccessory(item.AccessoryData);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void UnequipInternal()
+    {
+        if (_equipmentManager == null)
+        {
+            return;
+        }
+
+        switch (_slotKind)
+        {
+            case InventoryItemRecord.EquipmentSlotKind.Weapon:
+                _equipmentManager.UnequipWeapon();
+                break;
+            case InventoryItemRecord.EquipmentSlotKind.Shield:
+                _equipmentManager.UnequipCoreShield();
+                break;
+            case InventoryItemRecord.EquipmentSlotKind.CoreShard:
+            case InventoryItemRecord.EquipmentSlotKind.MarkOfSin:
+            case InventoryItemRecord.EquipmentSlotKind.RelicOfMemory:
+            case InventoryItemRecord.EquipmentSlotKind.Parasite:
+            case InventoryItemRecord.EquipmentSlotKind.Chain:
+                AccessoryData accessory = _equipmentManager.GetAccessoryInSlot(_slotKind);
+                if (accessory != null)
+                {
+                    _equipmentManager.UnequipAccessory(accessory);
+                }
+                break;
+        }
+    }
+
+    private InventoryItemRecord GetCurrentItem()
+    {
+        if (_equipmentManager == null)
+        {
+            return null;
+        }
+
+        switch (_slotKind)
+        {
+            case InventoryItemRecord.EquipmentSlotKind.Weapon:
+                return InventoryItemRecord.FromWeapon(_equipmentManager.GetVisibleEquippedWeapon());
+            case InventoryItemRecord.EquipmentSlotKind.Shield:
+                return InventoryItemRecord.FromShield(_equipmentManager.currentCoreShield);
+            case InventoryItemRecord.EquipmentSlotKind.CoreShard:
+            case InventoryItemRecord.EquipmentSlotKind.MarkOfSin:
+            case InventoryItemRecord.EquipmentSlotKind.RelicOfMemory:
+            case InventoryItemRecord.EquipmentSlotKind.Parasite:
+            case InventoryItemRecord.EquipmentSlotKind.Chain:
+                return InventoryItemRecord.FromAccessory(_equipmentManager.GetAccessoryInSlot(_slotKind));
+            default:
+                return null;
+        }
+    }
+
+    private void CreateGhostIcon(Sprite icon)
+    {
+        Canvas rootCanvas = _inventoryController != null ? _inventoryController.GetRootCanvas() : null;
+        if (rootCanvas == null)
+        {
+            return;
+        }
+
+        GameObject ghostObject = new GameObject("EquippedDragGhost", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+        ghostObject.transform.SetParent(rootCanvas.transform, false);
+        _ghostRect = ghostObject.GetComponent<RectTransform>();
+        _ghostRect.sizeDelta = new Vector2(72f, 72f);
+
+        Image ghostImage = ghostObject.GetComponent<Image>();
+        ghostImage.sprite = icon;
+        ghostImage.preserveAspect = true;
+        ghostImage.raycastTarget = false;
+
+        CanvasGroup ghostCanvasGroup = ghostObject.GetComponent<CanvasGroup>();
+        ghostCanvasGroup.alpha = 0.85f;
+        ghostCanvasGroup.blocksRaycasts = false;
+    }
+
+    private void DestroyGhostIcon()
+    {
+        if (_ghostRect != null)
+        {
+            Destroy(_ghostRect.gameObject);
+            _ghostRect = null;
+        }
+    }
+}

@@ -10,6 +10,17 @@ public class AccessoryStatEntry
     public float value;
 }
 
+/// <summary>
+/// [DAO Layer - Database Tier 1] Accessory stat modifiers.
+/// This is a ScriptableObject asset containing accessory stat bonuses.
+/// 
+/// ARCHITECTURE:
+/// - Called ONLY by InAppPlayerStateDAO.LoadAccessoryStats()
+/// - Part of the read-only database layer (no modifications here)
+/// - Uses lazy-loaded Dictionary cache for O(1) lookups (per accessory ID)
+/// 
+/// Usage: Create in Editor via Assets/Create/Database/Accessory Database
+/// </summary>
 [CreateAssetMenu(fileName = "AccessoryDatabase", menuName = "Database/Accessory Database")]
 public class AccessoryDatabase : ScriptableObject
 {

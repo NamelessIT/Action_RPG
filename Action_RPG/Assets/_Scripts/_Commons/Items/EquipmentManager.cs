@@ -89,6 +89,16 @@ public class EquipmentManager : MonoBehaviour
         EquipInternal(newWeapon);
     }
 
+            public void UnequipWeapon()
+            {
+                ResetToBaseWeapon();
+            }
+
+            public WeaponData GetVisibleEquippedWeapon()
+            {
+                return currentWeapon != null && currentWeapon != baseWeapon ? currentWeapon : null;
+            }
+
     // 3. Reset về tay không (Gọi khi muốn "Cởi đồ")
     public void ResetToBaseWeapon()
     {
@@ -336,6 +346,25 @@ public class EquipmentManager : MonoBehaviour
             case AccessoryData.AccessoryType.Parasite: return currentParasite;
             case AccessoryData.AccessoryType.Chain: return currentChain;
             default: return null;
+        }
+    }
+
+    public AccessoryData GetAccessoryInSlot(InventoryItemRecord.EquipmentSlotKind slotKind)
+    {
+        switch (slotKind)
+        {
+            case InventoryItemRecord.EquipmentSlotKind.CoreShard:
+                return currentCoreShard;
+            case InventoryItemRecord.EquipmentSlotKind.MarkOfSin:
+                return currentMarkOfSin;
+            case InventoryItemRecord.EquipmentSlotKind.RelicOfMemory:
+                return currentRelicOfMemory;
+            case InventoryItemRecord.EquipmentSlotKind.Parasite:
+                return currentParasite;
+            case InventoryItemRecord.EquipmentSlotKind.Chain:
+                return currentChain;
+            default:
+                return null;
         }
     }
 

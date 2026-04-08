@@ -10,6 +10,17 @@ public class WeaponStatEntry
     public float value;
 }
 
+/// <summary>
+/// [DAO Layer - Database Tier 1] Weapon configurations and stat bonuses.
+/// This is a ScriptableObject asset containing weapon templates and stat modifiers.
+/// 
+/// ARCHITECTURE:
+/// - Called by InAppPlayerStateDAO.LoadWeaponFromDB() and LoadWeaponStats()
+/// - Part of the read-only database layer (no modifications here)
+/// - Uses separate caches for weapons and extra stats (O(1) lookup)
+/// 
+/// Usage: Create in Editor via Assets/Create/Database/Weapon Database
+/// </summary>
 [CreateAssetMenu(fileName = "WeaponDatabase", menuName = "Database/Weapon Database")]
 public class WeaponDatabase : ScriptableObject
 {

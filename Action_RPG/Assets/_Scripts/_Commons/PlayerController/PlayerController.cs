@@ -141,6 +141,8 @@ public class PlayerController : MonoBehaviour
     {
         if (stats == null) return;
 
+        if (InventoryUIManager.IsInventoryOpen) return;
+
         // [SỬA Ở ĐÂY] Khóa di chuyển vật lý nếu đang dùng skill, lướt, parry, hoặc ĐANG GỒNG
         if (isUsingSpecialSkill || isDashing || stats.isParrying || isCharging) return;
 
@@ -156,6 +158,8 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         if (stats == null) return;
+
+        if (InventoryUIManager.IsInventoryOpen) return;
 
         // --- 0. CÁC LOGIC NỀN (Luôn chạy bất kể trạng thái) ---
         UpdateTimersAndCombo(); // Tách logic reset combo ra hàm riêng cho gọn

@@ -9,12 +9,20 @@ public class PlayerRuntimeState
     // =============== PHẦN LƯU ĐƯỢC (SAVE/LOAD) ===============
     public float currentHp;
     public float currentEnergy;
+    public float currentStamina;
+    public float currentSin;
     public int checkpointId;
     public Vector2 position;
     public int maxStamina;
     public float baseHp;
     public int dashCost;
     public float armorBackstabReduce;
+    public int level = 1;
+    public float exp;
+    public float nextLevelExp;
+    public float maxExpForCurrentLevel;
+    public int attributePointRemain;
+    public int skillPointRemain;
 
     // =============== CƠ SỞ DỮ LIỆU (không thay đổi trong combat) ===============
     public int playerId;
@@ -22,6 +30,9 @@ public class PlayerRuntimeState
     public int weaponId;
     public int coreShieldId;
     public List<int> equippedAccessoryIds = new List<int>();
+    public string weaponAssetId;
+    public string coreShieldAssetId;
+    public List<string> equippedAccessoryAssetIds = new List<string>();
 
     // =============== BASE STATS (từ bảng `player`) ===============
     public float baseSTR;
@@ -193,48 +204,65 @@ public class PlayerRuntimeState
     }
 
     // =============== SAVE/LOAD ===============
-    public PlayerSaveData GetSaveData()
+    public PlayerStateSaveData GetSaveData()
     {
-        return new PlayerSaveData
+        return new PlayerStateSaveData
         {
             playerId = playerId,
             currentHp = currentHp,
             currentEnergy = currentEnergy,
+            currentStamina = currentStamina,
+            currentSin = currentSin,
             checkpointId = checkpointId,
+            level = level,
+            exp = exp,
+            nextLevelExp = nextLevelExp,
+            maxExpForCurrentLevel = maxExpForCurrentLevel,
+            attributePointRemain = attributePointRemain,
+            skillPointRemain = skillPointRemain,
+            baseSTR = baseSTR,
+            baseDEX = baseDEX,
+            baseINT = baseINT,
+            baseVIT = baseVIT,
+            baseAGI = baseAGI,
             positionX = position.x,
             positionY = position.y,
             currentClassId = currentClassId,
             weaponId = weaponId,
             coreShieldId = coreShieldId,
-            accessoryIds = new List<int>(equippedAccessoryIds)
+            accessoryIds = new List<int>(equippedAccessoryIds),
+            weaponAssetId = weaponAssetId,
+            coreShieldAssetId = coreShieldAssetId,
+            accessoryAssetIds = new List<string>(equippedAccessoryAssetIds)
         };
     }
 
-    public void LoadFromSave(PlayerSaveData data)
+    public void LoadFromSave(PlayerStateSaveData data)
     {
         playerId = data.playerId;
         currentHp = data.currentHp;
         currentEnergy = data.currentEnergy;
+        currentStamina = data.currentStamina > 0f ? data.currentStamina : data.currentEnergy;
+        currentSin = data.currentSin;
         checkpointId = data.checkpointId;
+        level = data.level > 0 ? data.level : 1;
+        exp = data.exp;
+        nextLevelExp = data.nextLevelExp;
+        maxExpForCurrentLevel = data.maxExpForCurrentLevel;
+        attributePointRemain = data.attributePointRemain;
+        skillPointRemain = data.skillPointRemain;
+        baseSTR = data.baseSTR;
+        baseDEX = data.baseDEX;
+        baseINT = data.baseINT;
+        baseVIT = data.baseVIT;
+        baseAGI = data.baseAGI;
         position = new Vector2(data.positionX, data.positionY);
         currentClassId = data.currentClassId;
         weaponId = data.weaponId;
         coreShieldId = data.coreShieldId;
-        equippedAccessoryIds = new List<int>(data.accessoryIds);
+        equippedAccessoryIds = data.accessoryIds != null ? new List<int>(data.accessoryIds) : new List<int>();
+        weaponAssetId = data.weaponAssetId;
+        coreShieldAssetId = data.coreShieldAssetId;
+        equippedAccessoryAssetIds = data.accessoryAssetIds != null ? new List<string>(data.accessoryAssetIds) : new List<string>();
     }
-}
-
-[Serializable]
-public class PlayerSaveData
-{
-    public int playerId;
-    public float currentHp;
-    public float currentEnergy;
-    public int checkpointId;
-    public float positionX;
-    public float positionY;
-    public int currentClassId;
-    public int weaponId;
-    public int coreShieldId;
-    public List<int> accessoryIds = new List<int>();
 }

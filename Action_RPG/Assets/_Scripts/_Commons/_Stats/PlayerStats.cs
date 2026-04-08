@@ -11,10 +11,6 @@ public class PlayerStats : AllyStats
         if (skillPointRemain == 0) skillPointRemain = level;
         this.tag = "Player";
 
-        // Gọi base.Start() của AllyStats 
-        // -> Nó sẽ chạy RecalculateStats() và InitializeClassStats()
-        base.Start();
-
         // Debug để kiểm tra xem HP đã được tính chưa
     }
     // [MỚI] Ghi đè hàm thăng cấp của AllyStats
