@@ -16,6 +16,7 @@ public class Stats : MonoBehaviour
     public int level = 1;
     public int maxLevel = 60; // Giới hạn cấp độ
     public float exp;
+    public float nextLevelExp;
     public float percentExpReceive = 1f; // Tỷ lệ nhận EXP (Có thể bị tăng hoặc giảm bởi buffs/debuffs)
 
     public bool isInvincible = false;
@@ -183,7 +184,8 @@ public class Stats : MonoBehaviour
         currentHp = maxHp;
         currentStamina = maxStamina;
         currentSin= maxSin;
-
+        // [MỚI] Khởi tạo lượng EXP cần thiết cho level hiện tại ngay khi bắt đầu
+        nextLevelExp = CalculateExpRequirement(level);
         agent = GetComponent<NavMeshAgent>();
         rb = GetComponent<Rigidbody>();
         animator = GetComponentInChildren<Animator>();
@@ -681,6 +683,11 @@ public class Stats : MonoBehaviour
         return Mathf.Floor(100f * Mathf.Pow(level, 1.1f));
     }
 
+    // Hàm dùng chung để tính công thức EXP
+    protected float CalculateExpRequirement(int currentLevel)
+    {
+        return Mathf.Floor(100f * Mathf.Pow(currentLevel, 1.1f));
+    }
     public void AddExp(float amount)
     {
         if (level >= maxLevel) return;
@@ -688,16 +695,17 @@ public class Stats : MonoBehaviour
         float finalExp = amount * percentExpReceive;
         exp += finalExp;
 
-        // Dùng vòng lặp while đề phòng trường hợp nhận 1 cục EXP khổng lồ lên liền mấy cấp
-        while (exp >= GetNextLevelExp() && level < maxLevel)
+        // [ĐÃ SỬA] So sánh trực tiếp với biến nextLevelExp thay vì gọi hàm
+        while (exp >= nextLevelExp && level < maxLevel)
         {
-            exp -= GetNextLevelExp();
+            exp -= nextLevelExp; // Trừ đi lượng exp đã dùng để lên cấp
             LevelUp();
         }
 
         if (level >= maxLevel)
         {
-            exp = 0; // Max cấp thì không tích lũy EXP thừa nữa
+            exp = 0;
+            nextLevelExp = 0; // Set về 0 hoặc giữ nguyên tùy ý bạn cho UI hiển thị chữ "MAX"
             Debug.Log($"<color=orange>{gameObject.name} đã đạt Cấp Tối Đa ({maxLevel})!</color>");
         }
     }
@@ -705,6 +713,8 @@ public class Stats : MonoBehaviour
     protected virtual void LevelUp()
     {
         level++;
+        // [QUAN TRỌNG] Cập nhật lại cột mốc EXP mới cho cấp tiếp theo
+        nextLevelExp = CalculateExpRequirement(level);
         Debug.Log($"<color=yellow>LEVEL UP!</color> {gameObject.name} đã đạt cấp {level}!");
     }
 }
