@@ -1,5 +1,5 @@
-using System;
-using System.Collections; // -��+� d+�ng Coroutine
+﻿using System;
+using System.Collections; // Để dùng Coroutine
 using UnityEngine;
 using UnityEngine.AI;
 using static UnityEngine.AdaptivePerformance.Provider.AdaptivePerformanceSubsystemDescriptor;
@@ -14,11 +14,11 @@ public class Stats : MonoBehaviour
 
     [Header("--- Level---")]
     public int level = 1;
-    public int maxLevel = 60; // Gi�+�i hߦ�n cߦ�p -��+�
+    public int maxLevel = 60; // Giới hạn cấp độ
     public float exp;
     public float nextLevelExp;
     public float maxExpForCurrentLevel;
-    public float percentExpReceive = 1f; // T�++ l�+� nhߦ�n EXP (C+� th�+� b�+� t-�ng hoߦ+c giߦ�m b�+�i buffs/debuffs)
+    public float percentExpReceive = 1f; // Tỷ lệ nhận EXP (Có thể bị tăng hoặc giảm bởi buffs/debuffs)
 
     public bool isInvincible = false;
 
@@ -26,15 +26,15 @@ public class Stats : MonoBehaviour
     public float maxStamina = 100f;
     public float currentStamina;
 
-    [Tooltip("H�+�i ph�+�c m�+�i gi+�y khi TRONG combat")]
+    [Tooltip("Hồi phục mỗi giây khi TRONG combat")]
     public float staminaBaseRecovery = 0.5f;
 
-    [Tooltip("H�+�i ph�+�c m�+�i gi+�y khi NGO+�I combat")]
+    [Tooltip("Hồi phục mỗi giây khi NGOÀI combat")]
     public float staminaOutCombatRecovery = 15f;
 
-    // [M�+�I] Th�+�i gian ch�+� h�+�i ph�+�c sau khi d+�ng th�+� l�+�c (Dash/Run)
+    // [MỚI] Thời gian chờ hồi phục sau khi dùng thể lực (Dash/Run)
     public float staminaRegenDelay = 1.0f;
-    private float lastStaminaConsumeTime = -10f; // Biߦ+n ghi lߦ�i th�+�i -�i�+�m cu�+�i c+�ng d+�ng th�+� l�+�c
+    private float lastStaminaConsumeTime = -10f; // Biến ghi lại thời điểm cuối cùng dùng thể lực
 
     [Header("--- Combat State ---")]
     public bool outCombat = true;
@@ -47,7 +47,7 @@ public class Stats : MonoBehaviour
     public float dashCost = 15f;
     public float baseDashDuration = 0.2f;
 
-    // [M�+�I] Th�+� l�+�c ti+�u hao m�+�i gi+�y khi chߦ�y nhanh
+    // [MỚI] Thể lực tiêu hao mỗi giây khi chạy nhanh
     public float runCost = 8.0f;
 
     [HideInInspector] public float lastDashTime = -10f;
@@ -68,19 +68,19 @@ public class Stats : MonoBehaviour
     public float magicAtk ;
 
     [Header("--- Modifiers ---")]
-    public float damageOutputMultiplier = 1.0f; // % s+�t th����ng g+�y ra, default l+� 100%
+    public float damageOutputMultiplier = 1.0f; // % sát thương gây ra, default là 100%
 
     [Header("--- LifeSteal ---")]
     public float physicalLifeSteal;
     public float magicLifeSteal;
 
-    // [S�+�A] T+�ch comment ra kh�+�i khai b+�o biߦ+n
-    [Tooltip("Th�+�i gian gi�+�a c+�c -�+�n -�+�nh (Cooldown)")]
+    // [SỬA] Tách comment ra khỏi khai báo biến
+    [Tooltip("Thời gian giữa các đòn đánh (Cooldown)")]
     public float baseAttackSpeed;
 
-    // Biߦ+n h�+� tr�+� Combo (Logic n+�y sߦ+ nߦ�m �+� PlayerController, nh��ng Stats ch�+�a th+�ng s�+�)
-    public float comboResetTime = 1.0f; // Th�+�i gian ch�+� -��+� reset combo v�+� -�+�n 1
-    public float heavyAttackChargeTime = 1.0f; // Th�+�i gian gi�+� chu�+�t -��+� max dame
+    // Biến hỗ trợ Combo (Logic này sẽ nằm ở PlayerController, nhưng Stats chứa thông số)
+    public float comboResetTime = 1.0f; // Thời gian chờ để reset combo về đòn 1
+    public float heavyAttackChargeTime = 1.0f; // Thời gian giữ chuột để max dame
     public int heavyAttackCharge = 2;
 
     [Header("--- Crit ---")]
@@ -97,7 +97,7 @@ public class Stats : MonoBehaviour
     public float magicResist = 100;
     public float defenseValue = 20;
     [Header("--- Defense Logic ---")]
-    // G+�c block hi�+�u quߦ�. Mߦ+c -��+�nh 0.5 (180 -��+�). Vanguard sߦ+ s�+�a th+�nh 0.75 (270 -��+�).
+    // Góc block hiệu quả. Mặc định 0.5 (180 độ). Vanguard sẽ sửa thành 0.75 (270 độ).
     public float blockThreshold = 0.5f;
 
     [Header("--- Movement Setting ---")]
@@ -113,62 +113,62 @@ public class Stats : MonoBehaviour
 
     [Header("--- Knockback & Effect Res ---")]
     public float resistanceKnockBack = 0.1f; 
-    public float resistanceEffect = 0f; //giߦ�m th�+�i gian debuff
+    public float resistanceEffect = 0f; //giảm thời gian debuff
 
     [Header("--- Status ---")]
-    public bool isDead = false; // [M�+�I] Ki�+�m tra -�+� chߦ+t ch��a
+    public bool isDead = false; // [MỚI] Kiểm tra đã chết chưa
 
     [Header("--- Shield & State ---")]
-    public float currentShield = 0f; // L�+�p gi+�p ߦ�o
-    public bool isHealingBlocked = false; // C�+� chߦ+n h�+�i m+�u c�+�a Ravager
+    public float currentShield = 0f; // Lớp giáp ảo
+    public bool isHealingBlocked = false; // Cờ chặn hồi máu của Ravager
 
-    // [M�+�I] Event b+�o hi�+�u b�+� -�+�nh (D+�ng cho JuggernautSkill)
-    // Tham s�+�: (L���+�ng damage th�+�c nhߦ�n, Bߦ�n th+�n Stats b�+� -�+�nh)
+    // [MỚI] Event báo hiệu bị đánh (Dùng cho JuggernautSkill)
+    // Tham số: (Lượng damage thực nhận, Bản thân Stats bị đánh)
     public event Action<float, Stats> OnDamageReceived;
 
-    // [M�+�I] C�+�ng cho ph+�p c+�c K�+� n-�ng can thi�+�p tr���+�c khi nhߦ�n s+�t th����ng (DuelistSignature)
+    // [MỚI] Cổng cho phép các Kỹ năng can thiệp trước khi nhận sát thương (DuelistSignature)
     public Func<DamageInfo, bool> damageInterceptor;
 
     private float stunEndTime = 0f;
 
     private Coroutine currentStunCoroutine;
 
-    // [M�+�I] Trߦ�ng th+�i b�+� kh�+�ng chߦ+
+    // [MỚI] Trạng thái bị khống chế
     public bool isStunned = false;
 
-    // [M�+�I] Super Armor (Si+�u Gi+�p) - Kh+�ng b�+� ngߦ�t chi+�u
+    // [MỚI] Super Armor (Siêu Giáp) - Không bị ngắt chiêu
     [Header("--- Super Armor ---")]
     public bool isSuperArmor = false;
-    public int superArmorLevel = 0; // Cߦ�p -��+� gi+�p (0: Ch�+�ng qu+�i nh�+�, 1: Ch�+�ng Elite...)
+    public int superArmorLevel = 0; // Cấp độ giáp (0: Chống quái nhỏ, 1: Chống Elite...)
 
-    [Header("--- T-�ng th�+�i gian nhߦ�n Buff ---")]
+    [Header("--- Tăng thời gian nhận Buff ---")]
     public float buffDurationBonus = 0f;
-    // [M�+�I] Biߦ+n l��u h���+�ng mߦ+t th�+�c tߦ+ (D+�ng cho CombatMath)
+    // [MỚI] Biến lưu hướng mặt thực tế (Dùng cho CombatMath)
     [HideInInspector] public Vector3 facingDirection = Vector3.back;
 
     [Header("--- Stealth ---")]
-    public float stealthFactor = 1.0f; // 1 = B+�nh th���+�ng, 0.5 = Giߦ�m 50% tߦ�m -��+�ch
+    public float stealthFactor = 1.0f; // 1 = Bình thường, 0.5 = Giảm 50% tầm địch
 
-    // [M�+�I] C�+� b+�o hi�+�u trߦ�ng th+�i T+�ng H+�nh
+    // [MỚI] Cờ báo hiệu trạng thái Tàng Hình
     public bool isInvisible = false;
 
-    // --- HI�+�U �+�NG CHߦ�Y M+�U (BLEED) ---
+    // --- HIỆU ỨNG CHẢY MÁU (BLEED) ---
     [Header("--- Bleed ---")]
     public bool isBleeding = false;
     private Coroutine bleedCoroutine;
-    private float bleedTimer = 0f; // B�+� -�ߦ+m th�+�i gian c+�n lߦ�i c�+�a Bleed
-    private float currentBleedDamage = 0f; // L��u damage -��+� nߦ+u -�+�nh tiߦ+p th+� cߦ�p nhߦ�t damage m�+�i
+    private float bleedTimer = 0f; // Bộ đếm thời gian còn lại của Bleed
+    private float currentBleedDamage = 0f; // Lưu damage để nếu đánh tiếp thì cập nhật damage mới
     [Header ("--- Mark ---")]
-    [Tooltip("B�+� -�+�nh dߦ�u")]
+    [Tooltip("Bị đánh dấu")]
     public bool IsMarked=false;
 
     [Header("Parry Settings")]
-    public bool isParrying = false;       // -�ang trong thߦ+ th�+�
-    public bool isPerfectParryWindow = false; // -�ang trong "khung gi�+� v+�ng"
+    public bool isParrying = false;       // Đang trong thế thủ
+    public bool isPerfectParryWindow = false; // Đang trong "khung giờ vàng"
     [Range(0, 360)] public float parryAngle = 120f;
 
     [Header("--- Duelist Challenge ---")]
-    public bool isChallenged = false; // C�+� b+�o hi�+�u b�+� th+�ch -�ߦ�u
+    public bool isChallenged = false; // Cờ báo hiệu bị thách đấu
     private Coroutine challengeCoroutine;
 
     [Header("--- Resonance Mark (Catalyst) ---")]
@@ -185,6 +185,7 @@ public class Stats : MonoBehaviour
         currentHp = maxHp;
         currentStamina = maxStamina;
         currentSin= maxSin;
+        // [MỚI] Khởi tạo lượng EXP cần thiết cho level hiện tại ngay khi bắt đầu
         RefreshExpRequirements();
         agent = GetComponent<NavMeshAgent>();
         rb = GetComponent<Rigidbody>();
@@ -218,7 +219,7 @@ public class Stats : MonoBehaviour
 
     void HandleStaminaRegen()
     {
-        // [M�+�I] Ki�+�m tra Delay: Nߦ+u ch��a qua 1 gi+�y k�+� t�+� lߦ�n cu�+�i d+�ng th�+� l�+�c -> Kh+�ng h�+�i
+        // [MỚI] Kiểm tra Delay: Nếu chưa qua 1 giây kể từ lần cuối dùng thể lực -> Không hồi
         if (Time.time < lastStaminaConsumeTime + staminaRegenDelay)
         {
             return;
@@ -235,22 +236,22 @@ public class Stats : MonoBehaviour
 
     public void EnterCombat()
     {
-        if (outCombat) Debug.Log(">> Enter Combat! (H�+�i th�+� l�+�c chߦ�m, Xoay chߦ�m)");
+        if (outCombat) Debug.Log(">> Enter Combat! (Hồi thể lực chậm, Xoay chậm)");
         outCombat = false;
         combatTimer = 0f;
     }
 
     public void ApplyBleed(float damagePerTick, float duration)
     {
-        // 1. Cߦ�p nhߦ�t th+�ng s�+� m�+�i nhߦ�t
-        currentBleedDamage = damagePerTick; // C+� th�+� l+�m logic: Lߦ�y damage cao nhߦ�t hoߦ+c c�+�ng d�+�n
+        // 1. Cập nhật thông số mới nhất
+        currentBleedDamage = damagePerTick; // Có thể làm logic: Lấy damage cao nhất hoặc cộng dồn
 
-        // 2. Gia hߦ�n th�+�i gian (Reset lߦ�i -��+�ng h�+� -�ߦ+m ng���+�c)
+        // 2. Gia hạn thời gian (Reset lại đồng hồ đếm ngược)
         bleedTimer = duration;
 
-        // -�+�nh dߦ�u kߦ+ -��+�ch -�ang b�+� Bleed
+        // Đánh dấu kẻ địch đang bị Bleed
         isBleeding = true;
-        // 3. Ch�+� Start Coroutine nߦ+u n+� ch��a chߦ�y
+        // 3. Chỉ Start Coroutine nếu nó chưa chạy
         if (bleedCoroutine == null)
         {
             bleedCoroutine = StartCoroutine(BleedRoutine());
@@ -259,31 +260,31 @@ public class Stats : MonoBehaviour
 
     private IEnumerator BleedRoutine()
     {
-        // V+�ng lߦ+p chߦ�y ch�+�ng n+�o c+�n th�+�i gian
+        // Vòng lặp chạy chừng nào còn thời gian
         while (bleedTimer > 0)
         {
-            // Ch�+� 1 gi+�y
+            // Chờ 1 giây
             yield return new WaitForSeconds(1.0f);
 
-            // Tr�+� th�+�i gian
+            // Trừ thời gian
             bleedTimer -= 1.0f;
 
-            // G+�y s+�t th����ng
+            // Gây sát thương
             TakeDamage(currentBleedDamage);
-            Debug.Log($"<color=red>{gameObject.name} -�ang chߦ�y m+�u: -{currentBleedDamage} HP (C+�n {bleedTimer}s)</color>");
+            Debug.Log($"<color=red>{gameObject.name} đang chảy máu: -{currentBleedDamage} HP (Còn {bleedTimer}s)</color>");
         }
 
-        // Hߦ+t gi�+� -> X+�a Coroutine -��+� lߦ�n sau Start lߦ�i -榦�+�c
+        // Hết giờ -> Xóa Coroutine để lần sau Start lại được
         isBleeding = false;
         bleedCoroutine = null;
     }
 
-    // H+�m gߦ�n ߦ�n th+�ch -�ߦ�u
+    // Hàm gắn ấn thách đấu
     public void ApplyChallengeMark(float duration)
     {
         isChallenged = true;
 
-        // Nߦ+u -�ang c+� ߦ�n r�+�i th+� -�ߦ�p -�i t+�nh lߦ�i th�+�i gian m�+�i
+        // Nếu đang có ấn rồi thì đập đi tính lại thời gian mới
         if (challengeCoroutine != null) StopCoroutine(challengeCoroutine);
         challengeCoroutine = StartCoroutine(ChallengeRoutine(duration));
     }
@@ -295,12 +296,12 @@ public class Stats : MonoBehaviour
         challengeCoroutine = null;
     }
 
-    // [M�+�I] H+�m d+�ng -��+� gߦ�n dߦ�u ߦ�n C�+�ng H���+�ng
+    // [MỚI] Hàm dùng để gắn dấu ấn Cộng Hưởng
     public void ApplyResonanceMark(float duration)
     {
         isResonated = true;
 
-        // Nߦ+u -�ang c+� dߦ�u ߦ�n r�+�i th+� reset lߦ�i th�+�i gian
+        // Nếu đang có dấu ấn rồi thì reset lại thời gian
         if (resonanceCoroutine != null) StopCoroutine(resonanceCoroutine);
         resonanceCoroutine = StartCoroutine(ResonanceRoutine(duration));
     }
@@ -312,14 +313,14 @@ public class Stats : MonoBehaviour
         resonanceCoroutine = null;
     }
 
-    // [Cߦ�P NHߦ�T] H+�m ti+�u hao th�+� l�+�c d+�ng chung cho Dash v+� Run
+    // [CẬP NHẬT] Hàm tiêu hao thể lực dùng chung cho Dash và Run
     public bool TryConsumeStamina(float amount)
     {
         if (currentStamina >= amount)
         {
             currentStamina -= amount;
 
-            // [M�+�I] Ghi lߦ�i th�+�i gian ti+�u hao -��+� t+�nh Delay h�+�i ph�+�c
+            // [MỚI] Ghi lại thời gian tiêu hao để tính Delay hồi phục
             lastStaminaConsumeTime = Time.time;
 
             return true;
@@ -331,25 +332,25 @@ public class Stats : MonoBehaviour
     {
         if (isInvincible || isDead) return;
 
-        // [M�+�I] Cho ph+�p Signature chߦ+n s+�t th����ng
+        // [MỚI] Cho phép Signature chặn sát thương
         if (damageInterceptor != null && damageInterceptor.Invoke(info))
         {
-            return; // Nߦ+u Interceptor trߦ� v�+� true -> Kߦ+ -��+�ch -�+� sߦ�p bߦ�y, H�+�Y vi�+�c mߦ�t m+�u!
+            return; // Nếu Interceptor trả về true -> Kẻ địch đã sập bẫy, HỦY việc mất máu!
         }
 
         EnterCombat();
-        // 1. T+�NH TO+�N DAMAGE V+� SHIELD
+        // 1. TÍNH TOÁN DAMAGE VÀ SHIELD
         float damageToTake = info.damageAmount;
 
-        // [M�+�I] KI�+�M TRA C�+�NG H���+PNG T�+� COMPANION
-        // Giߦ� s�+� Companion c�+�a bߦ�n c+� tag l+� "Companion" v+� khi -�+�nh c+� truy�+�n info.attacker = stats c�+�a n+�
+        // [MỚI] KIỂM TRA CỘNG HƯỞNG TỪ COMPANION
+        // Giả sử Companion của bạn có tag là "Companion" và khi đánh có truyền info.attacker = stats của nó
         if (isResonated && info.attacker != null && info.attacker.CompareTag("Ally"))
         {
-            damageToTake *= 1.30f; // T-�ng 30% s+�t th����ng
-            Debug.Log($"<color=orange>C�+�ng H���+�ng!</color> S+�t th����ng t�+� Companion t-�ng l+�n: {damageToTake}");
+            damageToTake *= 1.30f; // Tăng 30% sát thương
+            Debug.Log($"<color=orange>Cộng Hưởng!</color> Sát thương từ Companion tăng lên: {damageToTake}");
         }
 
-        // [M�+�I] Tr�+� v+�o Shield tr���+�c (Nߦ+u c+�)
+        // [MỚI] Trừ vào Shield trước (Nếu có)
         if (currentShield > 0)
         {
             float damageBlocked = Mathf.Min(damageToTake, currentShield);
@@ -359,27 +360,27 @@ public class Stats : MonoBehaviour
             Debug.Log($"<color=yellow>Shield blocked: {damageBlocked}. Remaining Shield: {currentShield}");
         }
 
-        // 2. TR�+� M+�U (Nߦ+u damage vߦ�n c+�n sau khi ph+� shield)
+        // 2. TRỪ MÁU (Nếu damage vẫn còn sau khi phá shield)
         if (damageToTake > 0)
         {
             currentHp -= damageToTake;
 
-            //if (info.isCrit) Debug.Log($"<color=red>Damage nhߦ�n l�+�n h��n Shield</color> {gameObject.name} nhߦ�n {damageToTake} (Shield chߦ+n: {info.damageAmount - damageToTake})");
-            //else Debug.Log($"{gameObject.name} nhߦ�n {damageToTake}");
-            Debug.Log($"{gameObject.name} nhߦ�n {damageToTake}");
-            // [M�+�I] K+�CH HOߦ�T S�+� KI�+�N "B�+� -�+�NH"
-            // B+�o cho JuggernautSkill biߦ+t l+� "Tao b�+� mߦ�t m+�u r�+�i!"
+            //if (info.isCrit) Debug.Log($"<color=red>Damage nhận lớn hơn Shield</color> {gameObject.name} nhận {damageToTake} (Shield chặn: {info.damageAmount - damageToTake})");
+            //else Debug.Log($"{gameObject.name} nhận {damageToTake}");
+            Debug.Log($"{gameObject.name} nhận {damageToTake}");
+            // [MỚI] KÍCH HOẠT SỰ KIỆN "BỊ ĐÁNH"
+            // Báo cho JuggernautSkill biết là "Tao bị mất máu rồi!"
             OnDamageReceived?.Invoke(damageToTake, this);
         }
         else
         {
-            Debug.Log($"{gameObject.name} chߦ+n to+�n b�+� s+�t th����ng bߦ�ng Shield!");
+            Debug.Log($"{gameObject.name} chặn toàn bộ sát thương bằng Shield!");
         }
 
-        // 3. X�+� L+� HI�+�U �+�NG (CC)
+        // 3. XỬ LÝ HIỆU ỨNG (CC)
         ApplyCrowdControl(info);
 
-        // 4. KI�+�M TRA CHߦ+T
+        // 4. KIỂM TRA CHẾT
         if (currentHp <= 0)
         {
             currentHp = 0;
@@ -387,7 +388,7 @@ public class Stats : MonoBehaviour
         }
     }
 
-    //// H+�m c+� (Overload) -��+� t����ng th+�ch code c+� ch��a k�+�p s�+�a
+    //// Hàm cũ (Overload) để tương thích code cũ chưa kịp sửa
     public virtual void TakeDamage(float damage)
     {
         DamageInfo info = new DamageInfo
@@ -399,12 +400,12 @@ public class Stats : MonoBehaviour
         };
         TakeDamage(info);
     }
-    // S�+�a h+�m h�+�i m+�u (nߦ+u bߦ�n c+� h+�m Heal ri+�ng, hoߦ+c s�+�a tr�+�c tiߦ+p ch�+� n+�o c�+�ng m+�u)
+    // Sửa hàm hồi máu (nếu bạn có hàm Heal riêng, hoặc sửa trực tiếp chỗ nào cộng máu)
     public void Heal(float amount)
     {
         if (isHealingBlocked)
         {
-            Debug.Log("H�+�i m+�u b�+� chߦ+n do Say M+�u!");
+            Debug.Log("Hồi máu bị chặn do Say Máu!");
             return;
         }
 
@@ -416,34 +417,34 @@ public class Stats : MonoBehaviour
     {
         if (isSuperArmor && info.impactLevel <= superArmorLevel)
         {
-            // C+� th�+� th+�m hi�+�u �+�ng visual (v+� d�+�: ng���+�i l+�e s+�ng trߦ�ng ch�+�u -�+�n)
+            // Có thể thêm hiệu ứng visual (ví dụ: người lóe sáng trắng chịu đòn)
              //Debug.Log("Super Armor Blocked CC!");
             return;
         }
 
-        // 1. X�+� l++ KNOCKBACK
+        // 1. Xử lý KNOCKBACK
         if (info.isKnockback)
         {
-            // T+�nh l�+�c -�ߦ�y l+�i th�+�c tߦ+ sau khi tr�+� Kh+�ng
-            // V+� d�+�: Force 10, Res 0.2 -> Th�+�c nhߦ�n 8
+            // Tính lực đẩy lùi thực tế sau khi trừ Kháng
+            // Ví dụ: Force 10, Res 0.2 -> Thực nhận 8
             float finalForce = info.knockbackForce * (1.0f - resistanceKnockBack);
             Debug.Log("finalForce: " + finalForce + " info.knockbackForce: "+ info.knockbackForce + " resistanceKnockBack: "+ resistanceKnockBack);
 
-            // Nߦ+u l�+�c vߦ�n > 0 th+� -�ߦ�y
+            // Nếu lực vẫn > 0 thì đẩy
             if (finalForce > 0)
             {
                 Vector3 knockbackDir = (transform.position - info.sourcePosition).normalized;
-                knockbackDir.y = 0; // Gi�+� th-�ng bߦ�ng mߦ+t -�ߦ�t
+                knockbackDir.y = 0; // Giữ thăng bằng mặt đất
                 StartCoroutine(KnockbackRoutine(knockbackDir, finalForce));
             }
         }
 
-        // 2. X�+� l++ STUN (N+�ng cߦ�p)
+        // 2. Xử lý STUN (Nâng cấp)
         if (info.isStun)
         {
             float finalDuration = info.stunDuration * (1.0f - resistanceKnockBack);
             Debug.Log($"Stun: {finalDuration}");
-            // [S�+�A] B�+� h+�m Mathf.Max(0.1f). Nߦ+u th�+�i gian < 0.1s coi nh�� kh+�ng ho+�n to+�n
+            // [SỬA] Bỏ hàm Mathf.Max(0.1f). Nếu thời gian < 0.1s coi như kháng hoàn toàn
             if (finalDuration >= 0.1f)
             {
                 float proposedEndTime = Time.time + finalDuration;
@@ -464,49 +465,49 @@ public class Stats : MonoBehaviour
         bool wasKinematic = false;
         bool hasAgent = (agent != null);
 
-        // [M�+�I] Biߦ+n l��u trߦ�ng th+�i Root Motion
+        // [MỚI] Biến lưu trạng thái Root Motion
         bool wasRootMotion = false;
 
-        // 1. Tߦ�T Hߦ�N NAVMESH AGENT (Bi�+�n ph+�p mߦ�nh)
-        // isStopped -�+�i khi kh+�ng -��+� v�+�i Humanoid, tߦ�t lu+�n Component cho chߦ�c
+        // 1. TẮT HẲN NAVMESH AGENT (Biện pháp mạnh)
+        // isStopped đôi khi không đủ với Humanoid, tắt luôn Component cho chắc
         if (hasAgent)
         {
-            //Debug.Log("hasAgent: lߦ�y th+�nh c+�ng");
+            //Debug.Log("hasAgent: lấy thành công");
             agent.velocity = Vector3.zero;
-            agent.enabled = false; // <--- Tߦ�T Hߦ�N
+            agent.enabled = false; // <--- TẮT HẲN
         }
 
-        // 2. Tߦ�M D�+�NG ROOT MOTION
+        // 2. TẠM DỪNG ROOT MOTION
         if (animator != null)
         {
-            //Debug.Log("animator: Lߦ�y th+�nh c+�ng " );
+            //Debug.Log("animator: Lấy thành công " );
             wasRootMotion = animator.applyRootMotion;
-            animator.applyRootMotion = false; // Tߦ�t Root Motion -��+� Physics hoߦ�t -��+�ng
+            animator.applyRootMotion = false; // Tắt Root Motion để Physics hoạt động
         }
 
-        // 3. X�+� L+� RIGIDBODY (-�ߦ�y L+�i)
+        // 3. XỬ LÝ RIGIDBODY (Đẩy Lùi)
         if (rb != null)
         {
             wasKinematic = rb.isKinematic;
-            rb.isKinematic = false; // Bߦ�t Physics
+            rb.isKinematic = false; // Bật Physics
 
             //Debug.Log("rb.isKinematic: " + rb.isKinematic);
 
-            // Reset vߦ�n t�+�c c+�
+            // Reset vận tốc cũ
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
 
-            // Debug xem l�+�c c+� -榦�+�c add kh+�ng
-            // Debug.Log($"Add Force: {force} theo h���+�ng {dir}");
+            // Debug xem lực có được add không
+            // Debug.Log($"Add Force: {force} theo hướng {dir}");
 
-            // Th+�m l�+�c -�ߦ�y (D+�ng Impulse cho d�+�t kho+�t)
+            // Thêm lực đẩy (Dùng Impulse cho dứt khoát)
             rb.AddForce(dir * force, ForceMode.Impulse);
         }
 
-        // 4. CH�+� TH�+�I GIAN BAY
+        // 4. CHỜ THỜI GIAN BAY
         yield return new WaitForSeconds(0.2f);
 
-        // 5. KH+�I PH�+�C TRߦ�NG TH+�I
+        // 5. KHÔI PHỤC TRẠNG THÁI
         if (rb != null)
         {
             rb.linearVelocity = Vector3.zero;
@@ -514,24 +515,24 @@ public class Stats : MonoBehaviour
             rb.isKinematic = wasKinematic;
         }
 
-        // Kh+�i ph�+�c Root Motion
+        // Khôi phục Root Motion
         if (animator != null)
         {
             animator.applyRootMotion = wasRootMotion;
         }
 
-        // Kh+�i ph�+�c Agent
+        // Khôi phục Agent
         if (hasAgent)
         {
-            agent.enabled = true; // <--- Bߦ�T Lߦ�I
+            agent.enabled = true; // <--- BẬT LẠI
             if (agent.isOnNavMesh)
             {
-                agent.isStopped = true; // Vߦ�n gi�+� stop v+� -�ang Stun
-                agent.ResetPath();      // X+�a -榦�+�ng -�i c+� cho sߦ�ch
+                agent.isStopped = true; // Vẫn giữ stop vì đang Stun
+                agent.ResetPath();      // Xóa đường đi cũ cho sạch
             }
         }
 
-        // 6. CHECK STUN TIߦ+P
+        // 6. CHECK STUN TIẾP
         yield return new WaitForSeconds(0.1f);
 
         if (Time.time >= stunEndTime)
@@ -543,7 +544,7 @@ public class Stats : MonoBehaviour
     IEnumerator StunRoutine(float duration)
     {
         isStunned = true;
-        Debug.Log($"{gameObject.name} b�+� STUN!");
+        Debug.Log($"{gameObject.name} bị STUN!");
 
         if (agent != null && agent.isOnNavMesh)
         {
@@ -551,36 +552,36 @@ public class Stats : MonoBehaviour
             agent.velocity = Vector3.zero;
         }
 
-        // Thay v+� WaitForSeconds c�+� -��+�nh, ta ch�+� -�ߦ+n -�+�ng th�+�i -�i�+�m stunEndTime
-        // -�i�+�u n+�y gi+�p vi�+�c "ghi -�+�" th�+�i gian tr�+� n+�n m���+�t m+� (ch�+� cߦ�n update stunEndTime)
+        // Thay vì WaitForSeconds cố định, ta chờ đến đúng thời điểm stunEndTime
+        // Điều này giúp việc "ghi đè" thời gian trở nên mượt mà (chỉ cần update stunEndTime)
         while (Time.time < stunEndTime)
         {
             yield return null;
         }
 
         isStunned = false;
-        // Debug.Log($"{gameObject.name} hߦ+t STUN");
+        // Debug.Log($"{gameObject.name} hết STUN");
     }
 
     protected virtual void Die()
     {
-        if (isDead) return; // Chߦ+t r�+�i kh+�ng chߦ+t lߦ�i
+        if (isDead) return; // Chết rồi không chết lại
         isDead = true;
 
-        Debug.Log($"{gameObject.name} -�+� chߦ+t!");
+        Debug.Log($"{gameObject.name} đã chết!");
 
-        // 1. Tߦ�t Collider -��+� kh+�ng c+�n l+� m�+�c ti+�u (Raycast/OverlapSphere kh+�ng thߦ�y n�+�a)
+        // 1. Tắt Collider để không còn là mục tiêu (Raycast/OverlapSphere không thấy nữa)
         Collider col = GetComponent<Collider>();
         if (col != null) col.enabled = false;
 
-        // 2. Tߦ�t Physics
+        // 2. Tắt Physics
         if (rb != null)
         {
             rb.linearVelocity = Vector3.zero;
-            rb.isKinematic = true; // -��+� x+�c kh+�ng b�+� tr+�i
+            rb.isKinematic = true; // Để xác không bị trôi
         }
 
-        // 3. Tߦ�t AI Agent (Nߦ+u l+� Enemy)
+        // 3. Tắt AI Agent (Nếu là Enemy)
         if (agent != null)
         {
             agent.isStopped = true;
@@ -591,49 +592,49 @@ public class Stats : MonoBehaviour
         if (animator != null)
         {
             //animator.SetTrigger("Die");
-            // -�ߦ�m bߦ�o animator kh+�ng chuy�+�n sang state kh+�c
+            // Đảm bảo animator không chuyển sang state khác
             //animator.SetBool("IsDead", true);
         }
 
-        // 5. V+� hi�+�u h+�a Script -�i�+�u khi�+�n
-        // Nߦ+u l+� Player
+        // 5. Vô hiệu hóa Script điều khiển
+        // Nếu là Player
         var playerCtrl = GetComponent<PlayerController>();
         if (playerCtrl != null) playerCtrl.enabled = false;
 
-        // Nߦ+u l+� Enemy
+        // Nếu là Enemy
         var enemyAI = GetComponent<EnemyAI>();
         if (enemyAI != null) enemyAI.enabled = false;
 
         var enemyCombat = GetComponent<EnemyCombat>();
         if (enemyCombat != null) enemyCombat.enabled = false;
 
-        // 6. H�+�y Object sau 3 gi+�y
+        // 6. Hủy Object sau 3 giây
         Destroy(gameObject, 3.0f);
     }
-    // [-�+� S�+�A] H+�m H�+�i Sinh an to+�n vߦ�t l++
+    // [ĐÃ SỬA] Hàm Hồi Sinh an toàn vật lý
     public virtual void Revive(float hpPercent)
     {
         if (!isDead) return;
         isDead = false;
         currentHp = maxHp * hpPercent;
 
-        // 1. Reset sߦ�ch -��+�ng l���+�ng (Tr+�nh vi�+�c b�+� l��u l�+�c -�ߦ�y t�+� l+�c chߦ+t)
+        // 1. Reset sạch động lượng (Tránh việc bị lưu lực đẩy từ lúc chết)
         if (rb != null)
         {
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
 
-            // T�+� -��+�ng nhߦ�n di�+�n: 
-            // Nߦ+u l+� AI (c+� NavMeshAgent) -> Kh+�a vߦ�t l++ (isKinematic = true)
-            // Nߦ+u l+� Player -�i�+�u khi�+�n -> M�+� vߦ�t l++ (isKinematic = false)
+            // Tự động nhận diện: 
+            // Nếu là AI (có NavMeshAgent) -> Khóa vật lý (isKinematic = true)
+            // Nếu là Player điều khiển -> Mở vật lý (isKinematic = false)
             rb.isKinematic = (GetComponent<UnityEngine.AI.NavMeshAgent>() != null);
         }
 
-        // 2. Bߦ�t lߦ�i NavMeshAgent TR���+�C
+        // 2. Bật lại NavMeshAgent TRƯỚC
         UnityEngine.AI.NavMeshAgent agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
         if (agent != null) agent.enabled = true;
 
-        // 3. Bߦ�t lߦ�i Collider SAU (-��+� an to+�n)
+        // 3. Bật lại Collider SAU (Để an toàn)
         Collider col = GetComponent<Collider>();
         if (col != null) col.enabled = true;
 
@@ -644,46 +645,46 @@ public class Stats : MonoBehaviour
             animator.Update(0f);
         }
 
-        Debug.Log($"<color=green>{gameObject.name} -�+� -ɦ��+�C H�+�I SINH!</color>");
+        Debug.Log($"<color=green>{gameObject.name} ĐÃ ĐƯỢC HỒI SINH!</color>");
     }
-    // [M�+�I] H+�m giߦ�i ph+�ng nh+�n vߦ�t kh�+�i m�+�i trߦ�ng th+�i kh�+�ng chߦ+ hi�+�n tߦ�i
+    // [MỚI] Hàm giải phóng nhân vật khỏi mọi trạng thái khống chế hiện tại
     public void BreakCrowdControl()
     {
         isStunned = false;
         stunEndTime = 0f;
 
-        // Ngߦ�t Coroutine Stun nߦ+u -�ang chߦ�y
+        // Ngắt Coroutine Stun nếu đang chạy
         if (currentStunCoroutine != null)
         {
             StopCoroutine(currentStunCoroutine);
             currentStunCoroutine = null;
         }
 
-        // Tri�+�t ti+�u -��+�ng l���+�ng (L�+�c -�ߦ�y l+�i Knockback)
+        // Triệt tiêu động lượng (Lực đẩy lùi Knockback)
         if (rb != null && !isDead)
         {
             rb.linearVelocity = Vector3.zero;
         }
 
-        // -�ߦ�m bߦ�o bߦ�t lߦ�i NavMeshAgent nߦ+u l�+� b�+� KnockbackRoutine tߦ�t -�i
+        // Đảm bảo bật lại NavMeshAgent nếu lỡ bị KnockbackRoutine tắt đi
         if (agent != null && !agent.enabled && !isDead)
         {
             agent.enabled = true;
             if (agent.isOnNavMesh) agent.isStopped = false;
         }
 
-        Debug.Log($"<color=orange>{gameObject.name} -�+� THO+�T KH�+�I KH�+�NG CHߦ+!</color>");
+        Debug.Log($"<color=orange>{gameObject.name} đã THOÁT KHỎI KHỐNG CHẾ!</color>");
     }
     // ==========================================
-    // [M�+�I] H�+� TH�+�NG KINH NGHI�+�M V+� L+�N Cߦ�P
+    // [MỚI] HỆ THỐNG KINH NGHIỆM VÀ LÊN CẤP
     // ==========================================
     public float GetNextLevelExp()
     {
-        // C+�ng th�+�c -榦�+�ng cong EXP: 100 * (level ^ 1.1)
+        // Công thức đường cong EXP: 100 * (level ^ 1.1)
         return Mathf.Floor(100f * Mathf.Pow(level, 1.1f));
     }
 
-    // H+�m d+�ng chung -��+� t+�nh c+�ng th�+�c EXP
+    // Hàm dùng chung để tính công thức EXP
     protected float CalculateExpRequirement(int currentLevel)
     {
         return Mathf.Floor(100f * Mathf.Pow(currentLevel, 1.1f));
@@ -706,7 +707,7 @@ public class Stats : MonoBehaviour
 
         while (exp >= nextLevelExp && level < maxLevel)
         {
-            exp -= nextLevelExp; // Tr�+� -�i l���+�ng exp -�+� d+�ng -��+� l+�n cߦ�p
+            exp -= nextLevelExp; // Trừ đi lượng exp đã dùng để lên cấp
             LevelUp();
             RefreshExpRequirements();
         }
@@ -714,9 +715,9 @@ public class Stats : MonoBehaviour
         if (level >= maxLevel)
         {
             exp = 0;
-            nextLevelExp = 0; // Set v�+� 0 hoߦ+c gi�+� nguy+�n t+�y ++ bߦ�n cho UI hi�+�n th�+� ch�+� "MAX"
+            nextLevelExp = 0; // Set về 0 hoặc giữ nguyên tùy ý bạn cho UI hiển thị chữ "MAX"
             maxExpForCurrentLevel = 0f;
-            Debug.Log($"<color=orange>{gameObject.name} -�+� -�ߦ�t Cߦ�p T�+�i -�a ({maxLevel})!</color>");
+            Debug.Log($"<color=orange>{gameObject.name} đã đạt Cấp Tối Đa ({maxLevel})!</color>");
         }
     }
 
@@ -724,6 +725,6 @@ public class Stats : MonoBehaviour
     {
         level++;
         RefreshExpRequirements();
-        Debug.Log($"<color=yellow>LEVEL UP!</color> {gameObject.name} -�+� -�ߦ�t cߦ�p {level}!");
+        Debug.Log($"<color=yellow>LEVEL UP!</color> {gameObject.name} đã đạt cấp {level}!");
     }
 }

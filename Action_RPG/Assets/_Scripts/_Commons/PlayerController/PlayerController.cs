@@ -96,6 +96,7 @@ public class PlayerController : MonoBehaviour
 
     private DuelistPassive duelistSkill;
     private bool isDuelistCounterActive = false; // Cache trạng thái counter cho cả vòng lặp quét
+    private InventoryUIManager _inventoryUIManager;
     void Start()
     {
         stats = GetComponent<AllyStats>();
@@ -114,6 +115,7 @@ public class PlayerController : MonoBehaviour
 
         equipmentManager = GetComponent<EquipmentManager>();
         skillManager = GetComponent<SkillManager>();
+        _inventoryUIManager = FindFirstObjectByType<InventoryUIManager>();
 
         // [002-E] Initialize player vision manager
         InitializeVisionManager();
@@ -158,6 +160,15 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         if (stats == null) return;
+
+        // B key được xử lý TRUỜC guard IsInventoryOpen để đóng và mở đều hoạt động
+        if (Input.GetKeyDown(KeyCode.B))
+        {
+            if (_inventoryUIManager == null)
+                _inventoryUIManager = FindFirstObjectByType<InventoryUIManager>();
+            _inventoryUIManager?.ToggleInventory();
+            return;
+        }
 
         if (InventoryUIManager.IsInventoryOpen) return;
 

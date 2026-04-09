@@ -12,13 +12,8 @@ public class InventoryUIManager : MonoBehaviour
         SetInventoryVisible(false);
     }
 
-    private void Update()
-    {
-        if (Input.GetKeyDown(_toggleKey))
-        {
-            ToggleInventory();
-        }
-    }
+    // Toggle key (B) is handled by PlayerController.Update() to ensure
+    // it fires before the IsInventoryOpen early-return guard.
 
     public void ToggleInventory()
     {

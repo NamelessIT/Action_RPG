@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3b12cff4fa92acb48913ed9eedbc84b0, type: 3}
+  m_Script: {fileID: 11500000, guid: 49b0df16a89d4614aba7f80f35c7fbb2, type: 3}
   m_Name: CheckpointDatabase
   m_EditorClassIdentifier: Assembly-CSharp::CheckpointDatabase
   checkpoints: []

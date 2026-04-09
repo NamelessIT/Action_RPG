@@ -1732,7 +1732,6 @@ GameObject:
   - component: {fileID: 246247150}
   - component: {fileID: 246247149}
   - component: {fileID: 246247151}
-  - component: {fileID: 246247152}
   m_Layer: 5
   m_Name: TopEquipDiv
   m_TagString: Untagged
@@ -1827,26 +1826,6 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
---- !u!114 &246247152
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 246247147}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8ab25ed92b4fa2e4da33c9419f50dd05, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerStatsUI
-  _playerStats: {fileID: 338991038}
-  _useMockExperienceData: 0
-  _mockCurrentExp: 0
-  _mockMaxExpForCurrentLevel: 100
-  _sliderHP: {fileID: 1064711542}
-  _textHP: {fileID: 472518461}
-  _sliderExperience: {fileID: 54630973}
-  _textExperience: {fileID: 282290023}
 --- !u!1 &273984098
 GameObject:
   m_ObjectHideFlags: 0
@@ -3397,54 +3376,6 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
---- !u!1 &513065463
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 513065465}
-  - component: {fileID: 513065464}
-  m_Layer: 0
-  m_Name: GameManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &513065464
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 513065463}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c37de827e3ac75842b05dc163c2aeb63, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  playerDB: {fileID: 11400000, guid: f62f6f127a8c16148ad96c64fa59bd2e, type: 2}
-  weaponDB: {fileID: 11400000, guid: 34e7cc2978495564686f4dbec6a35339, type: 2}
-  checkpointDB: {fileID: 11400000, guid: 1ce9cd9df7a09484083b62e6931579cc, type: 2}
-  accessoryDB: {fileID: 11400000, guid: 5b08e6a5763e6944d9521d32a7b508af, type: 2}
---- !u!4 &513065465
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 513065463}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 378.5045, y: 245.68968, z: -55.00272}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &514174599
 GameObject:
   m_ObjectHideFlags: 0
@@ -3901,7 +3832,6 @@ GameObject:
   - component: {fileID: 568331568}
   - component: {fileID: 568331567}
   - component: {fileID: 568331569}
-  - component: {fileID: 568331570}
   m_Layer: 5
   m_Name: RightInventoryDiv
   m_TagString: Untagged
@@ -3994,24 +3924,6 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
---- !u!114 &568331570
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 568331565}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 95845786bc33fe848ac0c7a442a11498, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InventoryController
-  _inventoryRuntime: {fileID: 0}
-  _scrollRect: {fileID: 925160428}
-  _gridRoot: {fileID: 1505410619}
-  _itemViewPrefab: {fileID: 0}
-  _searchInput: {fileID: 1944379858}
-  _rootCanvas: {fileID: 2124656209}
 --- !u!1 &610370647
 GameObject:
   m_ObjectHideFlags: 0
@@ -6173,19 +6085,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 906339571}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 11500000, guid: 95845786bc33fe848ac0c7a442a11498, type: 3}
-        m_TargetAssemblyTypeName: UnityEditor.MonoScript, UnityEditor.CoreModule
-        m_MethodName: set_name
-        m_Mode: 5
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: ShowWeaponsTab()
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &906339571
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7002,7 +6902,6 @@ GameObject:
   - component: {fileID: 992123576}
   - component: {fileID: 992123575}
   - component: {fileID: 992123577}
-  - component: {fileID: 992123578}
   m_Layer: 5
   m_Name: InventoryPanel
   m_TagString: Untagged
@@ -7095,20 +6994,6 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
---- !u!114 &992123578
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 992123573}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d8db35e1a529fad4aa3b4ab7759eb8cf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InventoryUIManager
-  _inventoryPanel: {fileID: 0}
-  _toggleKey: 98
 --- !u!1 &996622455
 GameObject:
   m_ObjectHideFlags: 0
@@ -12760,7 +12645,6 @@ GameObject:
   - component: {fileID: 1911845537}
   - component: {fileID: 1911845539}
   - component: {fileID: 1911845540}
-  - component: {fileID: 1911845541}
   m_Layer: 5
   m_Name: BottomStatsDiv
   m_TagString: Untagged
@@ -12879,46 +12763,6 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: 1
   m_LayoutPriority: 1
---- !u!114 &1911845541
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1911845535}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 754df257d63aed449883317e168c128d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::StatAllocationUI
-  _allyStats: {fileID: 0}
-  _statPointsText: {fileID: 39064488}
-  _rows:
-  - attributeType: 0
-    baseValueText: {fileID: 514174602}
-    totalValueText: {fileID: 514174602}
-    capText: {fileID: 1514346270}
-    addButton: {fileID: 1535733682}
-  - attributeType: 1
-    baseValueText: {fileID: 637081307}
-    totalValueText: {fileID: 637081307}
-    capText: {fileID: 615049178}
-    addButton: {fileID: 447554137}
-  - attributeType: 2
-    baseValueText: {fileID: 637081307}
-    totalValueText: {fileID: 637081307}
-    capText: {fileID: 615049178}
-    addButton: {fileID: 1358712834}
-  - attributeType: 3
-    baseValueText: {fileID: 1775065868}
-    totalValueText: {fileID: 1775065868}
-    capText: {fileID: 1011395628}
-    addButton: {fileID: 747038973}
-  - attributeType: 4
-    baseValueText: {fileID: 1649969912}
-    totalValueText: {fileID: 1649969912}
-    capText: {fileID: 101212382}
-    addButton: {fileID: 1420870021}
 --- !u!1 &1944379856
 GameObject:
   m_ObjectHideFlags: 0
@@ -13842,7 +13686,6 @@ GameObject:
   - component: {fileID: 2002325630}
   - component: {fileID: 2002325629}
   - component: {fileID: 2002325628}
-  - component: {fileID: 2002325631}
   m_Layer: 5
   m_Name: TDV1
   m_TagString: Untagged
@@ -13952,23 +13795,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2002325626}
   m_CullTransparentMesh: 1
---- !u!114 &2002325631
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2002325626}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 740d3a76bb757aa4a9909861bb509fa3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EquipmentSlotUI
-  _slotKind: 0
-  _equipmentManager: {fileID: 0}
-  _inventoryController: {fileID: 0}
-  _slotIcon: {fileID: 0}
-  _slotCanvasGroup: {fileID: 0}
 --- !u!1 &2024258219
 GameObject:
   m_ObjectHideFlags: 0
@@ -14159,53 +13985,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2025425007}
   m_CullTransparentMesh: 1
---- !u!1 &2064932231
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2064932233}
-  - component: {fileID: 2064932232}
-  m_Layer: 0
-  m_Name: InventoryManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &2064932232
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2064932231}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 93f0edab9f6a41d4d9b54b51ca3d82f3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InventoryRuntime
-  _startingWeapons: []
-  _startingShields: []
-  _startingAccessories: []
---- !u!4 &2064932233
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2064932231}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 378.5045, y: 245.68968, z: -55.00272}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2091026765
 GameObject:
   m_ObjectHideFlags: 0
@@ -14575,5 +14354,3 @@ SceneRoots:
   - {fileID: 1015774792}
   - {fileID: 2124656210}
   - {fileID: 1995522832}
-  - {fileID: 513065465}
-  - {fileID: 2064932233}
