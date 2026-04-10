@@ -26,6 +26,7 @@ public class PlayerRuntimeState
 
     // =============== CƠ SỞ DỮ LIỆU (không thay đổi trong combat) ===============
     public int playerId;
+    public string playerName;
     public int currentClassId;
     public int weaponId;
     public int coreShieldId;

@@ -29,6 +29,7 @@ public class PlayerStateManager
         Debug.Log($"[PlayerStateManager] ✅ Tải base player: {player.name} | STR={player.STR}, VIT={player.VIT}");
 
         // Gán base stats...
+        runtime.playerName = player.name;
         runtime.baseSTR = player.STR;
         runtime.baseDEX = player.DEX;
         runtime.baseINT = player.INT;

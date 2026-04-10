@@ -17,7 +17,9 @@ namespace Systems
         public TextMeshProUGUI hpText;
 
         public Slider staminaSlider;
+        public TextMeshProUGUI staminaText;
         public Slider sinSlider;
+        public TextMeshProUGUI sinText;
 
         [Header("--- Skill E (Normal Skill - No Cost) ---")]
         public GameObject skillE_Container;
@@ -84,12 +86,13 @@ namespace Systems
                 staminaSlider.maxValue = playerStats.maxStamina;
                 staminaSlider.value = Mathf.Lerp(staminaSlider.value, playerStats.currentStamina, Time.deltaTime * 10f);
             }
-
+            if (staminaText) staminaText.text = $"{Mathf.Ceil(playerStats.currentStamina)} / {playerStats.maxStamina}";
             if (sinSlider)
             {
                 sinSlider.maxValue = playerStats.maxSin;
                 sinSlider.value = Mathf.Lerp(sinSlider.value, playerStats.currentSin, Time.deltaTime * 10f);
             }
+            if (sinText) sinText.text = $"{Mathf.Ceil(playerStats.currentSin)} / {playerStats.maxSin}";
         }
 
         void UpdateSkills()
