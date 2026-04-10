@@ -20,7 +20,7 @@ MonoBehaviour:
   description: a simple wooden bow with a slightly curved frame and a worn grip,
     its surface marked by small scratches from frequent use, designed for basic hunting
     rather than precision or power
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: a98af8ee668a96c40bb039918f9d3c2c, type: 3}
   rarity: 0
   baseAtk: 18
   baseAttackSpeed: 1

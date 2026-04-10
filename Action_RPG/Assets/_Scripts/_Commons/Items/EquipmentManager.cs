@@ -445,23 +445,31 @@ public class EquipmentManager : MonoBehaviour
             case StatModifier.StatType.BonusAGI: allyStats.bonusAGI += value; break;
 
             case StatModifier.StatType.FlatHP: allyStats.flatHp += value; break;
-            case StatModifier.StatType.BonusHP: allyStats.bonusHp += value; break; 
+            case StatModifier.StatType.BonusHP: allyStats.bonusHp += value; break;
+            case StatModifier.StatType.Armor: allyStats.armor += value; break;
+            case StatModifier.StatType.MagicResist: allyStats.magicResist += value; break;
+            case StatModifier.StatType.DefenseValue: allyStats.defenseValue += value; break;
 
             case StatModifier.StatType.FlatPhysicalAtk: allyStats.flatPhysicalAtk += value; break;
             case StatModifier.StatType.FlatMagicAtk: allyStats.flatMagicAtk += value; break;
             case StatModifier.StatType.BonusPhysicalAtk: allyStats.bonusPhysicalAtk += value; break;
             case StatModifier.StatType.BonusMagicAtk: allyStats.bonusMagicAtk += value; break;
+
             case StatModifier.StatType.CritChance: allyStats.bonusCritChance += value; break;
             case StatModifier.StatType.CritMultiplier: allyStats.bonusCritMultiplier += value; break;
-            case StatModifier.StatType.Armor: allyStats.armor += value; break;
-            case StatModifier.StatType.MagicResist: allyStats.magicResist += value; break;
+
+            case StatModifier.StatType.BonusAttackSpeed: allyStats.bonusAttackSpeed += value; break;
             case StatModifier.StatType.BonusMoveSpeed: allyStats.bonusMoveSpeed += value; break;
             case StatModifier.StatType.BonusCDR: allyStats.bonusCdr += value; break;
-            case StatModifier.StatType.DefenseValue: allyStats.defenseValue += value; break;
+
             case StatModifier.StatType.PhysicalLifeSteal: allyStats.physicalLifeSteal += value; break;
             case StatModifier.StatType.MagicLifeSteal: allyStats.magicLifeSteal += value; break;
+
             case StatModifier.StatType.KnockBackRes: allyStats.resistanceKnockBack += value; break;
             case StatModifier.StatType.EffectRes: allyStats.resistanceEffect += value; break;
+
+            case StatModifier.StatType.FlatHpGain: allyStats.hpGain += value; break;
+            case StatModifier.StatType.FlatSinGain: allyStats.hpGain += value; break;
 
                 // ... Thêm các case cho các chỉ số khác
         }
