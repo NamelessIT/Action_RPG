@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerDatabase
   players:
   - id: 1
-    name: Chris Don
+    name: Naruto
     STR: 20
     DEX: 15
     INT: 1

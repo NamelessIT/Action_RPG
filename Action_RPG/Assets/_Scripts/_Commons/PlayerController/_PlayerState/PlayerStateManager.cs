@@ -46,12 +46,21 @@ public class PlayerStateManager
         bool hasSaveData = saveData != null && saveData.currentHp > 0f;
         if (hasSaveData)
         {
+            // Lưu base stats từ DB trước khi LoadFromSave ghi đè
+            float dbSTR = runtime.baseSTR;
+            float dbDEX = runtime.baseDEX;
+            float dbINT = runtime.baseINT;
+            float dbVIT = runtime.baseVIT;
+            float dbAGI = runtime.baseAGI;
+
             runtime.LoadFromSave(saveData);
-            runtime.baseSTR = saveData.baseSTR > 0f ? saveData.baseSTR : runtime.baseSTR;
-            runtime.baseDEX = saveData.baseDEX > 0f ? saveData.baseDEX : runtime.baseDEX;
-            runtime.baseINT = saveData.baseINT > 0f ? saveData.baseINT : runtime.baseINT;
-            runtime.baseVIT = saveData.baseVIT > 0f ? saveData.baseVIT : runtime.baseVIT;
-            runtime.baseAGI = saveData.baseAGI > 0f ? saveData.baseAGI : runtime.baseAGI;
+
+            // Nếu save file chưa có base stats (legacy save) → dùng lại giá trị DB
+            runtime.baseSTR = saveData.baseSTR > 0f ? saveData.baseSTR : dbSTR;
+            runtime.baseDEX = saveData.baseDEX > 0f ? saveData.baseDEX : dbDEX;
+            runtime.baseINT = saveData.baseINT > 0f ? saveData.baseINT : dbINT;
+            runtime.baseVIT = saveData.baseVIT > 0f ? saveData.baseVIT : dbVIT;
+            runtime.baseAGI = saveData.baseAGI > 0f ? saveData.baseAGI : dbAGI;
 
             if (saveData.level <= 0)
             {
@@ -81,6 +90,8 @@ public class PlayerStateManager
             }
             runtime.currentEnergy = 100;
             runtime.currentStamina = runtime.maxStamina;
+            runtime.attributePointRemain = runtime.level * 5;
+            runtime.skillPointRemain = runtime.level;
         }
 
         // 3. Load weapon
