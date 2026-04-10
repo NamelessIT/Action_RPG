@@ -1,5 +1,6 @@
 ﻿// _Scripts/_Commons/System/GameManager.cs
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 public class GameManager : MonoBehaviour
@@ -32,6 +33,14 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        // Delay 1 frame để đảm bảo tất cả MonoBehaviour.Start() (PlayerStats, AllyStats, Stats)
+        // đã chạy xong trước khi gán giá trị từ save lên.
+        StartCoroutine(AssignStatsNextFrame());
+    }
+
+    private IEnumerator AssignStatsNextFrame()
+    {
+        yield return null;
         AssignStatsToPlayer();
     }
 
@@ -49,6 +58,7 @@ public class GameManager : MonoBehaviour
         }
 
         playerStats.level = Mathf.Max(1, currentPlayerState.level);
+        playerStats.initialBaseHp = currentPlayerState.baseHp > 0f ? currentPlayerState.baseHp : 100f;
         playerStats.baseSTR = currentPlayerState.baseSTR;
         playerStats.baseDEX = currentPlayerState.baseDEX;
         playerStats.baseINT = currentPlayerState.baseINT;
@@ -122,12 +132,17 @@ public class GameManager : MonoBehaviour
 
     private void SaveGame()
     {
-        if (currentPlayerState != null)
+        if (currentPlayerState == null) return;
+
+        // Khi thoát Play Mode hoặc scene teardown, Player có thể đã bị hủy
+        // → chỉ sync nếu Player còn sống, nếu không thì lưu state hiện có
+        if (playerObject != null)
         {
             SyncRuntimeStateFromScene();
-            stateManager.SaveGameState(currentPlayerState);
-            Debug.Log("[GameManager] 💾 Đã lưu game khi thoát.");
         }
+
+        stateManager.SaveGameState(currentPlayerState);
+        Debug.Log("[GameManager] 💾 Đã lưu game khi thoát.");
     }
 
     private bool ResolvePlayerReferences()

@@ -146,8 +146,8 @@ public class AllyStats : Stats
         AGI = (baseAGI * (1 + bonusAGI)) + flatAGI;
         VIT = (baseVIT * (1 + bonusVIT)) + flatVIT;
         // 1. Tính HP
-        // Công thức: baseHp = 100 + 20*level
-        baseHp = 100 + 20 * level;
+        // Công thức: baseHp = initialBaseHp + 20 * level (initialBaseHp từ DB hoặc Inspector, mặc định = 100)
+        baseHp = initialBaseHp + 20 * level;
         // Công thức: hpGain = base * (1 + maxBonus * VIT / (VIT + H))
         hpGain = baseHpGain * (1 + maxHpGainBonus * VIT / (VIT + H));
         // Công thức: MaxHP = (Flat + VIT * 15) * (1 + Bonus%)

@@ -10,6 +10,9 @@ public class PlayerStatsUI : MonoBehaviour
     [SerializeField] private float _mockCurrentExp;
     [SerializeField] private float _mockMaxExpForCurrentLevel = 100f;
 
+    [Header("Stat Detail Panel")]
+    [SerializeField] private StatDetailUI _statDetailUI;
+
     [Header("HP")]
     [SerializeField] private Slider _sliderHP;
     [SerializeField] private TextMeshProUGUI _textHP;
@@ -49,7 +52,10 @@ public class PlayerStatsUI : MonoBehaviour
 
     public void OnClick_ShowDetailedStats()
     {
-        Debug.Log("Mở giao diện thông số chi tiết - Sẽ làm sau");
+        if (_statDetailUI != null)
+        {
+            _statDetailUI.Toggle();
+        }
     }
 
     private void RefreshHp()

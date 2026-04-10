@@ -10,6 +10,8 @@ public class Stats : MonoBehaviour
     public float maxHp;
     public float currentHp;
     public float baseHp;
+    [Tooltip("Hằng số HP gốc của nhân vật (từ Database hoặc Inspector). Công thức: baseHp = initialBaseHp + 20 * level")]
+    public float initialBaseHp = 100f;
     public float baseHpGain = 2f;
 
     [Header("--- Level---")]
