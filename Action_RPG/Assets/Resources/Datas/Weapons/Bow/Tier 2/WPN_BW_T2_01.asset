@@ -22,7 +22,7 @@ MonoBehaviour:
     for trained hunters
   icon: {fileID: 0}
   rarity: 1
-  baseAtk: 30
+  baseAtk: 32
   baseAttackSpeed: 1.05
   moveFlexibility: 0.85
   defenseValue: 5

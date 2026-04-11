@@ -23,7 +23,7 @@ MonoBehaviour:
     reflecting disciplined study and controlled magical practice
   icon: {fileID: 0}
   rarity: 1
-  baseAtk: 30
+  baseAtk: 32
   baseAttackSpeed: 1.25
   moveFlexibility: 0.9
   defenseValue: 5

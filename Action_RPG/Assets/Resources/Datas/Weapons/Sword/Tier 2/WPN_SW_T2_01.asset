@@ -21,7 +21,7 @@ MonoBehaviour:
   description: a well-balanced sword with a clean, polished blade and a reinforced
     hilt, crafted with improved precision and care, offering a reliable edge and
     smoother handling compared to basic weapons
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 8b347785b68767b4ebc9d16d3c0a378f, type: 3}
   rarity: 1
   baseAtk: 28
   baseAttackSpeed: 1.15

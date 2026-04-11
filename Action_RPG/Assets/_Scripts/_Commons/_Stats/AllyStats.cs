@@ -25,7 +25,7 @@ public class AllyStats : Stats
     public float physicalAtkPerSTR = 2.5f;
     public float magicAtkPerINT = 3f;
     public float maxAttackSpeedBuff = 0.8f;
-    public float critPerDEX = 0.015f;
+    public float critPerDEX = 0.0015f;
     public float A = 80f;
     public float C = 100f;
     public float K = 0.005f;

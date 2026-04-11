@@ -20,7 +20,7 @@ MonoBehaviour:
     C\xE2n b\u1EB1ng."
   description: a simple iron longsword with a slightly chipped blade and worn handle,
     looks old and used
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 58b14558af2b0a340a31e4fa39af357e, type: 3}
   rarity: 0
   baseAtk: 16
   baseAttackSpeed: 1.1
