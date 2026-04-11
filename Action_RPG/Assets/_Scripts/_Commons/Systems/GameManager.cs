@@ -58,6 +58,7 @@ public class GameManager : MonoBehaviour
         }
 
         playerStats.level = Mathf.Max(1, currentPlayerState.level);
+        playerStats.characterName = currentPlayerState.playerName;
         playerStats.initialBaseHp = currentPlayerState.baseHp > 0f ? currentPlayerState.baseHp : 100f;
         playerStats.baseSTR = currentPlayerState.baseSTR;
         playerStats.baseDEX = currentPlayerState.baseDEX;

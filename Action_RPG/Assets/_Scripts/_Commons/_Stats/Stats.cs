@@ -6,6 +6,9 @@ using static UnityEngine.AdaptivePerformance.Provider.AdaptivePerformanceSubsyst
 
 public class Stats : MonoBehaviour
 {
+    [Header("--- Identity ---")]
+    public string characterName;
+
     [Header("--- Health ---")]
     public float maxHp;
     public float currentHp;
