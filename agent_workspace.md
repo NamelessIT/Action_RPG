@@ -27,6 +27,7 @@
 
 Lý do: Tất cả chức năng debug đã có trong DevToolPanel:
 - K (TakeDamage) → `CMD_TakeDamage10`
+
 - T (log direction) → `CMD_LogAllStats`
 - R (UpdateStat) → Đã deprecated
 - V (force level up) → `CMD_ForceLevelUp` (**Đúng, V = ForceLevelUp**)
