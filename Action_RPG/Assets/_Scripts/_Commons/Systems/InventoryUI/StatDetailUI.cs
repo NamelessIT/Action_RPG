@@ -52,6 +52,8 @@ public class StatDetailUI : MonoBehaviour
     [Header("Close Button")]
     [SerializeField] private Button _closeButton;
 
+    private EquipmentManager _equipmentManager;
+
     private void Awake()
     {
         if (_playerStats == null)
@@ -63,6 +65,16 @@ public class StatDetailUI : MonoBehaviour
         {
             _closeButton.onClick.AddListener(Hide);
         }
+
+        _equipmentManager = FindFirstObjectByType<EquipmentManager>();
+        if (_equipmentManager != null)
+            _equipmentManager.OnEquipmentChanged += Refresh;
+    }
+
+    private void OnDestroy()
+    {
+        if (_equipmentManager != null)
+            _equipmentManager.OnEquipmentChanged -= Refresh;
     }
 
     private void OnEnable()

@@ -23,6 +23,7 @@ public class PlayerRuntimeState
     public float maxExpForCurrentLevel;
     public int attributePointRemain;
     public int skillPointRemain;
+    public List<PlayerStateSaveData.SavedInventoryItem> inventoryItems = new List<PlayerStateSaveData.SavedInventoryItem>();
 
     // =============== CƠ SỞ DỮ LIỆU (không thay đổi trong combat) ===============
     public int playerId;

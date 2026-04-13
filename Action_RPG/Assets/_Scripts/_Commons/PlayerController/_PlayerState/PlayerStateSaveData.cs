@@ -34,4 +34,14 @@ public class PlayerStateSaveData
     public List<string> accessoryAssetIds = new List<string>();
     public float positionX;
     public float positionY;
+
+    public List<SavedInventoryItem> inventoryItems = new List<SavedInventoryItem>();
+
+    [Serializable]
+    public class SavedInventoryItem
+    {
+        public string itemType;   // "Weapon" | "Shield" | "Artifact" | "Others"
+        public string assetId;    // id của WeaponData / CoreShieldData / AccessoryData
+        public int quantity;
+    }
 }

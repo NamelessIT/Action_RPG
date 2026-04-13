@@ -3,7 +3,9 @@ using UnityEngine;
 public class InventoryUIManager : MonoBehaviour
 {
     [SerializeField] private GameObject _inventoryPanel;
+#pragma warning disable 0414
     [SerializeField] private KeyCode _toggleKey = KeyCode.B;
+#pragma warning restore 0414
 
     public static bool IsInventoryOpen { get; private set; }
 

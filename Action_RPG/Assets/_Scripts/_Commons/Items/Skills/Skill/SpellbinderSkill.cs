@@ -56,7 +56,7 @@ public class SpellbinderSkill : SkillBehavior
 
         Stats compStats = companion.GetComponent<Stats>();
         UnityEngine.AI.NavMeshAgent compAgent = companion.GetComponent<UnityEngine.AI.NavMeshAgent>();
-        GameObject auraInstance = null;
+        // GameObject auraInstance = null; // TODO: Will be used when aura VFX is implemented
 
         bool wasAIEnabled = companion.enabled;
 

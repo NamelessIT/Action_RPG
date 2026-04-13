@@ -89,7 +89,9 @@ public class PlayerController : MonoBehaviour
     // ============ CLASS-NEUTRAL EVENTS (Minimal Integration) ============
     public event System.Action<Vector2> OnMovementInputChanged;   // Gọi khi input di chuyển thay đổi
     public event System.Action<int, bool> OnAttackPerformed;      // Gọi khi đánh trúng địch (stepIndex, isHeavy)
+#pragma warning disable 0067
     public event System.Action<WeaponData> OnWeaponEquipped;      // Gọi khi trang bị vũ khí mới
+#pragma warning restore 0067
     public event System.Action<Stats, int, bool, bool> OnHitEnemy;
     // ==================================================================
 
@@ -97,6 +99,10 @@ public class PlayerController : MonoBehaviour
     private DuelistPassive duelistSkill;
     private bool isDuelistCounterActive = false; // Cache trạng thái counter cho cả vòng lặp quét
     private InventoryUIManager _inventoryUIManager;
+    private ItemPickupManager _pickupManager;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private DevToolPanel _devToolPanel;
+#endif
     void Start()
     {
         stats = GetComponent<AllyStats>();
@@ -116,6 +122,11 @@ public class PlayerController : MonoBehaviour
         equipmentManager = GetComponent<EquipmentManager>();
         skillManager = GetComponent<SkillManager>();
         _inventoryUIManager = FindFirstObjectByType<InventoryUIManager>();
+        _pickupManager = GetComponent<ItemPickupManager>();
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        _devToolPanel = FindFirstObjectByType<DevToolPanel>(FindObjectsInactive.Include);
+#endif
 
         // [002-E] Initialize player vision manager
         InitializeVisionManager();
@@ -164,11 +175,46 @@ public class PlayerController : MonoBehaviour
         // B key được xử lý TRUỜC guard IsInventoryOpen để đóng và mở đều hoạt động
         if (Input.GetKeyDown(KeyCode.B))
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (_devToolPanel != null && _devToolPanel.gameObject.activeSelf)
+                return; // DevTool đang mở → không toggle inventory
+#endif
             if (_inventoryUIManager == null)
                 _inventoryUIManager = FindFirstObjectByType<InventoryUIManager>();
             _inventoryUIManager?.ToggleInventory();
             return;
         }
+
+        if (Input.GetKeyDown(KeyCode.F) && !InventoryUIManager.IsInventoryOpen)
+        {
+            _pickupManager?.TryPickupNearest();
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (Input.GetKeyDown(KeyCode.V))
+        {
+            if (_devToolPanel != null && !InventoryUIManager.IsInventoryOpen)
+            {
+                bool willShow = !_devToolPanel.gameObject.activeSelf;
+                _devToolPanel.gameObject.SetActive(willShow);
+
+                // Nếu mở DevTool → show cursor, pause game
+                if (willShow)
+                {
+                    Time.timeScale = 0f;
+                    Cursor.visible = true;
+                    Cursor.lockState = CursorLockMode.None;
+                }
+                else
+                {
+                    Time.timeScale = 1f;
+                    Cursor.visible = false;
+                    Cursor.lockState = CursorLockMode.Locked;
+                }
+            }
+            return; // Prevent V from doing anything else
+        }
+#endif
 
         if (InventoryUIManager.IsInventoryOpen) return;
 
@@ -198,8 +244,7 @@ public class PlayerController : MonoBehaviour
         // Cập nhật hướng nhìn vào Stats (để Skill lấy hướng mà dùng)
         if (stats != null) stats.facingDirection = currentVisualDir;
 
-        // --- 4. DEBUG KEYS ---
-        HandleDebugKeys();
+
     }
 
     void UpdateTimersAndCombo()
@@ -300,47 +345,22 @@ public class PlayerController : MonoBehaviour
         // [MỚI] Nếu đang bị khóa skill thì không nhận lệnh
         if (isSkillBlocked) return;
 
-        if (Input.GetKeyDown(KeyCode.Alpha1))
+        // Skill 1: cá phím số 1 và E
+        if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.E))
         {
-            if (skillManager.currentSkill != null)
+            if (skillManager != null && skillManager.currentSkill != null)
                 skillManager.CastSkill(skillManager.currentSkill);
         }
 
-        if (Input.GetKeyDown(KeyCode.Alpha2))
+        // Skill 2 (Signature): cá phím số 2 và Q
+        if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Q))
         {
-            if (skillManager.currentSignature != null)
+            if (skillManager != null && skillManager.currentSignature != null)
                 skillManager.CastSkill(skillManager.currentSignature);
         }
-
-        // Thêm Input cho Learn Skill (L) vào đây luôn nếu muốn
-        if (Input.GetKeyDown(KeyCode.L)) LearnSkill();
     }
 
-    void HandleDebugKeys()
-    {
-        if (Input.GetKeyDown(KeyCode.K)) TakeDamage(10);
-        if (Input.GetKeyDown(KeyCode.T) && stats != null)
-        {
-            float t = CombatMath.CalculateDirectionFactor(transform, stats);
-            Debug.Log($"Hệ số hướng t={t}");
-        }
-        if (Input.GetKeyDown(KeyCode.E)) EquipWeapon();
-        if (Input.GetKeyDown(KeyCode.X)) DropWeapon();
-        if (Input.GetKeyDown(KeyCode.C)) EquipCoreShield();
-        if (Input.GetKeyDown(KeyCode.U)) DropCoreShield();
-        if (Input.GetKeyDown(KeyCode.N)) EquipPickedAccessory();
-        if (Input.GetKeyDown(KeyCode.M)) DropPickedAccessory();
-        if (Input.GetKeyDown(KeyCode.R)) UpdateStat();
-        if (Input.GetKeyDown(KeyCode.V))
-        {
-            if (stats != null)
-            {
-                Debug.Log(">> HACK: ÉP LÊN CẤP <<");
-                // Bơm chính xác lượng EXP còn thiếu để chạm ngưỡng level tiếp theo
-                stats.AddExp(stats.GetNextLevelExp() - stats.exp);
-            }
-        }
-    }
+
 
     void PerformDash()
     {
@@ -921,6 +941,9 @@ public class PlayerController : MonoBehaviour
         }
         */
 
+    /* [DEPRECATED] Moved to DevToolPanel UI — Các hàm dưới đây chỉ delegate thẳng sang Manager,
+       không có logic riêng. Đã được thay thế bởi DevToolPanel UI buttons.
+
     // Hàm trang bị hoặc đổi vũ khí (xài chung)
     void EquipWeapon()
     {
@@ -968,6 +991,7 @@ public class PlayerController : MonoBehaviour
         stats.RecalculateStats();
         Debug.Log("Đã tính toán lại stat thủ công");
     }
+    */
 
     public void TakeDamage(int damage)
     {

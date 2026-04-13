@@ -16,6 +16,7 @@ public class GameManager : MonoBehaviour
     private GameObject playerObject;
     private PlayerStats playerStats;
     private EquipmentManager equipmentManager;
+    private InventoryRuntime inventoryRuntime;
     private Dictionary<string, WeaponData> weaponLookup;
     private Dictionary<string, CoreShieldData> coreShieldLookup;
     private Dictionary<string, AccessoryData> accessoryLookup;
@@ -27,6 +28,7 @@ public class GameManager : MonoBehaviour
 
         // Tải player ID = 1
         currentPlayerState = stateManager.RebuildRuntimeState(playerId: 1);
+        inventoryRuntime = FindFirstObjectByType<InventoryRuntime>();
 
         Debug.Log("[GameManager] ✅ Đã tải xong Player Runtime State!");
     }
@@ -85,6 +87,15 @@ public class GameManager : MonoBehaviour
 
         playerStats.RecalculateStats();
         RestoreEquipmentState();
+
+        if (inventoryRuntime != null && currentPlayerState.inventoryItems != null
+            && currentPlayerState.inventoryItems.Count > 0)
+        {
+            inventoryRuntime.LoadInventoryFromSave(
+                currentPlayerState.inventoryItems,
+                weaponDB,
+                accessoryDB);
+        }
 
         playerStats.currentHp = Mathf.Clamp(currentPlayerState.currentHp > 0f ? currentPlayerState.currentHp : playerStats.maxHp, 0f, playerStats.maxHp);
         playerStats.currentStamina = Mathf.Clamp(
@@ -227,6 +238,11 @@ public class GameManager : MonoBehaviour
         AppendAccessoryState(equipmentManager.currentRelicOfMemory);
         AppendAccessoryState(equipmentManager.currentParasite);
         AppendAccessoryState(equipmentManager.currentChain);
+
+        if (inventoryRuntime != null)
+        {
+            currentPlayerState.inventoryItems = inventoryRuntime.GetInventorySaveData();
+        }
     }
 
     private void AppendAccessoryState(AccessoryData accessory)

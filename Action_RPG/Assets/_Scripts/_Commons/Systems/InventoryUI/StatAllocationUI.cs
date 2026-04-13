@@ -28,12 +28,24 @@ public class StatAllocationUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _statPointsText;
     [SerializeField] private StatRow[] _rows;
 
+    private EquipmentManager _equipmentManager;
+
     private void Awake()
     {
         if (_allyStats == null)
         {
             _allyStats = FindFirstObjectByType<PlayerStats>();
         }
+
+        _equipmentManager = FindFirstObjectByType<EquipmentManager>();
+        if (_equipmentManager != null)
+            _equipmentManager.OnEquipmentChanged += RefreshAll;
+    }
+
+    private void OnDestroy()
+    {
+        if (_equipmentManager != null)
+            _equipmentManager.OnEquipmentChanged -= RefreshAll;
     }
 
     private void OnEnable()

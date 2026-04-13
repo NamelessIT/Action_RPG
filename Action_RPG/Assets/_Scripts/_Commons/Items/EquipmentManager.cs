@@ -33,6 +33,8 @@ public class EquipmentManager : MonoBehaviour
     //public AccessoryData pickUpChain;
     public AccessoryData currentChain;
 
+    public event System.Action OnEquipmentChanged;
+
     void Start()
     {
         allyStats = GetComponent<AllyStats>();
@@ -46,7 +48,7 @@ public class EquipmentManager : MonoBehaviour
         // Đường dẫn file trong thư mục Resources (bỏ đuôi .asset)
         // Ví dụ: Assets/Resources/Weapons/WPN_H_T1_01.asset -> Load "Weapons/WPN_H_T1_01"
         // Bạn hãy điều chỉnh pathString cho đúng với project của bạn
-        string path = "Datas/Weapons/WPN_H_T1_01";
+        string path = "Datas/Weapons/Hand/Tier 1/WPN_H_T1_01";
 
         baseWeapon = Resources.Load<WeaponData>(path);
 
@@ -87,6 +89,7 @@ public class EquipmentManager : MonoBehaviour
         // Đeo vũ khí mới vào
         
         EquipInternal(newWeapon);
+        OnEquipmentChanged?.Invoke();
     }
 
             public void UnequipWeapon()
@@ -112,6 +115,7 @@ public class EquipmentManager : MonoBehaviour
         {
             EquipInternal(baseWeapon);
         }
+        OnEquipmentChanged?.Invoke();
     }
 
     // --- CÁC HÀM NỘI BỘ (Private) ĐỂ XỬ LÝ CHỈ SỐ ---
@@ -227,6 +231,7 @@ public class EquipmentManager : MonoBehaviour
 
         // Đeo khiên mới vào
         EquipCoreShieldInternal(newShield);
+        OnEquipmentChanged?.Invoke();
     }
 
     // 2. Tháo Core Shield (Về trạng thái trống)
@@ -236,6 +241,7 @@ public class EquipmentManager : MonoBehaviour
         {
             UnequipCoreShieldInternal(currentCoreShield);
             // KHÁC BIỆT: Không gọi EquipInternal(baseShield) vì Shield tháo ra là hết
+            OnEquipmentChanged?.Invoke();
         }
         else
         {
@@ -313,6 +319,7 @@ public class EquipmentManager : MonoBehaviour
 
         // Đeo đồ mới vào
         EquipAccessoryInternal(newAccessory);
+        OnEquipmentChanged?.Invoke();
     }
 
     // 2. Tháo một Accessory cụ thể
@@ -326,6 +333,7 @@ public class EquipmentManager : MonoBehaviour
         if (currentInSlot == accToRemove)
         {
             UnequipAccessoryInternal(accToRemove);
+            OnEquipmentChanged?.Invoke();
         }
         else
         {
