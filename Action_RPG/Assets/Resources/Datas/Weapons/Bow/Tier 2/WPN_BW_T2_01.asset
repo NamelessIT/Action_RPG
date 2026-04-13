@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9b495199aa16a44489d2944cd3f302f, type: 3}
+  m_Name: WPN_BW_T2_01
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponData
+  id: WPN_BW_T2_01
+  weaponType: 3
+  weaponAtkType: 0
+  weaponName: Oak Bow
+  lore: "L\u1EF1c b\u1EAFn m\u1EA1nh h\u01A1n, d\xE2y cung b\u1EC1n b\u1EC9 h\u01A1n."
+  description: a sturdy bow crafted from seasoned oak, with a smooth, slightly polished
+    frame and a firm, reliable grip, offering improved stability and consistent shots
+    for trained hunters
+  icon: {fileID: 21300000, guid: eafb8b73b06c92e41bffc4e669254383, type: 3}
+  rarity: 1
+  baseAtk: 32
+  baseAttackSpeed: 1.05
+  moveFlexibility: 0.85
+  defenseValue: 5
+  bonusCritChance: 0.03
+  attackRange: 15
+  isRanged: 1
+  projectilePrefab: {fileID: 0}
+  substats:
+  - stat: 1
+    val: 10
+    powerMod: 1
+  reqStr: 10
+  reqDex: 10
+  reqInt: 0
+  reqVit: 0
+  reqAgi: 0
+  playerOnly: 0
+  comboEffects: []
