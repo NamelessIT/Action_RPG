@@ -21,7 +21,7 @@ MonoBehaviour:
   description: a refined staff adorned with a smooth jade core set at its tip, its
     polished shaft and balanced form channel a steady flow of gentle magical energy,
     offering greater control and stability to its wielder
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 40f482a82d8f1f84b907ba1e3715046b, type: 3}
   rarity: 1
   baseAtk: 38
   baseAttackSpeed: 0.8

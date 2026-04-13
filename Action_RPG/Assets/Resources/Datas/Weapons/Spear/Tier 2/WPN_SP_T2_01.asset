@@ -21,7 +21,7 @@ MonoBehaviour:
   description: a sturdy spear with a sharpened steel tip and a reinforced shaft,
     bearing simple engravings near the base of the blade, designed for disciplined
     combat and reliable performance on the battlefield
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 4a07f28fe782939468f1d6c5353b6b42, type: 3}
   rarity: 1
   baseAtk: 35
   baseAttackSpeed: 0.95

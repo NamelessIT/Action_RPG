@@ -21,7 +21,7 @@ MonoBehaviour:
   description: a sleek, well-crafted dagger with a narrow, sharply honed blade and
     a balanced grip, designed for swift and precise strikes, its darkened metal reducing
     glare to remain unnoticed in the shadows
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: fe8092d0fbc27a44e8597ecf9d4e0500, type: 3}
   rarity: 1
   baseAtk: 18
   baseAttackSpeed: 1.6

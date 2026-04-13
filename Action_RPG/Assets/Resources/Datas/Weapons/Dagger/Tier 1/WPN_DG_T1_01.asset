@@ -20,7 +20,7 @@ MonoBehaviour:
   description: a small, worn dagger with a visibly chipped blade and a rough, simple
     handle, its edge uneven from repeated use, clearly a basic weapon made for survival
     rather than precision
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: cdecafcd81e3a5c4d8597b3107a55fb7, type: 3}
   rarity: 0
   baseAtk: 10
   baseAttackSpeed: 1.5

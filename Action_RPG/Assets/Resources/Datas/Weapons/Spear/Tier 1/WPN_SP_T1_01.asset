@@ -21,7 +21,7 @@ MonoBehaviour:
   description: a plain, battle-worn spear with a slightly dulled iron tip and a simple
     wooden shaft, showing small scratches and signs of frequent use, built for practicality
     rather than elegance
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 477fe014f569fe3499ff92c650a82b0b, type: 3}
   rarity: 0
   baseAtk: 20
   baseAttackSpeed: 0.9

@@ -20,7 +20,7 @@ MonoBehaviour:
   description: a sturdy bow crafted from seasoned oak, with a smooth, slightly polished
     frame and a firm, reliable grip, offering improved stability and consistent shots
     for trained hunters
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: eafb8b73b06c92e41bffc4e669254383, type: 3}
   rarity: 1
   baseAtk: 32
   baseAttackSpeed: 1.05

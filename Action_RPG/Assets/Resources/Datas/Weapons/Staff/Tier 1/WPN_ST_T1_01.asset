@@ -20,7 +20,7 @@ MonoBehaviour:
   description: a simple wooden staff with a slightly uneven shaft and a small, dull
     crystal set at its tip, showing signs of early practice use, imbued with only
     a faint trace of unstable magical energy
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 5468f6f78f81399488c92c5aa3a9664f, type: 3}
   rarity: 0
   baseAtk: 22
   baseAttackSpeed: 0.8

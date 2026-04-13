@@ -21,7 +21,7 @@ MonoBehaviour:
   description: a large, timeworn greatsword with a heavy, slightly dulled blade and
     faded engravings barely visible along its surface, its worn grip and aged metal
     hinting at a long-forgotten past rather than true power
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 8e40625cecd78944b940b254421a64fc, type: 3}
   rarity: 0
   baseAtk: 25
   baseAttackSpeed: 0.7

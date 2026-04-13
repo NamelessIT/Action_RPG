@@ -21,7 +21,7 @@ MonoBehaviour:
   description: a heavy greatsword forged from solid steel, featuring a broad, well-tempered
     blade and a sturdy two-handed grip, built for strength and durability, capable
     of delivering powerful and reliable strikes
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: cec2189844ca58844a37c46b1333fc9c, type: 3}
   rarity: 1
   baseAtk: 45
   baseAttackSpeed: 0.7

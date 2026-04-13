@@ -21,7 +21,7 @@ MonoBehaviour:
   description: a neatly bound grimoire with a reinforced cover and carefully inscribed
     symbols, its well-organized pages contain structured and reliable incantations,
     reflecting disciplined study and controlled magical practice
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 8e1ef612c9bf76e4f979da8810a26a64, type: 3}
   rarity: 1
   baseAtk: 32
   baseAttackSpeed: 1.25
