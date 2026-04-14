@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6cbf2f21cbaafa4c8dacb28b94abfb2, type: 3}
+  m_Name: ACC_CS_T1_01
+  m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
+  id: ACC_CS_T1_01
+  accessoryType: 0
+  AccessoryName: Life Core Fragment
+  lore: 
+  description: a small, weathered crystal fragment containing a faint trace of life
+    energy, once part of the core of a guardian machine, now reduced to a stable
+    but weakened source of power
+  icon: {fileID: 21300000, guid: 3133c3b06eb27fa448d65995bc12f757, type: 3}
+  rarity: 0
+  setId: 0
+  substats:
+  - stat: 0
+    val: 1
+    powerMod: 1
+  - stat: 1
+    val: 1
+    powerMod: 1
+  - stat: 2
+    val: 1
+    powerMod: 1
+  - stat: 3
+    val: 1
+    powerMod: 1
+  - stat: 4
+    val: 1
+    powerMod: 1
+  isUnique: 0
+  playerOnly: 0

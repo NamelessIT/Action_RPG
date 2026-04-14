@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9b495199aa16a44489d2944cd3f302f, type: 3}
+  m_Name: WPN_GR_T3_03
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponData
+  id: WPN_GR_T3_03
+  weaponType: 7
+  weaponAtkType: 1
+  weaponName: Whispering Pages
+  lore: 
+  description: "a mysterious book with faintly shifting text, its pages reacting
+    to the user\u2019s intent and subtly guiding spell execution"
+  icon: {fileID: 21300000, guid: 6e258409aa3044a43816d6293f38c6c9, type: 3}
+  rarity: 2
+  baseAtk: 63
+  baseAttackSpeed: 1.3
+  moveFlexibility: 0.9
+  defenseValue: 5
+  bonusCritChance: 0.05
+  attackRange: 8
+  isRanged: 1
+  projectilePrefab: {fileID: 5323527255875736035, guid: 322996f6bc69fd34d89e0fbe2d6ba4f7, type: 3}
+  substats:
+  - stat: 2
+    val: 12
+    powerMod: 1
+  - stat: 4
+    val: 10
+    powerMod: 1
+  - stat: 18
+    val: 0.1
+    powerMod: 1
+  - stat: 21
+    val: 0.05
+    powerMod: 1
+  reqStr: 0
+  reqDex: 0
+  reqInt: 0
+  reqVit: 0
+  reqAgi: 0
+  playerOnly: 0
+  comboEffects: []
