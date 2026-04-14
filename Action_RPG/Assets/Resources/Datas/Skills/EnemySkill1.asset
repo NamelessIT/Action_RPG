@@ -15,9 +15,13 @@ MonoBehaviour:
   id: 
   skillName: 
   icon: {fileID: 0}
-  skillType: 4
+  skilDesc: 
+  skillType: 3
   skillPhysicalMultiplier: 0
   skillMagicMultiplier: 0
   cooldown: 0
   sinChargeReq: 0
-  skilDesc: 
+  passiveEffectCode: 0
+  skillEffectCode: 0
+  signatureEffectCode: 0
+  passiveStats: []

@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9faf1b028513f2c4fbbbe9d8708c6d1b, type: 3}
+  m_Name: SHD_CS_T5_01
+  m_EditorClassIdentifier: Assembly-CSharp::CoreShieldData
+  id: SHD_CS_T5_01
+  coreShieldName: Aegis of the Fallen King
+  icon: {fileID: 21300000, guid: 9c98bd525d369ae448b519d65cf3c7e5, type: 3}
+  lore: 
+  description: A monolithic crest of a forgotten empire. It doesn't just block strikes;
+    it commands them to cease.
+  rarity: 4
+  setId: 0
+  armor: 200
+  magicResist: 200
+  substats:
+  - stat: 3
+    val: 70
+    powerMod: 1
+  - stat: 27
+    val: 0.2
+    powerMod: 1
+  - stat: 29
+    val: 20
+    powerMod: 1
+  playerOnly: 0

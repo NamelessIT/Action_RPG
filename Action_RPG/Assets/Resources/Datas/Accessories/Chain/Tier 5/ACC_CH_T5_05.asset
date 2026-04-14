@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6cbf2f21cbaafa4c8dacb28b94abfb2, type: 3}
+  m_Name: ACC_CH_T5_05
+  m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
+  id: ACC_CH_T5_05
+  accessoryType: 4
+  AccessoryName: Phantom's Leash
+  lore: 
+  description: A tether to the void. It allows the wearer to phase through attacks
+    using raw magic instead of physical effort.
+  icon: {fileID: 21300000, guid: d8f7f69c0528cb145bd14c53d2a063fe, type: 3}
+  rarity: 4
+  setId: 0
+  substats:
+  - stat: 4
+    val: 65
+    powerMod: 1
+  - stat: 9
+    val: 0.1
+    powerMod: 1
+  - stat: 21
+    val: 0.3
+    powerMod: 1
+  isUnique: 0
+  playerOnly: 0

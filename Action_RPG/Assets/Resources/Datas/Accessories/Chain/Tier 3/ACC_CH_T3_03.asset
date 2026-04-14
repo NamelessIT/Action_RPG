@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6cbf2f21cbaafa4c8dacb28b94abfb2, type: 3}
+  m_Name: ACC_CH_T3_03
+  m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
+  id: ACC_CH_T3_03
+  accessoryType: 4
+  AccessoryName: Chain of Clarity
+  lore: 
+  description: A cold iron chain that bites into the flesh forcing the wearer to
+    maintain intense magical focus even in pain.
+  icon: {fileID: 21300000, guid: 8d6ccafcd8d009644b593d83a9ea66cf, type: 3}
+  rarity: 2
+  setId: 0
+  substats:
+  - stat: 2
+    val: 20
+    powerMod: 1
+  - stat: 28
+    val: 1
+    powerMod: 1
+  isUnique: 0
+  playerOnly: 0

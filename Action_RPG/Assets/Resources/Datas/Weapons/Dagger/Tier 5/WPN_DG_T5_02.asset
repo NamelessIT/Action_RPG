@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9b495199aa16a44489d2944cd3f302f, type: 3}
+  m_Name: WPN_DG_T5_02
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponData
+  id: WPN_DG_T5_02
+  weaponType: 2
+  weaponAtkType: 0
+  weaponName: Time Weaver's Fang
+  lore: 
+  description: A crystalline dagger that constantly shifts and glitches between different
+    points in time.
+  icon: {fileID: 21300000, guid: 63905e67708f3c640af2b6726f2f7136, type: 3}
+  rarity: 4
+  baseAtk: 145
+  baseAttackSpeed: 1.75
+  moveFlexibility: 0.95
+  defenseValue: 5
+  bonusCritChance: 0.15
+  attackRange: 1.2
+  isRanged: 0
+  projectilePrefab: {fileID: 0}
+  substats:
+  - stat: 4
+    val: 50
+    powerMod: 1
+  - stat: 22
+    val: 0.15
+    powerMod: 1
+  - stat: 21
+    val: 0.2
+    powerMod: 1
+  - stat: 18
+    val: 0.2
+    powerMod: 1
+  reqStr: 0
+  reqDex: 0
+  reqInt: 0
+  reqVit: 0
+  reqAgi: 0
+  playerOnly: 0
+  comboEffects: []
