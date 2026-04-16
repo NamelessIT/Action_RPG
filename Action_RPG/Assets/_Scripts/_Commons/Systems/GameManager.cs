@@ -13,6 +13,12 @@ public class GameManager : MonoBehaviour
 
     private PlayerStateManager stateManager;
     private PlayerRuntimeState currentPlayerState;
+
+    /// <summary>
+    /// Đặt thành true trước khi reload scene để ngăn OnDestroy ghi đè save đã xóa.
+    /// DevToolPanel.CMD_ResetGame() dùng flag này.
+    /// </summary>
+    [HideInInspector] public bool suppressNextSave = false;
     private GameObject playerObject;
     private PlayerStats playerStats;
     private EquipmentManager equipmentManager;
@@ -38,6 +44,15 @@ public class GameManager : MonoBehaviour
         // Delay 1 frame để đảm bảo tất cả MonoBehaviour.Start() (PlayerStats, AllyStats, Stats)
         // đã chạy xong trước khi gán giá trị từ save lên.
         StartCoroutine(AssignStatsNextFrame());
+
+        // Subscribe real-time inventory sync:
+        // Mỗi khi inventory thay đổi (nhặt/bỏ item), lập tức cập nhật currentPlayerState.inventoryItems.
+        // Điều này đảm bảo SaveGame() luôn có dữ liệu mới nhất, kể cả khi
+        // inventoryRuntime bị destroy trước GameManager.OnDestroy().
+        if (inventoryRuntime != null)
+        {
+            inventoryRuntime.OnInventoryChanged += SyncInventoryToState;
+        }
     }
 
     private IEnumerator AssignStatsNextFrame()
@@ -139,11 +154,32 @@ public class GameManager : MonoBehaviour
 
     void OnDestroy()
     {
+        // Unsubscribe trước khi destroy
+        if (inventoryRuntime != null)
+        {
+            inventoryRuntime.OnInventoryChanged -= SyncInventoryToState;
+        }
         SaveGame();
+    }
+
+    /// <summary>
+    /// Callback: được gọi mỗi khi inventory thay đổi (AddItem/RemoveItem).
+    /// Sync ngay vào currentPlayerState để SaveGame() luôn có dữ liệu mới nhất.
+    /// </summary>
+    private void SyncInventoryToState()
+    {
+        if (currentPlayerState == null || inventoryRuntime == null) return;
+        currentPlayerState.inventoryItems = inventoryRuntime.GetInventorySaveData();
+        Debug.Log($"[GameManager] 🔄 Inventory synced → {currentPlayerState.inventoryItems.Count} items saved to state.");
     }
 
     private void SaveGame()
     {
+        if (suppressNextSave)
+        {
+            Debug.Log("[GameManager] 🔕 SaveGame bị chặn (suppressNextSave = true) — bỏ qua lưu.");
+            return;
+        }
         if (currentPlayerState == null) return;
 
         // Khi thoát Play Mode hoặc scene teardown, Player có thể đã bị hủy

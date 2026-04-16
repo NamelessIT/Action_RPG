@@ -8,7 +8,14 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler, IBeginDragHandler, I
     [SerializeField] private EquipmentManager _equipmentManager;
     [SerializeField] private InventoryController _inventoryController;
     [SerializeField] private Image _slotIcon;
+    [SerializeField] private Image _slotBackground;    // (tuỳ chọn) nền đổi màu khi equipped
     [SerializeField] private CanvasGroup _slotCanvasGroup;
+
+    // Màu nền: xanh lá mờ khi đang trang bị, tối khi trống
+    private static readonly Color COLOR_EQUIPPED_BG = new Color(0.15f, 0.55f, 0.15f, 0.45f);
+    private static readonly Color COLOR_EMPTY_BG    = new Color(0.08f, 0.08f, 0.08f, 0.30f);
+    // Màu icon: vàng placeholder khi equipped nhưng không có sprite
+    private static readonly Color COLOR_ICON_NO_SPRITE = new Color(0.95f, 0.78f, 0.10f, 0.90f);
 
     private RectTransform _ghostRect;
     private InventoryItemRecord _lastBoundItem;
@@ -61,8 +68,15 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler, IBeginDragHandler, I
             return;
         }
 
-        if (InventoryDragContext.ActiveInventorySource != null)
+        // ── Xóa item khỏi nguồn kéo ──────────────────────────────────────
+        if (InventoryDragContext.ActiveInventorySlotSource >= 0)
         {
+            // Kéo từ InventorySlotView (hệ thống 25 ô mới)
+            _inventoryController.RemoveFromSlot(InventoryDragContext.ActiveInventorySlotSource, 1);
+        }
+        else if (InventoryDragContext.ActiveInventorySource != null)
+        {
+            // Kéo từ DraggableItem (hệ thống cũ — backward compat)
             _inventoryController.RemoveItemFromInventory(draggedItem);
         }
         else if (InventoryDragContext.ActiveEquipmentSource != null && InventoryDragContext.ActiveEquipmentSource != this)
@@ -134,13 +148,24 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler, IBeginDragHandler, I
         InventoryItemRecord currentItem = GetCurrentItem();
         _lastBoundItem = currentItem;
 
-        if (_slotIcon == null)
+        bool isEquipped = currentItem != null;
+        bool hasIcon    = isEquipped && currentItem.Icon != null;
+
+        // ── Icon ────────────────────────────────────────────────────────────
+        if (_slotIcon != null)
         {
-            return;
+            _slotIcon.enabled = true;
+            _slotIcon.sprite  = hasIcon ? currentItem.Icon : null;
+            _slotIcon.color   = hasIcon    ? Color.white          // có sprite
+                              : isEquipped ? COLOR_ICON_NO_SPRITE  // equipped nhưng không có icon → vàng
+                                           : Color.clear;          // trống → trong suốt
         }
 
-        _slotIcon.sprite = currentItem != null ? currentItem.Icon : null;
-        _slotIcon.enabled = currentItem != null && currentItem.Icon != null;
+        // ── Background ──────────────────────────────────────────────────────
+        if (_slotBackground != null)
+        {
+            _slotBackground.color = isEquipped ? COLOR_EQUIPPED_BG : COLOR_EMPTY_BG;
+        }
     }
 
     public void ClearSlotWithoutReturningToInventory()

@@ -41,6 +41,10 @@ public class EnemyStats : Stats
     [Header("--- Enemy Rank ---")]
     public int monsterRank = 0;
 
+    [Header("--- Reward on Death ---")]
+    [Tooltip("EXP trao cho Player khi giết enemy này. Mỗi enemy prefab tự config con số riêng.")]
+    public float expReward = 10f;
+
     public float aggroRetentionTime = 5.0f;
     private float lastDamageReceivedTime = -100f;
 
@@ -195,7 +199,30 @@ public class EnemyStats : Stats
 
     protected override void Die()
     {
-        base.Die();
-        //effect gạch đá vỡ vụn
+        base.Die(); // Xử lý chung: tắt collider, AI, destroy sau 3s
+
+        // ── 1. TRAO EXP CHO PLAYER ──────────────────────────────────────
+        if (expReward > 0f)
+        {
+            PlayerStats playerStats = FindFirstObjectByType<PlayerStats>();
+            if (playerStats != null)
+            {
+                playerStats.AddExp(expReward);
+                Debug.Log($"[EnemyStats] 🎖️ {gameObject.name} chết → Player nhận {expReward} EXP");
+            }
+        }
+
+        // ── 2. TRIGGER LOOT DROP ─────────────────────────────────────────
+        // LootDropper phải được gắn trên cùng GameObject (hoặc con trực tiếp)
+        LootDropper dropper = GetComponent<LootDropper>()
+                           ?? GetComponentInChildren<LootDropper>();
+        if (dropper != null)
+        {
+            dropper.OnEnemyDeath();
+        }
+        else
+        {
+            Debug.Log($"[EnemyStats] {gameObject.name} không có LootDropper — bỏ qua drop loot.");
+        }
     }
 }
