@@ -30,6 +30,14 @@ public class CoreShieldData : ScriptableObject
     //public string effectConfig; để sau
 
     public bool playerOnly;
+
+    [Header("--- Unique Effect VFX ---")]
+    [Tooltip("VFX văng ra khi hiệu ứng đặc biệt kích hoạt")]
+    public GameObject triggerVfxPrefab;
+
+    [Tooltip("VFX kéo dài đi theo người (Aura) nếu có")]
+    public GameObject auraVfxPrefab;
+
     private void OnValidate()
     {
         if (substats != null)

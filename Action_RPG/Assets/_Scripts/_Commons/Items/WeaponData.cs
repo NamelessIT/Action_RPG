@@ -76,6 +76,13 @@ public class WeaponData : ScriptableObject
 
     public bool playerOnly;
 
+    [Header("--- Unique Effect VFX ---")]
+    [Tooltip("VFX văng ra khi hiệu ứng đặc biệt kích hoạt")]
+    public GameObject triggerVfxPrefab;
+
+    [Tooltip("VFX kéo dài đi theo người (Aura) nếu có")]
+    public GameObject auraVfxPrefab;
+
     [Header("Combo Effects")]
     [Tooltip("Index 0 = Đòn 1, Index 1 = Đòn 2...")]
     public List<AttackEffect> comboEffects;
