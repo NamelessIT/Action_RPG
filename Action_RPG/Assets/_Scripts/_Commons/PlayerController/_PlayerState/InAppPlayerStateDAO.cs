@@ -36,6 +36,17 @@ public class InAppPlayerStateDAO
     // Save data sẽ được lưu ở đây (hoặc ra file)
     private static Dictionary<int, PlayerStateSaveData> savedStates = new();
 
+    /// <summary>
+    /// Xóa toàn bộ save data khỏi bộ nhớ (static cache).
+    /// GỌI TRƯỚC SceneManager.LoadScene() khi muốn reset game hoàn toàn,
+    /// vì static field tồn tại xuyên qua scene reload.
+    /// </summary>
+    public static void ClearMemoryCache()
+    {
+        savedStates.Clear();
+        Debug.Log("[InAppPlayerStateDAO] 🗑️ Đã xóa save cache khỏi memory.");
+    }
+
     public InAppPlayerStateDAO(
         PlayerDatabase playerDB,
         WeaponDatabase weaponDB,

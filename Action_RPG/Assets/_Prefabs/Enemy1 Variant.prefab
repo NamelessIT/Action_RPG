@@ -96,6 +96,10 @@ PrefabInstance:
       propertyPath: m_TagString
       value: Enemy
       objectReference: {fileID: 0}
+    - target: {fileID: 8734627235539532154, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: isPlayer
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 4658667183789246777, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
     - {fileID: 2094500909127700378, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
@@ -173,9 +177,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be3db2d059620ee4c8f9af23b35ead3f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyStats
+  characterName: 
   maxHp: 0
   currentHp: 0
   baseHp: 1000
+  initialBaseHp: 100
   baseHpGain: 2
   level: 1
   maxLevel: 60
@@ -278,6 +284,7 @@ MonoBehaviour:
     m_Bits: 0
   spawnPosition: {x: 0, y: 0, z: 0}
   monsterRank: 0
+  expReward: 10
   aggroRetentionTime: 5
   canParry: 0
 --- !u!114 &6835872847786700743

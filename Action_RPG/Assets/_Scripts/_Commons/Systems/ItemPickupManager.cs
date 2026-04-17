@@ -3,9 +3,11 @@ using TMPro;
 
 /// <summary>
 /// Attach to the Player GameObject.
-/// Each frame, scans for the nearest DroppedItemBehaviour within _pickupScanRadius
-/// using Physics.OverlapSphere. Raises OnNearbyItemChanged whenever the nearest
-/// item changes. Call TryPickupNearest() from an input handler to pick up.
+/// Mỗi frame scan DroppedItemBehaviour gần nhất trong _pickupScanRadius.
+/// Gọi TryPickupNearest() từ input handler để nhặt.
+///
+/// Bug fix: Unity override == operator cho MonoBehaviour đã bị Destroy() trả về true khi so sánh với null.
+/// Dùng System.Object.ReferenceEquals để phân biệt C# null thật vs Unity-null (destroyed).
 /// </summary>
 public class ItemPickupManager : MonoBehaviour
 {
@@ -13,29 +15,99 @@ public class ItemPickupManager : MonoBehaviour
     [SerializeField] private LayerMask _droppedItemLayer;
     [SerializeField] private InventoryRuntime _inventoryRuntime;
 
-    /// <summary>Inject via Inspector. May be null — notification is optional.</summary>
     [SerializeField] private LootNotificationUI _notificationUI;
 
     [Header("Pickup Prompt UI")]
     [SerializeField] private GameObject _promptPanel;
     [SerializeField] private TextMeshProUGUI _promptItemNameLabel;
 
-    private DroppedItemBehaviour _nearestItem;
+    private DroppedItemBehaviour _nearestItem;  // C# null hoặc object còn sống
 
-    /// <summary>
-    /// Fires whenever the nearest dropped item changes (including becoming null).
-    /// </summary>
     public event System.Action<DroppedItemBehaviour> OnNearbyItemChanged;
 
     private void Awake()
     {
         if (_inventoryRuntime == null)
-        {
             _inventoryRuntime = FindFirstObjectByType<InventoryRuntime>();
-        }
     }
 
     private void Update()
+    {
+        DroppedItemBehaviour nearest = FindNearest();
+
+        // ── Quan trọng: dùng ReferenceEquals thay vì != ────────────────────
+        // Unity override != sẽ coi destroyed MonoBehaviour == null (true),
+        // nên nếu _nearestItem đang trỏ tới object đã bị Destroy() và nearest là null thật,
+        // điều kiện _nearestItem != nearest = false → panel không bao giờ được ẩn.
+        // ReferenceEquals không bị override → phân biệt đúng.
+        if (!System.Object.ReferenceEquals(_nearestItem, nearest))
+        {
+            _nearestItem = nearest;
+
+            bool hasItem = _nearestItem != null;   // Unity null check — ok để check trạng thái
+
+            if (_promptPanel != null)
+                _promptPanel.SetActive(hasItem);
+
+            if (_promptItemNameLabel != null)
+                _promptItemNameLabel.text = hasItem ? _nearestItem.Entry.displayName : string.Empty;
+
+            OnNearbyItemChanged?.Invoke(_nearestItem);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  PICKUP
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Nhặt item gần nhất. Ẩn prompt ngay từ đầu để tránh race condition.
+    /// </summary>
+    public void TryPickupNearest()
+    {
+        if (_nearestItem == null) return;
+
+        // Lưu reference trước khi clear, tránh double-pickup
+        DroppedItemBehaviour toPickup = _nearestItem;
+        _nearestItem = null;
+
+        // Ẩn prompt NGAY — không chờ Update() của frame sau
+        HidePrompt();
+        OnNearbyItemChanged?.Invoke(null);
+
+        // ── Tạo record ────────────────────────────────────────────
+        LootEntry entry = toPickup.Entry;
+        InventoryItemRecord record = null;
+
+        if (entry.weaponData != null)
+            record = InventoryItemRecord.FromWeapon(entry.weaponData);
+        else if (entry.accessoryData != null)
+            record = InventoryItemRecord.FromAccessory(entry.accessoryData);
+
+        if (record == null)
+        {
+            Debug.LogWarning($"[ItemPickupManager] Không có weaponData/accessoryData cho '{entry.displayName}'. Item bị bỏ qua.");
+            Destroy(toPickup.gameObject);
+            return;
+        }
+
+        // ── Thêm vào inventory ────────────────────────────────────
+        _inventoryRuntime.AddItem(record);
+        Debug.Log($"[ItemPickupManager] ✅ Nhặt '{record.DisplayName}' (type: {record.ItemType}).");
+
+        // ── Notification ──────────────────────────────────────────
+        if (_notificationUI != null)
+            _notificationUI.ShowPickup(entry.displayName, entry.quantity);
+
+        // ── Xóa khỏi world ───────────────────────────────────────
+        Destroy(toPickup.gameObject);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  HELPERS
+    // ─────────────────────────────────────────────────────────────
+
+    private DroppedItemBehaviour FindNearest()
     {
         Collider[] hits = Physics.OverlapSphere(transform.position, _pickupScanRadius, _droppedItemLayer);
 
@@ -44,6 +116,7 @@ public class ItemPickupManager : MonoBehaviour
 
         foreach (Collider hit in hits)
         {
+            // GetComponent trả về null nếu object đã bị Destroy() → skip
             DroppedItemBehaviour candidate = hit.GetComponent<DroppedItemBehaviour>();
             if (candidate == null) continue;
 
@@ -51,68 +124,16 @@ public class ItemPickupManager : MonoBehaviour
             if (dist < nearestDist)
             {
                 nearestDist = dist;
-                nearest = candidate;
+                nearest     = candidate;
             }
         }
 
-        if (_nearestItem != nearest)
-        {
-            _nearestItem = nearest;
-
-            // Toggle prompt UI
-            if (_promptPanel != null)
-            {
-                bool hasItem = _nearestItem != null;
-                _promptPanel.SetActive(hasItem);
-
-                if (hasItem && _promptItemNameLabel != null)
-                {
-                    _promptItemNameLabel.text = _nearestItem.Entry.displayName;
-                }
-            }
-
-            OnNearbyItemChanged?.Invoke(_nearestItem);
-        }
+        return nearest;
     }
 
-    /// <summary>
-    /// Attempts to pick up the nearest detected item and add it to the inventory.
-    /// Does nothing if no item is in range.
-    /// </summary>
-    public void TryPickupNearest()
+    private void HidePrompt()
     {
-        if (_nearestItem == null) return;
-
-        LootEntry entry = _nearestItem.Entry;
-        InventoryItemRecord record = null;
-
-        if (entry.weaponData != null)
-        {
-            record = InventoryItemRecord.FromWeapon(entry.weaponData);
-        }
-        else if (entry.accessoryData != null)
-        {
-            record = InventoryItemRecord.FromAccessory(entry.accessoryData);
-        }
-        else
-        {
-            // Fallback: entry has no weapon or accessory data reference.
-            // InventoryItemRecord fields are private; no public factory exists for
-            // a display-name-only record. Log and discard the item.
-            Debug.LogWarning($"[ItemPickupManager] No weapon/accessory data for '{entry.displayName}'. Item discarded.");
-            Destroy(_nearestItem.gameObject);
-            _nearestItem = null;
-            return;
-        }
-
-        _inventoryRuntime.AddItem(record);
-
-        if (_notificationUI != null)
-        {
-            _notificationUI.ShowPickup(entry.displayName, entry.quantity);
-        }
-
-        Destroy(_nearestItem.gameObject);
-        _nearestItem = null;
+        if (_promptPanel != null)      _promptPanel.SetActive(false);
+        if (_promptItemNameLabel != null) _promptItemNameLabel.text = string.Empty;
     }
 }

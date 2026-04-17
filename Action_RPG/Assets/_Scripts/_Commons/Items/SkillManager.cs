@@ -30,6 +30,14 @@ public class SkillManager : MonoBehaviour
         {
             allyStats = GetComponent<AllyStats>();
             playerController = GetComponent<PlayerController>();
+
+            // Guard: cảnh báo nếu thiếu component sau khi isPlayer = true
+            if (allyStats == null)
+                Debug.LogError("[SkillManager] isPlayer=true nhưng không tìm thấy AllyStats/PlayerStats trên " +
+                               $"'{gameObject.name}'. Skill equip sẽ bị lỗi NullRef.");
+            if (playerController == null)
+                Debug.LogError("[SkillManager] isPlayer=true nhưng không tìm thấy PlayerController trên " +
+                               $"'{gameObject.name}'. Skill Initialize sẽ bị lỗi NullRef.");
         }
     }
     // --- HÀM TRANG BỊ SKILL (Dùng chung) ---
@@ -153,32 +161,74 @@ public class SkillManager : MonoBehaviour
         }
     }
 
-    //private void UnequipPlayerSkill(SkillData skillToRemove)
-    //{
-    //    // Kiểm tra xem skill muốn tháo đang nằm ở slot nào
-    //    if (currentDefaultPassive == skillToRemove)
-    //    {
-    //        Debug.Log($"Tháo Default Passive: {skillToRemove.skillName}");
-    //        currentDefaultPassive = null;
-    //        // TODO: Nếu Passive có cộng chỉ số, nhớ trừ ra
-    //    }
-    //    else if (currentPassive == skillToRemove)
-    //    {
-    //        Debug.Log($"Tháo Passive: {skillToRemove.skillName}");
-    //        currentPassive = null;
-    //        // TODO: Nếu Passive có cộng chỉ số, nhớ trừ ra
-    //    }
-    //    else if (currentSkill == skillToRemove)
-    //    {
-    //        Debug.Log($"Tháo Skill: {skillToRemove.skillName}");
-    //        currentSkill = null;
-    //    }
-    //    else if (currentSignature == skillToRemove)
-    //    {
-    //        Debug.Log($"Tháo Signature: {skillToRemove.skillName}");
-    //        currentSignature = null;
-    //    }
-    //}
+    // =========================================================
+    // THÁO SKILL THEO TỪNG SLOT (PUBLIC — DevTool gọi)
+    // =========================================================
+
+    /// <summary>Tháo Default Passive đang được trang bị. Không làm gì nếu slot trống.</summary>
+    public void UnequipDefaultPassive()
+    {
+        if (currentDefaultPassive == null)
+        {
+            Debug.Log("[SkillManager] UnequipDefaultPassive — slot đang trống.");
+            return;
+        }
+        Debug.Log($"[SkillManager] Tháo Default Passive: {currentDefaultPassive.skillName}");
+        RemovePassiveEffect(currentDefaultPassive);
+        currentDefaultPassive = null;
+    }
+
+    /// <summary>Tháo Passive Slot 1 đang được trang bị. Không làm gì nếu slot trống.</summary>
+    public void UnequipPassive1()
+    {
+        if (currentPassive1 == null)
+        {
+            Debug.Log("[SkillManager] UnequipPassive1 — slot đang trống.");
+            return;
+        }
+        Debug.Log($"[SkillManager] Tháo Passive 1: {currentPassive1.skillName}");
+        RemovePassiveEffect(currentPassive1);
+        currentPassive1 = null;
+    }
+
+    /// <summary>Tháo Passive Slot 2 đang được trang bị. Không làm gì nếu slot trống.</summary>
+    public void UnequipPassive2()
+    {
+        if (currentPassive2 == null)
+        {
+            Debug.Log("[SkillManager] UnequipPassive2 — slot đang trống.");
+            return;
+        }
+        Debug.Log($"[SkillManager] Tháo Passive 2: {currentPassive2.skillName}");
+        RemovePassiveEffect(currentPassive2);
+        currentPassive2 = null;
+    }
+
+    /// <summary>Tháo Skill (slot E/Q) đang được trang bị. Không làm gì nếu slot trống.</summary>
+    public void UnequipSkillSlot()
+    {
+        if (currentSkill == null)
+        {
+            Debug.Log("[SkillManager] UnequipSkillSlot — slot đang trống.");
+            return;
+        }
+        Debug.Log($"[SkillManager] Tháo Skill: {currentSkill.skillName}");
+        RemoveSkillEffect(currentSkill);
+        currentSkill = null;
+    }
+
+    /// <summary>Tháo Signature (slot R) đang được trang bị. Không làm gì nếu slot trống.</summary>
+    public void UnequipSignatureSlot()
+    {
+        if (currentSignature == null)
+        {
+            Debug.Log("[SkillManager] UnequipSignatureSlot — slot đang trống.");
+            return;
+        }
+        Debug.Log($"[SkillManager] Tháo Signature: {currentSignature.skillName}");
+        RemoveSignatureEffect(currentSignature);
+        currentSignature = null;
+    }
 
 
     // =========================================================
@@ -209,94 +259,83 @@ public class SkillManager : MonoBehaviour
     {
         if (skill == null) return;
 
-        // 1. Cộng chỉ số tĩnh (List Stats trong Data)
+        // 1. Cộng chỉ số tĩnh
         if (skill.passiveStats != null)
         {
             foreach (var mod in skill.passiveStats)
-            {
                 ApplyModifier(mod, false);
-            }
         }
 
-        // 2. Gắn Script Logic (Dựa trên Factory)
+        // 2. Gắn Script Logic
         if (skill.passiveEffectCode != SkillData.PassiveEffectCode.None)
         {
-            // Hỏi Factory: "Skill này dùng script nào?" (VD: BattleHardened -> ChrisPassive)
             System.Type componentType = SkillFactory.GetPassiveComponentType(skill.passiveEffectCode);
-
-            if (componentType != null)
+            if (componentType != null && !activeSkills.ContainsKey(skill))
             {
-                if (!activeSkills.ContainsKey(skill))
-                {
-                    Debug.Log($">> Đang gắn script: {componentType.Name} vào Player");
+                if (!AssertPlayerRefs("ApplyPassiveEffect", skill.skillName)) return;
 
-                    // AddComponent: Gắn script đó vào GameObject Player
-                    SkillBehavior behavior = (SkillBehavior)gameObject.AddComponent(componentType);
-
-                    // Khởi tạo (Truyền stats và data vào cho script con dùng)
-                    behavior.Initialize(allyStats, skill, playerController);
-
-                    // Lưu vào danh sách để quản lý
-                    activeSkills.Add(skill, behavior);
-                }
+                Debug.Log($">> Đang gắn script: {componentType.Name} vào Player");
+                SkillBehavior behavior = (SkillBehavior)gameObject.AddComponent(componentType);
+                behavior.Initialize(allyStats, skill, playerController);
+                activeSkills.Add(skill, behavior);
             }
         }
 
         if (allyStats != null) allyStats.RecalculateStats();
     }
-    private void ApplySkillEffect (SkillData skill)
+
+    private void ApplySkillEffect(SkillData skill)
     {
         if (skill == null) return;
-        // 2. Gắn Script Logic (Dựa trên Factory)
+
         if (skill.skillEffectCode != SkillData.SkillEffectCode.None)
         {
-            // Hỏi Factory: "Skill này dùng script nào?" (VD: BattleHardened -> ChrisPassive)
             System.Type componentType = SkillFactory.GetSkillComponentType(skill.skillEffectCode);
-
-            if (componentType != null)
+            if (componentType != null && !activeSkills.ContainsKey(skill))
             {
-                if (!activeSkills.ContainsKey(skill))
-                {
-                    Debug.Log($">> Đang gắn script: {componentType.Name} vào Player");
+                if (!AssertPlayerRefs("ApplySkillEffect", skill.skillName)) return;
 
-                    // AddComponent: Gắn script đó vào GameObject Player
-                    SkillBehavior behavior = (SkillBehavior)gameObject.AddComponent(componentType);
-
-                    // Khởi tạo (Truyền stats và data vào cho script con dùng)
-                    behavior.Initialize(allyStats, skill, playerController);
-
-                    // Lưu vào danh sách để quản lý
-                    activeSkills.Add(skill, behavior);
-                }
+                Debug.Log($">> Đang gắn script: {componentType.Name} vào Player");
+                SkillBehavior behavior = (SkillBehavior)gameObject.AddComponent(componentType);
+                behavior.Initialize(allyStats, skill, playerController);
+                activeSkills.Add(skill, behavior);
             }
         }
     }
+
     private void ApplySignatureEffect(SkillData skill)
     {
         if (skill == null) return;
-        // 2. Gắn Script Logic (Dựa trên Factory)
+
         if (skill.signatureEffectCode != SkillData.SignatureEffectCode.None)
         {
-            // Hỏi Factory: "Skill này dùng script nào?" (VD: BattleHardened -> ChrisPassive)
             System.Type componentType = SkillFactory.GetSignatureComponentType(skill.signatureEffectCode);
-
-            if (componentType != null)
+            if (componentType != null && !activeSkills.ContainsKey(skill))
             {
-                if (!activeSkills.ContainsKey(skill))
-                {
-                    Debug.Log($">> Đang gắn script: {componentType.Name} vào Player");
+                if (!AssertPlayerRefs("ApplySignatureEffect", skill.skillName)) return;
 
-                    // AddComponent: Gắn script đó vào GameObject Player
-                    SkillBehavior behavior = (SkillBehavior)gameObject.AddComponent(componentType);
-
-                    // Khởi tạo (Truyền stats và data vào cho script con dùng)
-                    behavior.Initialize(allyStats, skill, playerController);
-
-                    // Lưu vào danh sách để quản lý
-                    activeSkills.Add(skill, behavior);
-                }
+                Debug.Log($">> Đang gắn script: {componentType.Name} vào Player");
+                SkillBehavior behavior = (SkillBehavior)gameObject.AddComponent(componentType);
+                behavior.Initialize(allyStats, skill, playerController);
+                activeSkills.Add(skill, behavior);
             }
         }
+    }
+
+    /// <summary>
+    /// Guard helper: kiểm tra allyStats và playerController trước khi gọi Initialize.
+    /// Trả về false (và log lỗi rõ ràng) nếu thiếu — thay vì throw NullReferenceException.
+    /// </summary>
+    private bool AssertPlayerRefs(string context, string skillName)
+    {
+        if (allyStats == null || playerController == null)
+        {
+            Debug.LogError($"[SkillManager] {context} '{skillName}' thất bại: " +
+                           $"allyStats={allyStats != null} playerController={playerController != null}. " +
+                           "→ Hãy tick 'Is Player = true' trên SkillManager của Player GameObject.");
+            return false;
+        }
+        return true;
     }
 
     private void RemovePassiveEffect(SkillData skill)
@@ -358,8 +397,15 @@ public class SkillManager : MonoBehaviour
     }
     void ApplyModifier(StatModifier mod, bool isReversing)
     {
+        if (allyStats == null)
+        {
+            Debug.LogError("[SkillManager] ApplyModifier: allyStats là null. " +
+                           "Hãy tick 'Is Player = true' trên SkillManager của Player.");
+            return;
+        }
+
         float value = mod.GetFinalValue();
-        if (isReversing) value = -value; // Nếu tháo đồ thì trừ đi
+        if (isReversing) value = -value;
 
         switch (mod.stat)
         {

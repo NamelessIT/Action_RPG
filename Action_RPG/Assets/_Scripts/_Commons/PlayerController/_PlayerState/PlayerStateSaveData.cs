@@ -43,5 +43,6 @@ public class PlayerStateSaveData
         public string itemType;   // "Weapon" | "Shield" | "Artifact" | "Others"
         public string assetId;    // id của WeaponData / CoreShieldData / AccessoryData
         public int quantity;
+        public int slotIndex;     // vị trí ô cố định (0-24)
     }
 }

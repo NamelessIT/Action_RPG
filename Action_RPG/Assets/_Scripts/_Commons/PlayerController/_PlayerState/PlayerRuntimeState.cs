@@ -235,7 +235,11 @@ public class PlayerRuntimeState
             accessoryIds = new List<int>(equippedAccessoryIds),
             weaponAssetId = weaponAssetId,
             coreShieldAssetId = coreShieldAssetId,
-            accessoryAssetIds = new List<string>(equippedAccessoryAssetIds)
+            accessoryAssetIds = new List<string>(equippedAccessoryAssetIds),
+            // FIX: inventoryItems bị thiếu → không được ghi vào JSON → mất sau reload
+            inventoryItems = inventoryItems != null
+                ? new List<PlayerStateSaveData.SavedInventoryItem>(inventoryItems)
+                : new List<PlayerStateSaveData.SavedInventoryItem>()
         };
     }
 
@@ -265,6 +269,12 @@ public class PlayerRuntimeState
         equippedAccessoryIds = data.accessoryIds != null ? new List<int>(data.accessoryIds) : new List<int>();
         weaponAssetId = data.weaponAssetId;
         coreShieldAssetId = data.coreShieldAssetId;
-        equippedAccessoryAssetIds = data.accessoryAssetIds != null ? new List<string>(data.accessoryAssetIds) : new List<string>();
+        equippedAccessoryAssetIds = data.accessoryAssetIds != null
+            ? new List<string>(data.accessoryAssetIds)
+            : new List<string>();
+        // FIX: load inventoryItems từ save
+        inventoryItems = data.inventoryItems != null
+            ? new List<PlayerStateSaveData.SavedInventoryItem>(data.inventoryItems)
+            : new List<PlayerStateSaveData.SavedInventoryItem>();
     }
 }
