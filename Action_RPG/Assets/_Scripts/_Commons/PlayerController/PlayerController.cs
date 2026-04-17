@@ -93,6 +93,8 @@ public class PlayerController : MonoBehaviour
     public event System.Action<WeaponData> OnWeaponEquipped;      // Gọi khi trang bị vũ khí mới
 #pragma warning restore 0067
     public event System.Action<Stats, int, bool, bool> OnHitEnemy;
+    // [MỚI] THÊM DÒNG NÀY
+    public event System.Action<Stats, bool> OnKillEnemy;
     // ==================================================================
 
 
@@ -894,6 +896,8 @@ public class PlayerController : MonoBehaviour
         {
             bool isBackstab = (t == 1f);
             if (stats != null) stats.NotifyKillEnemy(enemyStats, isBackstab);
+            // [MỚI] RUNG CHUÔNG SỰ KIỆN Ở ĐÂY
+            OnKillEnemy?.Invoke(enemyStats, isBackstab);
             Debug.Log(">> KẾT LIỄU ĐỊCH!");
         }
     }
