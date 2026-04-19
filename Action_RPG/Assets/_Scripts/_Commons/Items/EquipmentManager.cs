@@ -194,14 +194,20 @@ public class EquipmentManager : MonoBehaviour
         allyStats.defenseValue += newWeapon.defenseValue;
         allyStats.bonusCritChance += newWeapon.bonusCritChance;
 
-        // --- [MỚI] GÁN TẦM ĐÁNH TỪ VŨ KHÍ SANG PLAYER ---
+        // ── Sync combat data từ WeaponData → PlayerController ────────────
         PlayerController pc = GetComponent<PlayerController>();
         if (pc != null)
         {
-            // Lấy từ file WeaponData (cái mà OnValidate đã tự sinh ra)
-            pc.attackRange = newWeapon.attackRange > 0 ? newWeapon.attackRange : 1.0f;
-            pc.isRangedAttack = newWeapon.isRanged;
-            pc.projectilePrefab = newWeapon.projectilePrefab; // [MỚI] Nạp đạn
+            pc.attackRange      = newWeapon.attackRange > 0 ? newWeapon.attackRange : 1.0f;
+            pc.isRangedAttack   = newWeapon.isRanged;
+            pc.projectilePrefab = newWeapon.projectilePrefab;
+
+            // Sync heavy charge time (per-weapon override)
+            if (allyStats != null && newWeapon.heavyChargeTime > 0f)
+                allyStats.heavyAttackChargeTime = newWeapon.heavyChargeTime;
+
+            // Notify dispatcher về vũ khí mới
+            pc.attackDispatcher?.OnWeaponChanged(newWeapon);
         }
 
         allyStats.RecalculateStats();
