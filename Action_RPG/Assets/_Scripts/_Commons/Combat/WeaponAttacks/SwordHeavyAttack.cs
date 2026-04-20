@@ -36,26 +36,24 @@ public class SwordHeavyAttack : IWeaponAttackHandler
     }
 
     /// <summary>
-    /// Sweep toàn bộ góc attackAngle bằng 1 lần OverlapSphere từ giữa cung chém.
-    /// Cùng geometry với DefaultMeleeAttackHandler.SweepAtAngle tại góc = 0 (thẳng trước mặt).
+    /// Sweep toàn bộ góc attackAngle — geometry giống DefaultMeleeAttackHandler gốc.
+    /// Sphere tại player position (không offset forward), bán kính = full attackRange.
     /// </summary>
     private void SweepArc(WeaponAttackContext ctx, bool withKnockback)
     {
         float   range    = ctx.Player.attackRange;
-        float   radius   = range * 0.5f;
-        // + Vector3.up * 0.5f để bắt sprite enemy có collider trên child (giống Dagger)
-        Vector3 checkPos = ctx.PlayerPos + ctx.FacingDir * (range * 0.8f) + Vector3.up * 0.5f;
+        Vector3 center   = ctx.PlayerPos + Vector3.up * 0.5f;
 
-        Collider[] hits = Physics.OverlapSphere(checkPos, radius, ctx.DangerLayer);
+        Collider[] hits = Physics.OverlapSphere(center, range, ctx.DangerLayer);
 
         foreach (var hit in hits)
         {
             Stats enemy = ctx.GetEnemyStats(hit);
             if (enemy == null) continue;
 
-            // Angle check như PerformPlayerSweep gốc
+            // Angle check hình quạt — dùng vị trí ROOT
             float angleToEnemy = Vector3.Angle(ctx.FacingDir,
-                (hit.transform.position - ctx.PlayerPos).normalized);
+                (enemy.transform.position - ctx.PlayerPos).normalized);
             if (angleToEnemy > ctx.Player.attackAngle / 2f) continue;
 
             if (!ctx.TryAddHitTarget(enemy.transform)) continue;

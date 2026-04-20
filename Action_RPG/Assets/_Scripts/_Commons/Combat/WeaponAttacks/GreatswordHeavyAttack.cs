@@ -2,16 +2,15 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Heavy Attack — Greatsword: Gồng 1.5 giây → Bổ từ trên cao xuống.
-/// • Hitbox: hộp chữ nhật dài 2f, rộng 1f, theo hướng nhìn.
+/// Heavy Attack — Greatsword: Gồng 1.5 giây → Bổ thẳng trước mặt.
+/// • OverlapSphere tại player + angle check (cùng pattern DefaultMeleeAttackHandler).
+/// • Góc hẹp hơn attackAngle thông thường để giống cảm giác bổ thẳng.
 /// • 200% sát thương + Knockback mạnh.
 /// </summary>
 public class GreatswordHeavyAttack : IWeaponAttackHandler
 {
-    // Kích thước hộp hit (halfExtents)
-    private const float BOX_LENGTH      = 1.0f;   // 2f tổng / 2
-    private const float BOX_WIDTH_HALF  = 0.5f;   // 1f tổng / 2
-    private const float BOX_HEIGHT_HALF = 0.6f;
+    // Greatsword slam: góc 60° (hẹp hơn normal attack) — đòn thẳng, uy lực cao
+    private const float SLAM_ANGLE = 60f;
 
     public bool IsChanneled => false;
 
@@ -19,18 +18,21 @@ public class GreatswordHeavyAttack : IWeaponAttackHandler
     {
         // ANIMATOR: // ctx.Animator.SetTrigger("GreatswordSlam");
 
-        Vector3    dir      = ctx.FacingDir;
-        // + Vector3.up * 0.5f để bắt sprite enemy có collider trên child (giống Dagger)
-        Vector3    center   = ctx.PlayerPos + dir * BOX_LENGTH + Vector3.up * (BOX_HEIGHT_HALF + 0.5f);
-        Quaternion rotation = Quaternion.LookRotation(dir);
-        Vector3    halfExts = new Vector3(BOX_WIDTH_HALF, BOX_HEIGHT_HALF, BOX_LENGTH);
+        float   range  = ctx.Player.attackRange;
+        Vector3 center = ctx.PlayerPos + Vector3.up * 0.5f;
 
-        Collider[] hits = Physics.OverlapBox(center, halfExts, rotation, ctx.DangerLayer);
+        Collider[] hits = Physics.OverlapSphere(center, range, ctx.DangerLayer);
 
         foreach (var hit in hits)
         {
             Stats enemy = ctx.GetEnemyStats(hit);
             if (enemy == null) continue;
+
+            // Góc hẹp SLAM_ANGLE để tạo cảm giác bổ thẳng
+            float angleToEnemy = Vector3.Angle(ctx.FacingDir,
+                (enemy.transform.position - ctx.PlayerPos).normalized);
+            if (angleToEnemy > SLAM_ANGLE / 2f) continue;
+
             if (!ctx.TryAddHitTarget(enemy.transform)) continue;
 
             ctx.ApplyDamage(enemy, true, ctx.ComboStep);

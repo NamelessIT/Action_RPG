@@ -202,4 +202,57 @@ public class WeaponAttackDispatcher : MonoBehaviour
             OnHitEvent    = onHitEvent,
         };
     }
+
+    // ─────────────────────────────────────────────────────────────
+    //  GIZMOS — Chỉ vẽ hitbox ĐẶC BIỆT, không duplicate sphere/ray
+    //  của PlayerController (vốn đã vẽ sphere xanh + ray vàng).
+    //  Select Player trong Scene để thấy.
+    // ─────────────────────────────────────────────────────────────
+#if UNITY_EDITOR
+    private void OnDrawGizmosSelected()
+    {
+        if (_pc == null || _weapon == null) return;
+
+        float   range     = _pc.attackRange;
+        Vector3 pos       = transform.position;
+        Vector3 facingDir = _stats?.facingDirection ?? transform.forward;
+        if (facingDir == Vector3.zero) facingDir = transform.forward;
+
+        // ── Greatsword Slam: sphere thu hẹp góc 60° ─────────────────────────
+        if (_weapon.weaponType == WeaponData.WeaponType.GreatSword)
+        {
+            const float SLAM_ANGLE = 60f;
+            Gizmos.color = new Color(1f, 0.4f, 0f, 0.25f); // Cam
+            Gizmos.DrawSphere(pos + Vector3.up * 0.5f, range);
+            // Ray giới hạn góc 60° (hẹp hơn normal attack để thấy sự khác biệt)
+            Gizmos.color = new Color(1f, 0.4f, 0f, 1f);
+            Gizmos.DrawRay(pos + Vector3.up * 0.5f,
+                Quaternion.AngleAxis(-SLAM_ANGLE / 2f, Vector3.up) * facingDir * range);
+            Gizmos.DrawRay(pos + Vector3.up * 0.5f,
+                Quaternion.AngleAxis( SLAM_ANGLE / 2f, Vector3.up) * facingDir * range);
+        }
+
+        // ── Spear: capsule đâm thẳng ─────────────────────────────────────────
+        if (_weapon.weaponType == WeaponData.WeaponType.Spear)
+        {
+            const float THRUST_R = 0.4f;
+            Vector3 origin = pos + Vector3.up * 0.5f;
+            Vector3 tip    = origin + facingDir * range;
+            Gizmos.color = new Color(0f, 0.9f, 1f, 0.4f); // Cyan đậm
+            Gizmos.DrawSphere(origin, THRUST_R);
+            Gizmos.DrawSphere(tip,    THRUST_R);
+            Gizmos.DrawLine(origin + Vector3.right * THRUST_R, tip + Vector3.right * THRUST_R);
+            Gizmos.DrawLine(origin - Vector3.right * THRUST_R, tip - Vector3.right * THRUST_R);
+            Gizmos.DrawLine(origin + Vector3.up    * THRUST_R, tip + Vector3.up    * THRUST_R);
+            Gizmos.DrawLine(origin - Vector3.up    * THRUST_R, tip - Vector3.up    * THRUST_R);
+        }
+
+        // ── Staff Spin: sphere cố định 1.5f ─────────────────────────────────
+        if (_weapon.weaponType == WeaponData.WeaponType.Staff)
+        {
+            Gizmos.color = new Color(0.6f, 0f, 1f, 0.3f); // Tím
+            Gizmos.DrawSphere(pos + Vector3.up * 0.5f, 1.5f);
+        }
+    }
+#endif
 }

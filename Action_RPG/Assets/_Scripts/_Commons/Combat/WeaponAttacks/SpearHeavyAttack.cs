@@ -25,6 +25,10 @@ public class SpearHeavyAttack : IWeaponAttackHandler
 
         Vector3 dir = ctx.FacingDir;
 
+        // Ghi lại vị trí TRƯỚC khi lunge — để capsule bắt đầu từ đây
+        // (tránh miss enemy đứng sát ngay lúc ra đòn)
+        Vector3 preLungeOrigin = ctx.Player.transform.position + Vector3.up * 0.5f;
+
         // ── Lướt về phía trước ──────────────────────────────────────────────
         Rigidbody rb = ctx.Player.GetComponent<Rigidbody>();
         if (rb != null)
@@ -33,7 +37,7 @@ public class SpearHeavyAttack : IWeaponAttackHandler
             Vector3 startPos  = ctx.Player.transform.position;
             Vector3 targetPos = new Vector3(
                 startPos.x + dir.x * LUNGE_DISTANCE,
-                startPos.y,                          // giữ nguyên độ cao
+                startPos.y,
                 startPos.z + dir.z * LUNGE_DISTANCE);
 
             while (elapsed < LUNGE_DURATION)
@@ -45,10 +49,11 @@ public class SpearHeavyAttack : IWeaponAttackHandler
             }
         }
 
-        // ── Damage: OverlapCapsule từ gần đất → đầu mũi thương ──────────────
-        // Dùng OverlapCapsule thay SphereCastAll để bắt cả enemy đứng sát player
-        Vector3 origin = ctx.Player.transform.position + Vector3.up * 0.15f;
-        Vector3 tip    = origin + dir * ctx.Player.attackRange;
+        // ── Damage: OverlapCapsule từ vị trí GỐC (trước lunge) → đầu mũi thương ──
+        // origin = pre-lunge → bắt được enemy đứng sát lúc ra đòn
+        // tip    = post-lunge + attackRange → bắt được enemy ở xa
+        Vector3 origin = preLungeOrigin;
+        Vector3 tip    = ctx.Player.transform.position + Vector3.up * 0.5f + dir * ctx.Player.attackRange;
 
         Collider[] hits = Physics.OverlapCapsule(origin, tip, THRUST_RADIUS, ctx.DangerLayer);
 
