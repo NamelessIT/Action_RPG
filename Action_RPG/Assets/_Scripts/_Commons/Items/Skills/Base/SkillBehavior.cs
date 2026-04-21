@@ -53,4 +53,17 @@ public abstract class SkillBehavior : MonoBehaviour
         return true;
         // Lớp con (S_Fireball.cs) sẽ override hàm này, gọi base.Use(), nếu true thì bắn cầu lửa
     }
+
+    // [MỚI] HÀM GIẢM THỜI GIAN HỒI CHIÊU
+    public virtual void ReduceCooldown(float amount)
+    {
+        // Kỹ thuật "Đánh lừa thời gian": 
+        // Đẩy mốc thời gian dùng chiêu cuối cùng lùi về quá khứ.
+        // Điều này sẽ làm cho điều kiện (Time.time < lastUseTime + cooldown) kết thúc sớm hơn.
+
+        lastUseTime -= amount;
+
+        // Debug để bạn dễ dàng theo dõi trên Console
+        // Debug.Log($"Đã giảm {amount}s hồi chiêu cho {data.skillName}");
+    }
 }

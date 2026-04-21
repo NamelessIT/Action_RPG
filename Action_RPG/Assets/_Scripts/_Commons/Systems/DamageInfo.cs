@@ -1,9 +1,15 @@
 ﻿using UnityEngine;
 
 [System.Serializable]
-public struct DamageInfo
+public class DamageInfo
 {
-    public float damageAmount;
+    // [MỚI] Chia làm 3 biến thành phần
+    public float physDamage;
+    public float magicDamage;
+    public float trueDamage;
+
+    // [MỚI] Hàm tiện ích (Getter) để lấy tổng sát thương bất cứ lúc nào cần
+    public float TotalRawDamage => physDamage + magicDamage + trueDamage;
     public bool isCrit;
 
     // --- Hiệu ứng khống chế (CC) ---

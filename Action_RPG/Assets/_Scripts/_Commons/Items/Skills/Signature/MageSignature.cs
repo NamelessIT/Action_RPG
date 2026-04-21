@@ -170,14 +170,16 @@ public class MageSignature : SkillBehavior
                 float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
                 bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
-                float damage = CombatMath.CalculateFullDamage(
+                var dmgTuple = CombatMath.CalculateFullDamage(
                     stats, enemyStats, t, isCrit, data, currentWpn, data.skillMagicMultiplier
                 );
 
                 DamageInfo info = new DamageInfo();
                 info.sourcePosition = centerPos;
                 info.attacker = stats;
-                info.damageAmount = damage;
+                info.physDamage = dmgTuple.phys;
+                info.magicDamage = dmgTuple.magic;
+                info.trueDamage = dmgTuple.trueDmg;
                 info.isCrit = isCrit;
                 info.isStun = true; // Gây giật nhẹ liên tục để khó thoát ra
                 info.stunDuration = 0.2f;

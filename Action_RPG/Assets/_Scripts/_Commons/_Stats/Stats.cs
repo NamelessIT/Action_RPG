@@ -180,6 +180,9 @@ public class Stats : MonoBehaviour
     public bool isResonated = false;
     private Coroutine resonanceCoroutine;
 
+    public Action<DamageInfo> OnBeforeTakeDamage;
+    public Action<float> OnHealReceived; // Dùng cho SHD_CS_T5_06
+
     private NavMeshAgent agent;
     private Rigidbody rb;
     protected Animator animator;
@@ -319,15 +322,40 @@ public class Stats : MonoBehaviour
     }
 
     // [CẬP NHẬT] Hàm tiêu hao thể lực dùng chung cho Dash và Run
-    public bool TryConsumeStamina(float amount)
+    public bool TryConsumeStamina(float amount, bool isDash = false)
     {
+        EquipmentManager eq = GetComponent<EquipmentManager>();
+        string shieldId = (eq != null && eq.currentCoreShield != null) ? eq.currentCoreShield.id : "";
+
+        // SHD_CS_T5_02: Tiêu hao HP thay vì Stamina (x5)
+        if (shieldId == "SHD_CS_T5_02")
+        {
+            float hpCost = amount * 5f;
+            if (currentHp > hpCost)
+            {
+                currentHp -= hpCost;
+                return true;
+            }
+            return false;
+        }
+
+        // SHD_CS_T5_04: Dash tốn 10% Sin, không tốn Stamina
+        if (shieldId == "SHD_CS_T5_04")
+        {
+            float sinCost = maxSin * 0.1f;
+            if (currentSin >= sinCost)
+            {
+                currentSin -= sinCost;
+                return true;
+            }
+            return false;
+        }
+
+        // Logic mặc định
         if (currentStamina >= amount)
         {
             currentStamina -= amount;
-
-            // [MỚI] Ghi lại thời gian tiêu hao để tính Delay hồi phục
             lastStaminaConsumeTime = Time.time;
-
             return true;
         }
         return false;
@@ -336,7 +364,8 @@ public class Stats : MonoBehaviour
     public virtual void TakeDamage(DamageInfo info)
     {
         if (isInvincible || isDead) return;
-
+        // [MỚI] Cho phép các Khiên can thiệp trước khi tính toán sát thương (Giảm/Phản DMG/Cứu tử)
+        OnBeforeTakeDamage?.Invoke(info);
         // [MỚI] Cho phép Signature chặn sát thương
         if (damageInterceptor != null && damageInterceptor.Invoke(info))
         {
@@ -345,7 +374,7 @@ public class Stats : MonoBehaviour
 
         EnterCombat();
         // 1. TÍNH TOÁN DAMAGE VÀ SHIELD
-        float damageToTake = info.damageAmount;
+        float damageToTake = info.TotalRawDamage;
 
         // [MỚI] KIỂM TRA CỘNG HƯỞNG TỪ COMPANION
         // Giả sử Companion của bạn có tag là "Companion" và khi đánh có truyền info.attacker = stats của nó
@@ -398,7 +427,7 @@ public class Stats : MonoBehaviour
     {
         DamageInfo info = new DamageInfo
         {
-            damageAmount = damage,
+            physDamage = damage, // Mặc định nhận sát thương vào mục Vật Lý
             isCrit = false,
             isStun = false,
             isKnockback = false
@@ -416,6 +445,8 @@ public class Stats : MonoBehaviour
 
         currentHp += amount;
         if (currentHp > maxHp) currentHp = maxHp;
+        // [MỚI] Báo cáo lượng máu vừa hồi
+        OnHealReceived?.Invoke(amount);
     }
     // --- LOGIC STUN & KNOCKBACK ---
     void ApplyCrowdControl(DamageInfo info)

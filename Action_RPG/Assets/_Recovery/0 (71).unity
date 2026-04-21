@@ -1671,10 +1671,12 @@ MonoBehaviour:
   hpPerVIT: 15
   flatHpGain: 0
   hpGain: 0
+  bonusHpGain: 0
   bonusHp: 0
   flatHp: 0
   flatSinGain: 0
   sinGain: 0
+  bonusSinGain: 0
   S: 100
   maxSinBonus: 0.7
   physicalAtkPerSTR: 2.5

@@ -161,7 +161,7 @@ public class RavagerSkill : SkillBehavior
                     DamageInfo info = new DamageInfo();
                     info.isStun = true;
                     info.stunDuration = stunDuration;
-                    info.damageAmount = 0; // Hoặc gây dmg nổ nếu muốn
+                    info.physDamage = 0; // Hoặc gây dmg nổ nếu muốn
                     info.attacker = stats;
 
                     enemy.TakeDamage(info);

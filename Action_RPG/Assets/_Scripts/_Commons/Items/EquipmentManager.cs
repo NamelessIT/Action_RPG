@@ -233,7 +233,7 @@ public class EquipmentManager : MonoBehaviour
         EquipCoreShieldInternal(newShield);
         OnEquipmentChanged?.Invoke();
     }
-
+    
     // 2. Tháo Core Shield (Về trạng thái trống)
     public void UnequipCoreShield()
     {
@@ -266,7 +266,10 @@ public class EquipmentManager : MonoBehaviour
         allyStats.armor += newShield.armor;
         allyStats.magicResist += newShield.magicResist;
 
-        // 3. Tính lại chỉ số tổng
+        // [MỚI] 3. Cộng Unique Effect Stats (Nội tại đặc biệt của khiên)
+        ApplyCoreShieldEffectStats(newShield);
+
+        // 4. Tính lại chỉ số tổng
         allyStats.RecalculateStats();
     }
 
@@ -287,11 +290,47 @@ public class EquipmentManager : MonoBehaviour
         allyStats.armor -= shieldToRemove.armor;
         allyStats.magicResist -= shieldToRemove.magicResist;
 
-        // 3. Reset biến và tính lại
+        // [MỚI] 3. Trừ Unique Effect Stats
+        RemoveCoreShieldEffectStats(shieldToRemove);
+
+        // 4. Reset biến và tính lại
         currentCoreShield = null; // Quan trọng: Đưa về null để biểu thị không đeo gì
         allyStats.RecalculateStats();
     }
 
+    // [MỚI] HÀM QUẢN LÝ NỘI TẠI KHIÊN (PASSIVE EFFECTS)
+    private void ApplyCoreShieldEffectStats(CoreShieldData shield)
+    {
+        if (shield == null) return;
+        string id = shield.id.Trim();
+
+        // SHD_CS_T3_01: Tăng 10% HP gốc
+        if (id == "SHD_CS_T3_01") allyStats.bonusHp += 0.10f;
+
+        // SHD_CS_T3_02: Tăng 15% Sin Gain
+        if (id == "SHD_CS_T3_02") allyStats.bonusSinGain += 0.15f;
+
+        // SHD_CS_T3_04: Tăng 10% Tốc chạy gốc
+        if (id == "SHD_CS_T3_04") allyStats.bonusMoveSpeed += 0.10f;
+
+        // SHD_CS_T5_02: Tăng tốc độ hồi máu tự nhiên lên gấp 5 lần (+400%)
+        if (id == "SHD_CS_T5_02") allyStats.bonusHpGain += 4.0f;
+
+        // SHD_CS_T5_04: Tăng tốc độ hồi SinCharge lên 100%
+        if (id == "SHD_CS_T5_04") allyStats.bonusSinGain += 1.0f;
+    }
+
+    private void RemoveCoreShieldEffectStats(CoreShieldData shield)
+    {
+        if (shield == null) return;
+        string id = shield.id.Trim();
+
+        // Trả lại đúng những gì đã cộng khi tháo ra
+        if (id == "SHD_CS_T3_01") allyStats.bonusHp -= 0.10f;
+        if (id == "SHD_CS_T3_02") allyStats.bonusSinGain -= 0.15f;
+        if (id == "SHD_CS_T3_04") allyStats.bonusMoveSpeed -= 0.10f;
+        if (id == "SHD_CS_T5_02") allyStats.bonusHpGain -= 4.0f;
+    }
     // --------------- ACCESSORY (5 SLOTS) ---------------
     // 1. Trang bị Accessory (Tự động nhận diện slot dựa trên Type)
     public void EquipAccessory(AccessoryData newAccessory)

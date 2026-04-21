@@ -117,7 +117,7 @@ public class VanguardLiteSignature : SkillBehavior
                 bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
                 // Tính sát thương xuyên qua giáp địch
-                float damage = CombatMath.CalculateFullDamage(
+                var dmgTuple = CombatMath.CalculateFullDamage(
                     stats, enemy, 1.0f, isCrit, data, currentWpn, damageMultiplier
                 );
 
@@ -125,7 +125,9 @@ public class VanguardLiteSignature : SkillBehavior
                 DamageInfo info = new DamageInfo();
                 info.sourcePosition = transform.position;
                 info.isCrit = isCrit;
-                info.damageAmount = damage;
+                info.physDamage = dmgTuple.phys;
+                info.magicDamage = dmgTuple.magic;
+                info.trueDamage = dmgTuple.trueDmg;
 
                 // Đủ 3 hit -> Nổ CC
                 if (currentHits == hitsToStun)

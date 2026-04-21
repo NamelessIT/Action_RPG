@@ -141,7 +141,7 @@ public class WarriorSignature : SkillBehavior
 
             DamageInfo executeInfo = new DamageInfo();
             executeInfo.sourcePosition = transform.position;
-            executeInfo.damageAmount = 999999f; // Lượng sát thương ảo khổng lồ để chắc chắn chết
+            executeInfo.trueDamage = 999999f; // Lượng sát thương ảo khổng lồ để chắc chắn chết
             executeInfo.isCrit = true; // Hiện đỏ cho ngầu
             executeInfo.attacker = stats;
 
@@ -159,14 +159,16 @@ public class WarriorSignature : SkillBehavior
             bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
             float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
 
-            float damage = CombatMath.CalculateFullDamage(
+            var dmgTuple = CombatMath.CalculateFullDamage(
                 stats, enemyStats, t, isCrit, data, currentWpn, data.skillPhysicalMultiplier
             );
 
             DamageInfo info = new DamageInfo();
             info.sourcePosition = transform.position;
             info.isCrit = isCrit;
-            info.damageAmount = damage;
+            info.physDamage = dmgTuple.phys;
+            info.magicDamage = dmgTuple.magic;
+            info.trueDamage = dmgTuple.trueDmg;
             info.isStun = true;        // Giáng mạnh từ trên không xuống nên gây choáng
             info.stunDuration = 1.5f;
             info.isKnockback = true;

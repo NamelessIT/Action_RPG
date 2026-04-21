@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
-  m_Name: RougePassive
+  m_Name: RoguePassive
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
-  id: RougePassive
-  skillName: "N\u1ED9i t\u1EA1i c\u1EE7a Rouge"
+  id: RoguePassive
+  skillName: "N\u1ED9i t\u1EA1i c\u1EE7a Rogue"
   icon: {fileID: 0}
   skilDesc: "\u2022 Armor v\xE0 Magic BackstabReduce (\u0111\xE1nh sau l\u01B0ng)
     t\u0103ng th\xE0nh 100%.\n\u2022 N\u1EBFu k\u1EBFt li\u1EC5u k\u1EBB \u0111\u1ECBch
@@ -26,4 +26,5 @@ MonoBehaviour:
   sinChargeReq: 0
   passiveEffectCode: 7
   skillEffectCode: 0
+  signatureEffectCode: 0
   passiveStats: []

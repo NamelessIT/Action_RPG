@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 
-public class RougeLiteSignature : SkillBehavior
+public class RogueLiteSignature : SkillBehavior
 {
     [Header("Teleport Settings")]
     [Tooltip("Tầm nhìn của Player")]
@@ -110,14 +110,16 @@ public class RougeLiteSignature : SkillBehavior
 
         WeaponData currentWpn = equipmentManager != null ? equipmentManager.currentWeapon : null;
 
-        float damage = CombatMath.CalculateFullDamage(
+        var dmgTuple = CombatMath.CalculateFullDamage(
             stats, furthestEnemy, 1.0f, true, data, currentWpn, data.skillPhysicalMultiplier
         );
 
         DamageInfo info = new DamageInfo();
         info.sourcePosition = transform.position;
         info.attacker = stats;
-        info.damageAmount = damage;
+        info.physDamage = dmgTuple.phys;
+        info.magicDamage = dmgTuple.magic;
+        info.trueDamage = dmgTuple.trueDmg;
         info.isCrit = true;
 
         furthestEnemy.TakeDamage(info);
@@ -158,7 +160,7 @@ public class RougeLiteSignature : SkillBehavior
             // Truyền trực tiếp sát thương vào hệ thống
             DamageInfo bleedInfo = new DamageInfo();
             bleedInfo.sourcePosition = target.transform.position;
-            bleedInfo.damageAmount = tickDamage;
+            bleedInfo.physDamage = tickDamage;
             bleedInfo.attacker = stats;
 
             target.TakeDamage(bleedInfo);

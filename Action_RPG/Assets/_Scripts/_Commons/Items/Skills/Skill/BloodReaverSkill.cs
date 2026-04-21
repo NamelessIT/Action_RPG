@@ -223,14 +223,16 @@ public class BloodReaverSkill : SkillBehavior
         // multiplier ở đây là:
         // - Với Bow: Hệ số giảm dần (1.0 -> 0.85 -> 0.7...) và Hệ số bonus bleed (1.0 hoặc 1.5)
         // - Với Melee: Hệ số bonus bleed (1.0 hoặc 1.5)
-        float damage = CombatMath.CalculateFullDamage(
+        var dmgTuple = CombatMath.CalculateFullDamage(
             stats, enemyStats, t, isCrit, data, currentWpn, multiplier
         );
 
         DamageInfo info = new DamageInfo();
         info.sourcePosition = transform.position;
         info.isCrit = isCrit;
-        info.damageAmount = damage;
+        info.physDamage = dmgTuple.phys;
+        info.magicDamage = dmgTuple.magic;
+        info.trueDamage = dmgTuple.trueDmg;
         // Bow thì có thể knockback nhẹ, Melee thì đẩy mạnh (tùy chỉnh sau)
         info.isKnockback = true;
         info.knockbackForce = 0.5f;

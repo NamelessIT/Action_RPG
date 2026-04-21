@@ -225,7 +225,7 @@ public class MageSkill : SkillBehavior
                 // [TÍNH TOÁN CỦA BẠN]
                 float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
                 bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-                float damage = CombatMath.CalculateFullDamage(
+                var dmgTuple = CombatMath.CalculateFullDamage(
                     stats, enemyStats, t, isCrit, data, currentWpn, dmgMult
                 );
 
@@ -233,7 +233,9 @@ public class MageSkill : SkillBehavior
                 {
                     sourcePosition = transform.position,
                     attacker = stats,
-                    damageAmount = damage,
+                    physDamage = dmgTuple.phys,
+                    magicDamage = dmgTuple.magic,
+                    trueDamage = dmgTuple.trueDmg,
                     isCrit = isCrit,
                     isStun = (stunTime > 0),
                     stunDuration = stunTime,

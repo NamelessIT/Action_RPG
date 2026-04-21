@@ -403,7 +403,7 @@ public class CompanionAI : MonoBehaviour
                 DamageInfo info = new DamageInfo();
                 info.sourcePosition = transform.position;
                 info.attacker = stats;
-                info.damageAmount = stats.physicalAtk;
+                info.physDamage = stats.physicalAtk;
 
                 targetStats.TakeDamage(info);
                 Debug.Log($"[Companion] Đã cắn {currentTarget.name}!");

@@ -117,14 +117,16 @@ public class WarriorSkill : SkillBehavior
         bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
         float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
 
-        float damage = CombatMath.CalculateFullDamage(
+        var dmgTuple = CombatMath.CalculateFullDamage(
             stats, enemyStats, t, isCrit, data, currentWpn, 1f
         );
 
         DamageInfo info = new DamageInfo();
         info.sourcePosition = transform.position;
         info.isCrit = isCrit;
-        info.damageAmount = damage;
+        info.physDamage = dmgTuple.phys;
+        info.magicDamage = dmgTuple.magic;
+        info.trueDamage = dmgTuple.trueDmg;
         info.isStun = true;
         info.stunDuration = stunDuration;
         info.attacker = stats;

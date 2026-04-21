@@ -126,11 +126,11 @@ public class VanguardSignature : SkillBehavior
         if (Vector3.Angle(forward, dirToSource) <= 90f)
         {
             // Phản Sát Thương lại kẻ đánh
-            float reflectDmg = info.damageAmount * damageReflectPercent;
+            float reflectDmg = info.trueDamage * damageReflectPercent;
 
             DamageInfo reflectInfo = new DamageInfo();
             reflectInfo.sourcePosition = transform.position;
-            reflectInfo.damageAmount = reflectDmg;
+            reflectInfo.trueDamage = reflectDmg;
             reflectInfo.attacker = stats;
             reflectInfo.isKnockback = false;
             reflectInfo.isStun = false;

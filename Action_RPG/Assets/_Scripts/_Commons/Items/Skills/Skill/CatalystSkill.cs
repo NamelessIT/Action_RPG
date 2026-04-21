@@ -89,14 +89,16 @@ public class CatalystSkill : SkillBehavior
             float t = CombatMath.CalculateDirectionFactor(transform, bestTarget);
 
 
-            float damage = CombatMath.CalculateFullDamage(
+            var dmgTuple = CombatMath.CalculateFullDamage(
                 stats, bestTarget, t, isCrit, data, currentWpn, data.skillMagicMultiplier
             );
 
             DamageInfo info = new DamageInfo();
             info.sourcePosition = transform.position;
             info.isCrit = isCrit;
-            info.damageAmount = damage;
+            info.physDamage = dmgTuple.phys;
+            info.magicDamage = dmgTuple.magic;
+            info.trueDamage = dmgTuple.trueDmg;
             info.isStun = true;
             info.stunDuration = 1f; // Vì là tia sáng nên stun 1 giây
 

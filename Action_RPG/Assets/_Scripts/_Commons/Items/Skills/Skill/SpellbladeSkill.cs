@@ -161,13 +161,15 @@ public class SpellbladeSkill : SkillBehavior
             float t = CombatMath.CalculateDirectionFactor(transform, enemy);
             bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
-            float damage = CombatMath.CalculateFullDamage(stats, enemy, t, isCrit, data, currentWpn, currentDamageMult);
+            var dmgTuple = CombatMath.CalculateFullDamage(stats, enemy, t, isCrit, data, currentWpn, currentDamageMult);
 
             DamageInfo info = new DamageInfo
             {
                 sourcePosition = transform.position,
                 attacker = stats,
-                damageAmount = damage,
+                physDamage = dmgTuple.phys,
+                magicDamage = dmgTuple.magic,
+                trueDamage = dmgTuple.trueDmg,
                 isCrit = isCrit,
                 impactLevel = 0
             };
@@ -222,13 +224,15 @@ public class SpellbladeSkill : SkillBehavior
         bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
         float t = CombatMath.CalculateDirectionFactor(transform, enemy);
 
-        float damage = CombatMath.CalculateFullDamage(stats, enemy, t, isCrit, data, currentWpn, counterDamageMult);
+        var dmgTuple = CombatMath.CalculateFullDamage(stats, enemy, t, isCrit, data, currentWpn, counterDamageMult);
 
         DamageInfo info = new DamageInfo
         {
             sourcePosition = transform.position,
             attacker = stats,
-            damageAmount = damage,
+            physDamage = dmgTuple.phys,
+            magicDamage = dmgTuple.magic,
+            trueDamage = dmgTuple.trueDmg,
             isCrit = isCrit,
             isStun = true,                  // Choáng cứng
             stunDuration = counterStunDuration,

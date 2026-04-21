@@ -56,12 +56,12 @@ public class PlayerController : MonoBehaviour
 
     // State variables
     //private int lastDirection = 0;
-    private bool isWalking = false;
+    public bool isWalking = false;
     private float lastMoveTime = 0f;
     private bool isTurning = false;
 
     // Dash & Sprint State
-    private bool isDashing = false;
+    public bool isDashing = false;
     private bool isSprinting = false;
 
     // Movement variables
@@ -871,10 +871,14 @@ public class PlayerController : MonoBehaviour
         if (isCrit) Debug.Log("<color=red>CRITICAL HIT!</color>");
 
         // 5. Calculate Final Damage
-        float damage = CombatMath.CalculateFullDamage(
-            stats, enemyStats, t, isCrit, null, currentWpn, attackMultiplier, ignoreReduction
-        );
-        info.damageAmount = damage;
+        var dmgTuple = CombatMath.CalculateFullDamage(
+                stats, enemyStats, t, isCrit, null, currentWpn, attackMultiplier, ignoreReduction
+            );
+
+        // Gán vào 3 biến mới thay vì info.damageAmount
+        info.physDamage = dmgTuple.phys;
+        info.magicDamage = dmgTuple.magic;
+        info.trueDamage = dmgTuple.trueDmg;
 
         // --- 6. Send ---
         enemyStats.TakeDamage(info);

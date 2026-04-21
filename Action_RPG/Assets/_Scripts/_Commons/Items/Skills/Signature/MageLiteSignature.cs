@@ -91,14 +91,16 @@ public class MageLiteSignature : SkillBehavior
                 bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
                 // Tính sát thương (x3)
-                float damage = CombatMath.CalculateFullDamage(
+                var dmgTuple = CombatMath.CalculateFullDamage(
                     stats, enemyStats, t, isCrit, data, currentWpn, data.skillMagicMultiplier
                 );
 
                 DamageInfo info = new DamageInfo();
                 info.sourcePosition = transform.position;
                 info.attacker = stats;
-                info.damageAmount = damage;
+                info.physDamage = dmgTuple.phys;
+                info.magicDamage = dmgTuple.magic;
+                info.trueDamage = dmgTuple.trueDmg;
                 info.isCrit = isCrit;
 
                 enemyStats.TakeDamage(info);

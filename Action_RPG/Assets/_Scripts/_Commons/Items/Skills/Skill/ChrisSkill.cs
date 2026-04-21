@@ -212,10 +212,12 @@ public class ChrisSkill : SkillBehavior
         }
 
         // 4. Tính toán lượng Damage
-        float damage = CombatMath.CalculateFullDamage(
+        var dmgTuple = CombatMath.CalculateFullDamage(
             stats, enemyStats, t, isCrit, data, currentWpn, 1f
         );
-        info.damageAmount = damage;
+        info.physDamage = dmgTuple.phys;
+        info.magicDamage = dmgTuple.magic;
+        info.trueDamage = dmgTuple.trueDmg;
 
         // 5. GỬI ĐI
         enemyStats.TakeDamage(info);

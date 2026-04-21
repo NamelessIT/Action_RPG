@@ -162,7 +162,7 @@ public class PaladinSkill : SkillBehavior
         // Bạn có thể cần chỉnh lại CombatMath nếu muốn skill này thuần Magic mà vũ khí lại là Sword (Phys).
         // Tạm thời giả định hệ thống tự phân loại dựa trên chỉ số cao hơn hoặc mặc định.
 
-        float damage = CombatMath.CalculateFullDamage(
+        var dmgTuple = CombatMath.CalculateFullDamage(
             stats,
             enemyStats,
             0.5f, //AOE mặc địch là 0.5
@@ -175,7 +175,9 @@ public class PaladinSkill : SkillBehavior
         DamageInfo info = new DamageInfo();
         info.sourcePosition = transform.position;
         info.isCrit = isCrit;
-        info.damageAmount = damage;
+        info.physDamage = dmgTuple.phys;
+        info.magicDamage = dmgTuple.magic;
+        info.trueDamage = dmgTuple.trueDmg;
         info.isKnockback = false; // Vòng tròn đốt máu không nên đẩy lùi, để quái đứng trong đó mà chịu trận
         info.attacker = stats;
 

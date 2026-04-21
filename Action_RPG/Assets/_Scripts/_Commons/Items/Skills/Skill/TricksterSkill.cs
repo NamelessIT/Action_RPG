@@ -296,13 +296,15 @@ public class TricksterSkill : SkillBehavior
             {
                 float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
                 bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-                float damage = CombatMath.CalculateFullDamage(stats, enemyStats, t, isCrit, data, currentWpn, dmgMult);
+                var dmgTuple = CombatMath.CalculateFullDamage(stats, enemyStats, t, isCrit, data, currentWpn, dmgMult);
 
                 DamageInfo info = new DamageInfo
                 {
                     sourcePosition = transform.position,
                     attacker = stats,
-                    damageAmount = damage,
+                    physDamage = dmgTuple.phys,
+                    magicDamage = dmgTuple.magic,
+                    trueDamage = dmgTuple.trueDmg,
                     isCrit = isCrit,
                     isStun = (stunTime > 0),
                     stunDuration = stunTime,

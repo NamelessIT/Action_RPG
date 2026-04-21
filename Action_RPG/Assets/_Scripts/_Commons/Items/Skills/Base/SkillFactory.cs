@@ -20,8 +20,8 @@ public static class SkillFactory
                 return typeof(BattleMagePassive);
             case SkillData.PassiveEffectCode.BloodReaver:
                 return typeof(BloodReaverPassive);
-            case SkillData.PassiveEffectCode.Rouge:
-                return typeof(RougePassive);
+            case SkillData.PassiveEffectCode.Rogue:
+                return typeof(RoguePassive);
             case SkillData.PassiveEffectCode.Duelist:
                 return typeof(DuelistPassive);
             case SkillData.PassiveEffectCode.Mage:
@@ -50,8 +50,8 @@ public static class SkillFactory
                 return typeof(BattleMageSkill);
             case SkillData.SkillEffectCode.BloodReaverSkill:
                 return typeof(BloodReaverSkill);
-            case SkillData.SkillEffectCode.RougeSkill:
-                return typeof(RougeSkill);
+            case SkillData.SkillEffectCode.RogueSkill:
+                return typeof(RogueSkill);
             case SkillData.SkillEffectCode.DuelistSkill:
                 return typeof(DuelistSkill);
             case SkillData.SkillEffectCode.MageSkill:
@@ -113,10 +113,10 @@ public static class SkillFactory
                 return typeof(BloodReaverLiteSignature);
             case SkillData.SignatureEffectCode.BloodReaverSignature:
                 return typeof(BloodReaverSignature);
-            case SkillData.SignatureEffectCode.RougeLiteSignature:
-                return typeof(RougeLiteSignature);
-            case SkillData.SignatureEffectCode.RougeSignature:
-                return typeof(RougeSignature);
+            case SkillData.SignatureEffectCode.RogueLiteSignature:
+                return typeof(RogueLiteSignature);
+            case SkillData.SignatureEffectCode.RogueSignature:
+                return typeof(RogueSignature);
             case SkillData.SignatureEffectCode.DuelistLiteSignature:
                 return typeof(DuelistLiteSignature);
             case SkillData.SignatureEffectCode.DuelistSignature:

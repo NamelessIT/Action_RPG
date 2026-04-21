@@ -12,12 +12,14 @@ public class AllyStats : Stats
     public float hpPerVIT = 15f;
     public float flatHpGain;
     public float hpGain;
+    public float bonusHpGain;
     public float bonusHp;
     public float flatHp;
 
     [Header("--- Sub-Sin ---")]
     public float flatSinGain;
     public float sinGain;
+    public float bonusSinGain;
     public float S = 100f;
     public float maxSinBonus=0.7f;
 
@@ -69,6 +71,7 @@ public class AllyStats : Stats
 
     [Header("--- Combat Status ---")]
     public bool isPerfectDodgeSuccess = false;
+    public Action OnPerfectDodgeTriggered;
 
     [Tooltip("Độ chậm thời gian (0.1 = rất chậm, 1.0 = bình thường)")]
     public float slowMotionFactor = 0.2f;
@@ -102,7 +105,7 @@ public class AllyStats : Stats
     // Chỉ số giảm thương (0.3 = 30%)
     public float momentumReduction = 0.3f;
 
-    // ---------------- Rouge ----------------
+    // ---------------- Rogue ----------------
     // Action gửi đi: 
     // 1. Stats victim (Kẻ vừa bị giết)
     // 2. bool isBackstab (Có phải giết từ sau lưng không)
@@ -140,6 +143,9 @@ public class AllyStats : Stats
     // Hàm này phải được gọi mỗi khi: Lên cấp, Đổi đồ, Nhận Buff, Chịu Debuff
     public void RecalculateStats()
     {
+        // ==========================================
+        // TÍNH TOÁN CHỈ SỐ GỐC 
+        // ==========================================
         // 0. Tính Attribute Stat 
         // Công thức: Tổng = (Base * % Tăng thêm) + Điểm cộng thẳng từ đồ
         STR = (baseSTR * (1 + bonusSTR)) + flatSTR;
@@ -147,67 +153,52 @@ public class AllyStats : Stats
         DEX = (baseDEX * (1 + bonusDEX)) + flatDEX;
         AGI = (baseAGI * (1 + bonusAGI)) + flatAGI;
         VIT = (baseVIT * (1 + bonusVIT)) + flatVIT;
+
         // 1. Tính HP
-        // Công thức: baseHp = initialBaseHp + 20 * level (initialBaseHp từ DB hoặc Inspector, mặc định = 100)
         baseHp = initialBaseHp + 20 * level;
-        // Công thức: hpGain = base * (1 + maxBonus * VIT / (VIT + H))
-        hpGain = baseHpGain * (1 + maxHpGainBonus * VIT / (VIT + H)) + flatHpGain;
-        // Công thức: MaxHP = (Flat + VIT * 15) * (1 + Bonus%)
+        hpGain = (baseHpGain * (1 + maxHpGainBonus * VIT / (VIT + H)) + flatHpGain) * (1 + bonusHpGain);
         maxHp = (flatHp + baseHp + hpPerVIT * VIT) * (1 + bonusHp);
-        currentHp = Mathf.Clamp(currentHp, 0, maxHp); // Đảm bảo máu không vượt quá Max
+        currentHp = Mathf.Clamp(currentHp, 0, maxHp);
 
         // 2. Tính Sin
-        sinGain = baseSinGain * (1 + maxSinBonus * INT / (INT + S)) + flatSinGain;
+        sinGain = (baseSinGain * (1 + maxSinBonus * INT / (INT + S)) + flatSinGain) * (1 + bonusSinGain);
 
-        // [MỚI] Cập nhật maxSin dựa theo Signature đang trang bị
         SkillManager skillManager = GetComponent<SkillManager>();
         if (skillManager != null && skillManager.currentSignature != null)
         {
-            // Tùy thuộc vào việc biến currentSignature của bạn đang khai báo là kiểu SkillData hay SkillBehavior
-            // Nếu currentSignature là loại SkillData:
             maxSin = skillManager.currentSignature.sinChargeReq;
         }
         else
         {
-            maxSin = 40f; // Giá trị mặc định an toàn nếu nhân vật chưa gắn Signature nào
+            maxSin = 40f;
         }
-
-        // Đảm bảo currentSin không bị lố qua mức max mới
         currentSin = Mathf.Clamp(currentSin, 0, maxSin);
 
         // 3. Tính Damage
         physicalAtk = (flatPhysicalAtk + STR * physicalAtkPerSTR) * (1 + bonusPhysicalAtk);
         magicAtk = (flatMagicAtk + INT * magicAtkPerINT) * (1 + bonusMagicAtk);
 
-        // 4. Tính Attack Speed (Giới hạn buff tối đa bởi AGI)
-        // [ĐÃ SỬA] Tạo biến tạm để lưu tốc đánh từ AGI, không ghi đè lên bonusAttackSpeed
+        // 4. Tính Attack Speed 
         float agiAttackSpeedBonus = maxAttackSpeedBuff * AGI / (AGI + A);
-
-        // Tổng tốc đánh = Gốc * (1 + Buff_Từ_AGI + Buff_Từ_Skill)
         attackSpeed = baseAttackSpeed * (1 + agiAttackSpeedBonus + bonusAttackSpeed);
-        // (Lưu ý: baseAttackSpeed nên lấy từ Weapon đang cầm)
 
         // 5. Tính Crit
-        // baseCritChance lấy từ Stats.cs
         critChance = baseCritChance + critPerDEX * DEX + bonusCritChance;
         critMultiplier = baseCritMultiplier + bonusCritMultiplier;
 
         // 6. Tính Movement & Flexibility
-        // Công thức flexibility: 1 - ((1 - weaponFlex) * (1 - maxReduceBySTR))
-        trueMoveFlexibility =  1 - ((1 - moveFlexibility) * (1 - maxReduceBySTR * STR / (STR + M))); //moveFlexibility lấy từ vũ khí
+        trueMoveFlexibility = 1 - ((1 - moveFlexibility) * (1 - maxReduceBySTR * STR / (STR + M)));
         combatTurnDuration = 0.6f - (0.5f * trueMoveFlexibility);
 
-        // Công thức Move Speed (Sửa lỗi cú pháp ^ thành Mathf.Pow)
-        // moveSpeed = baseMoveSpeed + (0.2f * Mathf.Pow(AGI, 0.5f) - VIT * 0.005f) ...
         moveSpeed = baseMoveSpeed * (1 + ((0.05f * Mathf.Sqrt(AGI) - VIT * moveSpeedReducePerVIT) * (1 + trueMoveFlexibility) / 2)) * (1 + bonusMoveSpeed);
-        if (moveSpeed < minSpeed) moveSpeed = minSpeed; // Min speed
+
+        if (moveSpeed < minSpeed) moveSpeed = minSpeed;
         if (moveSpeed > maxSpeed) moveSpeed = maxSpeed;
 
         // 7. Tính Dash
-        dashDistance = baseDashDistance * (1f - trueMoveFlexibility); // Nặng thì lướt ngắn
+        dashDistance = baseDashDistance * (1f - trueMoveFlexibility);
         dashRecovery = (baseDashRecovery + (1f - trueMoveFlexibility)) * (1f - maxDashReduction * DEX / (DEX + R));
 
-        // Cost Dash (AGI Threshold)
         if (AGI >= AGI_ThreshHold) dashCost = 15;
         else dashCost = 20;
 
@@ -240,7 +231,7 @@ public class AllyStats : Stats
         base.TakeDamage(info);
 
         // 2. Rung chuông báo động cho các Passive (chỉ cần gửi số damge)
-        OnTakeDamage?.Invoke(info.damageAmount);
+        OnTakeDamage?.Invoke(info.TotalRawDamage);
     }
 
     // Override phiên bản rút gọn (để tương thích ngược)
@@ -264,7 +255,7 @@ public class AllyStats : Stats
     {
         OnBlockSuccess?.Invoke();
     }
-    // Hàm gọi sự kiện (Sẽ được PlayerController gọi) (Cho Rouge)
+    // Hàm gọi sự kiện (Sẽ được PlayerController gọi) (Cho Rogue)
     public void NotifyKillEnemy(Stats victim, bool isBackstab)
     {
         OnKillEnemy?.Invoke(victim, isBackstab);
@@ -302,6 +293,7 @@ public class AllyStats : Stats
     public void TriggerPerfectDodge()
     {
         isPerfectDodgeSuccess = true;
+        OnPerfectDodgeTriggered?.Invoke(); // [MỚI] Rung chuông báo hiệu né thành công
         Debug.Log("<color=cyan>✨ PERFECT DODGE! ✨</color>");
 
         // Ví dụ: Hồi 10 Stamina ngay lập tức

@@ -296,7 +296,7 @@ public class MagePassive : SkillBehavior
     {
         DamageInfo stunInfo = new DamageInfo
         {
-            damageAmount = 0,
+            magicDamage = 0,
             isStun = true,
             stunDuration = duration,
             sourcePosition = transform.position,

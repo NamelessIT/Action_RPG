@@ -1,9 +1,10 @@
 ﻿using UnityEngine;
+using System;
 using System.Collections.Generic;
 
 public class SkillManager : MonoBehaviour
 {
-
+    public Action OnSkillCast;
     [Header("Settings")]
     public bool isPlayer = false; // Tick vào nếu là Player, bỏ tick nếu là Enemy
 
@@ -457,7 +458,22 @@ public class SkillManager : MonoBehaviour
             // Gọi hàm Use() của script đó
             if (script != null)
             {
-                script.Use();
+                // [ĐÃ SỬA] Hứng kết quả true/false từ hàm Use()
+                bool isSuccess = script.Use();
+                // Nếu dùng chiêu thành công (Đủ điều kiện, trừ Sin xong)
+                if (isSuccess)
+                {
+                    // Thông báo dùng skill thành công
+                    Debug.Log($"<color=cyan>>> Kích hoạt {skillData.skillName}</color>");
+
+                    // Gọi trực tiếp sang EffectManager
+                    EquipmentEffectManager effectManager = GetComponentInChildren<EquipmentEffectManager>();
+                    if (effectManager != null)
+                    {
+                        // [BÍ QUYẾT Ở ĐÂY]: Truyền thẳng cái Type (E hay Q) sang cho EffectManager
+                        effectManager.TriggerSkillCastEffects(skillData.skillType);
+                    }
+                }
             }
         }
         else
@@ -469,12 +485,29 @@ public class SkillManager : MonoBehaviour
     // TIỆN ÍCH (HELPER)
     // =========================================================
 
+    // [MỚI] Giảm thời gian hồi chiêu cho toàn bộ kỹ năng đang trang bị
+    public void ReduceAllCooldowns(float amount)
+    {
+        if (!isPlayer) return; // Chỉ áp dụng cho Player
+
+        // Duyệt qua tất cả các script kỹ năng đang chạy (Cả chiêu E và chiêu Q)
+        foreach (var kvp in activeSkills)
+        {
+            SkillBehavior behavior = kvp.Value;
+            if (behavior != null)
+            {
+                // Yêu cầu từng skill tự giảm thời gian đếm ngược của nó
+                behavior.ReduceCooldown(amount);
+            }
+        }
+    }
+
     // Hàm này để Enemy AI gọi ngẫu nhiên 1 skill để đánh
     public SkillData GetRandomEnemySkill()
     {
         if (!isPlayer && enemySkills.Count > 0)
         {
-            int index = Random.Range(0, enemySkills.Count);
+            int index = UnityEngine.Random.Range(0, enemySkills.Count);
             return enemySkills[index];
         }
         return null;

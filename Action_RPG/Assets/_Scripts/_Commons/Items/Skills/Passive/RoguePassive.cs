@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-public class RougePassive : SkillBehavior
+public class RoguePassive : SkillBehavior
 {
 
     protected override void OnEquip()
@@ -12,7 +12,7 @@ public class RougePassive : SkillBehavior
         // 2. Đăng ký sự kiện Kill
         stats.OnKillEnemy += HandleKillEnemy;
 
-        Debug.Log($"[Rouge] Backstab Penetration: 100%");
+        Debug.Log($"[Rogue] Backstab Penetration: 100%");
     }
 
     protected override void OnUnequip()
@@ -24,7 +24,7 @@ public class RougePassive : SkillBehavior
         // 2. Hủy đăng ký
         stats.OnKillEnemy -= HandleKillEnemy;
 
-        Debug.Log("[Rouge] Gỡ bỏ hiệu ứng.");
+        Debug.Log("[Rogue] Gỡ bỏ hiệu ứng.");
     }
 
     private void HandleKillEnemy(Stats victim, bool isBackstab)
@@ -43,7 +43,7 @@ public class RougePassive : SkillBehavior
                 if (stats.currentStamina > stats.maxStamina)
                     stats.currentStamina = stats.maxStamina;
 
-                Debug.Log($"<color=red>[Rouge]</color> Backstab Kill! Hồi {staminaToRestore} Stamina.");
+                Debug.Log($"<color=red>[Rogue]</color> Backstab Kill! Hồi {staminaToRestore} Stamina.");
             }
         }
     }
