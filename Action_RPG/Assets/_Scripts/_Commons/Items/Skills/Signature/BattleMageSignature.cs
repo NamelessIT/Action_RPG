@@ -116,18 +116,20 @@ public class BattleMageSignature : SkillBehavior
                 float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
 
                 // Gây sát thương (Scale theo cả Vật lý lẫn Phép thuật tùy vũ khí)
-                float damage = CombatMath.CalculateFullDamage(
+                var dmgTuple = CombatMath.CalculateFullDamage(
                     stats, enemyStats, t, isCrit, data, currentWpn, data.skillMagicMultiplier
                 );
 
                 DamageInfo info = new DamageInfo();
                 info.sourcePosition = transform.position;
                 info.attacker = stats;
-                info.damageAmount = damage;
+                info.physDamage = dmgTuple.phys;
+                info.magicDamage = dmgTuple.magic;
+                info.trueDamage = dmgTuple.trueDmg;
                 info.isCrit = isCrit;
 
                 enemyStats.TakeDamage(info);
-                totalDamageDealtThisTick += damage;
+                totalDamageDealtThisTick += info.TotalRawDamage;
 
                 // --- B. ÁP DỤNG LÀM CHẬM (Nếu kẻ địch mới bước vào) ---
                 if (!slowedEnemies.Contains(enemyStats))

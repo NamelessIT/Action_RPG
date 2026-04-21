@@ -266,7 +266,7 @@ protected IEnumerator EnemyAttackRoutine()
             if (isCrit) Debug.Log($"<color=orange>{gameObject.name} CRITS!</color>");
 
             // Gọi CombatMath (Nhớ cập nhật tham số ignoreReduction nếu cần, ở đây Enemy thường ko có True Damage nên để false)
-            float damage = CombatMath.CalculateFullDamage(
+            var dmgTuple = CombatMath.CalculateFullDamage(
                 stats,
                 victimStats,
                 t,
@@ -277,7 +277,9 @@ protected IEnumerator EnemyAttackRoutine()
                 false // Enemy đánh thường không xuyên giáp
             );
 
-            info.damageAmount = damage;
+            info.physDamage = dmgTuple.phys;
+            info.magicDamage = dmgTuple.magic;
+            info.trueDamage = dmgTuple.trueDmg;
 
             // --- BƯỚC 4: GỬI ---
             victimStats.TakeDamage(info);

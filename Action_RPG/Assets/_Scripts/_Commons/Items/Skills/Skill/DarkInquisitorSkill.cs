@@ -194,29 +194,26 @@ public class DarkInquisitorSkill : SkillBehavior
             currentEnemyMR *= (1f - stats.magicResistBackstabReduce);
         }
 
-        // 4. TRỪ PHÒNG NGỰ ĐỘC LẬP
-        // Giáp chỉ đỡ Vật lý, Kháng Phép chỉ đỡ Phép
-        float reducedPhysDmg = rawPhysDmg * (100f / (100f + Mathf.Max(0, currentEnemyArmor)));
-        float reducedMagDmg = rawMagDmg * (100f / (100f + Mathf.Max(0, currentEnemyMR)));
-
-        // Gộp sát thương thực tế lại
-        float baseTotalDamage = reducedPhysDmg + reducedMagDmg;
-
-        // 5. TÍNH CHÍ MẠNG & HỆ SỐ TỔNG
+        // 4. TÍNH CHÍ MẠNG & HỆ SỐ TỔNG
         WeaponData currentWpn = equipmentManager.currentWeapon;
         float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
         bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
         float critMult = isCrit ? stats.critMultiplier : 1.0f;
 
-        // Sát thương cuối cùng (Nhân thêm DamageOutputMultiplier của Stats)
-        float finalDamage = baseTotalDamage * critMult * stats.damageOutputMultiplier;
+        // 5. TRỪ PHÒNG NGỰ ĐỘC LẬP
+        // Giáp chỉ đỡ Vật lý, Kháng Phép chỉ đỡ Phép
+        float reducedPhysDmg = rawPhysDmg * (100f / (100f + Mathf.Max(0, currentEnemyArmor))) * critMult * stats.damageOutputMultiplier;
+        float reducedMagDmg = rawMagDmg * (100f / (100f + Mathf.Max(0, currentEnemyMR))) * critMult * stats.damageOutputMultiplier;
+
+        float finalDamage = reducedPhysDmg + reducedMagDmg; //Để debug thôi
 
         // 6. GỬI SÁT THƯƠNG
         DamageInfo info = new DamageInfo();
         info.sourcePosition = transform.position;
         info.isCrit = isCrit;
-        info.damageAmount = finalDamage;
+        info.physDamage = reducedPhysDmg;
+        info.magicDamage = reducedMagDmg;
         info.isStun = true;
         info.stunDuration = stunDuration;
         info.isKnockback = false;

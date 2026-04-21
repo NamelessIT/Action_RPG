@@ -1,5 +1,7 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System.Collections;
+using UnityEngine;
+using UnityEngine.AdaptivePerformance;
+using static UnityEngine.AdaptivePerformance.Provider.AdaptivePerformanceSubsystemDescriptor;
 
 public class DuelistSignature : SkillBehavior
 {
@@ -126,14 +128,16 @@ public class DuelistSignature : SkillBehavior
         bool isCrit = true;
         float t = 1.0f; // Coi như chém lén sau lưng (t=1)
 
-        float damage = CombatMath.CalculateFullDamage(
+        var dmgTuple = CombatMath.CalculateFullDamage(
             stats, target, t, isCrit, data, currentWpn, data.skillPhysicalMultiplier, true // true = Xuyên giáp
         );
 
         DamageInfo counterInfo = new DamageInfo();
         counterInfo.sourcePosition = transform.position;
         counterInfo.isCrit = isCrit;
-        counterInfo.damageAmount = damage;
+        counterInfo.physDamage = dmgTuple.phys;
+        counterInfo.magicDamage = dmgTuple.magic;
+        counterInfo.trueDamage = dmgTuple.trueDmg;
 
         target.TakeDamage(counterInfo);
 

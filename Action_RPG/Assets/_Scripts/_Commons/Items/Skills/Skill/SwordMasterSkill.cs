@@ -143,7 +143,7 @@ public class SwordMasterSkill : SkillBehavior
         {
             sourcePosition = transform.position,
             attacker = stats,
-            damageAmount = 0,
+            physDamage = 0,
             isStun = true,
             stunDuration = stunDuration,
             impactLevel = 2 // Phá siêu giáp, chắc chắn choáng
@@ -180,7 +180,7 @@ public class SwordMasterSkill : SkillBehavior
         bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
         // Ép t = 1.0f để hệ thống luôn tính sát thương này là đâm lén (Backstab Bonus)
-        float damage = CombatMath.CalculateFullDamage(
+        var dmgTuple = CombatMath.CalculateFullDamage(
             stats, targetEnemy, 1.0f, isCrit, data, currentWpn, data.skillPhysicalMultiplier
         );
 
@@ -188,7 +188,9 @@ public class SwordMasterSkill : SkillBehavior
         {
             sourcePosition = transform.position,
             attacker = stats,
-            damageAmount = damage,
+            physDamage = dmgTuple.phys,
+            magicDamage = dmgTuple.magic,
+            trueDamage = dmgTuple.trueDmg,
             isCrit = isCrit
         };
 

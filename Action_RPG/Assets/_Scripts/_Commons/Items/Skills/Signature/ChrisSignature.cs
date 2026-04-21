@@ -70,7 +70,7 @@ public class ChrisSignature : SkillBehavior
             {
                 DamageInfo info = new DamageInfo();
                 info.sourcePosition = transform.position; // Lấy tâm từ Player đẩy ra
-                info.damageAmount = 0f;                   // Không gây sát thương
+                info.physDamage = 0f;                   // Không gây sát thương
                 info.isKnockback = true;
                 info.knockbackForce = knockbackForce;     // Lực đẩy lùi
                 info.isStun = false;

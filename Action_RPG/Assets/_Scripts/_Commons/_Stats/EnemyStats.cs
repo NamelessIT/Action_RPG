@@ -123,7 +123,8 @@ public class EnemyStats : Stats
                 Debug.Log($"<color=white>>> {gameObject.name} PARRY thành công! (Giảm 80% sát thương)</color>");
 
                 // Normal Parry: Giảm 80% sát thương
-                info.damageAmount *= 0.2f;
+                info.physDamage *= 0.2f;
+                info.magicDamage *= 0.2f;
 
                 DuelistPassive duelist = GetComponent<DuelistPassive>();
                 if (duelist != null) duelist.OnParrySuccess(false, info.attacker);

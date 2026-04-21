@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
-  m_Name: RougeLiteSignature
+  m_Name: RogueLiteSignature
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
-  id: RougeLiteSignature
+  id: RogueLiteSignature
   skillName: Shadow Strike
   icon: {fileID: 0}
   skilDesc: "H\xE0nh \u0111\u1ED9ng: Bi\u1EBFn m\u1EA5t v\xE0 xu\u1EA5t hi\u1EC7n

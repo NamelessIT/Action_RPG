@@ -161,7 +161,7 @@ public class CatalystSignature : SkillBehavior
         DamageInfo bonusInfo = new DamageInfo();
         bonusInfo.sourcePosition = transform.position;
         bonusInfo.attacker = stats;
-        bonusInfo.damageAmount = bonusMagicDamage;
+        bonusInfo.magicDamage = bonusMagicDamage;
         bonusInfo.isCrit = isCrit; // Cho phép sát thương thêm có thể Crit theo đòn gốc
 
         enemy.TakeDamage(bonusInfo);

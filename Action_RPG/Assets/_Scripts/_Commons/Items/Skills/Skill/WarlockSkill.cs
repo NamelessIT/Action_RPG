@@ -163,7 +163,7 @@ public class WarlockSkill : SkillBehavior
                     if (data != null) extraDamage *= data.skillMagicMultiplier;
 
                     DamageInfo extraInfo = new DamageInfo();
-                    extraInfo.damageAmount = extraDamage;
+                    extraInfo.magicDamage = extraDamage;
                     extraInfo.sourcePosition = transform.position;
                     // Sát thương nổ này có thể Crit ké theo đòn đánh gốc
                     extraInfo.isCrit = isCrit;

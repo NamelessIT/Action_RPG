@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
-  m_Name: RougeSignature
+  m_Name: RogueSignature
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
-  id: RougeSignature
+  id: RogueSignature
   skillName: "Thousand C\xFAt"
   icon: {fileID: 0}
   skilDesc: "\"H\xE0nh \u0111\u1ED9ng: Leonard bi\u1EBFn th\xE0nh b\xF3ng \u0111en,

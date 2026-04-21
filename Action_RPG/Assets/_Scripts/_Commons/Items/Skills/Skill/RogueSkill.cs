@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-public class RougeSkill : SkillBehavior
+public class RogueSkill : SkillBehavior
 {
     [Header("Distance Settings")]
     public float maxCastRange = 4.0f;  // Khoảng cách tối đa để tìm kẻ địch
@@ -179,7 +179,7 @@ public class RougeSkill : SkillBehavior
         if (forceBackstab)
         {
             t = 1.0f; // Ép buộc là sau lưng (Backstab chuẩn 100%)
-            Debug.Log($"<color=red>Rouge!</color> {enemyStats.name}");
+            Debug.Log($"<color=red>Rogue!</color> {enemyStats.name}");
         }
         else
         {
@@ -187,7 +187,7 @@ public class RougeSkill : SkillBehavior
             t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
         }
 
-        float damage = CombatMath.CalculateFullDamage(
+        var dmgTuple = CombatMath.CalculateFullDamage(
             stats, enemyStats, t, isCrit, data, currentWpn, 1f
         );
 
@@ -195,7 +195,9 @@ public class RougeSkill : SkillBehavior
         info.sourcePosition = transform.position;
         info.isCrit = isCrit;
         info.isKnockback = false;
-        info.damageAmount = damage;
+        info.physDamage = dmgTuple.phys;
+        info.magicDamage = dmgTuple.magic;
+        info.trueDamage = dmgTuple.trueDmg;
         info.attacker = stats;
 
         enemyStats.TakeDamage(info);

@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
-public class RougeSignature : SkillBehavior
+public class RogueSignature : SkillBehavior
 {
     [Header("Omnislash Settings")]
     public float scanRadius = 5.0f;           // Vùng quét 5m xung quanh
@@ -96,14 +96,16 @@ public class RougeSignature : SkillBehavior
             float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
             bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
-            float damage = CombatMath.CalculateFullDamage(
+            var dmgTuple = CombatMath.CalculateFullDamage(
                 stats, currentTarget, 1.0f, isCrit, data, currentWpn, data.skillPhysicalMultiplier
             );
 
             DamageInfo info = new DamageInfo();
             info.sourcePosition = transform.position;
             info.attacker = stats;
-            info.damageAmount = damage;
+            info.physDamage = dmgTuple.phys;
+            info.magicDamage = dmgTuple.magic;
+            info.trueDamage = dmgTuple.trueDmg;
             info.isCrit = isCrit;
             info.isStun = true; // Kích nhẹ hiệu ứng giật lùi/choáng ngắn
             info.stunDuration = 0.2f;

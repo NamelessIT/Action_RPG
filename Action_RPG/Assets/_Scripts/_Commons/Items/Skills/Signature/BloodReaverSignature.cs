@@ -79,7 +79,7 @@ public class BloodReaverSignature : SkillBehavior
             {
                 DamageInfo info = new DamageInfo();
                 info.sourcePosition = transform.position;
-                info.damageAmount = explosionDamage;
+                info.physDamage = explosionDamage;
                 info.isCrit = false;
                 info.isKnockback = true;
                 info.knockbackForce = 8f;

@@ -1,9 +1,12 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 public class PlayerStats : AllyStats
 {
     [Header("--- Skill Point---")]
     public int skillPointRemain;
+
+    public Action OnPerfectParryTriggered;
     public override void Start()
     {
         base.Start();
@@ -59,13 +62,17 @@ public class PlayerStats : AllyStats
                 if (isPerfectParryWindow)
                 {
                     Debug.Log("<color=yellow>>> PERFECT PARRY! (0 Damage)</color>");
-                    info.damageAmount = 0;
+                    info.physDamage = 0;
+                    info.magicDamage = 0;
+                    info.trueDamage = 0;
                     if (duelist != null) duelist.OnParrySuccess(true, info.attacker);
+                    OnPerfectParryTriggered?.Invoke();
                 }
                 else
                 {
                     Debug.Log("<color=white>>> Normal Parry (Giảm 80%)</color>");
-                    info.damageAmount *= 0.2f;
+                    info.physDamage *= 0.2f;
+                    info.magicDamage *= 0.2f;
                     if (duelist != null) duelist.OnParrySuccess(false, info.attacker);
                 }
                 // [FIX LỖI] Gọi base.TakeDamage Ở ĐÂY khi Super Armor đang bật

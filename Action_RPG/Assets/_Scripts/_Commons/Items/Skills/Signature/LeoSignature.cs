@@ -61,7 +61,7 @@ public class LeoSignature : SkillBehavior
                 // Chỉ truyền hiệu ứng khống chế, không truyền sát thương
                 DamageInfo info = new DamageInfo();
                 info.sourcePosition = explosionPos;
-                info.damageAmount = 0f;
+                info.physDamage = 0f;
                 info.isStun = true;
                 info.stunDuration = stunDuration;
                 info.isKnockback = false;

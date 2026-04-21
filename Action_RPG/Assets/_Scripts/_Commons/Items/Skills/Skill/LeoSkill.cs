@@ -183,7 +183,7 @@ public class LeoSkill : SkillBehavior
             t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
         }
 
-        float damage = CombatMath.CalculateFullDamage(
+        var dmgTuple = CombatMath.CalculateFullDamage(
             stats, enemyStats, t, isCrit, data, currentWpn, 1f
         );
 
@@ -191,7 +191,9 @@ public class LeoSkill : SkillBehavior
         info.sourcePosition = transform.position;
         info.isCrit = isCrit;
         info.isKnockback = false;
-        info.damageAmount = damage;
+        info.physDamage = dmgTuple.phys;
+        info.magicDamage = dmgTuple.magic;
+        info.trueDamage = dmgTuple.trueDmg;
         info.attacker = stats;
 
         enemyStats.TakeDamage(info);

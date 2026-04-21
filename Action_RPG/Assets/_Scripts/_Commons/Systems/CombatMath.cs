@@ -51,7 +51,7 @@ public static class CombatMath
     /// <param name="externalMult">Hệ số phụ (Combo, Charge... mặc định là 1)</param>
     /// Hàm tính damage chính thức (Đã thêm ignoreReduction)
     /// </summary>
-    public static float CalculateFullDamage(Stats attacker, Stats target, float t, bool isCrit, SkillData skill, WeaponData weapon, float externalMult = 1.0f, bool ignoreReduction = false)
+    public static (float phys, float magic, float trueDmg) CalculateFullDamage(Stats attacker, Stats target, float t, bool isCrit, SkillData skill, WeaponData weapon, float externalMult = 1.0f, bool ignoreReduction = false)
     {
         // --- 1. Tính Raw Damage ---
         float critMult = isCrit ? attacker.baseCritMultiplier : 1.0f; //Sửa lại thành critMultiplier 
@@ -90,31 +90,27 @@ public static class CombatMath
         float rawMagic = attacker.magicAtk * magicMult * critMult * attacker.damageOutputMultiplier;
 
 
-        // --- NẾU BỎ QUA GIẢM SÁT THƯƠNG (TRUE DAMAGE) ---
+        // XỬ LÝ SÁT THƯƠNG CHUẨN (Bỏ qua Giáp)
         if (ignoreReduction)
         {
             float trueDamage = rawPhysical + rawMagic;
-            // Vẫn áp dụng Direction Bonus (Thưởng sát thương theo hướng) vì đây là Tăng Damage chứ không phải Giảm
             float bonus = 1.0f + (0.25f * t);
 
-            Debug.Log($"<color=cyan>TRUE DAMAGE (Counter Attack)! {trueDamage * bonus}</color>");
-            return trueDamage * bonus;
+            // Trả toàn bộ thành True Damage
+            return (0f, 0f, trueDamage * bonus);
         }
 
 
-        // --- 2. Tính Armor/Resist thực tế theo hướng đánh (Armor Direction) ---
-        // [Source: 69] armorDir
+        // --- 2. Tính Armor/MagicResist thực tế theo hướng đánh (Armor Direction) ---
         float armorDir = target.armor * (1 - (attacker.armorBackstabReduce * t));
-
-        // [Source: 70] magicResistDir
         float magicResistDir = target.magicResist * (1 - (attacker.magicResistBackstabReduce * t));
 
 
         // --- 3. Tính % Giảm Sát Thương (Damage Reduction) ---
-        // [Source: 71] DR Vật lý = 25% * (armor / (armor + C))
+        // DR Vật lý = 25% * (armor / (armor + C))
         float physDR = 0.25f * (armorDir / (armorDir + C_CONST));
 
-        // [Source: 72] DR Phép
+        // DR Phép
         float magicDR = 0.25f * (magicResistDir / (magicResistDir + C_CONST));
 
 
@@ -155,18 +151,14 @@ public static class CombatMath
         }
 
         // --- 5. Tính Direction Bonus Multiplier (Thưởng sát thương theo hướng) ---
-        // [Source: 75-80] Từ 1.0 (t=0) đến 1.25 (t=1). Công thức tuyến tính: 1 + 0.25 * t
+        // Từ 1.0 (t=0) đến 1.25 (t=1). Công thức tuyến tính: 1 + 0.25 * t
         float dirBonusMult = 1.0f + (0.25f * t);
 
 
         // --- 6. TÍNH FINAL DAMAGE ---
-        // [Source: 81] Final Phys
         float finalPhys = rawPhysical * (1 - physDR) * defenseValMult * dirBonusMult * skillReductionMult;
-
-        // [Source: 82] Final Magic
         float finalMagic = rawMagic * (1 - magicDR) * defenseValMult * dirBonusMult * skillReductionMult;
 
-        // [Source: 83] Tổng
         float totalDamage = finalPhys + finalMagic;
         // Debug kiểm tra xem skillReductionMult có hoạt động không
         if (skillReductionMult < 1.0f)
@@ -182,6 +174,7 @@ public static class CombatMath
                   $"FINAL: {totalDamage} (Phys: {finalPhys} + Magic: {finalMagic})");
 
 
-        return totalDamage;
+        // Tổng Damage: Trả về 3 cục riêng biệt (True = 0 ở đòn đánh thường)
+        return (finalPhys, finalMagic, 0f);
     }
 }

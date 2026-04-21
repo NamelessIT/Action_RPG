@@ -155,13 +155,15 @@ public class TacticianSkill : SkillBehavior
         //if (companionCounterVfx) Instantiate(companionCounterVfx, enemy.transform.position, Quaternion.identity);
 
         // Tính sát thương dựa trên chỉ số của thú cưng
-        float compDmg = CombatMath.CalculateFullDamage(compStats, enemy, 1.0f, true, null, null, counterDamageMult);
+        var compDmg = CombatMath.CalculateFullDamage(compStats, enemy, 1.0f, true, null, null, counterDamageMult);
 
         DamageInfo counterInfo = new DamageInfo
         {
             sourcePosition = companion.transform.position,
             attacker = compStats,
-            damageAmount = compDmg,
+            physDamage = compDmg.phys,
+            magicDamage = compDmg.magic,
+            trueDamage = compDmg.trueDmg,
             isCrit = true,                  // Đòn phản công luôn chí mạng
             isStun = true,                  // Khóa chết mục tiêu
             stunDuration = counterStunDuration,

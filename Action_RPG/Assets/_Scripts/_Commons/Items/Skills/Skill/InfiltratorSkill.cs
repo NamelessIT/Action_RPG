@@ -1,5 +1,6 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
+using static UnityEngine.AdaptivePerformance.Provider.AdaptivePerformanceSubsystemDescriptor;
 
 public class InfiltratorSkill : SkillBehavior
 {
@@ -198,12 +199,14 @@ public class InfiltratorSkill : SkillBehavior
                 if (companionStrikeVfx) Instantiate(companionStrikeVfx, target.transform.position, Quaternion.identity);
 
                 // Gây sát thương của thú cưng
-                float compDmg = CombatMath.CalculateFullDamage(compStats, target, 0.5f, false, null, null, companionDamageMult);
+                var compDmg = CombatMath.CalculateFullDamage(compStats, target, 0.5f, false, null, null, companionDamageMult);
                 DamageInfo compInfo = new DamageInfo
                 {
                     sourcePosition = companion.transform.position,
                     attacker = compStats,
-                    damageAmount = compDmg,
+                    physDamage = compDmg.phys,
+                    magicDamage = compDmg.magic,
+                    trueDamage = compDmg.trueDmg,
                     isStun = true,
                     stunDuration = stunDuration,
                     impactLevel = 2 // Đảm bảo phá siêu giáp
@@ -242,13 +245,15 @@ public class InfiltratorSkill : SkillBehavior
             bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
             // Ép t = 1.0f (Sát thương đâm lén)
-            float bsDamage = CombatMath.CalculateFullDamage(stats, target, 1.0f, isCrit, data, currentWpn, data.skillPhysicalMultiplier);
+            var bsDamage = CombatMath.CalculateFullDamage(stats, target, 1.0f, isCrit, data, currentWpn, data.skillPhysicalMultiplier);
 
             DamageInfo bsInfo = new DamageInfo
             {
                 sourcePosition = transform.position,
                 attacker = stats,
-                damageAmount = bsDamage,
+                physDamage = bsDamage.phys,
+                magicDamage = bsDamage.magic,
+                trueDamage = bsDamage.trueDmg,
                 isCrit = isCrit,
                 impactLevel = 1
             };

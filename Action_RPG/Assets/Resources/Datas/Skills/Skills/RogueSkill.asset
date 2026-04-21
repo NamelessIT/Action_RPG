@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
-  m_Name: RougeSkill
+  m_Name: RogueSkill
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
-  id: RougeSkill
+  id: RogueSkill
   skillName: Shadow Step
   icon: {fileID: 0}
   skilDesc: "Bi\u1EBFn m\u1EA5t v\xE0 xu\u1EA5t hi\u1EC7n t\u1EE9c th\u1EDDi \u1EDF
@@ -26,4 +26,5 @@ MonoBehaviour:
   sinChargeReq: 0
   passiveEffectCode: 0
   skillEffectCode: 7
+  signatureEffectCode: 0
   passiveStats: []

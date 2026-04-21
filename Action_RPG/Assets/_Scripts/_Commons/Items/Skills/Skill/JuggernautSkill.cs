@@ -215,7 +215,7 @@ public class JuggernautSkill : SkillBehavior
         // 5. GỌI HÀM CHUẨN CỦA HỆ THỐNG
         // Hàm này sẽ tự lấy (Atk * SkillData.Mult) * finalMultiplier
         // Kết quả sẽ tương đương (Standard + Scaling) rồi mới trừ Giáp
-        float damage = CombatMath.CalculateFullDamage(
+        var dmgTuple = CombatMath.CalculateFullDamage(
             stats,
             enemyStats,
             t,
@@ -229,7 +229,9 @@ public class JuggernautSkill : SkillBehavior
         DamageInfo info = new DamageInfo();
         info.sourcePosition = transform.position;
         info.isCrit = isCrit;
-        info.damageAmount = damage; // Damage cuối cùng (đã trừ giáp)
+        info.physDamage = dmgTuple.phys;
+        info.magicDamage = dmgTuple.magic;
+         // Damage cuối cùng (đã trừ giáp)
 
         info.isStun = true;
         info.stunDuration = stunDuration;
@@ -242,7 +244,7 @@ public class JuggernautSkill : SkillBehavior
         // Debug để kiểm tra
         // Debug.Log($"Counter Dmg: Base({standardSkillDmg}) + Scale({scalingDmg}) = Raw({totalRawDamage}) -> Final({damage})");
 
-        return damage; // Trả về damage thực tế gây ra để hồi máu
+        return dmgTuple.phys + dmgTuple.magic + dmgTuple.trueDmg; // Trả về damage thực tế gây ra để hồi máu
     }
 
     private IEnumerator SpeedBuffRoutine()

@@ -176,14 +176,16 @@ public class VanguardSkill : SkillBehavior
                 bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
                 float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
 
-                float damage = CombatMath.CalculateFullDamage(
+                var dmgTuple = CombatMath.CalculateFullDamage(
                     stats, enemyStats, t, isCrit, data, currentWpn, data.skillPhysicalMultiplier // Sử dụng multiplier của skill để tính sát thương đập đất
                 );
 
                 DamageInfo info = new DamageInfo();
                 info.sourcePosition = transform.position;
                 info.attacker = stats;
-                info.damageAmount = damage;
+                info.physDamage = dmgTuple.phys;
+                info.magicDamage = dmgTuple.magic;
+                info.trueDamage = dmgTuple.trueDmg;
                 info.isCrit = isCrit;
 
                 // Gây choáng 1.5s

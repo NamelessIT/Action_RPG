@@ -126,14 +126,16 @@ public class BattleMageLiteSignature : SkillBehavior
         float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
 
         // CalculateFullDamage sẽ dùng multiplier được cộng dồn (Truyền vào cuối hàm)
-        float damage = CombatMath.CalculateFullDamage(
+        var dmgTuple = CombatMath.CalculateFullDamage(
             stats, enemyStats, t, isCrit, data, currentWpn, multiplier
         );
 
         DamageInfo info = new DamageInfo();
         info.sourcePosition = transform.position;
         info.isCrit = isCrit;
-        info.damageAmount = damage;
+        info.physDamage = dmgTuple.phys;
+        info.magicDamage = dmgTuple.magic;
+        info.trueDamage = dmgTuple.trueDmg;
         info.isKnockback = true;     // Nổ thì đẩy lùi quái một chút cho có lực
         info.knockbackForce = 2f;
         info.isStun = false;

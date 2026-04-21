@@ -1,6 +1,7 @@
-using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
+using static UnityEngine.AdaptivePerformance.Provider.AdaptivePerformanceSubsystemDescriptor;
 
 public class WardenSkill : SkillBehavior
 {
@@ -169,17 +170,20 @@ public class WardenSkill : SkillBehavior
                     bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
                     // Sát thương chuẩn bị từ hệ thống
-                    float baseDamage = CombatMath.CalculateFullDamage(stats, enemyStats, tFactor, isCrit, data, currentWpn, slash1BaseMultiplier);
+                    var baseDamage = CombatMath.CalculateFullDamage(stats, enemyStats, tFactor, isCrit, data, currentWpn, slash1BaseMultiplier);
 
                     // Cộng thêm sát thương từ Armor và Magic Resist
                     float bonusFromDef = (stats.armor * armorToDamageScale) + (stats.magicResist * mrToDamageScale);
-                    float finalSlash1Damage = baseDamage + bonusFromDef;
-
                     DamageInfo info1 = new DamageInfo
                     {
                         sourcePosition = transform.position,
                         attacker = stats,
-                        damageAmount = finalSlash1Damage,
+
+                        // Bóc tách gói hàng: Cộng sát thương từ Giáp thẳng vào sát thương Vật lý
+                        physDamage = baseDamage.phys + bonusFromDef,
+                        magicDamage = baseDamage.magic,
+                        trueDamage = baseDamage.trueDmg,
+
                         isCrit = isCrit,
                         impactLevel = 1
                     };
@@ -216,7 +220,7 @@ public class WardenSkill : SkillBehavior
                     {
                         sourcePosition = transform.position,
                         attacker = stats,
-                        damageAmount = trueDamage, // Trừ thẳng số máu này
+                        trueDamage = trueDamage, // Trừ thẳng số máu này
                         isCrit = false, // True damage thường không chí mạng, nếu bạn muốn có thể thêm vào
                         isStun = true,
                         stunDuration = stunDuration,
