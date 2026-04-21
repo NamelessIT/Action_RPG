@@ -100,6 +100,24 @@ public class PlayerController : MonoBehaviour
 
     private DuelistPassive duelistSkill;
     private bool isDuelistCounterActive = false; // Cache trạng thái counter cho cả vòng lặp quét
+
+    // ─────────────────────────────────────────────────────────────
+    //  WEAPON ATTACK DISPATCHER (hệ thống đánh theo vũ khí)
+    // ─────────────────────────────────────────────────────────────
+    [HideInInspector] public WeaponAttackDispatcher attackDispatcher;
+
+    /// <summary>Expose hitTargets cho dispatcher/handlers.</summary>
+    public System.Collections.Generic.List<Transform> HitTargets => hitTargets;
+
+    // Cờ đặc biệt cho Bow heavy charge (giảm tốc độ di chuyển)
+    [HideInInspector] public bool isBowCharging = false;
+
+    // ── Per-hit override flags (set bởi WeaponAttackHandlers trước khi gọi ApplyDamage) ──
+    /// <summary>True → đòn tiếp theo không gây knockback dù isHeavy=true (Dagger spin, Spear thrust...)</summary>
+    [HideInInspector] public bool  suppressNextKnockback = false;
+    /// <summary>True → đòn tiếp theo gây stun với thời lượng nextHitStunDuration (Spear, Grimoire heavy...)</summary>
+    [HideInInspector] public bool  nextHitStun           = false;
+    [HideInInspector] public float nextHitStunDuration   = 0f;
     private InventoryUIManager _inventoryUIManager;
     private ItemPickupManager _pickupManager;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -123,6 +141,15 @@ public class PlayerController : MonoBehaviour
 
         equipmentManager = GetComponent<EquipmentManager>();
         skillManager = GetComponent<SkillManager>();
+
+        // ── Dispatcher: GetOrAdd (cũng có thể drag-drop trong Inspector) ──
+        attackDispatcher = GetComponent<WeaponAttackDispatcher>();
+        if (attackDispatcher == null)
+            attackDispatcher = gameObject.AddComponent<WeaponAttackDispatcher>();
+
+        // Notify dispatcher về vũ khí đang trang bị (nếu đã equip trước đó)
+        if (equipmentManager != null && equipmentManager.currentWeapon != null)
+            attackDispatcher.OnWeaponChanged(equipmentManager.currentWeapon);
         _inventoryUIManager = FindFirstObjectByType<InventoryUIManager>();
         _pickupManager = GetComponent<ItemPickupManager>();
 
@@ -159,12 +186,18 @@ public class PlayerController : MonoBehaviour
         if (InventoryUIManager.IsInventoryOpen) return;
 
         // [SỬA Ở ĐÂY] Khóa di chuyển vật lý nếu đang dùng skill, lướt, parry, hoặc ĐANG GỒNG
-        if (isUsingSpecialSkill || isDashing || stats.isParrying || isCharging) return;
+        // Bow heavy charge: cho phép di chuyển nhưng cản thường (isCharging block bị tắt)
+        bool blockedByCharge = isCharging && !isBowCharging;
+        if (isUsingSpecialSkill || isDashing || stats.isParrying || blockedByCharge) return;
 
         // Logic di chuyển thường
         if (!isTurning && isWalking)
         {
             float currentSpeed = stats.moveSpeed * (isSprinting ? stats.runSpeedMultiplier : 1f);
+
+            // Bow heavy charge: giảm tốc 50%
+            if (isBowCharging) currentSpeed *= 0.5f;
+
             Vector3 targetPosition = rb.position + movementInput * currentSpeed * Time.fixedDeltaTime;
             rb.MovePosition(targetPosition);
         }
@@ -295,46 +328,83 @@ public class PlayerController : MonoBehaviour
 
     void HandleAttackInput()
     {
-        // [MỚI] Nếu đang Parry thì HỦY LUÔN việc gồng (Ưu tiên đỡ đòn)
+        // Nếu đang Parry → HỦY LUÔN việc gồng (Ưu tiên đỡ đòn)
         if (stats.isParrying && isCharging)
         {
             isCharging = false;
+            isBowCharging = false;
         }
 
-        // 1. Bắt đầu nhấn chuột -> Bắt đầu tính giờ
+        WeaponData currentWep = equipmentManager?.currentWeapon;
+
+        // ── 1. Bắt đầu nhấn chuột ──────────────────────────────────────────
         if (Input.GetMouseButtonDown(0) && !isAttacking && !isStance && !stats.isParrying)
         {
-            isCharging = true;
+            isCharging  = true;
             chargeTimer = 0f;
         }
 
-        // 2. Đang giữ chuột -> Tăng thời gian
-        if (isCharging)
+        // ── 2. Đang giữ chuột ──────────────────────────────────────────────
+        if (isCharging && Input.GetMouseButton(0))
         {
-            if (Input.GetMouseButton(0))
-            {
-                chargeTimer += Time.deltaTime;
+            chargeTimer += Time.deltaTime;
 
-                // --- [FIX QUAN TRỌNG] TỰ ĐỘNG TUNG TRỌNG KÍCH QUÁ GIỜ ---
-                // Nếu giữ quá (thời gian chuẩn + 3 giây) thì tự đánh luôn
-                if (chargeTimer >= stats.heavyAttackChargeTime + 2.0f)
-                {
-                    isCharging = false;
-                    PerformAttack(true); // Tự động đánh mạnh
-                    return; // Thoát sớm để không chạy xuống phần nhả chuột nữa
-                }
-            }
+            // ── BOW: giảm tốc độ di chuyển khi gồng ──────────────────────
+            isBowCharging = (currentWep?.weaponType == WeaponData.WeaponType.Bow);
 
-            // 3. Nhả chuột -> Quyết định đánh thường hay đánh mạnh
-            if (Input.GetMouseButtonUp(0) && isCharging)
+            // ── STAFF CHANNELED: kích hoạt spin ngay khi đủ thời gian ─────
+            if (attackDispatcher != null
+                && attackDispatcher.CurrentHeavyIsChanneled
+                && !attackDispatcher.IsChanneledActive
+                && chargeTimer >= (currentWep?.heavyChargeTime ?? 0.5f))
             {
                 isCharging = false;
-                if (chargeTimer >= stats.heavyAttackChargeTime) PerformAttack(true);
-                else PerformAttack(false);
+                float swingDur = 0.4f; // Swing window không quan trọng với channeled
+                var ctx = attackDispatcher.BuildContext(
+                    isHeavy: true, comboCount, swingDur,
+                    hitTargets, dangerLayer,
+                    ApplyDamageToTarget, OnAttackPerformed);
+
+                // Set multiplier cho Staff (1.5f = 150%)
+                currentDamageMultiplier = currentWep?.heavyDamageMultiplier ?? 1.5f;
+                attackDispatcher.TryStartChanneled(ctx);
+                return;
+            }
+
+            // ── Tự động tung Heavy nếu giữ quá lâu ───────────────────────
+            float maxCharge = (currentWep?.heavyChargeTime ?? stats.heavyAttackChargeTime) + 2.0f;
+            if (chargeTimer >= maxCharge)
+            {
+                isCharging    = false;
+                isBowCharging = false;
+                PerformAttack(true);
+                return;
             }
         }
 
-        // Queue Attack
+        // ── 3. Nhả chuột ───────────────────────────────────────────────────
+        if (Input.GetMouseButtonUp(0))
+        {
+            isBowCharging = false;
+
+            // Dừng Staff spin nếu đang chạy
+            if (attackDispatcher != null && attackDispatcher.IsChanneledActive)
+            {
+                attackDispatcher.StopChanneled();
+                isCharging = false;
+                return;
+            }
+
+            if (isCharging)
+            {
+                isCharging = false;
+                float threshold = currentWep?.heavyChargeTime ?? stats.heavyAttackChargeTime;
+                if (chargeTimer >= threshold) PerformAttack(true);
+                else                          PerformAttack(false);
+            }
+        }
+
+        // ── Queue Attack ───────────────────────────────────────────────────
         if (isAttacking && Input.GetMouseButtonDown(0))
         {
             nextAttackQueued = true;
@@ -648,8 +718,12 @@ public class PlayerController : MonoBehaviour
             if (isDuelistEmpoweredAttackActive) Debug.Log("<color=magenta>>> DUELIST EMPOWERED (CHALLENGE) READY!</color>");
         }
 
-        // Setup Multiplier
-        if (isHeavy) currentDamageMultiplier = stats.heavyAttackCharge;
+        // Setup Multiplier — dùng heavyDamageMultiplier từ WeaponData nếu có
+        if (isHeavy)
+        {
+            float wepMultiplier = equipmentManager?.currentWeapon?.heavyDamageMultiplier ?? 0f;
+            currentDamageMultiplier = wepMultiplier > 0f ? wepMultiplier : stats.heavyAttackCharge;
+        }
         else currentDamageMultiplier = 1.0f;
 
         // 2. Animator
@@ -674,57 +748,18 @@ public class PlayerController : MonoBehaviour
         float endDamageTime = realDuration * 0.5f;
         float swingDuration = endDamageTime - startDamageTime;
 
-        // Góc chém: Giả sử chém từ Phải (Góc dương) sang Trái (Góc âm)
-        // (Nếu muốn chuẩn theo từng animation chém trái/phải thì cần logic phức tạp hơn)
-        float startAngle = attackAngle / 2f;
-        float endAngle = -attackAngle / 2f;
-
         // 4. Chờ vung tay (Wind-up)
         yield return new WaitForSeconds(startDamageTime);
 
-        // 5. VÒNG LẶP QUÉT (SWEEPING)
-        // --- [SỬA Ở ĐÂY] CHIA NHÁNH ĐÁNH GẦN VÀ BẮN XA ---
-        if (isRangedAttack && projectilePrefab != null)
+        // 5. THỰC HIỆN ĐÒN ĐÁNH — Dispatcher chọn handler theo loại vũ khí ──
+        if (attackDispatcher != null)
         {
-            // BẮN ĐẠN
-            Vector3 spawnPos = transform.position + Vector3.up * projectileSpawnOffsetY; // Sinh đạn ở ngang ngực (cao 1m)
-            Vector3 fireDir = (stats != null && stats.facingDirection != Vector3.zero) ? stats.facingDirection : transform.forward;
+            var ctx = attackDispatcher.BuildContext(
+                isHeavy, currentStep, swingDuration,
+                hitTargets, dangerLayer,
+                ApplyDamageToTarget, OnAttackPerformed);
 
-            GameObject projObj = Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
-            Projectile projScript = projObj.GetComponent<Projectile>();
-
-            if (projScript != null)
-            {
-                // Truyền dữ liệu cho viên đạn tự xử lý
-                projScript.Setup(this, fireDir, attackRange, isHeavy, currentStep);
-            }
-        }
-        else
-        {
-            // ĐÁNH CẬN CHIẾN (Quét hình quạt như cũ)
-            float currentSweepTime = 0f;
-            bool hitAnyInSweep = false;
-
-            while (currentSweepTime < swingDuration)
-            {
-                currentSweepTime += Time.deltaTime;
-                float t = currentSweepTime / swingDuration;
-                float currentAngle = Mathf.Lerp(startAngle, endAngle, t);
-
-                if (PerformPlayerSweep(currentAngle, isHeavy, currentStep))
-                {
-                    hitAnyInSweep = true;
-                }
-                yield return null;
-            }
-
-            if (hitAnyInSweep)
-            {
-                if (stats != null && hitTargets.Count > 0)
-                {
-                    stats.GainSinFromAttack(hitTargets.Count); // Tích Sin cho đánh gần
-                }
-            }
+            yield return StartCoroutine(attackDispatcher.ExecuteSwing(ctx));
         }
 
         // 6. Recovery (Chờ nốt animation)
@@ -740,62 +775,6 @@ public class PlayerController : MonoBehaviour
             yield return null;
             currentAttackCoroutine = StartCoroutine(AttackRoutine(false));
         }
-    }
-
-    // Hàm quét tại 1 góc (Trả về true nếu trúng ai đó mới)
-    bool PerformPlayerSweep(float angle, bool isHeavy, int stepIndex)
-    {
-        Vector3 forward = (stats != null && stats.facingDirection != Vector3.zero) ? stats.facingDirection : transform.forward;
-        Quaternion rotation = Quaternion.AngleAxis(angle, Vector3.up);
-        Vector3 dirOfSword = rotation * forward;
-
-        // Vị trí quét: Cách người 1 đoạn, bán kính 1m
-        Vector3 checkPos = transform.position + dirOfSword * (attackRange * 0.8f);
-        float checkRadius = attackRange * 0.5f; // Độ rộng đường kiếm
-
-        Collider[] hits = Physics.OverlapSphere(checkPos, checkRadius, dangerLayer);
-        bool hitNew = false;
-
-        foreach (var hit in hits)
-        {
-            if (hit.CompareTag("Enemy"))
-            {
-                if (!hitTargets.Contains(hit.transform))
-                {
-
-                    // --- [FIX QUAN TRỌNG] THÊM LẠI CHECK GÓC Ở ĐÂY ---
-                    // Dù Sphere có chạm, ta vẫn phải check xem Enemy có nằm trong góc AttackAngle không
-                    // Để tránh trường hợp Sphere quá to lấn ra sau lưng
-
-                    Vector3 dirToEnemy = (hit.transform.position - transform.position).normalized;
-
-                    // Tính góc giữa "Mặt Player" và "Kẻ địch"
-                    float angleToEnemy = Vector3.Angle(forward, dirToEnemy);
-
-                    // Nếu góc lệch lớn hơn một nửa góc đánh -> Nằm ngoài hình quạt -> Bỏ qua
-                    // (Ví dụ attackAngle 90 thì mỗi bên 45. Nếu địch ở góc 50 -> Skip)
-                    if (angleToEnemy > attackAngle / 2f)
-                    {
-                        continue;
-                    }
-                    // ----------------------------------------------------
-
-                    hitTargets.Add(hit.transform); // Mark as hit
-
-                    Stats enemyStats = hit.GetComponent<Stats>();
-                    if (enemyStats != null)
-                    {
-                        // Gọi hàm tính damage riêng biệt
-                        ApplyDamageToTarget(enemyStats, isHeavy, stepIndex);
-
-                        // Callback sự kiện (Chỉ gọi 1 lần mỗi lần trúng địch)
-                        OnAttackPerformed?.Invoke(stepIndex, isHeavy);
-                        hitNew = true;
-                    }
-                }
-            }
-        }
-        return hitNew;
     }
 
     // --- HÀM TÍNH TOÁN DAMAGE (Tách ra từ HandleDamageLogic cũ) ---
@@ -818,9 +797,15 @@ public class PlayerController : MonoBehaviour
         WeaponData currentWpn = equipmentManager.currentWeapon;
         if (isHeavy)
         {
-            info.isKnockback = true;
-            info.knockbackForce = 15f;
-            info.impactLevel = 1;
+            // Handler có thể set suppressNextKnockback=true trước khi gọi ApplyDamage
+            // để bỏ qua knockback (Dagger spin, Spear thrust...)
+            if (!suppressNextKnockback)
+            {
+                info.isKnockback    = true;
+                info.knockbackForce = 15f;
+                info.impactLevel    = 1;
+            }
+            suppressNextKnockback = false; // auto-reset sau mỗi lần gọi
         }
         else
         {
@@ -828,11 +813,21 @@ public class PlayerController : MonoBehaviour
             if (currentWpn != null && currentWpn.comboEffects != null && stepIndex < currentWpn.comboEffects.Count)
             {
                 var effect = currentWpn.comboEffects[stepIndex];
-                info.isKnockback = effect.causesKnockback;
+                info.isKnockback    = effect.causesKnockback;
                 info.knockbackForce = effect.knockbackForce;
-                info.isStun = effect.causesStun;
-                info.stunDuration = effect.stunDuration;
+                info.isStun         = effect.causesStun;
+                info.stunDuration   = effect.stunDuration;
             }
+        }
+
+        // Override stun từ handler (Spear heavy, Grimoire heavy...)
+        // Set nextHitStun=true + nextHitStunDuration trước khi gọi ApplyDamage
+        if (nextHitStun)
+        {
+            info.isStun       = true;
+            info.stunDuration = nextHitStunDuration;
+            nextHitStun          = false; // auto-reset
+            nextHitStunDuration  = 0f;
         }
 
         // Perfect Dodge Counter (Check từ Stats)

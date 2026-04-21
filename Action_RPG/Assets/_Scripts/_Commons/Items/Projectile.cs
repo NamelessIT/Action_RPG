@@ -15,6 +15,12 @@ public class Projectile : MonoBehaviour
     private int stepIndex;
     private bool hasHit = false;
 
+    /// <summary>
+    /// Nếu true: đạn chỉ là visual, KHÔNG gây damage khi trigger.
+    /// Dùng cho BowHeavyAttack — damage đã được tính qua SphereCastAll.
+    /// </summary>
+    public bool visualOnly = false;
+
     public void Setup(PlayerController _owner, Vector3 dir, float _maxRange, bool _isHeavy, int _stepIndex)
     {
         owner = _owner;
@@ -50,6 +56,7 @@ public class Projectile : MonoBehaviour
     void OnTriggerEnter(Collider other)
     {
         if (hasHit) return;
+        if (visualOnly) return; // Chỉ visual, không gây damage
 
         // --- DEBUG TEST ---
         // In ra mọi thứ mà đạn chạm vào để bạn dễ theo dõi

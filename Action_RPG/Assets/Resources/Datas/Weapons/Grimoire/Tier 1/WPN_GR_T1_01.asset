@@ -31,6 +31,11 @@ MonoBehaviour:
   attackRange: 8
   isRanged: 1
   projectilePrefab: {fileID: 5323527255875736035, guid: 322996f6bc69fd34d89e0fbe2d6ba4f7, type: 3}
+  attackMode: 3
+  heavyChargeTime: 1
+  heavyAttackType: 4
+  heavyDamageMultiplier: 2
+  heavyProjectilePrefab: {fileID: 5323527255875736035, guid: 322996f6bc69fd34d89e0fbe2d6ba4f7, type: 3}
   substats: []
   reqStr: 0
   reqDex: 0
