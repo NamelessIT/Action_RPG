@@ -29,6 +29,11 @@ MonoBehaviour:
   attackRange: 15
   isRanged: 1
   projectilePrefab: {fileID: 6918126946625875329, guid: 387620a8a279e8e48a8558a9d9612de0, type: 3}
+  attackMode: 2
+  heavyChargeTime: 1
+  heavyAttackType: 3
+  heavyDamageMultiplier: 2
+  heavyProjectilePrefab: {fileID: 0}
   substats:
   - stat: 4
     val: 15
@@ -48,4 +53,6 @@ MonoBehaviour:
   reqVit: 0
   reqAgi: 0
   playerOnly: 0
+  triggerVfxPrefab: {fileID: 0}
+  auraVfxPrefab: {fileID: 0}
   comboEffects: []
