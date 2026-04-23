@@ -349,7 +349,8 @@ public class PlayerController : MonoBehaviour
         {
             chargeTimer += Time.deltaTime;
 
-            // ── BOW: giảm tốc độ di chuyển khi gồng ──────────────────────
+            // ── BOW: cho phép di chuyển (speed 50%) kể cả tap nhanh lẫn heavy charge ──
+            // Chỉ bị khóa khi isAttacking=true (animation bắn thực sự chạy)
             isBowCharging = (currentWep?.weaponType == WeaponData.WeaponType.Bow);
 
             // ── STAFF CHANNELED: kích hoạt spin ngay khi đủ thời gian ─────
@@ -569,11 +570,13 @@ public class PlayerController : MonoBehaviour
     void HandleMovementStopToTurn()
     {
 
-        // [MỚI] Nếu đang đánh thì KHÔNG nhận input di chuyển nữa
-        if (isAttacking || stats.isParrying || isCharging)
+        // Nếu đang đánh thì KHÔNG nhận input di chuyển
+        // Ngoại lệ: Bow heavy charge (isBowCharging=true) cho phép di chuyển chậm
+        bool blockMovement = isAttacking || stats.isParrying || (isCharging && !isBowCharging);
+        if (blockMovement)
         {
-            movementInput = Vector3.zero; // Xóa vector di chuyển
-            return; // Thoát hàm ngay, không tính toán xoay hay đi nữa
+            movementInput = Vector3.zero;
+            return;
         }
 
         float moveX = Input.GetAxisRaw("Horizontal");
