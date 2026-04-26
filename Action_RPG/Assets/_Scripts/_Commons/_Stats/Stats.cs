@@ -398,18 +398,16 @@ public class Stats : MonoBehaviour
         if (damageToTake > 0)
         {
             currentHp -= damageToTake;
-
-            //if (info.isCrit) Debug.Log($"<color=red>Damage nhận lớn hơn Shield</color> {gameObject.name} nhận {damageToTake} (Shield chặn: {info.damageAmount - damageToTake})");
-            //else Debug.Log($"{gameObject.name} nhận {damageToTake}");
             Debug.Log($"{gameObject.name} nhận {damageToTake}");
-            // [MỚI] KÍCH HOẠT SỰ KIỆN "BỊ ĐÁNH"
-            // Báo cho JuggernautSkill biết là "Tao bị mất máu rồi!"
             OnDamageReceived?.Invoke(damageToTake, this);
         }
         else
         {
             Debug.Log($"{gameObject.name} chặn toàn bộ sát thương bằng Shield!");
         }
+
+        // Hiển thị số sát thương nổi lên màn hình (cả bị chặn lẫn xuyên qua Shield)
+        DamageNumberManager.Show(info, transform.position);
 
         // 3. XỬ LÝ HIỆU ỨNG (CC)
         ApplyCrowdControl(info);
