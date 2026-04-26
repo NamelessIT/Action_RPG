@@ -69,17 +69,25 @@ public static class CombatMath
         {
             // B. Đánh thường: Dựa vào loại vũ khí
             // Nếu weapon null (tay không) -> mặc định là Physical
-            bool isMagicWeapon = weapon != null && weapon.weaponAtkType == WeaponData.WeaponAtkType.Magic;
+            WeaponData.WeaponAtkType atkType = weapon != null
+                ? weapon.weaponAtkType
+                : WeaponData.WeaponAtkType.Physical;
 
-            if (isMagicWeapon)
+            switch (atkType)
             {
-                physMult = 0f;
-                magicMult = 1.0f; // Đánh thường hệ số cơ bản là 100%
-            }
-            else // Physical (Hand, Sword, Spear...)
-            {
-                physMult = 1.0f; // Đánh thường hệ số cơ bản là 100%
-                magicMult = 0f;
+                case WeaponData.WeaponAtkType.Magic:
+                    physMult  = 0f;
+                    magicMult = 1.0f;
+                    break;
+                case WeaponData.WeaponAtkType.Both:
+                    // Chia đều 50/50 — hiện cả màu cam lẫn tím
+                    physMult  = 0.5f;
+                    magicMult = 0.5f;
+                    break;
+                default: // Physical (Hand, Sword, Spear, Bow...)
+                    physMult  = 1.0f;
+                    magicMult = 0f;
+                    break;
             }
         }
         // Nhân thêm hệ số phụ (Combo step / Charge attack)
