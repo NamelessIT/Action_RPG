@@ -60,15 +60,21 @@ protected IEnumerator EnemyAttackRoutine()
         // 1. Setup ban đầu
         isAttacking = true;
         lastAttackTime = Time.time;
-        hitTargets.Clear(); // [QUAN TRỌNG] Reset danh sách nạn nhân mới
+        hitTargets.Clear();
         if (stats != null) stats.EnterCombat();
 
-        // Xoay mặt về hướng Target
+        // Khóa hướng tấn công ngay lúc bắt đầu đánh — enemy commit vào hướng này
+        // Nếu player dash ra sau lưng trong lúc wind-up, đòn sẽ trượt
+        Vector3 lockedFacingDir = stats != null ? stats.facingDirection : transform.forward;
         if (target != null)
         {
             Vector3 dirToTarget = (target.position - transform.position).normalized;
             dirToTarget.y = 0;
-            if (dirToTarget != Vector3.zero) stats.facingDirection = dirToTarget;
+            if (dirToTarget != Vector3.zero)
+            {
+                lockedFacingDir = dirToTarget;
+                if (stats != null) stats.facingDirection = lockedFacingDir;
+            }
         }
 
         // 2. Trigger Animation
@@ -78,55 +84,37 @@ protected IEnumerator EnemyAttackRoutine()
             animator.SetTrigger("Attack");
         }
 
-        // --- [LOGIC MỚI] CẤU HÌNH TIMING CHO ĐÒN QUÉT ---
-        float baseAnimDuration = 0.5f; // Thời lượng anim gốc (Ví dụ)
-        float realAnimDuration = baseAnimDuration / stats.baseAttackSpeed;
+        float baseAnimDuration = 0.5f;
+        float realAnimDuration = baseAnimDuration / Mathf.Max(stats.baseAttackSpeed, 0.1f);
 
-        // Định nghĩa giai đoạn chém:
-        // - Wind-up (Giơ tay): 30% đầu
-        // - Active Swing (Vung kiếm gây damage): Từ 30% đến 60%
-        // - Recovery (Thu tay): 40% còn lại
-        float startDamageTime = realAnimDuration * 0.3f; 
-        float endDamageTime   = realAnimDuration * 0.6f;
+        // Wind-up 50%: player có đủ thời gian nhìn thấy animation và bấm dash thoát
+        // Active 50%-75%: hitbox quét trong cửa sổ hẹp, đòn đánh phải đúng timing
+        // Recovery 75%-100%: enemy bị hở sườn, player có thể phản công
+        float startDamageTime = realAnimDuration * 0.50f;
+        float endDamageTime   = realAnimDuration * 0.75f;
         float swingDuration   = endDamageTime - startDamageTime;
 
-        // Góc chém: Quét từ Trái (-Góc/2) sang Phải (+Góc/2)
-        // (Hoặc ngược lại tùy animation, ở đây giả sử chém từ trái sang phải)
-        float startAngle = -attackAngle / 2f; 
+        float startAngle = -attackAngle / 2f;
         float endAngle   = attackAngle / 2f;
 
-        // 3. Chờ giai đoạn Wind-up (Giơ tay lên - Chưa gây damage)
-        // Đây là lúc người chơi nhìn thấy để chuẩn bị Parry
+        // 3. Wind-up — player nhìn thấy animation và bấm dash trong giai đoạn này
         yield return new WaitForSeconds(startDamageTime);
 
-        // 4. [QUAN TRỌNG] VÒNG LẶP QUÉT (SWEEPING LOOP)
+        // 4. Sweep — dùng lockedFacingDir, không cập nhật theo target nữa
         float currentSweepTime = 0f;
-
-        // Chạy vòng lặp trong suốt thời gian vung kiếm
         while (currentSweepTime < swingDuration)
         {
             currentSweepTime += Time.deltaTime;
-            
-            // Tính phần trăm tiến trình chém (0.0 -> 1.0)
             float t = currentSweepTime / swingDuration;
-
-            // Tính góc hiện tại của cây kiếm theo t (Lerp từ góc bắt đầu đến kết thúc)
             float currentAngle = Mathf.Lerp(startAngle, endAngle, t);
-
-            // Thực hiện kiểm tra va chạm tại góc này
-            PerformSweepCheck(currentAngle);
-
-            // Chờ Frame tiếp theo để quét tiếp
-            yield return null; 
+            PerformSweepCheck(currentAngle, lockedFacingDir);
+            yield return null;
         }
 
-        // 5. Recovery (Chờ nốt animation)
-        // (realDuration - endDamageTime) là thời gian còn lại
+        // 5. Recovery — enemy hở sườn trong giai đoạn này
         yield return new WaitForSeconds(realAnimDuration - endDamageTime);
 
         isAttacking = false;
-        
-        // Tăng combo
         currentComboStep++;
         if (currentComboStep >= maxCombo) currentComboStep = 0;
     }
@@ -172,50 +160,28 @@ protected IEnumerator EnemyAttackRoutine()
     //    }
     //}
 
-    // Hàm quét tại một góc cụ thể (Thay thế CheckHitAndDealDamage)
-    void PerformSweepCheck(float angle)
+    // Dùng lockedFacingDir (hướng đã commit khi bắt đầu đánh) — không đọc stats.facingDirection
+    // để tránh hitbox theo dõi player sau khi họ đã dash ra ngoài góc đánh
+    void PerformSweepCheck(float angle, Vector3 lockedFacingDir)
     {
-        // 1. Xác định hướng mặt của Enemy (Trục giữa của hình quạt)
-        Vector3 enemyFacingDir = (stats != null && stats.facingDirection != Vector3.zero) ? stats.facingDirection : transform.forward;
-
-        // 2. Tính hướng của "lưỡi kiếm" tại thời điểm quét này
         Quaternion rotation = Quaternion.AngleAxis(angle, Vector3.up);
-        Vector3 dirOfSword = rotation * enemyFacingDir;
+        Vector3 dirOfSword = rotation * lockedFacingDir;
 
-        // 3. Vị trí quét
         Vector3 checkPos = transform.position + dirOfSword * (basicAttackRange * 0.8f);
+        float checkRadius = basicAttackRange * 0.4f;
 
-        // [TINH CHỈNH] Nên để bán kính phụ thuộc vào tầm đánh để không bị quá to
-        float checkRadius = basicAttackRange * 0.5f; // Hoặc để 1.0f nếu tầm đánh của quái luôn lớn
-
-        // 4. Kiểm tra va chạm
         Collider[] hits = Physics.OverlapSphere(checkPos, checkRadius);
-
         foreach (var hit in hits)
         {
             if (hit.CompareTag("Player") || hit.CompareTag("Ally"))
             {
-                // Kiểm tra xem nạn nhân này đã bị chém trúng trong lần vung này chưa?
                 if (!hitTargets.Contains(hit.transform))
                 {
-                    // --- [FIX QUAN TRỌNG] THÊM LẠI CHECK GÓC CHO ENEMY ---
-                    // Ngăn chặn việc đánh trúng sau lưng do Sphere quá to
-
+                    // Dùng lockedFacingDir để check góc — nếu player dash ra sau lưng, miss
                     Vector3 dirToTarget = (hit.transform.position - transform.position).normalized;
+                    if (Vector3.Angle(lockedFacingDir, dirToTarget) > attackAngle / 2f) continue;
 
-                    // Tính góc giữa "Mặt Enemy" và "Mục tiêu"
-                    float angleToTarget = Vector3.Angle(enemyFacingDir, dirToTarget);
-
-                    // Nếu góc lệch lớn hơn một nửa góc đánh -> Nằm ngoài hình quạt -> Bỏ qua
-                    if (angleToTarget > attackAngle / 2f)
-                    {
-                        continue;
-                    }
-                    // ----------------------------------------------------
-
-                    hitTargets.Add(hit.transform); // Đánh dấu đã trúng
-
-                    // Gây damage ngay lập tức
+                    hitTargets.Add(hit.transform);
                     DealDamageToTarget(hit.transform, currentComboStep);
                 }
             }

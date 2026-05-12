@@ -522,13 +522,9 @@ public class PlayerController : MonoBehaviour
 
         rb.linearVelocity = dashDir * dashSpeed;
 
-        yield return new WaitForSeconds(0.1f);
+        // I-frames kéo dài toàn bộ thời gian dash để dodge thực sự có ý nghĩa
+        yield return new WaitForSeconds(duration);
         stats.isInvincible = false;
-
-        if (duration > 0.1f)
-        {
-            yield return new WaitForSeconds(duration - 0.1f);
-        }
 
         rb.linearVelocity = Vector3.zero;
         isDashing = false;

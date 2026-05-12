@@ -51,6 +51,14 @@ public class EnemyAI : MonoBehaviour
     private bool isPatrolWaiting = false;
     private float nextTurnTimer;
 
+    [Header("--- Boss Dodge System ---")]
+    [Tooltip("Chỉ hoạt động với monsterRank >= 1")]
+    public float bossDodgeCooldown = 4f;
+    [Range(0f, 1f)]
+    public float bossDodgeChance = 0.65f;
+    private bool isBossDodging = false;
+    private float lastBossDodgeTime = -100f;
+
     [Header("--- AI Parry System ---")]
     [Tooltip("Tỷ lệ phản xạ đỡ đòn (0.8 = 80%)")]
     public float parryChance = 0.8f;
@@ -88,6 +96,8 @@ public class EnemyAI : MonoBehaviour
         agent.updateRotation = false;
         agent.updateUpAxis = false;
         agent.speed = stats.baseMoveSpeed;
+        agent.acceleration = 20f;   // Dừng nhanh nhưng không instant → không khựng
+        agent.angularSpeed = 0f;    // Tắt rotation của NavMesh, dùng facingDirection thủ công
 
         if (stats.facingDirection == Vector3.zero) stats.facingDirection = Vector3.back;
         baseIdleDirection = stats.facingDirection;
@@ -120,6 +130,9 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        // Boss dodge đang chạy — coroutine tự quản lý movement
+        if (isBossDodging) return;
+
         // [MỚI] Giảm thời gian chờ phản công liên tục
         if (receiveDamageTimer > 0) receiveDamageTimer -= Time.deltaTime;
 
@@ -137,7 +150,7 @@ public class EnemyAI : MonoBehaviour
             else
             {
                 // Nếu vẫn đang trong 2 giây chờ -> Đứng im cầm khiên
-                if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
+                if (agent.isOnNavMesh) agent.isStopped = true;
                 currentState = "Parrying";
                 HandleAnimation(stats.facingDirection);
                 return; // Thoát Update để không chạy logic di chuyển/tấn công bên dưới
@@ -154,10 +167,10 @@ public class EnemyAI : MonoBehaviour
         // Cập nhật target cho Combat
         combat.SetTarget(nearestTarget);
 
-        // 2. NẾU ĐANG ĐÁNH -> KHÓA DI CHUYỂN
+        // 2. NẾU ĐANG ĐÁNH -> KHÓA DI CHUYỂN (decelerate tự nhiên, không hard-stop)
         if (combat.isAttacking)
         {
-            if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
+            if (agent.isOnNavMesh) agent.isStopped = true;
             stats.EnterCombat();
             return;
         }
@@ -463,6 +476,24 @@ public class EnemyAI : MonoBehaviour
 
     void HandleCombatBehavior(float distToTarget)
     {
+        // ==========================================
+        // 0. BOSS DODGE — Chỉ cho rank >= 1, né đòn player rồi phản công
+        // ==========================================
+        if (stats.monsterRank >= 1 && !isBossDodging && Time.time >= lastBossDodgeTime + bossDodgeCooldown)
+        {
+            PlayerController pc = nearestTarget?.GetComponent<PlayerController>();
+            if (pc != null && pc.isAttacking && distToTarget <= combat.basicAttackRange * 2.5f)
+            {
+                if (Random.value <= bossDodgeChance)
+                {
+                    StartCoroutine(BossDodgeRoutine());
+                    return;
+                }
+                // Trượt dodge chance thì reset cooldown ngắn để không liên tục roll fail
+                lastBossDodgeTime = Time.time - bossDodgeCooldown * 0.7f;
+            }
+        }
+
         // ==========================================
         // 1. LOGIC QUYẾT ĐỊNH PHÒNG THỦ HAY TẤN CÔNG
         // ==========================================
@@ -773,6 +804,69 @@ public class EnemyAI : MonoBehaviour
                     Debug.Log($"[AI] Bị {attacker.name} cắn, nhưng vẫn quyết tâm đuổi {nearestTarget.name}!");
                 }
             }
+        }
+    }
+
+    // --- BOSS DODGE ---
+    // Dành cho enemy rank >= 1: lướt né đòn player theo kiểu Genshin rồi phản công ngay
+    IEnumerator BossDodgeRoutine()
+    {
+        if (nearestTarget == null) yield break;
+
+        isBossDodging = true;
+        lastBossDodgeTime = Time.time;
+        stats.isInvincible = true;
+        currentState = "Boss Dodging";
+
+        // Dodge vuông góc với hướng tấn công của player
+        Vector3 toEnemy = (transform.position - nearestTarget.position).normalized;
+        toEnemy.y = 0;
+        Vector3 dodgeDir = Vector3.Cross(toEnemy, Vector3.up).normalized;
+        if (Random.value < 0.5f) dodgeDir = -dodgeDir;
+
+        // Tìm điểm đích hợp lệ trên NavMesh
+        float dodgeDist = 2.5f;
+        Vector3 dodgeDest = transform.position + dodgeDir * dodgeDist;
+        NavMeshHit nmHit;
+        if (NavMesh.SamplePosition(dodgeDest, out nmHit, dodgeDist + 1f, NavMesh.AllAreas))
+            dodgeDest = nmHit.position;
+
+        if (agent.isOnNavMesh)
+        {
+            agent.isStopped = false;
+            agent.speed = stats.baseMoveSpeed * 3.5f;
+            agent.SetDestination(dodgeDest);
+        }
+
+        // Giữ mặt nhìn player trong lúc lướt
+        Vector3 faceDir = (nearestTarget.position - transform.position).normalized;
+        faceDir.y = 0;
+        if (faceDir != Vector3.zero)
+        {
+            stats.facingDirection = faceDir;
+            HandleAnimation(faceDir);
+        }
+
+        // I-frames trong suốt dodge (giống player dash)
+        yield return new WaitForSeconds(0.3f);
+
+        stats.isInvincible = false;
+        isBossDodging = false;
+
+        if (agent.isOnNavMesh)
+        {
+            agent.speed = stats.baseMoveSpeed;
+            agent.isStopped = true;
+        }
+
+        // Ngay sau khi dodge xong → phản công nếu player vẫn trong tầm
+        yield return new WaitForSeconds(0.1f);
+
+        if (nearestTarget != null && !stats.isDead && !stats.isStunned)
+        {
+            float dist = Vector3.Distance(transform.position, nearestTarget.position);
+            if (dist <= combat.basicAttackRange + 1.5f) State_Attack();
+            else State_Chase();
         }
     }
 
