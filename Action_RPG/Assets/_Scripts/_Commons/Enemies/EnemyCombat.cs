@@ -11,11 +11,20 @@ public class EnemyCombat : MonoBehaviour
     protected Animator animator;
 
     [Header("Combat Settings")]
-    public bool isAttacking = false; // [MỚI] Trạng thái đang đánh
+    public bool isAttacking = false;
     protected float lastAttackTime = -10f;
-    // Tầm đánh cơ bản (nếu chưa có skill)
+    // Expose để EnemyAI đọc cooldown state
+    public float LastAttackTime => lastAttackTime;
+
     public float basicAttackRange = 2.0f;
-    [Range(0, 360)] public float attackAngle = 90f; // [MỚI] Góc đánh
+    [Range(0, 360)] public float attackAngle = 90f;
+
+    [Header("Sweep Angles (tính từ hướng nhìn, âm=trái, dương=phải)")]
+    [Tooltip("Góc bắt đầu quét. Ví dụ: 0 = từ thẳng trước, -45 = từ trái")]
+    public float sweepStartAngle = -45f;
+    [Tooltip("Góc kết thúc quét. Ví dụ: 45 = ra phải. Đặt 0→45 cho chém một chiều")]
+    public float sweepEndAngle = 45f;
+
     private int currentComboStep = 0;
     private int maxCombo = 2;
 
@@ -94,20 +103,20 @@ protected IEnumerator EnemyAttackRoutine()
         float endDamageTime   = realAnimDuration * 0.75f;
         float swingDuration   = endDamageTime - startDamageTime;
 
-        float startAngle = -attackAngle / 2f;
-        float endAngle   = attackAngle / 2f;
-
         // 3. Wind-up — player nhìn thấy animation và bấm dash trong giai đoạn này
         yield return new WaitForSeconds(startDamageTime);
 
-        // 4. Sweep — dùng lockedFacingDir, không cập nhật theo target nữa
+        // 4. Sweep — quét từ sweepStartAngle đến sweepEndAngle theo từng frame
+        // Hit chỉ register khi góc quét "vượt qua" đúng góc mà player đứng
         float currentSweepTime = 0f;
+        float prevAngle = sweepStartAngle;
         while (currentSweepTime < swingDuration)
         {
             currentSweepTime += Time.deltaTime;
-            float t = currentSweepTime / swingDuration;
-            float currentAngle = Mathf.Lerp(startAngle, endAngle, t);
-            PerformSweepCheck(currentAngle, lockedFacingDir);
+            float t = Mathf.Clamp01(currentSweepTime / swingDuration);
+            float currentAngle = Mathf.Lerp(sweepStartAngle, sweepEndAngle, t);
+            PerformSweepCheck(currentAngle, prevAngle, lockedFacingDir);
+            prevAngle = currentAngle;
             yield return null;
         }
 
@@ -160,31 +169,40 @@ protected IEnumerator EnemyAttackRoutine()
     //    }
     //}
 
-    // Dùng lockedFacingDir (hướng đã commit khi bắt đầu đánh) — không đọc stats.facingDirection
-    // để tránh hitbox theo dõi player sau khi họ đã dash ra ngoài góc đánh
-    void PerformSweepCheck(float angle, Vector3 lockedFacingDir)
+    // Sweep-past detection: hit chỉ register khi góc quét đi qua đúng góc mà target đứng.
+    // Ví dụ: player ở 30°, sweep từ 20°→32° trong frame này → HIT.
+    // Nếu player dash ra khỏi range trước frame đó → MISS (vì dist check fail).
+    void PerformSweepCheck(float currentAngle, float prevAngle, Vector3 lockedFacingDir)
     {
-        Quaternion rotation = Quaternion.AngleAxis(angle, Vector3.up);
-        Vector3 dirOfSword = rotation * lockedFacingDir;
-
-        Vector3 checkPos = transform.position + dirOfSword * (basicAttackRange * 0.8f);
-        float checkRadius = basicAttackRange * 0.4f;
-
-        Collider[] hits = Physics.OverlapSphere(checkPos, checkRadius);
+        // Quét toàn bộ range một lần, check từng target
+        Collider[] hits = Physics.OverlapSphere(transform.position, basicAttackRange);
         foreach (var hit in hits)
         {
-            if (hit.CompareTag("Player") || hit.CompareTag("Ally"))
-            {
-                if (!hitTargets.Contains(hit.transform))
-                {
-                    // Dùng lockedFacingDir để check góc — nếu player dash ra sau lưng, miss
-                    Vector3 dirToTarget = (hit.transform.position - transform.position).normalized;
-                    if (Vector3.Angle(lockedFacingDir, dirToTarget) > attackAngle / 2f) continue;
+            if (!hit.CompareTag("Player") && !hit.CompareTag("Ally")) continue;
+            if (hitTargets.Contains(hit.transform)) continue;
 
-                    hitTargets.Add(hit.transform);
-                    DealDamageToTarget(hit.transform, currentComboStep);
-                }
-            }
+            // 1. Phải trong tầm đánh thực tế
+            float dist = Vector3.Distance(transform.position, hit.transform.position);
+            if (dist > basicAttackRange) continue;
+
+            // 2. Tính góc SIGNED của target so với lockedFacingDir (trong mặt phẳng XZ)
+            Vector3 toTarget = (hit.transform.position - transform.position);
+            toTarget.y = 0;
+            if (toTarget.sqrMagnitude < 0.001f) continue;
+            float targetAngle = Vector3.SignedAngle(lockedFacingDir, toTarget.normalized, Vector3.up);
+
+            // 3. Hit khi sweep vượt qua góc của target trong frame này
+            // Cả 2 chiều (prevAngle→currentAngle âm hoặc dương)
+            bool sweptPast;
+            if (currentAngle >= prevAngle)
+                sweptPast = targetAngle > prevAngle && targetAngle <= currentAngle;
+            else
+                sweptPast = targetAngle < prevAngle && targetAngle >= currentAngle;
+
+            if (!sweptPast) continue;
+
+            hitTargets.Add(hit.transform);
+            DealDamageToTarget(hit.transform, currentComboStep);
         }
     }
 

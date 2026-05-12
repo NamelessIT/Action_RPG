@@ -51,6 +51,16 @@ public class EnemyAI : MonoBehaviour
     private bool isPatrolWaiting = false;
     private float nextTurnTimer;
 
+    [Header("--- Post Attack Behavior ---")]
+    [Tooltip("Khoảng cách lùi sau khi đánh xong")]
+    public float backOffDistance = 2.0f;
+    [Tooltip("Xác suất lùi lại sau đòn (0=không bao giờ, 1=luôn luôn)")]
+    [Range(0f, 1f)] public float backOffChance = 0.5f;
+    [Tooltip("Xác suất xoay vòng quanh player thay vì lùi")]
+    [Range(0f, 1f)] public float circleChance = 0.3f;
+    // Thời điểm kết thúc đòn đánh cuối để tính cooldown
+    private float lastAttackEndTime = -100f;
+
     [Header("--- Boss Dodge System ---")]
     [Tooltip("Chỉ hoạt động với monsterRank >= 1")]
     public float bossDodgeCooldown = 4f;
@@ -172,6 +182,7 @@ public class EnemyAI : MonoBehaviour
         {
             if (agent.isOnNavMesh) agent.isStopped = true;
             stats.EnterCombat();
+            lastAttackEndTime = Time.time; // cập nhật liên tục → khi thoát sẽ là thời điểm kết thúc đánh
             return;
         }
 
@@ -495,7 +506,19 @@ public class EnemyAI : MonoBehaviour
         }
 
         // ==========================================
-        // 1. LOGIC QUYẾT ĐỊNH PHÒNG THỦ HAY TẤN CÔNG
+        // 1. POST-ATTACK COOLDOWN BEHAVIOR
+        // Enemy vừa đánh xong → hành động thông minh trong thời gian chờ hồi
+        // ==========================================
+        float attackCooldown = 1.0f / Mathf.Max(stats.baseAttackSpeed, 0.01f);
+        bool isOnAttackCooldown = Time.time < lastAttackEndTime + attackCooldown;
+        if (isOnAttackCooldown)
+        {
+            HandlePostAttackBehavior(distToTarget);
+            return;
+        }
+
+        // ==========================================
+        // 2. LOGIC QUYẾT ĐỊNH PHÒNG THỦ HAY TẤN CÔNG
         // ==========================================
         bool shouldDefend = false;
 
@@ -804,6 +827,82 @@ public class EnemyAI : MonoBehaviour
                     Debug.Log($"[AI] Bị {attacker.name} cắn, nhưng vẫn quyết tâm đuổi {nearestTarget.name}!");
                 }
             }
+        }
+    }
+
+    // --- POST-ATTACK BEHAVIOR ---
+    // Được gọi trong thời gian hồi đòn thường. Tùy tình huống enemy sẽ:
+    // lùi ra, xoay vòng, hoặc đứng tại chỗ mặt nhìn player chờ thời.
+    void HandlePostAttackBehavior(float distToTarget)
+    {
+        // Quá xa → áp sát để sẵn sàng đánh ngay khi hồi xong
+        if (distToTarget > combat.basicAttackRange * 2.0f)
+        {
+            State_Chase();
+            return;
+        }
+
+        // Quá gần (player áp sát) → lùi ra tạo khoảng cách
+        if (distToTarget < combat.basicAttackRange * 0.6f)
+        {
+            State_BackOff();
+            return;
+        }
+
+        // Khoảng cách hợp lý → random behavior
+        float roll = Random.value;
+        if (roll < backOffChance)
+            State_BackOff();
+        else if (roll < backOffChance + circleChance)
+            State_CircleTarget();
+        else
+            State_HoldAndFace(); // Đứng im nhìn player, chờ tấn công
+    }
+
+    // Lùi ra xa player theo hướng ngược lại
+    void State_BackOff()
+    {
+        if (nearestTarget == null || !agent.isOnNavMesh) return;
+        currentState = "Post-Attack BackOff";
+        Vector3 dirAway = (transform.position - nearestTarget.position).normalized;
+        dirAway.y = 0;
+        Vector3 dest = transform.position + dirAway * backOffDistance;
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(dest, out hit, backOffDistance + 1f, NavMesh.AllAreas))
+            State_MoveTo(hit.position, "Post-Attack BackOff");
+        else
+            State_HoldAndFace();
+    }
+
+    // Xoay vòng quanh player (flanking nhẹ)
+    void State_CircleTarget()
+    {
+        if (nearestTarget == null || !agent.isOnNavMesh) return;
+        currentState = "Post-Attack Circle";
+        Vector3 toTarget = (nearestTarget.position - transform.position).normalized;
+        toTarget.y = 0;
+        Vector3 circleDir = Vector3.Cross(toTarget, Vector3.up).normalized;
+        if (Random.value < 0.5f) circleDir = -circleDir;
+        float circleDist = combat.basicAttackRange * 0.8f;
+        Vector3 dest = transform.position + circleDir * circleDist;
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(dest, out hit, circleDist + 1f, NavMesh.AllAreas))
+            State_MoveTo(hit.position, "Post-Attack Circle");
+        else
+            State_BackOff();
+    }
+
+    // Đứng tại chỗ, nhìn player chờ
+    void State_HoldAndFace()
+    {
+        if (!agent.isOnNavMesh) return;
+        currentState = "Post-Attack Hold";
+        agent.isStopped = true;
+        if (nearestTarget != null)
+        {
+            Vector3 dir = (nearestTarget.position - transform.position).normalized;
+            dir.y = 0;
+            if (dir != Vector3.zero) stats.facingDirection = dir;
         }
     }
 
