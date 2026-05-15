@@ -3,15 +3,27 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Quản lý 25 ô inventory cố định.
-/// Hỗ trợ: thêm item (auto stack / auto slot), di chuyển giữa ô, merge same items.
+/// Quản lý inventory theo 4 trang riêng biệt (Weapon / Shield / Artifact / Others).
+/// Mỗi trang có 25 ô cố định — hoàn toàn độc lập, không chia sẻ slot.
+/// Tổng cộng 100 slot vật lý (4 × 25).
+///
+/// Layout:
+///   Page 0 (Weapon)   → slot  0 – 24
+///   Page 1 (Shield)   → slot 25 – 49
+///   Page 2 (Artifact) → slot 50 – 74
+///   Page 3 (Others)   → slot 75 – 99
 /// </summary>
 public class InventoryRuntime : MonoBehaviour
 {
     // ─────────────────────────────────────────────────────────────
     //  CONSTANTS
     // ─────────────────────────────────────────────────────────────
-    public const int SLOT_COUNT = 25;
+    public const int SLOTS_PER_PAGE = 25;
+    public const int PAGE_COUNT     = 4;
+    public const int TOTAL_SLOTS    = SLOTS_PER_PAGE * PAGE_COUNT; // 100
+
+    /// <summary>Backward-compat: code cũ dùng SLOT_COUNT → giờ trả về 25 (1 trang).</summary>
+    public const int SLOT_COUNT = SLOTS_PER_PAGE;
 
     // ─────────────────────────────────────────────────────────────
     //  SEED (mock data khi không có save)
@@ -33,21 +45,44 @@ public class InventoryRuntime : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     private void Awake()
     {
-        _slots = new InventorySlot[SLOT_COUNT];
-        for (int i = 0; i < SLOT_COUNT; i++)
+        _slots = new InventorySlot[TOTAL_SLOTS];
+        for (int i = 0; i < TOTAL_SLOTS; i++)
             _slots[i] = new InventorySlot();
 
         BuildInitialInventory();
     }
 
     // ─────────────────────────────────────────────────────────────
+    //  PAGE HELPERS
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>Trả về offset đầu trang cho loại item.</summary>
+    public static int GetPageOffset(InventoryItemRecord.InventoryItemType itemType)
+    {
+        switch (itemType)
+        {
+            case InventoryItemRecord.InventoryItemType.Weapon:   return 0;
+            case InventoryItemRecord.InventoryItemType.Shield:   return SLOTS_PER_PAGE;
+            case InventoryItemRecord.InventoryItemType.Artifact: return SLOTS_PER_PAGE * 2;
+            case InventoryItemRecord.InventoryItemType.Others:   return SLOTS_PER_PAGE * 3;
+            default: return 0;
+        }
+    }
+
+    /// <summary>Trả về index tuyệt đối từ local index (0-24) + itemType.</summary>
+    public static int ToAbsoluteIndex(int localIndex, InventoryItemRecord.InventoryItemType itemType)
+    {
+        return GetPageOffset(itemType) + localIndex;
+    }
+
+    // ─────────────────────────────────────────────────────────────
     //  READ
     // ─────────────────────────────────────────────────────────────
 
-    public InventorySlot GetSlot(int index)
+    public InventorySlot GetSlot(int absoluteIndex)
     {
-        if (_slots == null || index < 0 || index >= SLOT_COUNT) return null;
-        return _slots[index];
+        if (_slots == null || absoluteIndex < 0 || absoluteIndex >= TOTAL_SLOTS) return null;
+        return _slots[absoluteIndex];
     }
 
     /// <summary>Legacy — trả về list các item không rỗng (dùng cho code cũ).</summary>
@@ -56,7 +91,7 @@ public class InventoryRuntime : MonoBehaviour
         get
         {
             var list = new List<InventoryItemRecord>();
-            for (int i = 0; i < SLOT_COUNT; i++)
+            for (int i = 0; i < TOTAL_SLOTS; i++)
                 if (!_slots[i].IsEmpty) list.Add(_slots[i].Item);
             return list;
         }
@@ -67,17 +102,20 @@ public class InventoryRuntime : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Thêm item vào inventory:
-    /// 1. Tìm ô có cùng item → stack số lượng.
-    /// 2. Nếu không → tìm ô trống đầu tiên.
+    /// Thêm item vào đúng trang dựa theo ItemType:
+    /// 1. Tìm ô có cùng item trong trang → stack.
+    /// 2. Nếu không → tìm ô trống đầu tiên trong trang.
     /// 3. Nếu hết ô → log warning.
     /// </summary>
     public void AddItem(InventoryItemRecord item, int quantity = 1)
     {
         if (item == null) return;
 
-        // Tìm stack cùng loại
-        for (int i = 0; i < SLOT_COUNT; i++)
+        int pageStart = GetPageOffset(item.ItemType);
+        int pageEnd   = pageStart + SLOTS_PER_PAGE;
+
+        // Tìm stack cùng loại trong đúng trang
+        for (int i = pageStart; i < pageEnd; i++)
         {
             if (!_slots[i].IsEmpty && _slots[i].CanStackWith(item))
             {
@@ -89,27 +127,29 @@ public class InventoryRuntime : MonoBehaviour
             }
         }
 
-        // Tìm ô trống
-        for (int i = 0; i < SLOT_COUNT; i++)
+        // Tìm ô trống trong đúng trang
+        for (int i = pageStart; i < pageEnd; i++)
         {
             if (_slots[i].IsEmpty)
             {
                 _slots[i].Set(item, quantity);
-                Debug.Log($"[InventoryRuntime] Thêm '{item.DisplayName}' x{quantity} vào slot {i}");
+                Debug.Log($"[InventoryRuntime] Thêm '{item.DisplayName}' x{quantity} vào slot {i} " +
+                          $"(page: {item.ItemType})");
                 OnInventoryChanged?.Invoke();
                 return;
             }
         }
 
-        Debug.LogWarning($"[InventoryRuntime] Inventory đầy ({SLOT_COUNT} slots) — không thể thêm '{item.DisplayName}'.");
+        Debug.LogWarning($"[InventoryRuntime] Trang {item.ItemType} đầy ({SLOTS_PER_PAGE} slots) " +
+                         $"— không thể thêm '{item.DisplayName}'.");
     }
 
     /// <summary>Thêm item vào ô cụ thể (dùng khi kéo từ equipment về).</summary>
-    public void AddItemToSlot(int slotIndex, InventoryItemRecord item, int quantity = 1)
+    public void AddItemToSlot(int absoluteIndex, InventoryItemRecord item, int quantity = 1)
     {
-        if (item == null || slotIndex < 0 || slotIndex >= SLOT_COUNT) return;
+        if (item == null || absoluteIndex < 0 || absoluteIndex >= TOTAL_SLOTS) return;
 
-        InventorySlot target = _slots[slotIndex];
+        InventorySlot target = _slots[absoluteIndex];
         if (!target.IsEmpty && target.CanStackWith(item))
         {
             target.AddQuantity(quantity);
@@ -120,7 +160,7 @@ public class InventoryRuntime : MonoBehaviour
         }
         else
         {
-            // Ô bị chiếm bởi item khác → tìm ô khác
+            // Ô bị chiếm bởi item khác → tìm ô trống trong đúng trang
             AddItem(item, quantity);
             return;
         }
@@ -134,7 +174,7 @@ public class InventoryRuntime : MonoBehaviour
     /// <summary>Xóa 1 quantity của item (tìm theo reference). Legacy compat.</summary>
     public bool RemoveItem(InventoryItemRecord item)
     {
-        for (int i = 0; i < SLOT_COUNT; i++)
+        for (int i = 0; i < TOTAL_SLOTS; i++)
         {
             if (!_slots[i].IsEmpty && ReferenceEquals(_slots[i].Item, item))
             {
@@ -147,12 +187,12 @@ public class InventoryRuntime : MonoBehaviour
     }
 
     /// <summary>Xóa 1 quantity từ ô cụ thể.</summary>
-    public bool RemoveFromSlot(int slotIndex, int quantity = 1)
+    public bool RemoveFromSlot(int absoluteIndex, int quantity = 1)
     {
-        if (slotIndex < 0 || slotIndex >= SLOT_COUNT) return false;
-        if (_slots[slotIndex].IsEmpty) return false;
+        if (absoluteIndex < 0 || absoluteIndex >= TOTAL_SLOTS) return false;
+        if (_slots[absoluteIndex].IsEmpty) return false;
 
-        _slots[slotIndex].AddQuantity(-quantity);
+        _slots[absoluteIndex].AddQuantity(-quantity);
         OnInventoryChanged?.Invoke();
         return true;
     }
@@ -160,7 +200,7 @@ public class InventoryRuntime : MonoBehaviour
     public void NotifyInventoryChanged() => OnInventoryChanged?.Invoke();
 
     // ─────────────────────────────────────────────────────────────
-    //  MOVE / SWAP / STACK
+    //  MOVE / SWAP / STACK (chỉ trong cùng trang)
     // ─────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -168,12 +208,13 @@ public class InventoryRuntime : MonoBehaviour
     /// • Cùng item: stack số lượng, xóa from.
     /// • Khác item: swap 2 ô.
     /// • To trống: di chuyển đơn giản.
+    /// Hoạt động với absolute index (0-99).
     /// </summary>
     public void MoveSlot(int fromIndex, int toIndex)
     {
         if (fromIndex == toIndex) return;
-        if (fromIndex < 0 || fromIndex >= SLOT_COUNT) return;
-        if (toIndex   < 0 || toIndex   >= SLOT_COUNT) return;
+        if (fromIndex < 0 || fromIndex >= TOTAL_SLOTS) return;
+        if (toIndex   < 0 || toIndex   >= TOTAL_SLOTS) return;
 
         InventorySlot from = _slots[fromIndex];
         InventorySlot to   = _slots[toIndex];
@@ -208,7 +249,7 @@ public class InventoryRuntime : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    //  MERGE
+    //  MERGE (trong toàn bộ 100 slot)
     // ─────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -223,7 +264,7 @@ public class InventoryRuntime : MonoBehaviour
         int firstSlotIndex     = -1;
         InventoryItemRecord ref_item = null;
 
-        for (int i = 0; i < SLOT_COUNT; i++)
+        for (int i = 0; i < TOTAL_SLOTS; i++)
         {
             if (_slots[i].IsEmpty) continue;
             if (_slots[i].Item.Id != itemId) continue;
@@ -258,7 +299,7 @@ public class InventoryRuntime : MonoBehaviour
     {
         var saved = new List<PlayerStateSaveData.SavedInventoryItem>();
 
-        for (int i = 0; i < SLOT_COUNT; i++)
+        for (int i = 0; i < TOTAL_SLOTS; i++)
         {
             if (_slots[i].IsEmpty) continue;
 
@@ -276,7 +317,7 @@ public class InventoryRuntime : MonoBehaviour
                 itemType  = item.ItemType.ToString(),
                 assetId   = assetId,
                 quantity  = _slots[i].Quantity,
-                slotIndex = i
+                slotIndex = i  // Giờ lưu absolute index (0-99)
             });
         }
 
@@ -291,7 +332,7 @@ public class InventoryRuntime : MonoBehaviour
         if (savedItems == null || savedItems.Count == 0) return;
 
         // Clear toàn bộ slots trước
-        for (int i = 0; i < SLOT_COUNT; i++) _slots[i].Clear();
+        for (int i = 0; i < TOTAL_SLOTS; i++) _slots[i].Clear();
 
         var weaponLookup    = new System.Collections.Generic.Dictionary<string, WeaponData>();
         var shieldLookup    = new System.Collections.Generic.Dictionary<string, CoreShieldData>();
@@ -322,10 +363,10 @@ public class InventoryRuntime : MonoBehaviour
             int targetIdx = saved.slotIndex;
 
             // Dùng đúng slot nếu hợp lệ và trống
-            if (targetIdx >= 0 && targetIdx < SLOT_COUNT && _slots[targetIdx].IsEmpty)
+            if (targetIdx >= 0 && targetIdx < TOTAL_SLOTS && _slots[targetIdx].IsEmpty)
                 _slots[targetIdx].Set(record, qty);
             else
-                AddItem(record, qty);  // fallback: tìm ô trống
+                AddItem(record, qty);  // fallback: tìm ô trống đúng trang
         }
 
         OnInventoryChanged?.Invoke();
@@ -340,17 +381,17 @@ public class InventoryRuntime : MonoBehaviour
         foreach (var w in _startingWeapons)
         {
             var r = InventoryItemRecord.FromWeapon(w);
-            if (r != null) AddItem(r);
+            if (r != null) AddItem(r); // Tự vào trang Weapon (slot 0-24)
         }
         foreach (var s in _startingShields)
         {
             var r = InventoryItemRecord.FromShield(s);
-            if (r != null) AddItem(r);
+            if (r != null) AddItem(r); // Tự vào trang Shield (slot 25-49)
         }
         foreach (var a in _startingAccessories)
         {
             var r = InventoryItemRecord.FromAccessory(a);
-            if (r != null) AddItem(r);
+            if (r != null) AddItem(r); // Tự vào trang Artifact (slot 50-74)
         }
     }
 }

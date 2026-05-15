@@ -177,12 +177,12 @@ public class EnemyAI : MonoBehaviour
         // Cập nhật target cho Combat
         combat.SetTarget(nearestTarget);
 
-        // 2. NẾU ĐANG ĐÁNH -> KHÓA DI CHUYỂN (decelerate tự nhiên, không hard-stop)
-        if (combat.isAttacking)
+        // 2. NẾU ĐANG ĐÁNH hoặc TELEGRAPH -> KHÓA DI CHUYỂN
+        if (combat.isAttacking || combat.isTelegraphing)
         {
             if (agent.isOnNavMesh) agent.isStopped = true;
             stats.EnterCombat();
-            lastAttackEndTime = Time.time; // cập nhật liên tục → khi thoát sẽ là thời điểm kết thúc đánh
+            if (combat.isAttacking) lastAttackEndTime = Time.time;
             return;
         }
 

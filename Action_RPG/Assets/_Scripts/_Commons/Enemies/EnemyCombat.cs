@@ -25,6 +25,26 @@ public class EnemyCombat : MonoBehaviour
     [Tooltip("Góc kết thúc quét. Ví dụ: 45 = ra phải. Đặt 0→45 cho chém một chiều")]
     public float sweepEndAngle = 45f;
 
+    [Header("Telegraph — Báo hiệu trước khi đánh")]
+    [Tooltip("Bật/tắt animation báo hiệu. Tắt = tấn công ngay không cảnh báo.")]
+    public bool useTelegraph = true;
+
+    [Tooltip("Thời gian thực hiện animation báo hiệu (giây). Đây là window để player né đòn.")]
+    public float telegraphDuration = 1.0f;
+
+    [Tooltip("Tên Animator Trigger để kích hoạt animation báo hiệu.\n" +
+             "Ví dụ: 'WindUp' (kiếm sĩ giơ tay), 'ChargeUp' (pháp sư tụ lực), 'Roar' (boss gầm).\n" +
+             "Để TRỐNG nếu chỉ muốn đứng im không animation.")]
+    public string telegraphAnimTrigger = "WindUp";
+
+    [Tooltip("Tên Animator Bool để set TRUE suốt thời gian telegraph (optional).\n" +
+             "Dùng khi animation báo hiệu dài/blend (VD: 'IsCharging').\n" +
+             "Để TRỐNG nếu dùng Trigger.")]
+    public string telegraphAnimBool = "";
+
+    // Trạng thái telegraph — EnemyAI đọc để block movement
+    [HideInInspector] public bool isTelegraphing = false;
+
     private int currentComboStep = 0;
     private int maxCombo = 2;
 
@@ -72,8 +92,7 @@ protected IEnumerator EnemyAttackRoutine()
         hitTargets.Clear();
         if (stats != null) stats.EnterCombat();
 
-        // Khóa hướng tấn công ngay lúc bắt đầu đánh — enemy commit vào hướng này
-        // Nếu player dash ra sau lưng trong lúc wind-up, đòn sẽ trượt
+        // Khóa hướng ngay khi bắt đầu chuỗi tấn công — commit từ pha telegraph
         Vector3 lockedFacingDir = stats != null ? stats.facingDirection : transform.forward;
         if (target != null)
         {
@@ -86,7 +105,33 @@ protected IEnumerator EnemyAttackRoutine()
             }
         }
 
-        // 2. Trigger Animation
+        // ── TELEGRAPH PHASE ───────────────────────────────────────────────────
+        // Enemy gồng / tụ lực / làm động tác báo hiệu — player có window để né
+        // isAttacking đã = true → EnemyAI sẽ stop movement trong giai đoạn này
+        if (useTelegraph && telegraphDuration > 0f)
+        {
+            isTelegraphing = true;
+
+            if (animator != null)
+            {
+                // Ưu tiên Bool (animation blend dài), nếu không thì dùng Trigger
+                if (!string.IsNullOrEmpty(telegraphAnimBool))
+                    animator.SetBool(telegraphAnimBool, true);
+                else if (!string.IsNullOrEmpty(telegraphAnimTrigger))
+                    animator.SetTrigger(telegraphAnimTrigger);
+            }
+
+            yield return new WaitForSeconds(telegraphDuration);
+
+            isTelegraphing = false;
+
+            // Tắt Bool nếu đã bật
+            if (animator != null && !string.IsNullOrEmpty(telegraphAnimBool))
+                animator.SetBool(telegraphAnimBool, false);
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
+        // 2. Trigger Attack Animation (sau khi telegraph xong)
         if (animator != null)
         {
             animator.SetFloat("AttackSpeedMultiplier", stats.baseAttackSpeed);

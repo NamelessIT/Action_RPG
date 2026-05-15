@@ -173,13 +173,10 @@ public static class CombatMath
         {
             Debug.Log($"<color=green>SHIELD BLOCK!</color> Giảm {(1 - skillReductionMult) * 100}% sát thương. Damage còn: {totalDamage}");
         }
-        // Debug chi tiết (có thể comment lại nếu spam console)
-
-        Debug.Log($"LOG DAMGE >> RawPhys: {rawPhysical} | RawMagic: {rawMagic} \n" +
-                  $"ArmorDir: {armorDir} (Gốc {target.armor}) | T: {t} \n" +
-                  $"DefenseMult: {defenseValMult} | DirBonus: {dirBonusMult} \n" +
-                  $"Final Type Damage >> FinalPhys: {finalPhys} | FinalMagic: {finalMagic} \n" +
-                  $"FINAL: {totalDamage} (Phys: {finalPhys} + Magic: {finalMagic})");
+        // Debug chi tiết — bỏ comment khi cần tuning damage, tắt khi ship
+        // Debug.Log($"LOG DAMAGE >> RawPhys:{rawPhysical:F1} RawMagic:{rawMagic:F1} | " +
+        //           $"Armor:{armorDir:F1} DR:{physDR:P0} | T:{t} DirBonus:{dirBonusMult:F2} | " +
+        //           $"Final Phys:{finalPhys:F1} Magic:{finalMagic:F1} Total:{totalDamage:F1}");
 
 
         // Tổng Damage: Trả về 3 cục riêng biệt (True = 0 ở đòn đánh thường)

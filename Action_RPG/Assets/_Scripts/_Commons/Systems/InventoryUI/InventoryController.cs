@@ -4,9 +4,10 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Quản lý UI lưới 25 ô cố định.
-/// • Khởi tạo đúng 25 InventorySlotView khi Awake.
-/// • RefreshGrid(): cập nhật tất cả slot views, áp filter tab / search.
-/// • Các tab button (Weapon/Shield/Artifact/Others) làm mờ ô không khớp thay vì ẩn.
+/// Mỗi tab (Weapon/Shield/Artifact/Others) hiển thị 1 trang riêng biệt.
+/// Trang Weapon = slot 0–24, Shield = 25–49, Artifact = 50–74, Others = 75–99.
+/// Chuyển tab = rebind 25 views sang trang tương ứng → mỗi tab có layout slot độc lập.
+/// Tab "All" hiển thị trang Weapon mặc định (hoặc trang cuối cùng đang xem).
 /// </summary>
 public class InventoryController : MonoBehaviour
 {
@@ -29,10 +30,14 @@ public class InventoryController : MonoBehaviour
 
     private InventorySlotView[] _slotViews;   // luôn đúng 25 phần tử
 
+    /// <summary>Offset trang hiện tại (0 / 25 / 50 / 75). -1 = All tab.</summary>
+    private int _currentPageOffset = 0;
+
+    /// <summary>True khi đang filter theo tab cụ thể, false khi All tab.</summary>
+    private bool _filterActive = false;
+
     private InventoryItemRecord.InventoryItemType _currentTab
         = InventoryItemRecord.InventoryItemType.Weapon;
-
-    private bool _filterActive = false;   // false = hiện tất cả (no tab selected)
 
     // ─────────────────────────────────────────────────────────────
     //  UNITY LIFECYCLE
@@ -45,20 +50,13 @@ public class InventoryController : MonoBehaviour
 
         if (_rootCanvas == null)
             _rootCanvas = GetComponentInParent<Canvas>();
-
-        // KHÔNG gọi BuildSlotViews() ở đây!
-        // Unity không đảm bảo thứ tự Awake() giữa các GameObject.
-        // InventoryRuntime._slots có thể chưa được khởi tạo → NullRef.
     }
 
-    /// <summary>
-    /// Start() được gọi SAU KHI tất cả Awake() đã hoàn thành.
-    /// Lúc này InventoryRuntime._slots đã được khởi tạo an toàn.
-    /// </summary>
     private void Start()
     {
         BuildSlotViews();
-        RefreshGrid();   // lần đầu load đúng data
+        // Mặc định hiển thị trang Weapon
+        ShowWeaponsTab();
     }
 
     private void OnEnable()
@@ -69,7 +67,6 @@ public class InventoryController : MonoBehaviour
         if (_searchInput != null)
             _searchInput.onValueChanged.AddListener(OnSearchValueChanged);
 
-        // RefreshGrid() an toàn: nếu _slotViews chưa build (trước Start) thì return sớm
         RefreshGrid();
     }
 
@@ -83,7 +80,7 @@ public class InventoryController : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    //  BUILD SLOT VIEWS  (gọi 1 lần trong Awake)
+    //  BUILD SLOT VIEWS  (gọi 1 lần trong Start)
     // ─────────────────────────────────────────────────────────────
 
     private void BuildSlotViews()
@@ -95,62 +92,90 @@ public class InventoryController : MonoBehaviour
             return;
         }
 
-        _slotViews = new InventorySlotView[InventoryRuntime.SLOT_COUNT];
+        _slotViews = new InventorySlotView[InventoryRuntime.SLOTS_PER_PAGE];
 
-        for (int i = 0; i < InventoryRuntime.SLOT_COUNT; i++)
+        for (int i = 0; i < InventoryRuntime.SLOTS_PER_PAGE; i++)
         {
             InventorySlotView view = Instantiate(_slotViewPrefab, _gridRoot);
+            // Bind lần đầu vào trang Weapon (offset 0)
             view.Bind(i, _inventoryRuntime, this);
             _slotViews[i] = view;
         }
 
-        Debug.Log($"[InventoryController] Đã tạo {InventoryRuntime.SLOT_COUNT} InventorySlotView.");
+        Debug.Log($"[InventoryController] Đã tạo {InventoryRuntime.SLOTS_PER_PAGE} InventorySlotView.");
     }
 
     // ─────────────────────────────────────────────────────────────
-    //  TAB BUTTONS
+    //  TAB BUTTONS — chuyển trang
     // ─────────────────────────────────────────────────────────────
 
     public void ShowAllTab()
     {
+        // All tab: hiển thị trang Weapon mặc định
         _filterActive = false;
-        RefreshGrid();
+        _currentTab = InventoryItemRecord.InventoryItemType.Weapon;
+        _currentPageOffset = 0;
+        RebindViewsToPage(0);
     }
 
     public void ShowWeaponsTab()
     {
-        _currentTab   = InventoryItemRecord.InventoryItemType.Weapon;
+        _currentTab = InventoryItemRecord.InventoryItemType.Weapon;
         _filterActive = true;
-        RefreshGrid();
+        _currentPageOffset = InventoryRuntime.GetPageOffset(_currentTab);
+        RebindViewsToPage(_currentPageOffset);
     }
 
     public void ShowShieldsTab()
     {
-        _currentTab   = InventoryItemRecord.InventoryItemType.Shield;
+        _currentTab = InventoryItemRecord.InventoryItemType.Shield;
         _filterActive = true;
-        RefreshGrid();
+        _currentPageOffset = InventoryRuntime.GetPageOffset(_currentTab);
+        RebindViewsToPage(_currentPageOffset);
     }
 
     public void ShowArtifactsTab()
     {
-        _currentTab   = InventoryItemRecord.InventoryItemType.Artifact;
+        _currentTab = InventoryItemRecord.InventoryItemType.Artifact;
         _filterActive = true;
-        RefreshGrid();
+        _currentPageOffset = InventoryRuntime.GetPageOffset(_currentTab);
+        RebindViewsToPage(_currentPageOffset);
     }
 
     public void ShowOthersTab()
     {
-        _currentTab   = InventoryItemRecord.InventoryItemType.Others;
+        _currentTab = InventoryItemRecord.InventoryItemType.Others;
         _filterActive = true;
-        RefreshGrid();
+        _currentPageOffset = InventoryRuntime.GetPageOffset(_currentTab);
+        RebindViewsToPage(_currentPageOffset);
     }
 
     /// <summary>Backward-compat setter.</summary>
     public void SetTab(InventoryItemRecord.InventoryItemType itemType)
     {
-        _currentTab   = itemType;
+        _currentTab = itemType;
         _filterActive = true;
-        RefreshGrid();
+        _currentPageOffset = InventoryRuntime.GetPageOffset(itemType);
+        RebindViewsToPage(_currentPageOffset);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  REBIND — gán lại 25 views sang trang mới
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Rebind 25 InventorySlotView sang trang mới.
+    /// View[0] → slot[pageOffset + 0], View[1] → slot[pageOffset + 1], ...
+    /// </summary>
+    private void RebindViewsToPage(int pageOffset)
+    {
+        if (_slotViews == null || _inventoryRuntime == null) return;
+
+        for (int i = 0; i < _slotViews.Length; i++)
+        {
+            if (_slotViews[i] == null) continue;
+            _slotViews[i].Bind(pageOffset + i, _inventoryRuntime, this);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -181,20 +206,21 @@ public class InventoryController : MonoBehaviour
             // Cập nhật visual nội dung ô
             view.Refresh();
 
-            // Áp filter: ô trống hoặc item không khớp → làm mờ
-            InventorySlot slot = _inventoryRuntime.GetSlot(i);
-            bool matches = true;
-
-            if (slot != null && !slot.IsEmpty)
+            // Search filter (nếu có gõ tìm kiếm)
+            if (!string.IsNullOrEmpty(search))
             {
-                if (_filterActive && !slot.Item.MatchesTab(_currentTab))
-                    matches = false;
+                InventorySlot slot = _inventoryRuntime.GetSlot(_currentPageOffset + i);
+                bool matches = true;
 
-                if (!string.IsNullOrEmpty(search) && !slot.Item.MatchesSearch(search))
-                    matches = false;
+                if (slot != null && !slot.IsEmpty)
+                {
+                    if (!slot.Item.MatchesSearch(search))
+                        matches = false;
+                }
+
+                view.SetFilterMatch(matches);
             }
-
-            view.SetFilterMatch(matches);
+            // Không cần filter tab nữa — mỗi trang CHỈ chứa item đúng loại
         }
     }
 
@@ -204,20 +230,20 @@ public class InventoryController : MonoBehaviour
     //  INVENTORY OPERATIONS  (dùng bởi EquipmentSlotUI)
     // ─────────────────────────────────────────────────────────────
 
-    /// <summary>Trả item về inventory (unequip → thêm vào ô trống đầu tiên).</summary>
+    /// <summary>Trả item về inventory (unequip → thêm vào trang đúng loại).</summary>
     public void ReturnItemToInventory(InventoryItemRecord item)
     {
         if (_inventoryRuntime == null || item == null) return;
-        _inventoryRuntime.AddItem(item);
+        _inventoryRuntime.AddItem(item);  // Tự vào đúng trang
     }
 
-    /// <summary>Xóa 1 lượng item theo reference (legacy — dùng khi kéo từ DraggableItem cũ).</summary>
+    /// <summary>Xóa 1 lượng item theo reference (legacy).</summary>
     public bool RemoveItemFromInventory(InventoryItemRecord item)
     {
         return _inventoryRuntime != null && _inventoryRuntime.RemoveItem(item);
     }
 
-    /// <summary>Xóa item tại ô cụ thể (dùng khi kéo từ InventorySlotView mới).</summary>
+    /// <summary>Xóa item tại ô cụ thể.</summary>
     public bool RemoveFromSlot(int slotIndex, int quantity = 1)
     {
         return _inventoryRuntime != null && _inventoryRuntime.RemoveFromSlot(slotIndex, quantity);
