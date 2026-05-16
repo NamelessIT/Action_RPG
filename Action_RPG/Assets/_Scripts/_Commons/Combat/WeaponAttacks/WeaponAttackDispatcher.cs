@@ -95,6 +95,13 @@ public class WeaponAttackDispatcher : MonoBehaviour
             _heavyHandler  = new DefaultMeleeAttackHandler();
             return;
         }
+        // ── KHIỂM TRA VŨ KHÍ SW_T5_02 ĐẶC BIỆT ──
+        if (w.id.Trim() == "WPN_SW_T5_02")
+        {
+            _normalHandler = new ChainsawAttackHandler();
+            _heavyHandler = new ChainsawAttackHandler(); // Khóa Heavy thành Chainsaw luôn
+            return;
+        }
 
         // ── Normal handler ─────────────────────────────────────────────────
         WeaponData.AttackMode resolvedMode = ResolveAttackMode(w);

@@ -31,9 +31,12 @@ public abstract class SkillBehavior : MonoBehaviour
     public virtual bool Use()
     {
         // 1. Kiểm tra Cooldown
-        if (Time.time < lastUseTime + data.cooldown)
+        // Giảm trừ thời gian hồi chiêu dựa trên bonusCdr (Giả sử 0.2 = giảm 20%)
+        float finalCooldown = data.cooldown * (1f - stats.cooldownReduction);
+
+        if (Time.time < lastUseTime + finalCooldown)
         {
-            Debug.Log($"Skill {data.skillName} đang hồi! ({data.cooldown - (Time.time - lastUseTime):F1}s)");
+            Debug.Log($"Skill đang hồi! ({finalCooldown - (Time.time - lastUseTime):F1}s)");
             return false;
         }
 

@@ -11,8 +11,8 @@ public class BattleMageSkill : SkillBehavior
 
     [Header("Healing Settings")]
     public int minEnemiesToHeal = 2;      // Cần trúng ít nhất 2 địch để kích hoạt hồi máu
-    public float healAmountPerEnemy = 15f; // Hồi 15 HP trên mỗi kẻ địch trúng đòn
-    public float maxHealLimit = 90f;      // Giới hạn hồi máu tối đa mỗi lần dậm
+    public float healAmountPerEnemy = 50f; // Hồi 15 HP trên mỗi kẻ địch trúng đòn
+    public float maxHealLimit = 250f;      // Giới hạn hồi máu tối đa mỗi lần dậm
 
     [Header("VFX")]
     public GameObject impactVfxPrefab;    // Hiệu ứng vòng tròn năng lượng tỏa ra

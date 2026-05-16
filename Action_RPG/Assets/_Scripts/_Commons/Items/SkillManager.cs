@@ -467,12 +467,12 @@ public class SkillManager : MonoBehaviour
                     Debug.Log($"<color=cyan>>> Kích hoạt {skillData.skillName}</color>");
 
                     // Gọi trực tiếp sang EffectManager
-                    EquipmentEffectManager effectManager = GetComponentInChildren<EquipmentEffectManager>();
-                    if (effectManager != null)
-                    {
-                        // [BÍ QUYẾT Ở ĐÂY]: Truyền thẳng cái Type (E hay Q) sang cho EffectManager
-                        effectManager.TriggerSkillCastEffects(skillData.skillType);
-                    }
+                    CoreShieldEffectManager coreShieldEffectManager = GetComponentInChildren<CoreShieldEffectManager>();
+                    if (coreShieldEffectManager != null) coreShieldEffectManager.TriggerSkillCastEffects(skillData.skillType);
+
+                    // Gọi vũ khí nhận biết là vừa dùng skill
+                    WeaponEffectManager wpnEffectManager = GetComponentInChildren<WeaponEffectManager>();
+                    if (wpnEffectManager != null) wpnEffectManager.TriggerWeaponSkillEffects(skillData.skillType);
                 }
             }
         }

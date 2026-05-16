@@ -286,6 +286,16 @@ public class AllyStats : Stats
     {
         base.Update();
         // Có thể gọi RecalculateStats ở đây để test (nhưng sẽ nặng máy), nên gọi khi cần thiết thôi.
+        // HỒI MÁU TỰ NHIÊN (HpGain)
+        if (currentHp > 0 && currentHp < maxHp && !isHealingBlocked)
+        {
+            // outCombat = true thì hồi x2, false thì x1
+            float multiplier = outCombat ? 2f : 1f;
+            float amount = hpGain * multiplier * Time.deltaTime;
+
+            // Gọi hàm Heal để nó tự động kích hoạt event OnHealReceived (giúp khiên T5_03 hoạt động)
+            Heal(amount);
+        }
     }
 
 

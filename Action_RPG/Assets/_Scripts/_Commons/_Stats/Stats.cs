@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections; // Để dùng Coroutine
+using Unity.VisualScripting.Antlr3.Runtime.Misc;
 using UnityEngine;
 using UnityEngine.AI;
 using static UnityEngine.AdaptivePerformance.Provider.AdaptivePerformanceSubsystemDescriptor;
@@ -163,6 +164,13 @@ public class Stats : MonoBehaviour
     private Coroutine bleedCoroutine;
     private float bleedTimer = 0f; // Bộ đếm thời gian còn lại của Bleed
     private float currentBleedDamage = 0f; // Lưu damage để nếu đánh tiếp thì cập nhật damage mới
+
+    // --- HIỆU ỨNG THIÊU ĐỐT (BURN) (magic damage)---
+    [Header("--- Burn ---")]
+    public bool isBurning = false;
+    private Coroutine burnCoroutine;
+    private float burnTimer = 0f; // Bộ đếm thời gian còn lại của Burn
+    private float currentBurnDamage = 0f; // Lưu damage để nếu đánh tiếp thì cập nhật damage mới
     [Header ("--- Mark ---")]
     [Tooltip("Bị đánh dấu")]
     public bool IsMarked=false;
@@ -181,7 +189,7 @@ public class Stats : MonoBehaviour
     private Coroutine resonanceCoroutine;
 
     public Action<DamageInfo> OnBeforeTakeDamage;
-    public Action<float> OnHealReceived; // Dùng cho SHD_CS_T5_06
+    public event Action<float, float> OnHealReceived; // <lượng hồi, lượng dư>
 
     private NavMeshAgent agent;
     private Rigidbody rb;
@@ -286,6 +294,43 @@ public class Stats : MonoBehaviour
         isBleeding = false;
         bleedCoroutine = null;
     }
+    public void ApplyBurn(float damagePerTick, float duration)
+    {
+        // 1. Cập nhật thông số mới nhất
+        currentBurnDamage = damagePerTick; // Có thể làm logic: Lấy damage cao nhất hoặc cộng dồn
+
+        // 2. Gia hạn thời gian (Reset lại đồng hồ đếm ngược)
+        burnTimer = duration;
+
+        // Đánh dấu kẻ địch đang bị Burn
+        isBurning = true;
+        // 3. Chỉ Start Coroutine nếu nó chưa chạy
+        if (burnCoroutine == null)
+        {
+            burnCoroutine = StartCoroutine(BurnRoutine());
+        }
+    }
+
+    private IEnumerator BurnRoutine()
+    {
+        // Vòng lặp chạy chừng nào còn thời gian
+        while (burnTimer > 0)
+        {
+            // Chờ 1 giây
+            yield return new WaitForSeconds(1.0f);
+
+            // Trừ thời gian
+            burnTimer -= 1.0f;
+
+            // Gây sát thương
+            TakeDamage(new DamageInfo { magicDamage = currentBurnDamage });
+            Debug.Log($"<color=red>{gameObject.name} đang bị thiêu đốt: -{currentBurnDamage} HP (Còn {burnTimer}s)</color>");
+        }
+
+        // Hết giờ -> Xóa Coroutine để lần sau Start lại được
+        isBurning = false;
+        burnCoroutine = null;
+    }
 
     // Hàm gắn ấn thách đấu
     public void ApplyChallengeMark(float duration)
@@ -349,6 +394,12 @@ public class Stats : MonoBehaviour
                 return true;
             }
             return false;
+        }
+        // [MỚI FIX] WPN_SW_T3_02: Giảm 10% lượng Stamina tiêu hao
+        WeaponData wep = eq != null ? eq.currentWeapon : null;
+        if (wep != null && wep.id.Trim() == "WPN_SW_T3_02")
+        {
+            amount *= 0.9f; // Giảm 10%
         }
 
         // Logic mặc định
@@ -433,19 +484,19 @@ public class Stats : MonoBehaviour
         TakeDamage(info);
     }
     // Sửa hàm hồi máu (nếu bạn có hàm Heal riêng, hoặc sửa trực tiếp chỗ nào cộng máu)
-    public void Heal(float amount)
+    public virtual void Heal(float amount)
     {
-        if (isHealingBlocked)
-        {
-            Debug.Log("Hồi máu bị chặn do Say Máu!");
-            return;
-        }
+        if (isDead) return;
+
+        float excess = (currentHp + amount) - maxHp;
+        if (excess < 0) excess = 0;
 
         currentHp += amount;
         if (currentHp > maxHp) currentHp = maxHp;
-        // [MỚI] Báo cáo lượng máu vừa hồi
-        OnHealReceived?.Invoke(amount);
+
+        OnHealReceived?.Invoke(amount, excess);
     }
+
     // --- LOGIC STUN & KNOCKBACK ---
     void ApplyCrowdControl(DamageInfo info)
     {

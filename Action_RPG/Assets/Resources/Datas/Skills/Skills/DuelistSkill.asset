@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: DuelistSkill
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
   id: DuelistSkill
-  skillName: "Th\xE1ch th\u1EE9c"
+  skillName: Flash Stance
   icon: {fileID: 0}
   skilDesc: "Ch\xE9m v\u1EC1 ph\xEDa tr\u01B0\u1EDBc 1 \u0111\xF2n, \u0111\u01B0a
     k\u1EBB \u0111\u1ECBch v\xE0o tr\u1EA1ng th\xE1i \"Challenge\" trong 5 gi\xE2y.

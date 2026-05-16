@@ -22,13 +22,18 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: bad40283e81191348918933cd4ccf266, type: 3}
   rarity: 4
   baseAtk: 250
-  baseAttackSpeed: 0
+  baseAttackSpeed: 5
   moveFlexibility: 0.8
   defenseValue: 30
   bonusCritChance: 0.05
   attackRange: 2
   isRanged: 0
   projectilePrefab: {fileID: 0}
+  attackMode: 0
+  heavyChargeTime: 0.8
+  heavyAttackType: 7
+  heavyDamageMultiplier: 1.5
+  heavyProjectilePrefab: {fileID: 0}
   substats:
   - stat: 0
     val: 50
@@ -51,4 +56,6 @@ MonoBehaviour:
   reqVit: 0
   reqAgi: 0
   playerOnly: 0
+  triggerVfxPrefab: {fileID: 0}
+  auraVfxPrefab: {fileID: 0}
   comboEffects: []

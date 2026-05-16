@@ -3,7 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-public class EquipmentEffectManager : MonoBehaviour
+public class CoreShieldEffectManager : MonoBehaviour
 {
     private PlayerController player;
     private AllyStats stats;
@@ -922,7 +922,7 @@ public class EquipmentEffectManager : MonoBehaviour
         }
     }
 
-    private void HandleOnHealReceived(float amount)
+    private void HandleOnHealReceived(float amount, float excessAmount)
     {
         // Hễ có cục máu nào bơm vào người là cộng dồn
         if (SHD_CS_T5_06_Accumulating)

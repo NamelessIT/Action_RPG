@@ -96,7 +96,7 @@ public class PlayerController : MonoBehaviour
     // [MỚI] THÊM DÒNG NÀY
     public event System.Action<Stats, bool> OnKillEnemy;
     // ==================================================================
-
+    public event System.Action OnDashPerformed;
 
     private DuelistPassive duelistSkill;
     private bool isDuelistCounterActive = false; // Cache trạng thái counter cho cả vòng lặp quét
@@ -488,6 +488,7 @@ public class PlayerController : MonoBehaviour
         // ---------------------------------
 
         StartCoroutine(DashCoroutine());
+        OnDashPerformed?.Invoke();
     }
 
 
@@ -880,6 +881,15 @@ public class PlayerController : MonoBehaviour
 
         // --- 6. Send ---
         enemyStats.TakeDamage(info);
+        // --- LOGIC HÚT MÁU ---
+        float physHeal = info.physDamage * stats.physicalLifeSteal;
+        float magicHeal = info.magicDamage * stats.magicLifeSteal;
+        float totalHeal = physHeal + magicHeal;
+
+        if (totalHeal > 0)
+        {
+            stats.Heal(totalHeal);
+        }
 
         // --- 7 BÁO CHO THÚ CƯNG BIẾT ĐỂ GHI SỔ ĐEN ---
         CompanionAI myCompanion = FindFirstObjectByType<CompanionAI>();

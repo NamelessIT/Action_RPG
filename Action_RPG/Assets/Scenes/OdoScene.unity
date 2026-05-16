@@ -469,6 +469,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a205d3a76b517ab4db1bc6148b13a90f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EquipmentEffectManager
+--- !u!114 &356537144
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 356537126}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a07d308653dd6bd4e8cfbab2bb58c5d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponEffectManager
 --- !u!114 &607220562 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 491269274461419455, guid: 6c4b054cad4f8a0469efbdac5d8460f6, type: 3}
@@ -1706,6 +1718,7 @@ MonoBehaviour:
   stealthFactor: 1
   isInvisible: 0
   isBleeding: 0
+  isBurning: 0
   IsMarked: 0
   isParrying: 0
   isPerfectParryWindow: 0
@@ -2174,6 +2187,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7595386532533513913, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       insertIndex: -1
       addedObject: {fileID: 356537143}
+    - targetCorrespondingSourceObject: {fileID: 7595386532533513913, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 356537144}
   m_SourcePrefab: {fileID: 100100000, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
 --- !u!1001 &9217491667451409061
 PrefabInstance:
