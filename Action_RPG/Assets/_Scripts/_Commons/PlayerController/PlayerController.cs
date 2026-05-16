@@ -119,6 +119,7 @@ public class PlayerController : MonoBehaviour
     [HideInInspector] public bool  nextHitStun           = false;
     [HideInInspector] public float nextHitStunDuration   = 0f;
     private InventoryUIManager _inventoryUIManager;
+    private SkillTreeController _skillTreeController;
     private ItemPickupManager _pickupManager;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private DevToolPanel _devToolPanel;
@@ -151,6 +152,7 @@ public class PlayerController : MonoBehaviour
         if (equipmentManager != null && equipmentManager.currentWeapon != null)
             attackDispatcher.OnWeaponChanged(equipmentManager.currentWeapon);
         _inventoryUIManager = FindFirstObjectByType<InventoryUIManager>();
+        _skillTreeController = FindFirstObjectByType<SkillTreeController>();
         _pickupManager = GetComponent<ItemPickupManager>();
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -183,7 +185,7 @@ public class PlayerController : MonoBehaviour
     {
         if (stats == null) return;
 
-        if (InventoryUIManager.IsInventoryOpen) return;
+        if (InventoryUIManager.IsInventoryOpen || SkillTreeController.IsSkillTreeOpen) return;
 
         // [SỬA Ở ĐÂY] Khóa di chuyển vật lý nếu đang dùng skill, lướt, parry, hoặc ĐANG GỒNG
         // Bow heavy charge: cho phép di chuyển nhưng cản thường (isCharging block bị tắt)
@@ -220,6 +222,19 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
+        // C key — Skill Tree (xử lý TRƯỚC guard để đóng/mở đều hoạt động)
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            // Cho phép đóng nếu đang mở, hoặc mở nếu không có UI nào khác đang bật
+            if (SkillTreeController.IsSkillTreeOpen || !InventoryUIManager.IsInventoryOpen)
+            {
+                if (_skillTreeController == null)
+                    _skillTreeController = FindFirstObjectByType<SkillTreeController>();
+                _skillTreeController?.ToggleSkillTree();
+                return;
+            }
+        }
+
         if (Input.GetKeyDown(KeyCode.F) && !InventoryUIManager.IsInventoryOpen)
         {
             _pickupManager?.TryPickupNearest();
@@ -251,7 +266,7 @@ public class PlayerController : MonoBehaviour
         }
 #endif
 
-        if (InventoryUIManager.IsInventoryOpen) return;
+        if (InventoryUIManager.IsInventoryOpen || SkillTreeController.IsSkillTreeOpen) return;
 
         // --- 0. CÁC LOGIC NỀN (Luôn chạy bất kể trạng thái) ---
         UpdateTimersAndCombo(); // Tách logic reset combo ra hàm riêng cho gọn
@@ -523,13 +538,9 @@ public class PlayerController : MonoBehaviour
 
         rb.linearVelocity = dashDir * dashSpeed;
 
-        yield return new WaitForSeconds(0.1f);
+        // I-frames kéo dài toàn bộ thời gian dash để dodge thực sự có ý nghĩa
+        yield return new WaitForSeconds(duration);
         stats.isInvincible = false;
-
-        if (duration > 0.1f)
-        {
-            yield return new WaitForSeconds(duration - 0.1f);
-        }
 
         rb.linearVelocity = Vector3.zero;
         isDashing = false;

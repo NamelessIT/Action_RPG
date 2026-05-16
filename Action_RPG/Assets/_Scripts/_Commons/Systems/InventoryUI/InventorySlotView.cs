@@ -9,6 +9,9 @@ using UnityEngine.UI;
 ///   • Kéo thả giữa các ô (swap / stack)
 ///   • Kéo thả vào EquipmentSlotUI để trang bị
 ///   • Right-click x2 (trong 0.4s) để gộp tất cả item cùng loại
+///
+/// Multi-page: Bind() nhận absolute slot index (0-99).
+/// Khi chuyển tab, InventoryController gọi Bind() lại với offset mới.
 /// </summary>
 public class InventorySlotView : MonoBehaviour,
     IBeginDragHandler, IDragHandler, IEndDragHandler,
@@ -22,7 +25,7 @@ public class InventorySlotView : MonoBehaviour,
     [SerializeField] private CanvasGroup      _canvasGroup;
 
     // Runtime binding (gán bởi InventoryController)
-    private int              _slotIndex  = -1;
+    private int              _slotIndex  = -1;   // absolute index (0-99)
     private InventoryRuntime _runtime;
     private InventoryController _owner;
 
@@ -37,7 +40,7 @@ public class InventorySlotView : MonoBehaviour,
     //  BINDING
     // ─────────────────────────────────────────────────
 
-    /// <summary>Gán slot index + runtime cho view này.</summary>
+    /// <summary>Gán slot index (absolute 0-99) + runtime cho view này.</summary>
     public void Bind(int slotIndex, InventoryRuntime runtime, InventoryController owner)
     {
         _slotIndex = slotIndex;
@@ -52,7 +55,7 @@ public class InventorySlotView : MonoBehaviour,
         if (_runtime == null || _slotIndex < 0) return;
 
         InventorySlot slot = _runtime.GetSlot(_slotIndex);
-        bool hasItem       = !slot.IsEmpty;
+        bool hasItem       = slot != null && !slot.IsEmpty;
         bool hasIcon       = hasItem && slot.Item.Icon != null;
 
         // Icon
@@ -90,7 +93,7 @@ public class InventorySlotView : MonoBehaviour,
         if (_runtime == null || _slotIndex < 0) return;
 
         InventorySlot slot = _runtime.GetSlot(_slotIndex);
-        if (slot.IsEmpty) return;
+        if (slot == null || slot.IsEmpty) return;
 
         InventoryDragContext.BeginFromInventorySlot(slot.Item, _slotIndex, this);
 
@@ -134,7 +137,7 @@ public class InventorySlotView : MonoBehaviour,
     {
         if (_runtime == null || _slotIndex < 0) return;
 
-        // Kéo từ ô inventory sang ô inventory
+        // Kéo từ ô inventory sang ô inventory (cùng trang — vì cả 2 view đều bind cùng page)
         if (InventoryDragContext.ActiveInventorySlotSource >= 0
             && InventoryDragContext.ActiveInventorySlotSource != _slotIndex)
         {
@@ -163,7 +166,7 @@ public class InventorySlotView : MonoBehaviour,
         if (_runtime == null || _slotIndex < 0) return;
 
         InventorySlot slot = _runtime.GetSlot(_slotIndex);
-        if (slot.IsEmpty) return;
+        if (slot == null || slot.IsEmpty) return;
 
         // Dùng unscaledTime vì timeScale có thể = 0 khi inventory mở
         float now = Time.unscaledTime;
@@ -221,34 +224,23 @@ public class InventorySlotView : MonoBehaviour,
     }
 
     // ─────────────────────────────────────────────────
-    //  FILTER VISUAL (dùng bởi InventoryController khi tab filter)
+    //  FILTER VISUAL (giữ cho search filter dùng)
     // ─────────────────────────────────────────────────
 
     /// <summary>
-    /// Ẩn HOÀN TOÀN nội dung ô khi không khớp tab filter (ô trông như rỗng).
-    /// Chỉ gọi SAU Refresh() — Refresh() đã set đúng visual, hàm này chỉ override lên khi cần ẩn.
-    /// matches=true → không làm gì (Refresh() đã đúng).
-    /// matches=false → xoá icon, tên, số lượng; hiện nền rỗng.
+    /// Ẩn visual khi search không khớp.
+    /// Với multi-page, tab filter không cần hàm này nữa (mỗi trang chỉ chứa item đúng loại).
+    /// Chỉ dùng cho search text filter.
     /// </summary>
     public void SetFilterMatch(bool matches)
     {
-        if (matches) return;  // ô khớp hoặc ô trống → giữ nguyên visual từ Refresh()
+        if (matches) return;  // Khớp → giữ nguyên visual từ Refresh()
 
-        // Ẩn icon
-        if (_iconImage != null)
-            _iconImage.color = Color.clear;
-
-        // Ẩn tên
-        if (_nameText != null)
-            _nameText.text = string.Empty;
-
-        // Ẩn số lượng
-        if (_quantityText != null)
-            _quantityText.text = string.Empty;
-
-        // Hiện nền rỗng (nếu có)
-        if (_emptyBackground != null)
-            _emptyBackground.enabled = true;
+        // Ẩn visual
+        if (_iconImage != null) _iconImage.color = Color.clear;
+        if (_nameText != null) _nameText.text = string.Empty;
+        if (_quantityText != null) _quantityText.text = string.Empty;
+        if (_emptyBackground != null) _emptyBackground.enabled = true;
     }
 
     // ─────────────────────────────────────────────────
@@ -258,5 +250,5 @@ public class InventorySlotView : MonoBehaviour,
     public int SlotIndex => _slotIndex;
 
     public InventoryItemRecord CurrentItem
-        => (_runtime != null && _slotIndex >= 0) ? _runtime.GetSlot(_slotIndex).Item : null;
+        => (_runtime != null && _slotIndex >= 0) ? _runtime.GetSlot(_slotIndex)?.Item : null;
 }

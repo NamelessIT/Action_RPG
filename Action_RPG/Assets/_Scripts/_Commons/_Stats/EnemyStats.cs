@@ -59,7 +59,7 @@ public class EnemyStats : Stats
         base.Start();
         if (maxHp == 0) maxHp = baseHp;
         currentHp = maxHp;
-        base.baseAttackSpeed = 0.5f;
+        base.baseAttackSpeed = 0.667f; // 1 đòn mỗi 1.5 giây (= 1/1.5). Subclass override để chỉnh.
         spawnPosition = transform.position;
 
         currentAggro = 0;
