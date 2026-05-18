@@ -61,6 +61,10 @@ public class EnemyAI : MonoBehaviour
     // Thời điểm kết thúc đòn đánh cuối để tính cooldown
     private float lastAttackEndTime = -100f;
 
+    // Post-attack behavior state — chọn một lần, giữ đến hết cooldown
+    private bool _postAttackBehaviorChosen = false;
+    private bool _postAttackCircleRight    = false;
+
     [Header("--- Boss Dodge System ---")]
     [Tooltip("Chỉ hoạt động với monsterRank >= 1")]
     public float bossDodgeCooldown = 4f;
@@ -455,7 +459,13 @@ public class EnemyAI : MonoBehaviour
         Stats tStats = target.GetComponent<Stats>();
         if (tStats != null) stealthFactor = tStats.stealthFactor;
 
-        float effectiveRadius = stats.detectionRadius * stealthFactor;
+        // Enemy không bị ảnh hưởng stealthReduction → bỏ qua stealth của player
+        if (stats is EnemyStats enemyStats && !enemyStats.isAffectedByStealthReduction)
+            stealthFactor = 1.0f;
+
+        float effectiveRadius    = stats.detectionRadius * stealthFactor;
+        float effectiveViewDist  = stats.viewDistance * stealthFactor;
+        float effectiveHalfAngle = (stats.viewAngle / 2f) * stealthFactor;
 
         if ((stats.detectionMethod & DetectionMethod.Range) != 0)
         {
@@ -464,14 +474,13 @@ public class EnemyAI : MonoBehaviour
 
         if ((stats.detectionMethod & DetectionMethod.Sight) != 0)
         {
-            float effectiveViewDist = stats.viewDistance * stealthFactor;
             if (dist <= effectiveViewDist)
             {
                 Vector3 dirToTarget = (target.position - transform.position).normalized;
                 Vector3 facingDir = stats.facingDirection != Vector3.zero ? stats.facingDirection : transform.forward;
 
                 float angle = Vector3.Angle(facingDir, dirToTarget);
-                if (angle < stats.viewAngle / 2f)
+                if (angle < effectiveHalfAngle)
                 {
                     if (!Physics.Raycast(transform.position, dirToTarget, dist, stats.obstacleMask))
                     {
@@ -515,6 +524,13 @@ public class EnemyAI : MonoBehaviour
         {
             HandlePostAttackBehavior(distToTarget);
             return;
+        }
+
+        // Cooldown vừa kết thúc → reset trạng thái post-attack và phục hồi tốc độ
+        if (_postAttackBehaviorChosen)
+        {
+            _postAttackBehaviorChosen = false;
+            RestoreNormalSpeed();
         }
 
         // ==========================================
@@ -573,7 +589,7 @@ public class EnemyAI : MonoBehaviour
         else
         {
             // --- HÀNH ĐỘNG TẤN CÔNG ---
-            if (distToTarget <= combat.basicAttackRange + 0.5f)
+            if (distToTarget <= combat.basicAttackRange)
             {
                 State_Attack();
             }
@@ -651,6 +667,7 @@ public class EnemyAI : MonoBehaviour
         if (agent.isOnNavMesh)
         {
             agent.stoppingDistance = combat.basicAttackRange * 0.9f;
+            agent.speed = stats.baseMoveSpeed; // đảm bảo tốc độ về bình thường sau khi circle
         }
         else
         {
@@ -660,11 +677,22 @@ public class EnemyAI : MonoBehaviour
         stats.EnterCombat();
     }
 
+    void RestoreNormalSpeed()
+    {
+        if (agent.isOnNavMesh) agent.speed = stats.baseMoveSpeed;
+    }
+
     void State_Attack()
     {
         if (nearestTarget == null) return;
         currentState = "Attacking";
-        if (agent.isOnNavMesh) agent.isStopped = true;
+        if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
+
+        // Ép mặt về phía player trước khi đánh — tránh đánh hụt do facingDirection sai hướng
+        Vector3 dirToTarget = (nearestTarget.position - transform.position).normalized;
+        dirToTarget.y = 0;
+        if (dirToTarget != Vector3.zero) stats.facingDirection = dirToTarget;
+
         stats.EnterCombat();
         combat.PerformBasicAttack();
     }
@@ -747,7 +775,16 @@ public class EnemyAI : MonoBehaviour
         Vector3 currentDir = Vector3.zero;
         if (agent.velocity.magnitude > 0.1f)
         {
-            currentDir = agent.velocity.normalized;
+            // Khi đang lùi hoặc circle (post-attack), vẫn nhìn về phía player thay vì nhìn hướng di chuyển
+            if (currentState.StartsWith("Post-Attack") && nearestTarget != null)
+            {
+                currentDir = (nearestTarget.position - transform.position).normalized;
+                currentDir.y = 0;
+            }
+            else
+            {
+                currentDir = agent.velocity.normalized;
+            }
             lookTimer = 0f;
         }
         else if (currentState == "Attacking" || currentState == "Chasing")
@@ -835,28 +872,42 @@ public class EnemyAI : MonoBehaviour
     // lùi ra, xoay vòng, hoặc đứng tại chỗ mặt nhìn player chờ thời.
     void HandlePostAttackBehavior(float distToTarget)
     {
-        // Quá xa → áp sát để sẵn sàng đánh ngay khi hồi xong
+        // Quá xa → áp sát (reset về chase, không giữ behavior cũ)
         if (distToTarget > combat.basicAttackRange * 2.0f)
         {
+            _postAttackBehaviorChosen = false;
+            RestoreNormalSpeed();
             State_Chase();
             return;
         }
 
-        // Quá gần (player áp sát) → lùi ra tạo khoảng cách
+        // Quá gần (player áp sát) → lùi ra (override behavior hiện tại)
         if (distToTarget < combat.basicAttackRange * 0.6f)
         {
+            _postAttackBehaviorChosen = false;
+            RestoreNormalSpeed();
             State_BackOff();
             return;
         }
 
-        // Khoảng cách hợp lý → random behavior
-        float roll = Random.value;
-        if (roll < backOffChance)
-            State_BackOff();
-        else if (roll < backOffChance + circleChance)
-            State_CircleTarget();
-        else
-            State_HoldAndFace(); // Đứng im nhìn player, chờ tấn công
+        // Chưa chọn hành động → chọn ngay bây giờ (chỉ chọn 1 lần cho cả cooldown)
+        if (!_postAttackBehaviorChosen)
+        {
+            _postAttackBehaviorChosen = true;
+            _postAttackCircleRight = Random.value < 0.5f; // lưu chiều circle
+            float roll = Random.value;
+            if (roll < backOffChance)
+                State_BackOff();
+            else if (roll < backOffChance + circleChance)
+                State_CircleTarget();
+            else
+                State_HoldAndFace();
+            return;
+        }
+
+        // Hành động đã chọn → nếu agent đến đích rồi thì đứng chờ, không roll lại
+        if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.1f)
+            State_HoldAndFace();
     }
 
     // Lùi ra xa player theo hướng ngược lại
@@ -874,7 +925,7 @@ public class EnemyAI : MonoBehaviour
             State_HoldAndFace();
     }
 
-    // Xoay vòng quanh player (flanking nhẹ)
+    // Xoay vòng quanh player (flanking nhẹ) — 50% tốc độ, chiều đã chọn 1 lần
     void State_CircleTarget()
     {
         if (nearestTarget == null || !agent.isOnNavMesh) return;
@@ -882,12 +933,15 @@ public class EnemyAI : MonoBehaviour
         Vector3 toTarget = (nearestTarget.position - transform.position).normalized;
         toTarget.y = 0;
         Vector3 circleDir = Vector3.Cross(toTarget, Vector3.up).normalized;
-        if (Random.value < 0.5f) circleDir = -circleDir;
+        if (!_postAttackCircleRight) circleDir = -circleDir; // chiều đã cố định từ lúc chọn
         float circleDist = combat.basicAttackRange * 0.8f;
         Vector3 dest = transform.position + circleDir * circleDist;
         NavMeshHit hit;
         if (NavMesh.SamplePosition(dest, out hit, circleDist + 1f, NavMesh.AllAreas))
+        {
+            agent.speed = stats.baseMoveSpeed * 0.5f;
             State_MoveTo(hit.position, "Post-Attack Circle");
+        }
         else
             State_BackOff();
     }

@@ -66,6 +66,16 @@ public class DamageNumberManager : MonoBehaviour
         Instance.SpawnPopup(info, worldPos);
     }
 
+    /// <summary>
+    /// Hiển thị số hồi máu màu xanh lá tại vị trí worldPos.
+    /// Gọi từ Stats.Heal.
+    /// </summary>
+    public static void ShowHeal(float amount, Vector3 worldPos)
+    {
+        if (Instance == null) return;
+        Instance.SpawnHealPopup(amount, worldPos);
+    }
+
     /// <summary>Trả popup về pool sau khi hết vòng đời.</summary>
     public void ReturnToPool(DamageNumberPopup popup)
     {
@@ -90,6 +100,22 @@ public class DamageNumberManager : MonoBehaviour
             popup.ResetPopup();
             _pool.Enqueue(popup);
         }
+    }
+
+    private void SpawnHealPopup(float amount, Vector3 worldPos)
+    {
+        if (_popupPrefab == null) return;
+
+        if (_pool.Count == 0)
+        {
+            DamageNumberPopup extra = Instantiate(_popupPrefab, transform);
+            extra.ResetPopup();
+            _pool.Enqueue(extra);
+        }
+
+        DamageNumberPopup next = _pool.Dequeue();
+        Vector3 spawnPos = worldPos + Vector3.right * Random.Range(-0.2f, 0.2f);
+        next.ShowHeal(amount, spawnPos);
     }
 
     private void SpawnPopup(DamageInfo info, Vector3 worldPos)

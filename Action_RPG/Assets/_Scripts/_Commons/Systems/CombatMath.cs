@@ -64,6 +64,14 @@ public static class CombatMath
             // A. Dùng Skill: Lấy hệ số từ Skill
             physMult = skill.skillPhysicalMultiplier;
             magicMult = skill.skillMagicMultiplier;
+
+            // Signature damage bonus từ Skill Tree
+            if (skill.skillType == SkillData.SkillType.Signature && attacker is AllyStats allyAtk)
+            {
+                float sigBonus = 1f + allyAtk.signatureDamageBonus;
+                physMult  *= sigBonus;
+                magicMult *= sigBonus;
+            }
         }
         else
         {
@@ -129,8 +137,11 @@ public static class CombatMath
         // Kiểm tra góc Block (blockThreshold nằm ở Stats cha nên gọi trực tiếp được)
         if (t <= target.blockThreshold)
         {
-            // A. Auto Block bằng chỉ số Defense của vũ khí
-            defenseValMult = 1f / (1f + target.defenseValue * K_CONST);
+            // A. Auto Block — áp dụng defenseValueIgnore từ attacker
+            float effectiveDefenseValue = target.defenseValue;
+            if (attacker is AllyStats allyIgnore && allyIgnore.defenseValueIgnore > 0f)
+                effectiveDefenseValue *= (1f - Mathf.Clamp01(allyIgnore.defenseValueIgnore));
+            defenseValMult = 1f / (1f + effectiveDefenseValue * K_CONST);
 
             // B. Manual Guard (Phải ép kiểu sang AllyStats mới check được)
             if (target is AllyStats allyTarget)

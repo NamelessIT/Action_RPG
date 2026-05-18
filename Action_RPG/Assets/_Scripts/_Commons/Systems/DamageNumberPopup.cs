@@ -37,6 +37,7 @@ public class DamageNumberPopup : MonoBehaviour
     private static readonly Color ColPhys  = new Color(1.0f, 0.55f, 0.1f);  // Cam vàng
     private static readonly Color ColMagic = new Color(0.75f, 0.2f, 1.0f); // Tím
     private static readonly Color ColTrue  = Color.white;                    // Trắng
+    private static readonly Color ColHeal  = new Color(0.2f, 0.9f, 0.2f);  // Xanh lá
 
     // ─────────────────────────────────────────────────────────────
     //  RUNTIME
@@ -102,6 +103,19 @@ public class DamageNumberPopup : MonoBehaviour
         if (info.trueDamage  > 0f) SpawnLine(info.trueDamage,  info.isCrit, ColTrue,  idx++);
 
         if (idx == 0) SpawnLine(0f, false, Color.gray, 0, "BLOCKED");
+    }
+
+    public void ShowHeal(float amount, Vector3 worldPos)
+    {
+        if (_cam == null) _cam = Camera.main;
+
+        transform.position = worldPos + Vector3.up * _spawnOffsetY;
+        _timer  = 0f;
+        _active = true;
+        gameObject.SetActive(true);
+
+        ClearLines();
+        SpawnLine(amount, false, ColHeal, 0, $"+{Mathf.RoundToInt(amount)}");
     }
 
     public void ResetPopup()

@@ -21,8 +21,9 @@ MonoBehaviour:
   skillType: 2
   skillPhysicalMultiplier: 1.5
   skillMagicMultiplier: 0
-  cooldown: 2
+  cooldown: 5
   sinChargeReq: 0
   passiveEffectCode: 0
   skillEffectCode: 2
+  signatureEffectCode: 0
   passiveStats: []

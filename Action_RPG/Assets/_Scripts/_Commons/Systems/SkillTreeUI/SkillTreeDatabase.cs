@@ -2,14 +2,21 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// Database tổng chứa tất cả Class Skill Trees.
-/// Gắn 1 instance duy nhất trên scene (hoặc làm ScriptableObject singleton).
-/// SkillTreeController dùng file này để tra cứu skill tree theo className.
+/// Database skill tree cho 1 nhân vật (Chris hoặc Leo).
+/// Mỗi nhân vật có 1 asset riêng gồm: shared T1 + 4 class trees.
 /// </summary>
 [CreateAssetMenu(fileName = "SkillTreeDatabase", menuName = "SkillTree/Skill Tree Database")]
 public class SkillTreeDatabase : ScriptableObject
 {
-    [Header("--- All Class Skill Trees ---")]
+    [Header("--- Character ---")]
+    [Tooltip("ID nhân vật thuộc database này: 'Chris' hoặc 'Leo'")]
+    public string characterId = "Chris";
+
+    [Header("--- Shared Tier 1 (5 nodes chung) ---")]
+    [Tooltip("5 node Tier 1 dùng chung trước khi chọn class. Hiển thị khi chưa unlock class nào.")]
+    public ClassSkillTreeData commonTree;
+
+    [Header("--- All Class Skill Trees (4 classes) ---")]
     [Tooltip("Kéo tất cả ClassSkillTreeData vào đây (1 class = 1 entry)")]
     public List<ClassSkillTreeData> allClassTrees = new List<ClassSkillTreeData>();
 

@@ -280,7 +280,7 @@ public class DevToolPanel : MonoBehaviour
     public void CMD_HealFull()
     {
         if (!AssertStats()) return;
-        _playerStats.currentHp = _playerStats.maxHp;
+        _playerStats.Heal(_playerStats.maxHp - _playerStats.currentHp);
         Debug.Log($"[DevTool] HealFull → HP: {_playerStats.currentHp}/{_playerStats.maxHp}");
     }
 
@@ -313,6 +313,24 @@ public class DevToolPanel : MonoBehaviour
         _devGodMode = !_devGodMode;
         _playerStats.isInvincible = _devGodMode;
         Debug.Log($"[DevTool] God Mode: {(_devGodMode ? "<color=green>ON</color>" : "<color=red>OFF</color>")}");
+    }
+
+    /// <summary>Tạo Shield bằng 20% max HP, tồn tại 3 giây.</summary>
+    public void CMD_AddShield20()
+    {
+        if (!AssertStats()) return;
+        float amount = _playerStats.maxHp * 0.2f;
+        _playerStats.AddShield(amount, 3f);
+        Debug.Log($"[DevTool] AddShield 20% ({amount:F0}) — tồn tại 3s");
+    }
+
+    /// <summary>Tạo Shield bằng 50% max HP, tồn tại 3 giây.</summary>
+    public void CMD_AddShield50()
+    {
+        if (!AssertStats()) return;
+        float amount = _playerStats.maxHp * 0.5f;
+        _playerStats.AddShield(amount, 3f);
+        Debug.Log($"[DevTool] AddShield 50% ({amount:F0}) — tồn tại 3s");
     }
 
     // ============================================================
@@ -623,6 +641,26 @@ public class DevToolPanel : MonoBehaviour
             Debug.Log($"[DevTool]   └ EXP reward: {es.expReward} | HP: {es.baseHp}");
     }
 
+    /// <summary>Chuyển sang nhân vật Chris và reload scene.</summary>
+    public void CMD_SwitchToChris()
+    {
+        PlayerPrefs.SetString("SelectedCharacter", "Chris");
+        PlayerPrefs.Save();
+        Debug.Log("[DevTool] Chuyển sang Chris — reloading scene...");
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    /// <summary>Chuyển sang nhân vật Leo và reload scene.</summary>
+    public void CMD_SwitchToLeo()
+    {
+        PlayerPrefs.SetString("SelectedCharacter", "Leo");
+        PlayerPrefs.Save();
+        Debug.Log("[DevTool] Chuyển sang Leo — reloading scene...");
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
     /// <summary>
     /// Reset TOÀN BỘ game về trạng thái mặc định:
     /// 1. Chặn GameManager.OnDestroy() ghi đè save (fix bug static Dictionary)
@@ -643,17 +681,28 @@ public class DevToolPanel : MonoBehaviour
         // 2. Xóa static memory cache (BUG ROOT CAUSE: static Dictionary tồn tại qua scene reload)
         InAppPlayerStateDAO.ClearMemoryCache();
 
-        // 3. Xóa save file trên disk
-        string savePath = Path.Combine(Application.persistentDataPath, "save_player_1.json");
-        if (File.Exists(savePath))
+        // 3. Xóa tất cả save file per-character trên disk
+        string[] charIds = { "Chris", "Leo" };
+        foreach (string cid in charIds)
         {
-            File.Delete(savePath);
-            Debug.Log($"[DevTool] ResetGame — đã xóa save file: {savePath}");
+            string charSavePath = Path.Combine(Application.persistentDataPath, $"save_{cid}.json");
+            if (File.Exists(charSavePath))
+            {
+                File.Delete(charSavePath);
+                Debug.Log($"[DevTool] ResetGame — đã xóa save file: {charSavePath}");
+            }
         }
-        else
+        // Xóa cả file legacy (save_player_1.json) nếu còn tồn tại
+        string legacySavePath = Path.Combine(Application.persistentDataPath, "save_player_1.json");
+        if (File.Exists(legacySavePath))
         {
-            Debug.Log("[DevTool] ResetGame — save file không tồn tại, sẽ dùng DB default.");
+            File.Delete(legacySavePath);
+            Debug.Log($"[DevTool] ResetGame — đã xóa legacy save file: {legacySavePath}");
         }
+
+        // 3b. Xóa tiến trình Skill Tree + SP per-character khỏi PlayerPrefs
+        SkillTreeRuntime.ClearAllSavedProgress("Chris", "Leo");
+        Debug.Log("[DevTool] ResetGame — đã xóa toàn bộ tiến trình Skill Tree.");
 
         // 4. Reload scene
         Time.timeScale = 1f;

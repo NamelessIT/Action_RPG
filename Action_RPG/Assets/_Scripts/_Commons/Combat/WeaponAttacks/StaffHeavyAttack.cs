@@ -40,7 +40,8 @@ public class StaffHeavyAttack : IWeaponAttackHandler
     private IEnumerator SpinRoutine(WeaponAttackContext ctx)
     {
         // ANIMATOR: // ctx.Animator.SetBool("StaffSpin", true);
-        ctx.Player.isAttacking = true;
+        ctx.Player.isAttacking    = true;
+        ctx.Player.isStaffSpinning = true; // Cho phép di chuyển 50% tốc độ khi spin
 
         float tickTimer = 0f;
 
@@ -62,8 +63,9 @@ public class StaffHeavyAttack : IWeaponAttackHandler
 
         // ANIMATOR: // ctx.Animator.SetBool("StaffSpin", false);
         // Lưu ý: nếu coroutine bị StopCoroutine, đoạn này không chạy.
-        // WeaponAttackDispatcher.StopChanneled() đã xử lý reset isAttacking.
-        ctx.Player.isAttacking = false;
+        // WeaponAttackDispatcher.StopChanneled() đã xử lý reset isAttacking + isStaffSpinning.
+        ctx.Player.isAttacking     = false;
+        ctx.Player.isStaffSpinning = false;
         _isSpinning = false;
     }
 
@@ -78,6 +80,7 @@ public class StaffHeavyAttack : IWeaponAttackHandler
             if (enemy == null) continue;
             if (!ctx.TryAddHitTarget(enemy.transform)) continue;
 
+            ctx.Player.nextHitKnockbackForce = 5f; // Spin nhẹ hơn đòn heavy thường (15f → 5f)
             ctx.ApplyDamage(enemy, true, ctx.ComboStep);
             ctx.OnHitEvent?.Invoke(ctx.ComboStep, true);
         }

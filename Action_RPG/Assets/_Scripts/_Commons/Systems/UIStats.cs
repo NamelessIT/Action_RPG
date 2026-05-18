@@ -21,6 +21,12 @@ namespace Systems
         public Slider sinSlider;
         public TextMeshProUGUI sinText;
 
+        [Header("--- Shield Bar ---")]
+        [Tooltip("Image fill màu bạc — lấp đầy phần HP còn trống (fill từ trái sang phải)")]
+        public Image shieldFillImage;
+        [Tooltip("Image fill màu bạc mờ — đè lên HP bar khi shield vượt quá max HP (fill từ phải sang trái)")]
+        public Image shieldOverlayImage;
+
         [Header("--- Skill E (Normal Skill - No Cost) ---")]
         public GameObject skillE_Container;
         public Image skillE_Icon;
@@ -81,6 +87,8 @@ namespace Systems
             }
             if (hpText) hpText.text = $"{Mathf.Ceil(playerStats.currentHp)} / {playerStats.maxHp}";
 
+            UpdateShieldBar();
+
             if (staminaSlider)
             {
                 staminaSlider.maxValue = playerStats.maxStamina;
@@ -93,6 +101,34 @@ namespace Systems
                 sinSlider.value = Mathf.Lerp(sinSlider.value, playerStats.currentSin, Time.deltaTime * 10f);
             }
             if (sinText) sinText.text = $"{Mathf.Ceil(playerStats.currentSin)} / {playerStats.maxSin}";
+        }
+
+        // Shield bar dùng 2 Image chồng lên hp slider fill area:
+        // shieldFillImage    — fillOrigin=Left,  solid silver:   điền phần HP trống
+        // shieldOverlayImage — fillOrigin=Right, semi-transparent: đè lên phần HP đầy
+        // Hierarchy Unity: shieldFillImage DƯỚI hpSlider, shieldOverlayImage TRÊN hpSlider
+        void UpdateShieldBar()
+        {
+            float shield = playerStats.currentShield;
+            float curHp  = playerStats.currentHp;
+            float maxHp  = playerStats.maxHp;
+
+            bool hasShield = shield > 0f && maxHp > 0f;
+            if (shieldFillImage)    shieldFillImage.gameObject.SetActive(hasShield);
+            if (shieldOverlayImage) shieldOverlayImage.gameObject.SetActive(hasShield);
+            if (!hasShield) return;
+
+            float emptySpace  = Mathf.Max(0f, maxHp - curHp);
+            float fillPart    = Mathf.Min(shield, emptySpace);
+            float overlayPart = Mathf.Max(0f, shield - emptySpace);
+
+            // Fill từ trái đến (curHp + fillPart)/maxHp; phần dưới hpSlider bị che, chỉ lộ shield
+            if (shieldFillImage)
+                shieldFillImage.fillAmount = (curHp + fillPart) / maxHp;
+
+            // Fill từ phải sang trái, đè lên HP bar (bạc mờ, thấy máu đỏ bên dưới)
+            if (shieldOverlayImage)
+                shieldOverlayImage.fillAmount = overlayPart / maxHp;
         }
 
         void UpdateSkills()

@@ -3,7 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-public class EquipmentEffectManager : MonoBehaviour
+public class CoreShieldEffectManager : MonoBehaviour
 {
     private PlayerController player;
     private AllyStats stats;
@@ -207,18 +207,8 @@ public class EquipmentEffectManager : MonoBehaviour
 
     private void Effect_SHD_CS_T3_02()
     {
-        StartCoroutine(TemporaryShieldRoutine(200f, 3f));
-    }
-    private IEnumerator TemporaryShieldRoutine(float amount, float duration)
-    {
-        stats.currentShield += amount;
-        Debug.Log($"<color=cyan>[SHD_CS_T3_02]</color> Nhận {amount} giáp ảo (3s)");
-
-        yield return new WaitForSeconds(duration);
-
-        stats.currentShield -= amount;
-        if (stats.currentShield < 0) stats.currentShield = 0;
-        Debug.Log("<color=cyan>[SHD_CS_T3_02]</color> Giáp ảo đã hết hạn.");
+        stats.AddShield(200f, 3f);
+        Debug.Log("<color=cyan>[SHD_CS_T3_02]</color> Nhận 200 giáp ảo (3s)");
     }
 
     private void Effect_SHD_CS_T3_03(DamageInfo info)
@@ -922,7 +912,7 @@ public class EquipmentEffectManager : MonoBehaviour
         }
     }
 
-    private void HandleOnHealReceived(float amount)
+    private void HandleOnHealReceived(float amount, float excessAmount)
     {
         // Hễ có cục máu nào bơm vào người là cộng dồn
         if (SHD_CS_T5_06_Accumulating)

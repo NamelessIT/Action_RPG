@@ -95,6 +95,13 @@ public class WeaponAttackDispatcher : MonoBehaviour
             _heavyHandler  = new DefaultMeleeAttackHandler();
             return;
         }
+        // ── KHIỂM TRA VŨ KHÍ SW_T5_02 ĐẶC BIỆT ──
+        if (w.id.Trim() == "WPN_SW_T5_02")
+        {
+            _normalHandler = new ChainsawAttackHandler();
+            _heavyHandler = new ChainsawAttackHandler(); // Khóa Heavy thành Chainsaw luôn
+            return;
+        }
 
         // ── Normal handler ─────────────────────────────────────────────────
         WeaponData.AttackMode resolvedMode = ResolveAttackMode(w);
@@ -168,8 +175,12 @@ public class WeaponAttackDispatcher : MonoBehaviour
         _channeledCoroutine = null;
         _isChanneledActive  = false;
 
-        // Reset isAttacking để player di chuyển được ngay sau khi thả chuột
-        if (_pc != null) _pc.isAttacking = false;
+        // Reset để player di chuyển được ngay sau khi thả chuột
+        if (_pc != null)
+        {
+            _pc.isAttacking     = false;
+            _pc.isStaffSpinning = false;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────

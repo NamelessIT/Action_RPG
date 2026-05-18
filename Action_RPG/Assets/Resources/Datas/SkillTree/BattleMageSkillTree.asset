@@ -1,0 +1,474 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81f2eb5fa3b7a7b4e9c17c99f73d64a9, type: 3}
+  m_Name: BattleMageSkillTree
+  m_EditorClassIdentifier: Assembly-CSharp::ClassSkillTreeData
+  className: BattleMage
+  classIcon: {fileID: 0}
+  skillNodes:
+  - nodeId: BattleMage_T2_N1
+    nodeName: +3 VIT
+    nodeDescription: +3 baseVIT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 2
+      value: 3
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Chris_T1_N5
+    uiPosition: {x: 0, y: 0}
+  - nodeId: BattleMage_T2_N2
+    nodeName: +3 INT
+    nodeDescription: +3 baseINT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 3
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - BattleMage_T2_N1
+    uiPosition: {x: 0, y: -150}
+  - nodeId: BattleMage_T2_N3
+    nodeName: +5 VIT
+    nodeDescription: +5 baseVIT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 2
+      value: 5
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - BattleMage_T2_N2
+    uiPosition: {x: 0, y: -300}
+  - nodeId: BattleMage_T2_N4
+    nodeName: +5 INT
+    nodeDescription: +5 baseINT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 5
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - BattleMage_T2_N3
+    uiPosition: {x: 0, y: -450}
+  - nodeId: BattleMage_T2_N5
+    nodeName: BattleMageLiteSignature
+    nodeDescription: "H\u1ECDc BattleMageLiteSignature Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: 7883a7bfc3ce84e4696e5dc2121ccd06, type: 2}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - BattleMage_T2_N4
+    uiPosition: {x: 0, y: -600}
+  - nodeId: BattleMage_T3_N1
+    nodeName: BattleMagePassive
+    nodeDescription: "H\u1ECDc BattleMagePassive Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: f4fc50f6e5800674f95ad79f4d9045c4, type: 2}
+    statGains: []
+    classGrantType: 1
+    classGrantName: BattleMage
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - BattleMage_T2_N5
+    uiPosition: {x: 0, y: -750}
+  - nodeId: BattleMage_T3_N2
+    nodeName: +7 VIT / +4 Armor / +8 MR
+    nodeDescription: +7 baseVIT, +4 Armor, +8 MagicResist
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 2
+      value: 7
+    - statType: 9
+      value: 4
+    - statType: 10
+      value: 8
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - BattleMage_T3_N1
+    uiPosition: {x: 0, y: -900}
+  - nodeId: BattleMage_T3_N3
+    nodeName: BattleMageSkill
+    nodeDescription: "H\u1ECDc BattleMageSkill Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: 342c7020eccd0b94c91866411c8fbc3f, type: 2}
+    statGains: []
+    classGrantType: 2
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - BattleMage_T3_N2
+    uiPosition: {x: 0, y: -1050}
+  - nodeId: BattleMage_T3_N4
+    nodeName: +1% MagicLifeSteal
+    nodeDescription: +1% MagicLifeSteal
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 21
+      value: 0.01
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - BattleMage_T3_N3
+    uiPosition: {x: 0, y: -1200}
+  - nodeId: BattleMage_T3_N5
+    nodeName: +7 INT / +0.4 FlatSinGain
+    nodeDescription: +7 baseINT, +0.4 flatSinGain
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 7
+    - statType: 22
+      value: 0.4
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - BattleMage_T3_N4
+    uiPosition: {x: 0, y: -1350}
+  - nodeId: BattleMage_T4_N1
+    nodeName: Heal 10 Sin on HP Threshold
+    nodeDescription: "Core: H\u1ED3i 10 Sin khi HP xu\u1ED1ng d\u01B0\u1EDBi ng\u01B0\u1EE1ng
+      nh\u1EA5t \u0111\u1ECBnh"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T3_N5
+    uiPosition: {x: 0, y: -1500}
+  - nodeId: BattleMage_T4_N2
+    nodeName: +5 INT / +5 VIT
+    nodeDescription: +5 baseINT, +5 baseVIT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 5
+    - statType: 2
+      value: 5
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T4_N1
+    uiPosition: {x: 0, y: -1650}
+  - nodeId: BattleMage_T4_N3
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T4_N2
+    uiPosition: {x: 0, y: -1800}
+  - nodeId: BattleMage_T4_N4
+    nodeName: Skill Range +20%
+    nodeDescription: "Core: K\u1EF9 n\u0103ng t\u0103ng 20% t\u1EA7m \u0111\xE1nh
+      / t\u1EA7m h\u1ED3i"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T4_N3
+    uiPosition: {x: 0, y: -1950}
+  - nodeId: BattleMage_T4_N5
+    nodeName: +6 Armor / +12 MR
+    nodeDescription: +6 Armor, +12 MagicResist
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 9
+      value: 6
+    - statType: 10
+      value: 12
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T4_N4
+    uiPosition: {x: 0, y: -2100}
+  - nodeId: BattleMage_T4_N6
+    nodeName: "Excess Heal 30% \u2192 Shield"
+    nodeDescription: "Core: 30% l\u01B0\u1EE3ng h\u1ED3i m\xE1u v\u01B0\u1EE3t m\u1EE9c
+      chuy\u1EC3n th\xE0nh shield"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T4_N5
+    uiPosition: {x: 0, y: -2250}
+  - nodeId: BattleMage_T4_N7
+    nodeName: +5 INT / +5 VIT
+    nodeDescription: +5 baseINT, +5 baseVIT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 5
+    - statType: 2
+      value: 5
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T4_N6
+    uiPosition: {x: 0, y: -2400}
+  - nodeId: BattleMage_T4_N8
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T4_N7
+    uiPosition: {x: 0, y: -2550}
+  - nodeId: BattleMage_T4_N9
+    nodeName: Cooldown -1s
+    nodeDescription: "Core: Gi\u1EA3m 1 gi\xE2y cooldown k\u1EF9 n\u0103ng"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T4_N8
+    uiPosition: {x: 0, y: -2700}
+  - nodeId: BattleMage_T4_N10
+    nodeName: +1.5% MagicLifeSteal
+    nodeDescription: +1.5% MagicLifeSteal
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 21
+      value: 0.015
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T4_N9
+    uiPosition: {x: 0, y: -2850}
+  - nodeId: BattleMage_T4_N11
+    nodeName: Companion Heals 5% of BM Heal
+    nodeDescription: "Core: Companion h\u1ED3i 5% l\u01B0\u1EE3ng m\xE1u m\xE0 BattleMage
+      h\u1ED3i"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T4_N10
+    uiPosition: {x: 0, y: -3000}
+  - nodeId: BattleMage_T4_N12
+    nodeName: +5 INT / +5 VIT
+    nodeDescription: +5 baseINT, +5 baseVIT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 5
+    - statType: 2
+      value: 5
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T4_N11
+    uiPosition: {x: 0, y: -3150}
+  - nodeId: BattleMage_T4_N13
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T4_N12
+    uiPosition: {x: 0, y: -3300}
+  - nodeId: BattleMage_T4_N14
+    nodeName: Heal Scale +20%
+    nodeDescription: "Core: K\u1EF9 n\u0103ng scale th\xEAm 20% l\u01B0\u1EE3ng h\u1ED3i
+      m\xE1u"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T4_N13
+    uiPosition: {x: 0, y: -3450}
+  - nodeId: BattleMage_T4_N15
+    nodeName: +0.6 FlatSinGain
+    nodeDescription: +0.6 flatSinGain
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 22
+      value: 0.6
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - BattleMage_T4_N14
+    uiPosition: {x: 0, y: -3600}
+  - nodeId: BattleMage_T5_N1
+    nodeName: BattleMageSignature
+    nodeDescription: "H\u1ECDc BattleMageSignature Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: 5f7d72f6699cb5e4294c61877acfbbd0, type: 2}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - BattleMage_T4_N15
+    uiPosition: {x: 0, y: -3750}
+  - nodeId: BattleMage_T5_N2
+    nodeName: +15 INT / +15 VIT
+    nodeDescription: +15 baseINT, +15 baseVIT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 15
+    - statType: 2
+      value: 15
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - BattleMage_T5_N1
+    uiPosition: {x: 0, y: -3900}
+  - nodeId: BattleMage_T5_N3
+    nodeName: +10 Armor / +20 MR / +2.5% MagicLS
+    nodeDescription: +10 Armor, +20 MagicResist, +2.5% MagicLifeSteal
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 9
+      value: 10
+    - statType: 10
+      value: 20
+    - statType: 21
+      value: 0.025
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - BattleMage_T5_N2
+    uiPosition: {x: 0, y: -4050}
+  - nodeId: BattleMage_T5_N4
+    nodeName: +15 INT / +15 VIT
+    nodeDescription: +15 baseINT, +15 baseVIT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 15
+    - statType: 2
+      value: 15
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - BattleMage_T5_N3
+    uiPosition: {x: 0, y: -4200}
+  - nodeId: BattleMage_T5_N5
+    nodeName: +1 FlatSinGain
+    nodeDescription: +1 flatSinGain
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 22
+      value: 1
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - BattleMage_T5_N4
+    uiPosition: {x: 0, y: -4350}

@@ -132,7 +132,7 @@ public class StatDetailUI : MonoBehaviour
     private void RefreshHeader()
     {
         SetText(_textName, _playerStats.characterName);
-        SetText(_textLevelClass, $"Lv {_playerStats.level}  {_playerStats.className}");
+        SetText(_textLevelClass, $"Lv {_playerStats.level}  {_playerStats.DisplayClassName}");
     }
 
     private void RefreshResources()

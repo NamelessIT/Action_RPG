@@ -70,6 +70,13 @@ public class InAppPlayerStateDAO
     // === Save/Load State (dùng file JSON) ===
     private string GetSavePath(int playerId)
     {
+        // Dùng characterId (Chris / Leo) để tạo save file riêng biệt cho từng nhân vật.
+        // PlayerPrefs "SelectedCharacter" được ghi từ CharacterSelectScene trước khi load scene chính.
+        string charId = PlayerPrefs.GetString("SelectedCharacter", "");
+        if (!string.IsNullOrEmpty(charId))
+            return System.IO.Path.Combine(Application.persistentDataPath, $"save_{charId}.json");
+
+        // Fallback: nếu chưa chọn nhân vật, dùng playerId như cũ
         return System.IO.Path.Combine(Application.persistentDataPath, $"save_player_{playerId}.json");
     }
 
@@ -90,8 +97,8 @@ public class InAppPlayerStateDAO
         if (savedStates.TryGetValue(playerId, out var memData))
             return memData;
 
-        // Thử load từ file
-        string path = Application.persistentDataPath + $"/save_player_{playerId}.json";
+        // Thử load từ file (dùng GetSavePath để đảm bảo đúng file per-character)
+        string path = GetSavePath(playerId);
         if (System.IO.File.Exists(path))
         {
             string json = System.IO.File.ReadAllText(path);

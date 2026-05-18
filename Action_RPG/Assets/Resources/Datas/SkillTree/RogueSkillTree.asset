@@ -1,0 +1,466 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81f2eb5fa3b7a7b4e9c17c99f73d64a9, type: 3}
+  m_Name: RogueSkillTree
+  m_EditorClassIdentifier: Assembly-CSharp::ClassSkillTreeData
+  className: Rogue
+  classIcon: {fileID: 0}
+  skillNodes:
+  - nodeId: Rogue_T2_N1
+    nodeName: +2 AGI
+    nodeDescription: +2 baseAGI
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 6
+      value: 2
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Leo_T1_N5
+    uiPosition: {x: 0, y: 0}
+  - nodeId: Rogue_T2_N2
+    nodeName: +4 DEX
+    nodeDescription: +4 baseDEX
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 5
+      value: 4
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Rogue_T2_N1
+    uiPosition: {x: 0, y: -150}
+  - nodeId: Rogue_T2_N3
+    nodeName: +4 AGI
+    nodeDescription: +4 baseAGI
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 6
+      value: 4
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Rogue_T2_N2
+    uiPosition: {x: 0, y: -300}
+  - nodeId: Rogue_T2_N4
+    nodeName: +6 DEX
+    nodeDescription: +6 baseDEX
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 5
+      value: 6
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Rogue_T2_N3
+    uiPosition: {x: 0, y: -450}
+  - nodeId: Rogue_T2_N5
+    nodeName: RogueLiteSignature
+    nodeDescription: "H\u1ECDc RogueLiteSignature Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: d779029c483aaa245a4bc7b1befed6c6, type: 2}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Rogue_T2_N4
+    uiPosition: {x: 0, y: -600}
+  - nodeId: Rogue_T3_N1
+    nodeName: RoguePassive
+    nodeDescription: "H\u1ECDc RoguePassive Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: 55aa6247e9add4d4595577a21759e053, type: 2}
+    statGains: []
+    classGrantType: 1
+    classGrantName: Rogue
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Rogue_T2_N5
+    uiPosition: {x: 0, y: -750}
+  - nodeId: Rogue_T3_N2
+    nodeName: +4 AGI / +4% StealthRed
+    nodeDescription: +4 baseAGI, +4% stealthReduction
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 6
+      value: 4
+    - statType: 18
+      value: 0.04
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Rogue_T3_N1
+    uiPosition: {x: 0, y: -900}
+  - nodeId: Rogue_T3_N3
+    nodeName: RogueSkill
+    nodeDescription: "H\u1ECDc RogueSkill Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: 0a6eba31b1aefd0448b624d9ecd62bcd, type: 2}
+    statGains: []
+    classGrantType: 2
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Rogue_T3_N2
+    uiPosition: {x: 0, y: -1050}
+  - nodeId: Rogue_T3_N4
+    nodeName: +3% DirBackstab
+    nodeDescription: +3% directionBonusBackstab
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 27
+      value: 0.03
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Rogue_T3_N3
+    uiPosition: {x: 0, y: -1200}
+  - nodeId: Rogue_T3_N5
+    nodeName: +10 DEX / +4% DashSpeed
+    nodeDescription: +10 baseDEX, +4% dashSpeed
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 5
+      value: 10
+    - statType: 28
+      value: 0.04
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Rogue_T3_N4
+    uiPosition: {x: 0, y: -1350}
+  - nodeId: Rogue_T4_N1
+    nodeName: Dash Through Enemies
+    nodeDescription: "Core: Dash xuy\xEAn qua k\u1EBB \u0111\u1ECBch"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T3_N5
+    uiPosition: {x: 0, y: -1500}
+  - nodeId: Rogue_T4_N2
+    nodeName: +6 DEX / +3 AGI
+    nodeDescription: +6 baseDEX, +3 baseAGI
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 5
+      value: 6
+    - statType: 6
+      value: 3
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T4_N1
+    uiPosition: {x: 0, y: -1650}
+  - nodeId: Rogue_T4_N3
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T4_N2
+    uiPosition: {x: 0, y: -1800}
+  - nodeId: Rogue_T4_N4
+    nodeName: Skill Duration +20%
+    nodeDescription: "Core: K\u1EF9 n\u0103ng t\u0103ng 20% th\u1EDDi gian hi\u1EC7u
+      l\u1EF1c"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T4_N3
+    uiPosition: {x: 0, y: -1950}
+  - nodeId: Rogue_T4_N5
+    nodeName: +6% StealthReduction
+    nodeDescription: +6% stealthReduction
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 18
+      value: 0.06
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T4_N4
+    uiPosition: {x: 0, y: -2100}
+  - nodeId: Rogue_T4_N6
+    nodeName: First Attack After Dash +10% Dmg
+    nodeDescription: "Core: \u0110\xF2n \u0111\xE1nh \u0111\u1EA7u ti\xEAn sau dash
+      t\u0103ng 10% s\xE1t th\u01B0\u01A1ng"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T4_N5
+    uiPosition: {x: 0, y: -2250}
+  - nodeId: Rogue_T4_N7
+    nodeName: +6 DEX / +3 AGI
+    nodeDescription: +6 baseDEX, +3 baseAGI
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 5
+      value: 6
+    - statType: 6
+      value: 3
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T4_N6
+    uiPosition: {x: 0, y: -2400}
+  - nodeId: Rogue_T4_N8
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T4_N7
+    uiPosition: {x: 0, y: -2550}
+  - nodeId: Rogue_T4_N9
+    nodeName: Cooldown -1s
+    nodeDescription: "Core: Gi\u1EA3m 1 gi\xE2y cooldown k\u1EF9 n\u0103ng"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T4_N8
+    uiPosition: {x: 0, y: -2700}
+  - nodeId: Rogue_T4_N10
+    nodeName: +4.5% DirBackstab
+    nodeDescription: +4.5% directionBonusBackstab
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 27
+      value: 0.045
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T4_N9
+    uiPosition: {x: 0, y: -2850}
+  - nodeId: Rogue_T4_N11
+    nodeName: 'Backstab: -30% Armor+MS 3s'
+    nodeDescription: "Core: Backstab gi\u1EA3m 30% Armor v\xE0 MoveSpeed k\u1EBB
+      \u0111\u1ECBch trong 3 gi\xE2y"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T4_N10
+    uiPosition: {x: 0, y: -3000}
+  - nodeId: Rogue_T4_N12
+    nodeName: +8 DEX / +4 AGI
+    nodeDescription: +8 baseDEX, +4 baseAGI
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 5
+      value: 8
+    - statType: 6
+      value: 4
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T4_N11
+    uiPosition: {x: 0, y: -3150}
+  - nodeId: Rogue_T4_N13
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T4_N12
+    uiPosition: {x: 0, y: -3300}
+  - nodeId: Rogue_T4_N14
+    nodeName: Damage Scale +20%
+    nodeDescription: "Core: K\u1EF9 n\u0103ng scale th\xEAm 20% s\xE1t th\u01B0\u01A1ng"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T4_N13
+    uiPosition: {x: 0, y: -3450}
+  - nodeId: Rogue_T4_N15
+    nodeName: +6% DashSpeed
+    nodeDescription: +6% dashSpeed
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 28
+      value: 0.06
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Rogue_T4_N14
+    uiPosition: {x: 0, y: -3600}
+  - nodeId: Rogue_T5_N1
+    nodeName: RogueSignature
+    nodeDescription: "H\u1ECDc RogueSignature Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: f59ab83fb15dd804bad503733ed69680, type: 2}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Rogue_T4_N15
+    uiPosition: {x: 0, y: -3750}
+  - nodeId: Rogue_T5_N2
+    nodeName: +20 DEX / +10 AGI
+    nodeDescription: +20 baseDEX, +10 baseAGI
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 5
+      value: 20
+    - statType: 6
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Rogue_T5_N1
+    uiPosition: {x: 0, y: -3900}
+  - nodeId: Rogue_T5_N3
+    nodeName: +10% StealthRed / +7.5% DirBackstab
+    nodeDescription: +10% stealthReduction, +7.5% directionBonusBackstab
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 18
+      value: 0.1
+    - statType: 27
+      value: 0.075
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Rogue_T5_N2
+    uiPosition: {x: 0, y: -4050}
+  - nodeId: Rogue_T5_N4
+    nodeName: +20 DEX / +10 AGI
+    nodeDescription: +20 baseDEX, +10 baseAGI
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 5
+      value: 20
+    - statType: 6
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Rogue_T5_N3
+    uiPosition: {x: 0, y: -4200}
+  - nodeId: Rogue_T5_N5
+    nodeName: +6% DashSpeed
+    nodeDescription: +6% dashSpeed
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 28
+      value: 0.06
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Rogue_T5_N4
+    uiPosition: {x: 0, y: -4350}

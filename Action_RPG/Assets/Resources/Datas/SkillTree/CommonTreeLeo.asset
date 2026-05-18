@@ -1,0 +1,85 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81f2eb5fa3b7a7b4e9c17c99f73d64a9, type: 3}
+  m_Name: CommonTreeLeo
+  m_EditorClassIdentifier: Assembly-CSharp::ClassSkillTreeData
+  className: Common
+  classIcon: {fileID: 0}
+  skillNodes:
+  - nodeId: Leo_T1_N1
+    nodeName: 
+    nodeDescription: +20 baseHp
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 1
+      value: 20
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 1
+    prerequisiteNodeIds: []
+    uiPosition: {x: 0, y: 200}
+  - nodeId: Leo_T1_N2
+    nodeName: 
+    nodeDescription: "H\u1ECDc LeoPassive"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: 352ec4913129af649abe7d3145774a0f, type: 2}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 2
+    prerequisiteNodeIds:
+    - Leo_T1_N1
+    uiPosition: {x: 0, y: 175}
+  - nodeId: Leo_T1_N3
+    nodeName: 
+    nodeDescription: "H\u1ECDc LeoSkill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: 839eaaa8f1d124f45b1c4ad1023f66e4, type: 2}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 3
+    prerequisiteNodeIds:
+    - Leo_T1_N2
+    uiPosition: {x: 0, y: 150}
+  - nodeId: Leo_T1_N4
+    nodeName: 
+    nodeDescription: "H\u1ECDc LeoSignature"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: f887a716beb294a42a10e3999355edc7, type: 2}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 4
+    prerequisiteNodeIds:
+    - Leo_T1_N3
+    uiPosition: {x: 0, y: 125}
+  - nodeId: Leo_T1_N5
+    nodeName: 
+    nodeDescription: +5% bonusCritChance
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 7
+      value: 0.05
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 5
+    prerequisiteNodeIds:
+    - Leo_T1_N4
+    uiPosition: {x: 0, y: 100}

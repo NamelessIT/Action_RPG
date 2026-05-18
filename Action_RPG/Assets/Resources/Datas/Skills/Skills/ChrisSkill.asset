@@ -22,9 +22,10 @@ MonoBehaviour:
     nh\u1ECF."
   skillType: 2
   skillPhysicalMultiplier: 1
-  skillMagicMultiplier: 1
-  cooldown: 3
+  skillMagicMultiplier: 0
+  cooldown: 7
   sinChargeReq: 0
   passiveEffectCode: 0
   skillEffectCode: 1
+  signatureEffectCode: 0
   passiveStats: []
