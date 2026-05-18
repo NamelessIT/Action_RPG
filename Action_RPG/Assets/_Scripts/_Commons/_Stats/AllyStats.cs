@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 public class AllyStats : Stats
 {
     [Header("--- Attribute Point---")]
@@ -66,8 +67,43 @@ public class AllyStats : Stats
     public float cdrPerAGI=0.0015f;
     public float bonusCdr;
 
-    [Header("--- Class Info ---")]
-    public string className = "Warrior"; // Hoặc dùng Enum ClassType
+    [Header("--- Special Stats (Skill Tree) ---")]
+    [Tooltip("% bỏ qua Defense Value của quái (0.1 = 10%)")]
+    public float defenseValueIgnore = 0f;
+    [Tooltip("% giảm tầm phát hiện của enemy (0.1 = giảm 10%)")]
+    public float stealthReduction = 0f;
+    [Tooltip("% tăng sát thương Signature (0.1 = +10%)")]
+    public float signatureDamageBonus = 0f;
+    [Tooltip("% tăng tốc độ bay projectile (0.1 = +10%)")]
+    public float projectileSpeedBonus = 0f;
+    [Tooltip("% giảm Stamina tiêu hao (0.2 = giảm 20%)")]
+    public float staminaReduction = 0f;
+    [Tooltip("Giây cộng thêm vào parry window của DuelistPassive")]
+    public float parryWindow = 0f;
+    [Tooltip("% tăng thêm cho Direction Bonus khi backstab (0.15 = tăng thêm 15%, 1.25→1.4)")]
+    public float directionBonusBackstab = 0f;
+    [Tooltip("% tăng tốc độ dash (0.2 = nhanh hơn 20%)")]
+    public float dashSpeed = 0f;
+    [Tooltip("% tăng DamageOutputMultiplier của Companion (0.3 = +30%)")]
+    public float companionDamageOutputMult = 0f;
+    [Tooltip("% tăng bonusHp của Companion (0.3 = +30%)")]
+    public float companionBonusHp = 0f;
+    [Tooltip("% tăng bonusCdr của Companion (0.2 = +20%)")]
+    public float companionBonusCdr = 0f;
+
+    [Header("--- Class System ---")]
+    [Tooltip("Danh sách class đã học (0–2 phần tử). Tự động cập nhật khi unlock node Skill Tree.")]
+    public List<string> classes = new List<string>();
+
+    [Tooltip("'Chris' hoặc 'Leo' — xác định nhân vật, không thay đổi trong game.")]
+    public string characterId = "Chris";
+
+    /// <summary>Class đầu tiên học được (T3 N1 đầu tiên).</summary>
+    public string PrimaryClass   => classes.Count > 0 ? classes[0] : "";
+    /// <summary>Class thứ hai (T3 N1 thứ hai). Trống nếu chưa học.</summary>
+    public string SecondaryClass => classes.Count > 1 ? classes[1] : "";
+    /// <summary>Tên hiển thị: "ClassA+ClassB" sau khi kết hợp, hoặc "ClassA" nếu còn đơn.</summary>
+    public string DisplayClassName => classes.Count > 0 ? string.Join("+", classes) : "—";
 
     [Header("--- Combat Status ---")]
     public bool isPerfectDodgeSuccess = false;
@@ -140,6 +176,9 @@ public class AllyStats : Stats
         Debug.Log($"<color=cyan>[AllyStats]</color> {gameObject.name} nhận 5 Attribute Points (Tổng: {attributePointRemain})");
         Debug.Log($"<color=gray>Lưu ý UI sau này: Chỉ số tối đa được cộng là {(level * 3) + 10}</color>");
     }
+    /// <summary>Override trong PlayerStats để khởi tạo chỉ số theo nhân vật cụ thể.</summary>
+    protected virtual void InitializeClassStats() { }
+
     // Hàm này phải được gọi mỗi khi: Lên cấp, Đổi đồ, Nhận Buff, Chịu Debuff
     public void RecalculateStats()
     {
@@ -204,25 +243,10 @@ public class AllyStats : Stats
 
         // 8. Cooldown Reduction
         cooldownReduction = baseCdr + (cdrPerAGI * AGI) + bonusCdr;
-    }
-    public void InitializeClassStats()
-    {
-        if (className == "Warrior")
-        {
-            // WARRIOR: "Mình đồng da sắt"
-            // Luôn luôn có Super Armor cấp 0 -> Miễn nhiễm với quái nhỏ (Rank 0)
-            isSuperArmor = true;
-            superArmorLevel = 0;
 
-            // Nếu bạn muốn Warrior cấp cao cứng hơn nữa thì tăng level lên 1
-        }
-        else if (className == "Assassin")
-        {
-            // ASSASSIN: Mỏng manh, dễ bị đẩy
-            isSuperArmor = false;
-        }
+        // 9. Stealth Factor (dùng bởi EnemyAI.CanSeeTarget)
+        stealthFactor = 1.0f - Mathf.Clamp01(stealthReduction);
     }
-
     // Ghi đè hàm TakeDamage của cha (Stats) (Cho Chris)
     // Override phiên bản đầy đủ (DamageInfo)
     public override void TakeDamage(DamageInfo info)
@@ -292,9 +316,10 @@ public class AllyStats : Stats
             // outCombat = true thì hồi x2, false thì x1
             float multiplier = outCombat ? 2f : 1f;
             float amount = hpGain * multiplier * Time.deltaTime;
+            if (amount <= 0f) return;
 
-            // Gọi hàm Heal để nó tự động kích hoạt event OnHealReceived (giúp khiên T5_03 hoạt động)
-            Heal(amount);
+            // showPopup=false: không hiện số xanh lá cho hồi máu tự nhiên
+            Heal(amount, false);
         }
     }
 

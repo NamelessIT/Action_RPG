@@ -35,7 +35,11 @@ public class RangedAttackHandler : IWeaponAttackHandler
             Projectile proj    = projObj.GetComponent<Projectile>();
 
             if (proj != null)
+            {
                 proj.Setup(ctx.Player, fireDir, ctx.Player.attackRange, ctx.IsHeavy, ctx.ComboStep);
+                if (ctx.Stats != null && ctx.Stats.projectileSpeedBonus > 0f)
+                    proj.speed *= (1f + ctx.Stats.projectileSpeedBonus);
+            }
         }
 
         yield return new WaitForSeconds(ctx.SwingDuration);

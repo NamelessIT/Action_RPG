@@ -2,55 +2,45 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// UI component cho 1 node skill trong Skill Tree.
-/// Mỗi node hiển thị: icon, tên, trạng thái (locked/unlocked/equipped), level upgrade.
-/// Designer tạo prefab với component này, SkillTreeController sẽ spawn nó.
-/// </summary>
 public class SkillNodeUI : MonoBehaviour
 {
-    // ─────────────────────────────────────────────────────────────
-    //  INSPECTOR FIELDS
-    // ─────────────────────────────────────────────────────────────
-
     [Header("Visual")]
-    [SerializeField] private Image _iconImage;
-    [SerializeField] private Image _frameBorder;           // Viền frame (đổi màu theo state)
-    [SerializeField] private TextMeshProUGUI _nameText;
-    [SerializeField] private TextMeshProUGUI _levelText;   // "Lv 2/3"
-    [SerializeField] private TextMeshProUGUI _costText;    // "1 SP"
+    [SerializeField] private Image              _iconImage;
+    [SerializeField] private Image              _frameBorder;
+    [SerializeField] private TextMeshProUGUI    _nameText;
+    [SerializeField] private TextMeshProUGUI    _costText;       // "1 SP"
 
     [Header("State Colors")]
-    [SerializeField] private Color _lockedColor = new Color(0.3f, 0.3f, 0.3f, 1f);
-    [SerializeField] private Color _availableColor = new Color(1f, 0.85f, 0f, 1f);    // Vàng: đủ điều kiện
-    [SerializeField] private Color _unlockedColor = new Color(0.2f, 0.8f, 0.2f, 1f);  // Xanh lá: đã unlock
-    [SerializeField] private Color _equippedColor = new Color(0f, 0.6f, 1f, 1f);      // Xanh dương: đang equip
-    [SerializeField] private Color _maxedColor = new Color(0.9f, 0.3f, 0.9f, 1f);     // Tím: max level
+    [SerializeField] private Color _lockedColor    = new Color(0.3f, 0.3f, 0.3f, 1f);
+    [SerializeField] private Color _availableColor = new Color(1f, 0.85f, 0f, 1f);
+    [SerializeField] private Color _unlockedColor  = new Color(0.2f, 0.8f, 0.2f, 1f);
+    [SerializeField] private Color _equippedColor  = new Color(0f, 0.6f, 1f, 1f);
 
     [Header("Buttons")]
     [SerializeField] private Button _unlockButton;
     [SerializeField] private Button _equipButton;
 
-    // ─────────────────────────────────────────────────────────────
-    //  STATE
-    // ─────────────────────────────────────────────────────────────
+    // ── Default icon cho node stat/core (không có SkillData.icon) ──
+    [Header("Default Icons")]
+    [SerializeField] private Sprite _statNodeIcon;
+    [SerializeField] private Sprite _coreNodeIcon;
 
-    private SkillNodeData _nodeData;
-    private SkillTreeRuntime _runtime;
+    private SkillNodeData       _nodeData;
+    private SkillTreeRuntime    _runtime;
     private SkillTreeController _controller;
+
+    public SkillNodeData NodeData => _nodeData;
 
     // ─────────────────────────────────────────────────────────────
     //  BINDING
     // ─────────────────────────────────────────────────────────────
 
-    /// <summary>Gán dữ liệu cho node UI này.</summary>
     public void Bind(SkillNodeData nodeData, SkillTreeRuntime runtime, SkillTreeController controller)
     {
-        _nodeData = nodeData;
-        _runtime = runtime;
+        _nodeData   = nodeData;
+        _runtime    = runtime;
         _controller = controller;
 
-        // Gán button listeners
         if (_unlockButton != null)
         {
             _unlockButton.onClick.RemoveAllListeners();
@@ -65,92 +55,90 @@ public class SkillNodeUI : MonoBehaviour
         Refresh();
     }
 
-    /// <summary>Cập nhật visual theo state hiện tại.</summary>
+    // ─────────────────────────────────────────────────────────────
+    //  REFRESH
+    // ─────────────────────────────────────────────────────────────
+
     public void Refresh()
     {
-        if (_nodeData == null || _nodeData.skillData == null || _runtime == null) return;
+        if (_nodeData == null || _runtime == null) return;
 
-        SkillData skill = _nodeData.skillData;
-        string id = skill.id;
-        int currentLevel = _runtime.GetUpgradeLevel(id);
-        bool isUnlocked = currentLevel > 0;
-        bool isMaxed = currentLevel >= _nodeData.maxUpgradeLevel;
-        bool canUpgrade = _runtime.CanUnlockOrUpgrade(_nodeData);
-        bool isEquipped = _runtime.IsEquipped(skill);
+        string id         = _nodeData.nodeId;
+        bool   isUnlocked = _runtime.IsUnlocked(id);
+        bool   canUnlock  = _runtime.CanUnlockNode(_nodeData);
 
-        // --- Icon ---
+        // ── Icon ──────────────────────────────────────────────────
         if (_iconImage != null)
         {
-            _iconImage.sprite = skill.icon;
-            _iconImage.color = isUnlocked ? Color.white : new Color(0.4f, 0.4f, 0.4f, 0.8f);
+            Sprite icon = null;
+            if (_nodeData.skillData != null)
+                icon = _nodeData.skillData.icon;
+            else if (_nodeData.nodeType == SkillNodeType.CoreMechanic)
+                icon = _coreNodeIcon;
+            else
+                icon = _statNodeIcon;
+
+            _iconImage.sprite = icon;
+            _iconImage.color  = isUnlocked ? Color.white : new Color(0.4f, 0.4f, 0.4f, 0.8f);
         }
 
-        // --- Name ---
+        // ── Name ──────────────────────────────────────────────────
         if (_nameText != null)
-            _nameText.text = skill.skillName;
+            _nameText.text = _nodeData.nodeName;
 
-        // --- Level Text ---
-        if (_levelText != null)
-        {
-            if (!isUnlocked)
-                _levelText.text = "Locked";
-            else if (isMaxed)
-                _levelText.text = $"MAX ({currentLevel}/{_nodeData.maxUpgradeLevel})";
-            else
-                _levelText.text = $"Lv {currentLevel}/{_nodeData.maxUpgradeLevel}";
-        }
-
-        // --- Cost Text ---
+        // ── Cost ──────────────────────────────────────────────────
         if (_costText != null)
-        {
-            if (isMaxed)
-                _costText.text = "";
-            else
-            {
-                int cost = _runtime.GetNextCost(_nodeData);
-                _costText.text = $"{cost} SP";
-            }
-        }
+            _costText.text = isUnlocked ? "" : $"{_nodeData.unlockCost} SP";
 
-        // --- Frame Color ---
+        // ── Frame Color ───────────────────────────────────────────
         if (_frameBorder != null)
         {
-            if (isEquipped)
-                _frameBorder.color = _equippedColor;
-            else if (isMaxed)
-                _frameBorder.color = _maxedColor;
-            else if (isUnlocked)
-                _frameBorder.color = _unlockedColor;
-            else if (canUpgrade)
-                _frameBorder.color = _availableColor;
-            else
-                _frameBorder.color = _lockedColor;
+            bool isEquipped = _nodeData.skillData != null && _runtime.IsEquipped(_nodeData.skillData);
+
+            if (isEquipped)      _frameBorder.color = _equippedColor;
+            else if (isUnlocked) _frameBorder.color = _unlockedColor;
+            else if (canUnlock)  _frameBorder.color = _availableColor;
+            else                 _frameBorder.color = _lockedColor;
         }
 
-        // --- Buttons ---
+        // ── Unlock Button ─────────────────────────────────────────
         if (_unlockButton != null)
         {
-            // Hiện nút Unlock/Upgrade khi chưa max
-            _unlockButton.gameObject.SetActive(!isMaxed);
-            _unlockButton.interactable = canUpgrade;
+            _unlockButton.gameObject.SetActive(!isUnlocked);
+            _unlockButton.interactable = canUnlock;
 
-            // Đổi text nút
             TextMeshProUGUI btnText = _unlockButton.GetComponentInChildren<TextMeshProUGUI>();
-            if (btnText != null)
-                btnText.text = isUnlocked ? "Upgrade" : "Unlock";
+            if (btnText != null) btnText.text = "Unlock";
         }
 
+        // ── Equip Button ─────────────────────────────────────────
         if (_equipButton != null)
         {
-            // Chỉ hiện nút Equip cho skill type Skill/Signature đã unlock
-            bool isEquippableType = (skill.skillType == SkillData.SkillType.Skill
-                                  || skill.skillType == SkillData.SkillType.Signature);
-            _equipButton.gameObject.SetActive(isUnlocked && isEquippableType);
-            _equipButton.interactable = isUnlocked && !isEquipped;
+            bool isSkillNode = _nodeData.nodeType == SkillNodeType.Skill && _nodeData.skillData != null;
+
+            // Lấy Skill thực tế (Sẽ tự động trả về skill kết hợp nếu đạt level 23)
+            SkillData actualSkill = isSkillNode ? _runtime.GetActualSkillToEquip(_nodeData) : null;
+
+            bool isEquippable = actualSkill != null &&
+                               (actualSkill.skillType == SkillData.SkillType.Skill ||
+                                actualSkill.skillType == SkillData.SkillType.Signature);
+
+            bool isBanned = _runtime.IsNodeEquipBanned(_nodeData);
+            bool isEquipped = actualSkill != null && _runtime.IsEquipped(actualSkill);
+
+            // Hiện nút trang bị nếu node đã unlock và chứa kỹ năng hợp lệ
+            _equipButton.gameObject.SetActive(isUnlocked && isEquippable);
+
+            // Chỉ cho bấm trang bị nếu chưa được gán VÀ không nằm trong danh sách cấm
+            _equipButton.interactable = !isEquipped && !isBanned;
 
             TextMeshProUGUI btnText = _equipButton.GetComponentInChildren<TextMeshProUGUI>();
             if (btnText != null)
-                btnText.text = isEquipped ? "Equipped" : "Equip";
+            {
+                if (isEquipped) btnText.text = "Equipped";
+                else if (isBanned) btnText.text = "Locked";
+                else btnText.text = "Equip";
+            }
         }
     }
 
@@ -162,37 +150,23 @@ public class SkillNodeUI : MonoBehaviour
     {
         if (_runtime == null || _nodeData == null) return;
 
-        bool success = _runtime.UnlockOrUpgrade(_nodeData);
-        if (success)
+        if (_runtime.UnlockNode(_nodeData))
         {
-            // Refresh toàn bộ tree (vì prerequisite có thể mở node khác)
             if (_controller != null) _controller.RefreshAllNodes();
         }
     }
 
     private void OnEquipClicked()
     {
-        if (_runtime == null || _nodeData == null || _nodeData.skillData == null) return;
+        if (_runtime == null || _nodeData?.skillData == null) return;
 
-        SkillData skill = _nodeData.skillData;
+        SkillData actualSkill = _runtime.GetActualSkillToEquip(_nodeData);
 
-        if (_runtime.IsEquipped(skill))
-        {
-            // Đang equip → unequip
-            _runtime.UnequipSkillFromTree(skill.skillType);
-        }
+        if (_runtime.IsEquipped(actualSkill))
+            _runtime.UnequipSkillFromTree(actualSkill.skillType);
         else
-        {
-            // Equip mới
-            _runtime.EquipSkillFromTree(skill);
-        }
+            _runtime.EquipSkillFromNode(_nodeData); // Gọi hàm mới bên Runtime
 
         if (_controller != null) _controller.RefreshAllNodes();
     }
-
-    // ─────────────────────────────────────────────────────────────
-    //  PROPERTIES
-    // ─────────────────────────────────────────────────────────────
-
-    public SkillNodeData NodeData => _nodeData;
 }

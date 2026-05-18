@@ -34,6 +34,8 @@ public class EnemyStats : Stats
     public float viewDistance = 10f;
     [Range(0, 360)] public float viewAngle = 110f;
     public LayerMask obstacleMask;
+    [Tooltip("Có bị ảnh hưởng bởi stealthReduction của player không (false = luôn phát hiện bình thường)")]
+    public bool isAffectedByStealthReduction = true;
 
     [Header("--- Spawn Info ---")]
     [HideInInspector] public Vector3 spawnPosition;

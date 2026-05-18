@@ -25,3 +25,15 @@ MonoBehaviour:
     dash_cost: 20
     armor_backstab_reduce: 0.5
     defaultAccessories: 
+  - id: 2
+    name: Leonard II
+    STR: 0
+    DEX: 0
+    INT: 0
+    VIT: 0
+    AGI: 0
+    base_hp: 100
+    max_stamina: 100
+    dash_cost: 20
+    armor_backstab_reduce: 0.5
+    defaultAccessories: 

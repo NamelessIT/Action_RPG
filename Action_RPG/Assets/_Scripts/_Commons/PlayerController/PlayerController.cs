@@ -111,6 +111,8 @@ public class PlayerController : MonoBehaviour
 
     // Cờ đặc biệt cho Bow heavy charge (giảm tốc độ di chuyển)
     [HideInInspector] public bool isBowCharging = false;
+    // Cờ cho Staff heavy spin — cho phép di chuyển 50% tốc độ trong khi xoay
+    [HideInInspector] public bool isStaffSpinning = false;
 
     // ── Per-hit override flags (set bởi WeaponAttackHandlers trước khi gọi ApplyDamage) ──
     /// <summary>True → đòn tiếp theo không gây knockback dù isHeavy=true (Dagger spin, Spear thrust...)</summary>
@@ -118,6 +120,8 @@ public class PlayerController : MonoBehaviour
     /// <summary>True → đòn tiếp theo gây stun với thời lượng nextHitStunDuration (Spear, Grimoire heavy...)</summary>
     [HideInInspector] public bool  nextHitStun           = false;
     [HideInInspector] public float nextHitStunDuration   = 0f;
+    /// <summary>≥0 → override knockbackForce cho heavy hit tiếp theo (Staff spin giảm knockback). -1 = không override.</summary>
+    [HideInInspector] public float nextHitKnockbackForce = -1f;
     private InventoryUIManager _inventoryUIManager;
     private SkillTreeController _skillTreeController;
     private ItemPickupManager _pickupManager;
@@ -199,6 +203,9 @@ public class PlayerController : MonoBehaviour
 
             // Bow heavy charge: giảm tốc 50%
             if (isBowCharging) currentSpeed *= 0.5f;
+
+            // Staff normal attack: giảm tốc 50%
+            if (isStaffSpinning) currentSpeed *= 0.5f;
 
             Vector3 targetPosition = rb.position + movementInput * currentSpeed * Time.fixedDeltaTime;
             rb.MovePosition(targetPosition);
@@ -488,6 +495,7 @@ public class PlayerController : MonoBehaviour
 
             // 2. Reset các trạng thái tấn công
             isAttacking = false;
+            isStaffSpinning = false;
             nextAttackQueued = false; // Xóa luôn lệnh đánh tiếp theo nếu có
 
             // 3. Reset Animator để nó không bị kẹt ở pose đánh
@@ -583,8 +591,8 @@ public class PlayerController : MonoBehaviour
     {
 
         // Nếu đang đánh thì KHÔNG nhận input di chuyển
-        // Ngoại lệ: Bow heavy charge (isBowCharging=true) cho phép di chuyển chậm
-        bool blockMovement = isAttacking || stats.isParrying || (isCharging && !isBowCharging);
+        // Ngoại lệ: Bow heavy charge và Staff normal attack cho phép di chuyển chậm
+        bool blockMovement = (isAttacking && !isStaffSpinning) || stats.isParrying || (isCharging && !isBowCharging);
         if (blockMovement)
         {
             movementInput = Vector3.zero;
@@ -817,10 +825,11 @@ public class PlayerController : MonoBehaviour
             if (!suppressNextKnockback)
             {
                 info.isKnockback    = true;
-                info.knockbackForce = 15f;
+                info.knockbackForce = (nextHitKnockbackForce >= 0f) ? nextHitKnockbackForce : 15f;
                 info.impactLevel    = 1;
             }
-            suppressNextKnockback = false; // auto-reset sau mỗi lần gọi
+            suppressNextKnockback    = false; // auto-reset
+            nextHitKnockbackForce    = -1f;   // auto-reset
         }
         else
         {

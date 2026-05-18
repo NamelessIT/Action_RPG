@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77e3892179804414e8ec69af46c83698, type: 3}
+  m_Name: LeoSkillTreeDB
+  m_EditorClassIdentifier: Assembly-CSharp::SkillTreeDatabase
+  characterId: Leo
+  commonTree: {fileID: 11400000, guid: c45d88847c92193438a339d640b79558, type: 2}
+  allClassTrees:
+  - {fileID: 11400000, guid: 938b99ad60014ee459117d482ffbdb80, type: 2}
+  - {fileID: 11400000, guid: c04eb6a558ffed7488235f14f594ec84, type: 2}
+  - {fileID: 11400000, guid: d8700d43dc9b5174bb3b45c95554420c, type: 2}
+  - {fileID: 11400000, guid: 2414c2152b54c6e48bcbc3008a41821a, type: 2}
+  fusionSkills: []

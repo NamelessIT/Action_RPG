@@ -62,9 +62,9 @@ public class RavagerSkill : SkillBehavior
         player.isBerserk = true; // Chiếm quyền điều khiển
         stats.isHealingBlocked = true; // Chặn hồi máu
 
-        // 2. TẠO SHIELD
+        // 2. TẠO SHIELD (tự xóa sau khi berserk kết thúc)
         float shieldAmount = stats.maxHp * shieldPercent;
-        stats.currentShield += shieldAmount;
+        stats.AddShield(shieldAmount, duration);
 
         // 3. CỘNG CHỈ SỐ (BUFF)
         ApplyBuffs();

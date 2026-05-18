@@ -75,7 +75,10 @@ public class GameManager : MonoBehaviour
         }
 
         playerStats.level = Mathf.Max(1, currentPlayerState.level);
-        playerStats.characterName = currentPlayerState.playerName;
+        // characterName đã được set theo characterId trong InitializeClassStats() (AllyStats.Start).
+        // Không ghi đè bằng playerName từ DB (DB chỉ có entry cho player 1 = "Chris Don").
+        if (string.IsNullOrEmpty(playerStats.characterName))
+            playerStats.characterName = currentPlayerState.playerName;
         playerStats.initialBaseHp = currentPlayerState.baseHp > 0f ? currentPlayerState.baseHp : 100f;
         playerStats.baseSTR = currentPlayerState.baseSTR;
         playerStats.baseDEX = currentPlayerState.baseDEX;

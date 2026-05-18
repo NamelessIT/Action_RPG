@@ -73,8 +73,8 @@ public class SpellbinderSkill : SkillBehavior
 
             // [ĐÃ SỬA] Tính toán Giáp Ảo dựa trên INT hiện tại của Player
             float appliedShield = stats.INT * shieldIntMultiplier;
-            compStats.currentShield += appliedShield;
-            Debug.Log($"<color=cyan>SPELLBINDER:</color> Bơm {appliedShield} Giáp Ảo (Dựa trên {stats.INT} INT) cho Companion!");
+            compStats.AddShield(appliedShield, overloadDuration);
+            Debug.Log($"<color=cyan>SPELLBINDER:</color> Bơm {appliedShield} Giáp Ảo (Dựa trên {stats.INT} INT) cho Companion! ({overloadDuration}s)");
 
             // ==========================================
             // 2. KHIÊU KHÍCH ĐỊCH (TAUNT VÀO COMPANION)

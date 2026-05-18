@@ -5,52 +5,80 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Controller chính cho Skill Tree UI.
-/// - Mở/đóng bằng phím C (xử lý ở PlayerController, gọi Toggle từ đây)
-/// - Hiển thị skill tree theo class hiện tại
-/// - Hỗ trợ dual-class: tab chuyển giữa 2 class + tab Fusion
-/// - Quản lý spawn/despawn SkillNodeUI
+/// - Mở/đóng bằng phím C
+/// - Hiển thị toàn bộ 125 node cùng lúc:
+///     T1 (5 node chung) ở cột giữa phía trên
+///     4 class tree (30 node mỗi cây) dạng 4 cột dọc bên dưới
+///     T4 (15 node) dạng grid 3×5 trong mỗi cột class
+/// - Không có tab, không chuyển view
 /// </summary>
 public class SkillTreeController : MonoBehaviour
 {
     // ─────────────────────────────────────────────────────────────
-    //  INSPECTOR FIELDS
+    //  INSPECTOR — DATA
     // ─────────────────────────────────────────────────────────────
 
-    [Header("Data")]
-    [SerializeField] private SkillTreeDatabase _database;
+    [Header("Data — Per Character")]
+    [SerializeField] private SkillTreeDatabase _chrisDatabase;
+    [SerializeField] private SkillTreeDatabase _leoDatabase;
+
+    private SkillTreeDatabase ActiveDatabase =>
+        (_playerStats != null && _playerStats.characterId == "Leo") ? _leoDatabase : _chrisDatabase;
+
+    // ─────────────────────────────────────────────────────────────
+    //  INSPECTOR — UI
+    // ─────────────────────────────────────────────────────────────
 
     [Header("UI — Panel")]
-    [SerializeField] private GameObject _skillTreePanel;         // Root panel (bật/tắt)
-    [SerializeField] private RectTransform _nodeContainer;       // Container spawn các SkillNodeUI
-    [SerializeField] private SkillNodeUI _skillNodePrefab;       // Prefab 1 node
+    [SerializeField] private GameObject _skillTreePanel;
+    [SerializeField] private RectTransform _nodeContainer;
+    [SerializeField] private SkillNodeUI _skillNodePrefab;
+    [SerializeField] private float _nodeScale = 0.2f;
 
-    [Header("UI — Header")]
-    [SerializeField] private TextMeshProUGUI _classNameText;     // Tên class đang xem
-    [SerializeField] private TextMeshProUGUI _skillPointText;    // "SP: 5"
-    [SerializeField] private Image _classIcon;                   // Icon class
+    [Header("UI — Header (Optional)")]
+    [SerializeField] private TextMeshProUGUI _skillPointText;
+    [SerializeField] private TextMeshProUGUI _classNameText;
 
-    [Header("UI — Class Tabs")]
-    [SerializeField] private Button _classTab1Button;            // Tab class chính
-    [SerializeField] private Button _classTab2Button;            // Tab class phụ (ẩn nếu single class)
-    [SerializeField] private Button _fusionTabButton;            // Tab fusion (ẩn nếu single class)
-    [SerializeField] private TextMeshProUGUI _classTab1Text;
-    [SerializeField] private TextMeshProUGUI _classTab2Text;
-
-    [Header("UI — Info Panel (Skill Detail)")]
+    [Header("UI — Skill Detail Panel (Optional)")]
     [SerializeField] private GameObject _detailPanel;
     [SerializeField] private Image _detailIcon;
     [SerializeField] private TextMeshProUGUI _detailName;
     [SerializeField] private TextMeshProUGUI _detailDesc;
     [SerializeField] private TextMeshProUGUI _detailType;
 
-    [Header("UI — Equipped Slots Display")]
-    [SerializeField] private Image _equippedSkillIcon;           // Icon skill đang equip (slot E)
-    [SerializeField] private Image _equippedSignatureIcon;       // Icon signature đang equip (slot R)
+    [Header("UI — Equipped Slots (Optional)")]
+    [SerializeField] private Image _equippedSkillIcon;
+    [SerializeField] private Image _equippedSignatureIcon;
     [SerializeField] private TextMeshProUGUI _equippedSkillName;
     [SerializeField] private TextMeshProUGUI _equippedSignatureName;
 
-    [Header("UI — Refund")]
+    [Header("UI — Refund (Optional)")]
     [SerializeField] private Button _refundButton;
+
+    // ─────────────────────────────────────────────────────────────
+    //  INSPECTOR — LAYOUT POSITIONS
+    //  Điều chỉnh các giá trị này nếu node bị lệch / chồng nhau
+    // ─────────────────────────────────────────────────────────────
+
+    [Header("Layout — Vertical Y positions (canvas units)")]
+    [Tooltip("Y của node T1 đầu tiên (trên cùng)")]
+    [SerializeField] private float _t1TopY = 500f;
+    [Tooltip("Y của T2 node đầu tiên")]
+    [SerializeField] private float _t2TopY = 60f;
+    [Tooltip("Y của T3 node đầu tiên")]
+    [SerializeField] private float _t3TopY = -370f;
+    [Tooltip("Y của hàng đầu tiên trong T4 grid")]
+    [SerializeField] private float _t4TopY = -800f;
+    [Tooltip("Y của T5 node đầu tiên")]
+    [SerializeField] private float _t5TopY = -1240f;
+    [Tooltip("Khoảng cách Y giữa các node trong cùng cột")]
+    [SerializeField] private float _nodeSpacingY = 80f;
+
+    [Header("Layout — Horizontal positions")]
+    [Tooltip("Khoảng cách X giữa 2 class tree kề nhau")]
+    [SerializeField] private float _classColumnSpacingX = 220f;
+    [Tooltip("Khoảng cách X giữa 3 sub-column trong T4 grid")]
+    [SerializeField] private float _t4SubColSpacingX = 65f;
 
     // ─────────────────────────────────────────────────────────────
     //  STATE
@@ -60,16 +88,7 @@ public class SkillTreeController : MonoBehaviour
 
     private SkillTreeRuntime _runtime;
     private PlayerStats _playerStats;
-
     private List<SkillNodeUI> _spawnedNodes = new List<SkillNodeUI>();
-    private ClassSkillTreeData _currentViewingTree;
-
-    // Dual class support
-    private string _primaryClass = "";
-    private string _secondaryClass = "";  // Rỗng nếu chưa mở khóa class 2
-
-    private enum ViewTab { Primary, Secondary, Fusion }
-    private ViewTab _currentTab = ViewTab.Primary;
 
     // ─────────────────────────────────────────────────────────────
     //  UNITY LIFECYCLE
@@ -82,44 +101,36 @@ public class SkillTreeController : MonoBehaviour
 
     private void Start()
     {
-        // Tìm runtime trên Player
-        _runtime = FindFirstObjectByType<SkillTreeRuntime>();
-        _playerStats = FindFirstObjectByType<PlayerStats>();
+        _runtime      = FindFirstObjectByType<SkillTreeRuntime>();
+        _playerStats  = FindFirstObjectByType<PlayerStats>();
 
         if (_runtime == null)
-            Debug.LogWarning("[SkillTreeController] Không tìm thấy SkillTreeRuntime trên scene!");
+            Debug.LogWarning("[SkillTreeController] Không tìm thấy SkillTreeRuntime!");
+        else
+            _runtime.SetDatabase(ActiveDatabase); // TRUYỀN DATABASE NGAY LẬP TỨC ĐỂ RUNTIME CÓ DỮ LIỆU TÍNH TOÁN
 
-        // Setup button listeners
-        if (_classTab1Button != null)
-            _classTab1Button.onClick.AddListener(() => SwitchTab(ViewTab.Primary));
-        if (_classTab2Button != null)
-            _classTab2Button.onClick.AddListener(() => SwitchTab(ViewTab.Secondary));
-        if (_fusionTabButton != null)
-            _fusionTabButton.onClick.AddListener(() => SwitchTab(ViewTab.Fusion));
         if (_refundButton != null)
             _refundButton.onClick.AddListener(OnRefundClicked);
+
+        // Delay 2 frame: PlayerStats.Start() + GameManager.AssignStatsNextFrame() xong hết
+        StartCoroutine(LateLoadAndReapply());
     }
 
-    private void OnEnable()
+    private System.Collections.IEnumerator LateLoadAndReapply()
     {
-        if (_runtime != null)
-            _runtime.OnSkillTreeChanged += RefreshHeader;
+        yield return null; // frame 1
+        yield return null; // frame 2
+        _runtime?.LoadAndReapply(ActiveDatabase);
     }
 
-    private void OnDisable()
-    {
-        if (_runtime != null)
-            _runtime.OnSkillTreeChanged -= RefreshHeader;
-    }
+    private void OnEnable()  { if (_runtime != null) _runtime.OnSkillTreeChanged += RefreshHeader; }
+    private void OnDisable() { if (_runtime != null) _runtime.OnSkillTreeChanged -= RefreshHeader; }
 
     // ─────────────────────────────────────────────────────────────
-    //  TOGGLE (gọi từ PlayerController khi bấm C)
+    //  TOGGLE
     // ─────────────────────────────────────────────────────────────
 
-    public void ToggleSkillTree()
-    {
-        SetPanelVisible(!IsSkillTreeOpen);
-    }
+    public void ToggleSkillTree() => SetPanelVisible(!IsSkillTreeOpen);
 
     public void SetPanelVisible(bool isVisible)
     {
@@ -128,142 +139,134 @@ public class SkillTreeController : MonoBehaviour
         if (_skillTreePanel != null)
             _skillTreePanel.SetActive(isVisible);
 
-        Time.timeScale = isVisible ? 0f : 1f;
-        Cursor.visible = isVisible;
+        Time.timeScale   = isVisible ? 0f : 1f;
+        Cursor.visible   = isVisible;
         Cursor.lockState = isVisible ? CursorLockMode.None : CursorLockMode.Locked;
 
         if (isVisible)
         {
-            // Refresh khi mở
-            DetectClasses();
-            BuildTree();
+            BuildAllTrees();
             RefreshHeader();
+            RefreshEquippedDisplay();
         }
     }
 
     // ─────────────────────────────────────────────────────────────
-    //  CLASS DETECTION
+    //  BUILD — hiển thị toàn bộ 125 node cùng lúc
     // ─────────────────────────────────────────────────────────────
 
-    /// <summary>Xác định class chính/phụ từ AllyStats.</summary>
-    private void DetectClasses()
-    {
-        if (_runtime == null) return;
-
-        _primaryClass = _runtime.CurrentClassName;
-        // TODO: Khi implement dual-class, lấy secondaryClass từ AllyStats
-        _secondaryClass = ""; // Chưa có dual-class
-
-        // Cập nhật tab visibility
-        bool hasDualClass = !string.IsNullOrEmpty(_secondaryClass);
-
-        if (_classTab1Text != null) _classTab1Text.text = _primaryClass;
-        if (_classTab2Text != null) _classTab2Text.text = _secondaryClass;
-
-        if (_classTab2Button != null) _classTab2Button.gameObject.SetActive(hasDualClass);
-        if (_fusionTabButton != null) _fusionTabButton.gameObject.SetActive(hasDualClass);
-
-        // Default về tab Primary
-        _currentTab = ViewTab.Primary;
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    //  BUILD TREE
-    // ─────────────────────────────────────────────────────────────
-
-    /// <summary>Spawn các SkillNodeUI theo class đang xem.</summary>
-    private void BuildTree()
+    private void BuildAllTrees()
     {
         ClearNodes();
 
-        if (_database == null || _runtime == null) return;
+        var db = ActiveDatabase;
+        if (db == null || _runtime == null) return;
 
-        ClassSkillTreeData treeData = null;
-
-        switch (_currentTab)
+        // ── T1 Common tree — cột giữa, phía trên ────────────────
+        if (db.commonTree != null)
         {
-            case ViewTab.Primary:
-                treeData = _database.GetTreeByClassName(_primaryClass);
-                break;
-            case ViewTab.Secondary:
-                treeData = _database.GetTreeByClassName(_secondaryClass);
-                break;
-            case ViewTab.Fusion:
-                BuildFusionTree();
-                return;
-        }
-
-        if (treeData == null)
-        {
-            Debug.LogWarning($"[SkillTreeController] Không tìm thấy tree cho class '{_primaryClass}'");
-            return;
-        }
-
-        _currentViewingTree = treeData;
-
-        // Cập nhật header
-        if (_classNameText != null) _classNameText.text = treeData.className;
-        if (_classIcon != null && treeData.classIcon != null)
-        {
-            _classIcon.sprite = treeData.classIcon;
-            _classIcon.enabled = true;
-        }
-
-        // Spawn nodes
-        foreach (var nodeData in treeData.skillNodes)
-        {
-            if (nodeData.skillData == null) continue;
-
-            SkillNodeUI nodeUI = Instantiate(_skillNodePrefab, _nodeContainer);
-
-            // Đặt vị trí theo uiPosition (designer config trong Inspector)
-            RectTransform rect = nodeUI.GetComponent<RectTransform>();
-            if (rect != null)
-                rect.anchoredPosition = nodeData.uiPosition;
-
-            nodeUI.Bind(nodeData, _runtime, this);
-            _spawnedNodes.Add(nodeUI);
-        }
-    }
-
-    /// <summary>Build fusion skill tree (dual-class).</summary>
-    private void BuildFusionTree()
-    {
-        if (_database == null || _database.fusionSkills == null) return;
-
-        foreach (var fusion in _database.fusionSkills)
-        {
-            // Tìm fusion phù hợp với 2 class hiện tại
-            bool match = (fusion.classA == _primaryClass && fusion.classB == _secondaryClass)
-                      || (fusion.classA == _secondaryClass && fusion.classB == _primaryClass);
-
-            if (!match) continue;
-
-            if (_classNameText != null)
-                _classNameText.text = $"Fusion: {fusion.classA} + {fusion.classB}";
-
-            foreach (var nodeData in fusion.fusionNodes)
+            var nodes = db.commonTree.skillNodes;
+            for (int i = 0; i < nodes.Count; i++)
             {
-                if (nodeData.skillData == null) continue;
-
-                SkillNodeUI nodeUI = Instantiate(_skillNodePrefab, _nodeContainer);
-                RectTransform rect = nodeUI.GetComponent<RectTransform>();
-                if (rect != null) rect.anchoredPosition = nodeData.uiPosition;
-
-                nodeUI.Bind(nodeData, _runtime, this);
-                _spawnedNodes.Add(nodeUI);
+                if (string.IsNullOrEmpty(nodes[i].nodeId)) continue;
+                SpawnNode(nodes[i], T1Position(i));
             }
-            break; // Chỉ 1 fusion set per 2 classes
+        }
+
+        // ── 4 Class trees — 4 cột dọc bên dưới ─────────────────
+        int classCount = db.allClassTrees.Count;
+        for (int c = 0; c < classCount; c++)
+        {
+            var tree = db.allClassTrees[c];
+            if (tree == null) continue;
+
+            float colX = ClassColumnX(c, classCount);
+            var nodes = tree.skillNodes;
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (string.IsNullOrEmpty(nodes[i].nodeId)) continue;
+                SpawnNode(nodes[i], ClassNodePosition(i, colX));
+            }
+        }
+
+        if (_classNameText != null)
+            _classNameText.text = "SKILL TREE";
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  POSITION CALCULATORS
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>Vị trí node T1 (cột giữa, X=0).</summary>
+    private Vector2 T1Position(int nodeIdx)
+    {
+        return new Vector2(0f, _t1TopY - nodeIdx * _nodeSpacingY);
+    }
+
+    /// <summary>X của cột class thứ c (căn giữa tổng thể).</summary>
+    private float ClassColumnX(int classIdx, int totalClasses)
+    {
+        float totalWidth = (totalClasses - 1) * _classColumnSpacingX;
+        return -totalWidth * 0.5f + classIdx * _classColumnSpacingX;
+    }
+
+    /// <summary>
+    /// Vị trí node trong class tree.
+    /// Nodes 0-4   → T2 (single column)
+    /// Nodes 5-9   → T3 (single column)
+    /// Nodes 10-24 → T4 (3×5 grid: col = idx%3, row = idx/3)
+    /// Nodes 25-29 → T5 (single column)
+    /// </summary>
+    private Vector2 ClassNodePosition(int nodeIdx, float colX)
+    {
+        if (nodeIdx < 5)
+        {
+            // T2 — cột đơn
+            return new Vector2(colX, _t2TopY - nodeIdx * _nodeSpacingY);
+        }
+        else if (nodeIdx < 10)
+        {
+            // T3 — cột đơn
+            return new Vector2(colX, _t3TopY - (nodeIdx - 5) * _nodeSpacingY);
+        }
+        else if (nodeIdx < 25)
+        {
+            // T4 — grid 3×5
+            int t4Idx = nodeIdx - 10;
+            int col   = t4Idx / 5;     
+            int row   = t4Idx % 5;
+            float xOff = (col - 1) * _t4SubColSpacingX; // -spacing, 0, +spacing
+            return new Vector2(colX + xOff, _t4TopY - row * _nodeSpacingY);
+        }
+        else
+        {
+            // T5 — cột đơn
+            return new Vector2(colX, _t5TopY - (nodeIdx - 25) * _nodeSpacingY);
         }
     }
 
-    /// <summary>Hủy tất cả node UI đang hiển thị.</summary>
+    // ─────────────────────────────────────────────────────────────
+    //  SPAWN HELPER
+    // ─────────────────────────────────────────────────────────────
+
+    private void SpawnNode(SkillNodeData nodeData, Vector2 position)
+    {
+        SkillNodeUI nodeUI = Instantiate(_skillNodePrefab, _nodeContainer);
+        RectTransform rect = nodeUI.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            rect.anchoredPosition = position;
+            rect.localScale       = Vector3.one * _nodeScale;
+        }
+        nodeUI.Bind(nodeData, _runtime, this);
+        _spawnedNodes.Add(nodeUI);
+    }
+
     private void ClearNodes()
     {
-        foreach (var node in _spawnedNodes)
-        {
-            if (node != null) Destroy(node.gameObject);
-        }
+        foreach (var n in _spawnedNodes)
+            if (n != null) Destroy(n.gameObject);
         _spawnedNodes.Clear();
     }
 
@@ -271,62 +274,48 @@ public class SkillTreeController : MonoBehaviour
     //  REFRESH
     // ─────────────────────────────────────────────────────────────
 
-    /// <summary>Refresh tất cả node (gọi sau khi unlock/equip).</summary>
     public void RefreshAllNodes()
     {
-        foreach (var node in _spawnedNodes)
-        {
-            if (node != null) node.Refresh();
-        }
+        foreach (var n in _spawnedNodes)
+            if (n != null) n.Refresh();
         RefreshHeader();
         RefreshEquippedDisplay();
     }
 
-    /// <summary>Cập nhật header (SP còn lại).</summary>
     private void RefreshHeader()
     {
+        if (_runtime == null) return;
+
         if (_skillPointText != null && _runtime != null)
             _skillPointText.text = $"SP: {_runtime.SkillPointRemain}";
+        
+        if (_classNameText != null)
+            _classNameText.text = _runtime.CurrentClassName; // Lấy tên thật (Class kết hợp) từ Runtime
     }
 
-    /// <summary>Cập nhật hiển thị slot equip.</summary>
     private void RefreshEquippedDisplay()
     {
         if (_runtime == null) return;
 
-        // Skill slot (E)
-        SkillData equippedSkill = _runtime.EquippedSkill;
+        var skill = _runtime.EquippedSkill;
         if (_equippedSkillIcon != null)
         {
-            bool hasSkill = equippedSkill != null && equippedSkill.icon != null;
-            _equippedSkillIcon.sprite = hasSkill ? equippedSkill.icon : null;
-            _equippedSkillIcon.color = hasSkill ? Color.white : Color.clear;
+            bool has = skill != null && skill.icon != null;
+            _equippedSkillIcon.sprite = has ? skill.icon : null;
+            _equippedSkillIcon.color  = has ? Color.white : Color.clear;
         }
         if (_equippedSkillName != null)
-            _equippedSkillName.text = equippedSkill != null ? equippedSkill.skillName : "Empty";
+            _equippedSkillName.text = skill != null ? skill.skillName : "Empty";
 
-        // Signature slot (R)
-        SkillData equippedSig = _runtime.EquippedSignature;
+        var sig = _runtime.EquippedSignature;
         if (_equippedSignatureIcon != null)
         {
-            bool hasSig = equippedSig != null && equippedSig.icon != null;
-            _equippedSignatureIcon.sprite = hasSig ? equippedSig.icon : null;
-            _equippedSignatureIcon.color = hasSig ? Color.white : Color.clear;
+            bool has = sig != null && sig.icon != null;
+            _equippedSignatureIcon.sprite = has ? sig.icon : null;
+            _equippedSignatureIcon.color  = has ? Color.white : Color.clear;
         }
         if (_equippedSignatureName != null)
-            _equippedSignatureName.text = equippedSig != null ? equippedSig.skillName : "Empty";
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    //  TAB SWITCH
-    // ─────────────────────────────────────────────────────────────
-
-    private void SwitchTab(ViewTab tab)
-    {
-        _currentTab = tab;
-        BuildTree();
-        RefreshHeader();
-        RefreshEquippedDisplay();
+            _equippedSignatureName.text = sig != null ? sig.skillName : "Empty";
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -335,30 +324,44 @@ public class SkillTreeController : MonoBehaviour
 
     private void OnRefundClicked()
     {
-        if (_runtime == null || _database == null) return;
-
-        _runtime.RefundAllWithDatabase(_database);
-        BuildTree();
+        var db = ActiveDatabase;
+        if (_runtime == null || db == null) return;
+        _runtime.RefundAllWithDatabase(db);
+        BuildAllTrees();
         RefreshHeader();
         RefreshEquippedDisplay();
     }
 
     // ─────────────────────────────────────────────────────────────
-    //  SKILL DETAIL PANEL (Hover/Click)
+    //  SKILL DETAIL PANEL
     // ─────────────────────────────────────────────────────────────
 
-    /// <summary>Hiển thị thông tin chi tiết skill (gọi từ SkillNodeUI khi hover/click).</summary>
+    public void ShowNodeDetail(SkillNodeData node)
+    {
+        if (_detailPanel == null || node == null) return;
+        _detailPanel.SetActive(true);
+
+        if (node.skillData != null)
+        {
+            if (_detailIcon != null) { _detailIcon.sprite = node.skillData.icon; _detailIcon.color = node.skillData.icon != null ? Color.white : Color.clear; }
+            if (_detailName != null) _detailName.text = node.skillData.skillName;
+            if (_detailDesc != null) _detailDesc.text = node.skillData.skilDesc;
+            if (_detailType != null) _detailType.text = node.skillData.skillType.ToString();
+        }
+        else
+        {
+            if (_detailIcon != null) _detailIcon.color = Color.clear;
+            if (_detailName != null) _detailName.text = node.nodeName;
+            if (_detailDesc != null) _detailDesc.text = node.nodeDescription;
+            if (_detailType != null) _detailType.text = node.nodeType.ToString();
+        }
+    }
+
     public void ShowSkillDetail(SkillData skill)
     {
         if (_detailPanel == null || skill == null) return;
-
         _detailPanel.SetActive(true);
-
-        if (_detailIcon != null)
-        {
-            _detailIcon.sprite = skill.icon;
-            _detailIcon.color = skill.icon != null ? Color.white : Color.clear;
-        }
+        if (_detailIcon != null) { _detailIcon.sprite = skill.icon; _detailIcon.color = skill.icon != null ? Color.white : Color.clear; }
         if (_detailName != null) _detailName.text = skill.skillName;
         if (_detailDesc != null) _detailDesc.text = skill.skilDesc;
         if (_detailType != null) _detailType.text = skill.skillType.ToString();
@@ -366,7 +369,6 @@ public class SkillTreeController : MonoBehaviour
 
     public void HideSkillDetail()
     {
-        if (_detailPanel != null)
-            _detailPanel.SetActive(false);
+        if (_detailPanel != null) _detailPanel.SetActive(false);
     }
 }

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx gitnexus *)",
+      "Skill(anthropic-skills:docx)",
+      "Skill(anthropic-skills:docx:*)",
+      "Bash(extract-text \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Data\\\\Skill tree.docx\")",
+      "Bash(python \"C:\\\\Users\\\\xuand\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\e0d98ce4-93d5-4ec8-bdfe-2be8c04c7c01\\\\27ad4c03-e667-4f6a-a7d5-a73469ec986a\\\\skills\\\\docx\\\\scripts\\\\office\\\\unpack.py\" \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Data\\\\Skill tree.docx\" \"C:\\\\Users\\\\xuand\\\\AppData\\\\Local\\\\Temp\\\\skilltree_unpack\")",
+      "Bash(python -c ' *)"
+    ]
+  }
+}

@@ -484,7 +484,8 @@ public class Stats : MonoBehaviour
         TakeDamage(info);
     }
     // Sửa hàm hồi máu (nếu bạn có hàm Heal riêng, hoặc sửa trực tiếp chỗ nào cộng máu)
-    public virtual void Heal(float amount)
+    // showPopup=false dùng cho heal tự nhiên (HpGain regen) để tránh spam số
+    public virtual void Heal(float amount, bool showPopup = true)
     {
         if (isDead) return;
 
@@ -495,6 +496,25 @@ public class Stats : MonoBehaviour
         if (currentHp > maxHp) currentHp = maxHp;
 
         OnHealReceived?.Invoke(amount, excess);
+        if (showPopup && amount > 0f)
+            DamageNumberManager.ShowHeal(amount, transform.position);
+    }
+
+    /// <summary>
+    /// Thêm giáp ảo. Nếu duration > 0, sẽ tự động xóa đúng lượng đã thêm sau khi hết thời gian.
+    /// </summary>
+    public void AddShield(float amount, float duration = 0f)
+    {
+        if (amount <= 0f) return;
+        currentShield += amount;
+        if (duration > 0f)
+            StartCoroutine(RemoveShieldAfterDelay(amount, duration));
+    }
+
+    private IEnumerator RemoveShieldAfterDelay(float amount, float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        currentShield = Mathf.Max(0f, currentShield - amount);
     }
 
     // --- LOGIC STUN & KNOCKBACK ---

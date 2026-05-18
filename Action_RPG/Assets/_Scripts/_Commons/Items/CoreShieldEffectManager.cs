@@ -207,18 +207,8 @@ public class CoreShieldEffectManager : MonoBehaviour
 
     private void Effect_SHD_CS_T3_02()
     {
-        StartCoroutine(TemporaryShieldRoutine(200f, 3f));
-    }
-    private IEnumerator TemporaryShieldRoutine(float amount, float duration)
-    {
-        stats.currentShield += amount;
-        Debug.Log($"<color=cyan>[SHD_CS_T3_02]</color> Nhận {amount} giáp ảo (3s)");
-
-        yield return new WaitForSeconds(duration);
-
-        stats.currentShield -= amount;
-        if (stats.currentShield < 0) stats.currentShield = 0;
-        Debug.Log("<color=cyan>[SHD_CS_T3_02]</color> Giáp ảo đã hết hạn.");
+        stats.AddShield(200f, 3f);
+        Debug.Log("<color=cyan>[SHD_CS_T3_02]</color> Nhận 200 giáp ảo (3s)");
     }
 
     private void Effect_SHD_CS_T3_03(DamageInfo info)

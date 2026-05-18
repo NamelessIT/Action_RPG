@@ -118,7 +118,8 @@ protected IEnumerator EnemyAttackRoutine()
                 if (!string.IsNullOrEmpty(telegraphAnimBool))
                     animator.SetBool(telegraphAnimBool, true);
                 else if (!string.IsNullOrEmpty(telegraphAnimTrigger))
-                    animator.SetTrigger(telegraphAnimTrigger);
+                    //animator.SetTrigger(telegraphAnimTrigger);
+                    Debug.Log("EnemyCombat: //animator.SetTrigger(telegraphAnimTrigger);");
             }
 
             yield return new WaitForSeconds(telegraphDuration);

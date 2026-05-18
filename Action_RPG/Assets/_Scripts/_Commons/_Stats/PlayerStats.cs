@@ -9,12 +9,14 @@ public class PlayerStats : AllyStats
     public Action OnPerfectParryTriggered;
     public override void Start()
     {
+        // Đọc nhân vật đã chọn từ CharacterSelect (nếu có), ghi đè trước khi base.Start() gọi InitializeClassStats
+        string savedChar = PlayerPrefs.GetString("SelectedCharacter", "");
+        if (!string.IsNullOrEmpty(savedChar))
+            characterId = savedChar;
+
         base.Start();
-        // [MỚI] Khởi tạo điểm Skill ban đầu
         if (skillPointRemain == 0) skillPointRemain = level;
         this.tag = "Player";
-
-        // Debug để kiểm tra xem HP đã được tính chưa
     }
     // [MỚI] Ghi đè hàm thăng cấp của AllyStats
     protected override void LevelUp()
@@ -22,6 +24,9 @@ public class PlayerStats : AllyStats
         base.LevelUp(); // Sẽ gọi hàm LevelUp của AllyStats -> Nhận 5 Attribute + Hồi máu
 
         skillPointRemain += 1; // Cấp 1 điểm kỹ năng
+        // Lưu SP per-character để SkillTreeRuntime khôi phục đúng khi load
+        PlayerPrefs.SetInt($"SP_{characterId}", skillPointRemain);
+        PlayerPrefs.Save();
         Debug.Log($"<color=green>[PlayerStats]</color> {gameObject.name} nhận 1 Skill Point (Tổng: {skillPointRemain})");
     }
 
@@ -92,5 +97,19 @@ public class PlayerStats : AllyStats
 
         // --- GỌI LOGIC TRỪ MÁU GỐC ---
         base.TakeDamage(info);
+    }
+    protected override void InitializeClassStats()
+    {
+        if (characterId == "Chris")
+        {
+            characterName  = "Chris Don";
+            isSuperArmor   = true;
+            superArmorLevel = 0;
+        }
+        else if (characterId == "Leo")
+        {
+            characterName  = "Leonard II";
+            isSuperArmor   = false;
+        }
     }
 }
