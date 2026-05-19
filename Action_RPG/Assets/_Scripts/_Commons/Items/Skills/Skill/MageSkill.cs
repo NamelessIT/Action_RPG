@@ -215,7 +215,7 @@ public class MageSkill : SkillBehavior
 
         stats.EnterCombat();
         WeaponData currentWpn = equipmentManager.currentWeapon;
-        float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
+        float totalCritChance = stats.critChance;
 
         foreach (var hit in hits)
         {

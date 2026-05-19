@@ -322,7 +322,7 @@ public class SkillTreeController : MonoBehaviour
     //  REFUND
     // ─────────────────────────────────────────────────────────────
 
-    private void OnRefundClicked()
+    public void OnRefundClicked()
     {
         var db = ActiveDatabase;
         if (_runtime == null || db == null) return;

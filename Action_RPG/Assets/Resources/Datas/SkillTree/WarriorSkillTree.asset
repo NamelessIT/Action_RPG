@@ -211,7 +211,7 @@ MonoBehaviour:
   - nodeId: Warrior_T4_N4
     nodeName: Stun +20% Duration
     nodeDescription: "Core: K\u1EF9 n\u0103ng t\u0103ng 20% th\u1EDDi gian cho\xE1ng"
-    nodeType: 2
+    nodeType: 3
     skillData: {fileID: 0}
     statGains: []
     classGrantType: 0
@@ -284,7 +284,7 @@ MonoBehaviour:
   - nodeId: Warrior_T4_N9
     nodeName: Cooldown -1s
     nodeDescription: "Core: Gi\u1EA3m 1 gi\xE2y cooldown k\u1EF9 n\u0103ng"
-    nodeType: 2
+    nodeType: 3
     skillData: {fileID: 0}
     statGains: []
     classGrantType: 0
@@ -357,7 +357,7 @@ MonoBehaviour:
   - nodeId: Warrior_T4_N14
     nodeName: Damage Scale +20%
     nodeDescription: "Core: K\u1EF9 n\u0103ng scale th\xEAm 20% s\xE1t th\u01B0\u01A1ng"
-    nodeType: 2
+    nodeType: 3
     skillData: {fileID: 0}
     statGains: []
     classGrantType: 0

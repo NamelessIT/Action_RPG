@@ -25,6 +25,11 @@ public class SwordMasterSkill : SkillBehavior
     private bool isSwiftnessActive = false;
     private GameObject currentAuraVfx;
 
+    // Cached effective values (computed at swiftness activation)
+    private float _effectiveBuffDuration;
+    private float _effectiveStunDuration;
+    private float _effectiveBackstabMult;
+
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
         base.Initialize(myStats, myData, myPlayer);
@@ -60,33 +65,37 @@ public class SwordMasterSkill : SkillBehavior
     {
         if (!isSwiftnessActive && allyStats != null)
         {
+            // Rogue U1:  +20% buffDuration    | Rogue U3:  +20% backstab damage mult
+            // Duelist U1: +20% stun duration  | Duelist U3: +20% backstab damage mult
+            float rU1 = allyStats.rogueSkillU1;
+            float rU3 = allyStats.rogueSkillU3;
+            float dU1 = allyStats.duelistSkillU1;
+            float dU3 = allyStats.duelistSkillU3;
+
+            _effectiveBuffDuration  = buffDuration  * (1f + rU1);
+            _effectiveStunDuration  = stunDuration  * (1f + dU1);
+            _effectiveBackstabMult  = data.skillPhysicalMultiplier * (1f + rU3) * (1f + dU3);
+
             isSwiftnessActive = true;
 
-            // Xóa cost của Dash
             originalDashCost = allyStats.dashCost;
             allyStats.dashCost = 0f;
 
-            //if (currentAuraVfx != null) Destroy(currentAuraVfx);
-            //if (swiftnessAuraVfx != null) currentAuraVfx = Instantiate(swiftnessAuraVfx, transform);
-
-            Debug.Log("<color=cyan>SWORD MASTER: SWIFTNESS! (Dash không tốn thể lực trong 4s)</color>");
+            Debug.Log($"<color=cyan>SWORD MASTER: SWIFTNESS! ({_effectiveBuffDuration:F1}s)</color>");
 
             float timer = 0f;
-            while (timer < buffDuration)
+            while (timer < _effectiveBuffDuration)
             {
-                // LIÊN TỤC LẮNG NGHE PHẢN XẠ (FRAME PERFECT)
-                // Hệ thống sẽ bật cờ này khi bạn lướt đúng lúc quái đang đánh
                 if (allyStats.isPerfectDodgeSuccess)
                 {
-                    allyStats.isPerfectDodgeSuccess = false; // Tiêu thụ ngay lập tức để không lặp lại
+                    allyStats.isPerfectDodgeSuccess = false;
                     ExecutePerfectCounter();
                 }
 
                 timer += Time.deltaTime;
-                yield return null; // Quét mỗi frame
+                yield return null;
             }
 
-            // HẾT THỜI GIAN -> GỠ BUFF
             RemoveBuff();
         }
     }
@@ -145,8 +154,8 @@ public class SwordMasterSkill : SkillBehavior
             attacker = stats,
             physDamage = 0,
             isStun = true,
-            stunDuration = stunDuration,
-            impactLevel = 2 // Phá siêu giáp, chắc chắn choáng
+            stunDuration = _effectiveStunDuration, // Duelist U1
+            impactLevel = 2
         };
         targetEnemy.TakeDamage(stunInfo);
 
@@ -180,8 +189,9 @@ public class SwordMasterSkill : SkillBehavior
         bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
         // Ép t = 1.0f để hệ thống luôn tính sát thương này là đâm lén (Backstab Bonus)
+        // Rogue U3 * Duelist U3 both boost backstab damage
         var dmgTuple = CombatMath.CalculateFullDamage(
-            stats, targetEnemy, 1.0f, isCrit, data, currentWpn, data.skillPhysicalMultiplier
+            stats, targetEnemy, 1.0f, isCrit, data, currentWpn, _effectiveBackstabMult
         );
 
         DamageInfo damageInfo = new DamageInfo

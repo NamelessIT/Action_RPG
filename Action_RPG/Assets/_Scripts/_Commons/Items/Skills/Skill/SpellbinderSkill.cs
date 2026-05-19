@@ -25,11 +25,18 @@ public class SpellbinderSkill : SkillBehavior
     public GameObject explosionVfx;
 
     private EquipmentManager equipmentManager;
+    private AllyStats allyStats;
+
+    // Cached effective values per Use()
+    private float _effectiveOverloadDur;
+    private float _effectiveStunDur;
+    private float _effectiveExplosionMult;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
         base.Initialize(myStats, myData, myPlayer);
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
+        allyStats = myStats;
     }
 
     protected override void OnEquip() { }
@@ -45,6 +52,17 @@ public class SpellbinderSkill : SkillBehavior
         }
 
         if (!base.Use()) return false;
+
+        // Mage U1:    +20% overloadDuration (shield duration)      | Mage U3:    +20% explosion damage
+        // Catalyst U1: +20% stunDuration                           | Catalyst U3: +20% explosion damage (stacks)
+        float mU1 = allyStats != null ? allyStats.mageSkillU1    : 0f;
+        float mU3 = allyStats != null ? allyStats.mageSkillU3    : 0f;
+        float cU1 = allyStats != null ? allyStats.catalystSkillU1 : 0f;
+        float cU3 = allyStats != null ? allyStats.catalystSkillU3 : 0f;
+
+        _effectiveOverloadDur   = overloadDuration      * (1f + mU1);
+        _effectiveStunDur       = stunDuration          * (1f + cU1);
+        _effectiveExplosionMult = data.skillMagicMultiplier * (1f + mU3) * (1f + cU3);
 
         StartCoroutine(SpellbinderRoutine(companion));
         return true;
@@ -73,8 +91,8 @@ public class SpellbinderSkill : SkillBehavior
 
             // [ĐÃ SỬA] Tính toán Giáp Ảo dựa trên INT hiện tại của Player
             float appliedShield = stats.INT * shieldIntMultiplier;
-            compStats.AddShield(appliedShield, overloadDuration);
-            Debug.Log($"<color=cyan>SPELLBINDER:</color> Bơm {appliedShield} Giáp Ảo (Dựa trên {stats.INT} INT) cho Companion! ({overloadDuration}s)");
+            compStats.AddShield(appliedShield, _effectiveOverloadDur); // Mage U1
+            Debug.Log($"<color=cyan>SPELLBINDER:</color> {appliedShield} Shield on Companion ({_effectiveOverloadDur:F1}s)");
 
             // ==========================================
             // 2. KHIÊU KHÍCH ĐỊCH (TAUNT VÀO COMPANION)
@@ -135,7 +153,7 @@ public class SpellbinderSkill : SkillBehavior
             // 5. CHỜ ĐẾN VỊ TRÍ HOẶC HẾT 4 GIÂY HOẶC VỠ GIÁP
             // ==========================================
             float timer = 0f;
-            while (timer < overloadDuration)
+            while (timer < _effectiveOverloadDur)
             {
                 if (compAgent && compAgent.remainingDistance <= 1.5f && !compAgent.pathPending) break;
                 if (compStats.currentShield <= 0) break;
@@ -188,8 +206,9 @@ public class SpellbinderSkill : SkillBehavior
                 float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
                 bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
+                // Mage U3 * Catalyst U3 scale explosion damage; Catalyst U1 scales stun
                 var dmgTuple = CombatMath.CalculateFullDamage(
-                    stats, enemyStats, t, isCrit, data, currentWpn, data.skillMagicMultiplier
+                    stats, enemyStats, t, isCrit, data, currentWpn, _effectiveExplosionMult
                 );
 
                 DamageInfo info = new DamageInfo
@@ -201,7 +220,7 @@ public class SpellbinderSkill : SkillBehavior
                     trueDamage = dmgTuple.trueDmg,
                     isCrit = isCrit,
                     isStun = true,
-                    stunDuration = stunDuration,
+                    stunDuration = _effectiveStunDur, // Catalyst U1
                     impactLevel = 2
                 };
 
@@ -211,7 +230,7 @@ public class SpellbinderSkill : SkillBehavior
                 EnemyAI enemyAI = enemyStats.GetComponent<EnemyAI>();
                 if (enemyAI != null)
                 {
-                    StartCoroutine(AggroPlayerAfterStunRoutine(enemyAI, stunDuration));
+                    StartCoroutine(AggroPlayerAfterStunRoutine(enemyAI, _effectiveStunDur));
                 }
             }
         }

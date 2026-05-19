@@ -47,7 +47,9 @@ public class VanguardPassive : SkillBehavior
 
         if (Input.GetKey(shieldKey) && isHoldingShield)
         {
-            bool hasStamina = stats.TryConsumeStamina(staminaCostPerSec * Time.deltaTime);
+            // CM1: stats.staminaReduction giảm stamina tiêu hao (set bởi VanguardCoreMechanic)
+            float actualCost = staminaCostPerSec * (1f - stats.staminaReduction) * Time.deltaTime;
+            bool hasStamina = stats.TryConsumeStamina(actualCost);
             if (!hasStamina)
             {
                 ResetShieldState();
@@ -67,17 +69,24 @@ public class VanguardPassive : SkillBehavior
         }
     }
 
+    private bool _slowWasApplied; // track to safely revert CM3
+
     private void ActivateShield()
     {
         isShieldActive = true;
 
-        // Trừ tốc chạy (Cộng âm)
-        stats.bonusMoveSpeed -= moveSpeedSlowPercent;
+        // CM3: nếu có flag thì không giảm tốc
+        if (!stats.vanguardCM3_NoBlockSlow)
+        {
+            stats.bonusMoveSpeed -= moveSpeedSlowPercent;
+            _slowWasApplied = true;
+        }
 
         // Bật cờ Manual Guard trong AllyStats
         stats.isManualGuarding = true;
         stats.manualGuardReduction = damageReductionPercent;
 
+        // CM2: shieldSetupTime được sửa trực tiếp bởi VanguardCoreMechanic
         stats.RecalculateStats();
         Debug.Log("SHIELD ON");
     }
@@ -92,8 +101,12 @@ public class VanguardPassive : SkillBehavior
         {
             isShieldActive = false;
 
-            // Hoàn trả tốc chạy
-            stats.bonusMoveSpeed += moveSpeedSlowPercent;
+            // Hoàn trả tốc chạy (chỉ nếu đã trừ)
+            if (_slowWasApplied)
+            {
+                stats.bonusMoveSpeed += moveSpeedSlowPercent;
+                _slowWasApplied = false;
+            }
 
             // Tắt cờ Manual Guard
             stats.isManualGuarding = false;

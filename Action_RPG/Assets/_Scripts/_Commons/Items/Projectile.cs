@@ -89,6 +89,10 @@ public class Projectile : MonoBehaviour
         // Dùng .tag thay vì CompareTag để tránh lỗi crash nếu chưa khai báo tag trong Inspector
         else if (other.gameObject.layer == LayerMask.NameToLayer("Obstacle") || other.gameObject.tag == "Obstacle")
         {
+            // CM3 Mage: đạn xuyên tường
+            AllyStats ownerAlly = owner != null ? owner.GetComponent<AllyStats>() : null;
+            if (ownerAlly != null && ownerAlly.mageCM3_ProjectilePhaseWalls) return;
+
             Debug.Log("[Projectile] Đập vào chướng ngại vật (Obstacle). Hủy đạn.");
             Destroy(gameObject);
         }

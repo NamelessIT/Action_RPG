@@ -49,7 +49,7 @@ public class WardenSkill : SkillBehavior
         base.Initialize(myStats, myData, myPlayer);
         rb = myPlayer.GetComponent<Rigidbody>();
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
-        allyStats = myStats; // Cache lại thành AllyStats để lấy chỉ số VIT
+        allyStats = myStats;
     }
 
     protected override void OnEquip() { }
@@ -67,6 +67,22 @@ public class WardenSkill : SkillBehavior
         // ==========================================
         // SETUP TRẠNG THÁI (KHÔNG THỂ CANCEL)
         // ==========================================
+        // Vanguard U1: +20% Defense Value buff | Vanguard U3: +20% Armor/MR scale damage
+        // Warrior U1:  +20% stun duration      | Warrior U3:  +20% scale damage (slash1Mult, trueDmgBase)
+        float vU1 = allyStats != null ? allyStats.vanguardSkillU1 : 0f;
+        float vU3 = allyStats != null ? allyStats.vanguardSkillU3 : 0f;
+        float wU1 = allyStats != null ? allyStats.warriorSkillU1  : 0f;
+        float wU3 = allyStats != null ? allyStats.warriorSkillU3  : 0f;
+
+        float effectiveDefBuff        = defenseValueBuff     * (1f + vU1);
+        float effectiveArmorToDmg     = armorToDamageScale   * (1f + vU3);
+        float effectiveMRToDmg        = mrToDamageScale      * (1f + vU3);
+        float effectiveArmorToTrue    = armorToTrueDamageScale * (1f + vU3);
+        float effectiveMRToTrue       = mrToTrueDamageScale    * (1f + vU3);
+        float effectiveStunDur        = stunDuration          * (1f + wU1);
+        float effectiveSlash1Mult     = slash1BaseMultiplier  * (1f + wU3);
+        float effectiveTrueDmgBase    = flatTrueDamageBase    * (1f + wU3);
+
         player.isUsingSpecialSkill = true; // Khóa toàn bộ input của người chơi
 
         Vector3 forward = stats.facingDirection;
@@ -170,10 +186,10 @@ public class WardenSkill : SkillBehavior
                     bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
                     // Sát thương chuẩn bị từ hệ thống
-                    var baseDamage = CombatMath.CalculateFullDamage(stats, enemyStats, tFactor, isCrit, data, currentWpn, slash1BaseMultiplier);
+                    var baseDamage = CombatMath.CalculateFullDamage(stats, enemyStats, tFactor, isCrit, data, currentWpn, effectiveSlash1Mult);
 
-                    // Cộng thêm sát thương từ Armor và Magic Resist
-                    float bonusFromDef = (stats.armor * armorToDamageScale) + (stats.magicResist * mrToDamageScale);
+                    // Cộng thêm sát thương từ Armor và Magic Resist (scale bởi Vanguard U3)
+                    float bonusFromDef = (stats.armor * effectiveArmorToDmg) + (stats.magicResist * effectiveMRToDmg);
                     DamageInfo info1 = new DamageInfo
                     {
                         sourcePosition = transform.position,
@@ -208,10 +224,10 @@ public class WardenSkill : SkillBehavior
                     // Lấy chỉ số VIT từ AllyStats
                     float currentVit = allyStats != null ? allyStats.VIT : 0f;
 
-                    // Tính toán Sát thương chuẩn (True Damage)
-                    float trueDamage = flatTrueDamageBase
-                                     + (stats.armor * armorToTrueDamageScale)
-                                     + (stats.magicResist * mrToTrueDamageScale)
+                    // Tính toán Sát thương chuẩn (True Damage, Vanguard U3 scale armor/MR portion)
+                    float trueDamage = effectiveTrueDmgBase
+                                     + (stats.armor * effectiveArmorToTrue)
+                                     + (stats.magicResist * effectiveMRToTrue)
                                      + (currentVit * vitToTrueDamageScale)
                                      + (enemyStats.maxHp * targetMaxHpPercent);
 
@@ -223,7 +239,7 @@ public class WardenSkill : SkillBehavior
                         trueDamage = trueDamage, // Trừ thẳng số máu này
                         isCrit = false, // True damage thường không chí mạng, nếu bạn muốn có thể thêm vào
                         isStun = true,
-                        stunDuration = stunDuration,
+                        stunDuration = effectiveStunDur, // Warrior U1
                         impactLevel = 2 // Phá Siêu giáp
                     };
 
@@ -235,7 +251,7 @@ public class WardenSkill : SkillBehavior
             // ==========================================
             // PHASE 5: TỰ BUFF DEFENSE VALUE TRONG 3 GIÂY
             // ==========================================
-            StartCoroutine(DefenseBuffRoutine());
+            StartCoroutine(DefenseBuffRoutine(effectiveDefBuff)); // Vanguard U1
             // Đợi thêm 0.2s để kết thúc dáng dấp rồi mới cho di chuyển lại
             yield return new WaitForSeconds(0.2f);
 
@@ -272,17 +288,17 @@ public class WardenSkill : SkillBehavior
     }
 
     // Coroutine xử lý nhận 150 Defense Value
-    private IEnumerator DefenseBuffRoutine()
+    private IEnumerator DefenseBuffRoutine(float buffAmount)
     {
-        stats.defenseValue += defenseValueBuff;
-        Debug.Log($"<color=green>WARDEN BUFF:</color> Nhận {defenseValueBuff} Defense Value. Tổng hiện tại: {stats.defenseValue}");
+        stats.defenseValue += buffAmount;
+        Debug.Log($"<color=green>WARDEN BUFF:</color> Nhận {buffAmount} Defense Value. Tổng hiện tại: {stats.defenseValue}");
 
         GameObject buffVfx = null;
         if (buffVfxPrefab != null) buffVfx = Instantiate(buffVfxPrefab, transform);
 
         yield return new WaitForSeconds(buffDuration);
 
-        stats.defenseValue -= defenseValueBuff;
+        stats.defenseValue -= buffAmount;
         if (buffVfx != null) Destroy(buffVfx);
         Debug.Log($"<color=gray>Warden Buff Hết hạn:</color> Defense Value trở về {stats.defenseValue}");
     }

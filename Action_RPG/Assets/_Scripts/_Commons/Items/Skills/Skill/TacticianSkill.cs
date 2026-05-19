@@ -21,10 +21,16 @@ public class TacticianSkill : SkillBehavior
     private Coroutine trapCoroutine;
     private GameObject currentTauntAura;
     private bool isTrapTriggered = false;
+    private AllyStats allyStats;
+
+    // Cached effective values
+    private float _effectiveStunDur;
+    private float _effectiveDmgMult;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
         base.Initialize(myStats, myData, myPlayer);
+        allyStats = myStats;
     }
 
     protected override void OnEquip() { }
@@ -45,6 +51,16 @@ public class TacticianSkill : SkillBehavior
         }
 
         if (!base.Use()) return false;
+
+        // Duelist U1 + Catalyst U1 both: +20% stun duration (multiplicative)
+        // Duelist U3 + Catalyst U3 both: +20% counter damage (multiplicative)
+        float dU1 = allyStats != null ? allyStats.duelistSkillU1  : 0f;
+        float dU3 = allyStats != null ? allyStats.duelistSkillU3  : 0f;
+        float cU1 = allyStats != null ? allyStats.catalystSkillU1 : 0f;
+        float cU3 = allyStats != null ? allyStats.catalystSkillU3 : 0f;
+
+        _effectiveStunDur = counterStunDuration * (1f + dU1) * (1f + cU1);
+        _effectiveDmgMult = counterDamageMult   * (1f + dU3) * (1f + cU3);
 
         if (trapCoroutine != null) StopCoroutine(trapCoroutine);
         trapCoroutine = StartCoroutine(TacticianRoutine());
@@ -154,8 +170,8 @@ public class TacticianSkill : SkillBehavior
         // 2. HIỆU ỨNG VÀ SÁT THƯƠNG
         //if (companionCounterVfx) Instantiate(companionCounterVfx, enemy.transform.position, Quaternion.identity);
 
-        // Tính sát thương dựa trên chỉ số của thú cưng
-        var compDmg = CombatMath.CalculateFullDamage(compStats, enemy, 1.0f, true, null, null, counterDamageMult);
+        // Duelist U3 + Catalyst U3 scale counterDamageMult; Duelist U1 + Catalyst U1 scale stun
+        var compDmg = CombatMath.CalculateFullDamage(compStats, enemy, 1.0f, true, null, null, _effectiveDmgMult);
 
         DamageInfo counterInfo = new DamageInfo
         {
@@ -164,10 +180,10 @@ public class TacticianSkill : SkillBehavior
             physDamage = compDmg.phys,
             magicDamage = compDmg.magic,
             trueDamage = compDmg.trueDmg,
-            isCrit = true,                  // Đòn phản công luôn chí mạng
-            isStun = true,                  // Khóa chết mục tiêu
-            stunDuration = counterStunDuration,
-            impactLevel = 2                 // Phá Siêu Giáp
+            isCrit = true,
+            isStun = true,
+            stunDuration = _effectiveStunDur, // Duelist U1 + Catalyst U1
+            impactLevel = 2
         };
 
         enemy.TakeDamage(counterInfo);

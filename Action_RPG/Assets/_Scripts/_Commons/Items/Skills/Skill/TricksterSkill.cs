@@ -33,6 +33,7 @@ public class TricksterSkill : SkillBehavior
     private PlayerController playerController;
     private EquipmentManager equipmentManager;
     private SpriteRenderer playerSprite;
+    private AllyStats allyStats;
 
     // --- Trạng thái tàng hình ---
     private Coroutine invisibilityCoroutine;
@@ -40,6 +41,7 @@ public class TricksterSkill : SkillBehavior
 
     // --- Trạng thái cường hóa ---
     private int currentEmpowerStacks = 0;
+    private float _currentDefaultDmgMult; // effective mult for current empower session
     private bool isGrimoireEquipped = false;
     private bool isDaggerEquipped = false;
     private Direction8 currentDirection = Direction8.None;
@@ -51,6 +53,7 @@ public class TricksterSkill : SkillBehavior
         base.Initialize(myStats, myData, myPlayer);
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
         playerSprite = myPlayer.GetComponentInChildren<SpriteRenderer>();
+        allyStats = myStats;
     }
 
     protected override void OnEquip()
@@ -85,8 +88,20 @@ public class TricksterSkill : SkillBehavior
 
     private IEnumerator TricksterRoutine()
     {
+        // Rogue U1:  +20% invisibilityDuration  | Rogue U3:  +20% defaultBonusDamageMult
+        // Mage U1:   +20% decoyStunDuration     | Mage U3:   +20% explosionDamageMult
+        float rU1 = allyStats != null ? allyStats.rogueSkillU1 : 0f;
+        float rU3 = allyStats != null ? allyStats.rogueSkillU3 : 0f;
+        float mU1 = allyStats != null ? allyStats.mageSkillU1  : 0f;
+        float mU3 = allyStats != null ? allyStats.mageSkillU3  : 0f;
+
+        float effectiveInvisDur   = invisibilityDuration   * (1f + rU1);
+        float effectiveDefaultDmg = defaultBonusDamageMult * (1f + rU3);
+        float effectiveStunDur    = decoyStunDuration      * (1f + mU1);
+        float effectiveExplosionDmg = explosionDamageMult  * (1f + mU3);
+
         // ==========================================
-        // PHASE 1: DỊCH CHUYỂN VÀ TÀNG HÌNH
+        // PHASE 1
         // ==========================================
         player.isAttacking = true;
         Vector3 oldPosition = transform.position;
@@ -118,25 +133,26 @@ public class TricksterSkill : SkillBehavior
         if (decoyPrefab)
         {
             GameObject decoy = Instantiate(decoyPrefab, oldPosition, transform.rotation);
-            StartCoroutine(DecoyLifecycleRoutine(decoy));
+            StartCoroutine(DecoyLifecycleRoutine(decoy, effectiveStunDur, effectiveExplosionDmg));
         }
 
         // ==========================================
         // PHASE 3: CẤP 3 STACK CƯỜNG HÓA
         // ==========================================
         currentEmpowerStacks = maxEmpoweredStacks;
-        Debug.Log($"<color=orange>Trickster:</color> Đã nạp {currentEmpowerStacks} stack cường hóa đòn đánh!");
+        _currentDefaultDmgMult = effectiveDefaultDmg; // store for OnAttackPerformed
+        Debug.Log($"<color=orange>Trickster:</color> Stacks x{currentEmpowerStacks}, DmgMult {_currentDefaultDmgMult:F2}");
 
         yield return new WaitForSeconds(0.1f);
         player.isAttacking = false;
 
         if (invisibilityCoroutine != null) StopCoroutine(invisibilityCoroutine);
-        invisibilityCoroutine = StartCoroutine(InvisibilityTimeoutRoutine());
+        invisibilityCoroutine = StartCoroutine(InvisibilityTimeoutRoutine(effectiveInvisDur));
     }
 
-    private IEnumerator InvisibilityTimeoutRoutine()
+    private IEnumerator InvisibilityTimeoutRoutine(float duration)
     {
-        yield return new WaitForSeconds(invisibilityDuration);
+        yield return new WaitForSeconds(duration);
         BreakInvisibility(false);
     }
 
@@ -155,7 +171,7 @@ public class TricksterSkill : SkillBehavior
     // ==========================================================
     // LOGIC ẢO ẢNH (KHIÊU KHÍCH & NỔ)
     // ==========================================================
-    private IEnumerator DecoyLifecycleRoutine(GameObject decoy)
+    private IEnumerator DecoyLifecycleRoutine(GameObject decoy, float effectiveStunDur, float effectiveExplosionDmg)
     {
         Collider[] hitsToTaunt = Physics.OverlapSphere(decoy.transform.position, tauntRadius, player.dangerLayer);
 
@@ -163,19 +179,17 @@ public class TricksterSkill : SkillBehavior
         {
             var agent = col.GetComponent<UnityEngine.AI.NavMeshAgent>();
             if (agent != null && agent.enabled)
-            {
                 agent.SetDestination(decoy.transform.position);
-            }
         }
 
         yield return new WaitForSeconds(tauntDuration);
 
         if (decoyExplosionVfx) Instantiate(decoyExplosionVfx, decoy.transform.position, Quaternion.identity);
 
-        Debug.Log("<color=red>ẢO ẢNH NỔ TUNG!</color>");
+        Debug.Log("<color=red>DECOY EXPLODES!</color>");
 
-        // Gọi hàm sát thương cho vụ nổ ảo ảnh
-        DealEmpoweredAoe(decoy.transform.position, explosionRadius, explosionDamageMult, decoyStunDuration);
+        // Mage U1 scales stun, Mage U3 scales explosion damage
+        DealEmpoweredAoe(decoy.transform.position, explosionRadius, effectiveExplosionDmg, effectiveStunDur);
 
         Destroy(decoy);
     }
@@ -209,8 +223,9 @@ public class TricksterSkill : SkillBehavior
         }
         else if (isDaggerEquipped || !isGrimoireEquipped)
         {
-            Debug.Log("<color=orange>TRICKSTER: Ám Sát Ma Thuật (Default)!</color>");
-            DealEmpoweredAoe(center, 2.5f, defaultBonusDamageMult, 1.5f);
+            Debug.Log("<color=orange>TRICKSTER: Empowered Attack!</color>");
+            // Rogue U3 scales defaultBonusDamageMult (cached in _currentDefaultDmgMult)
+            DealEmpoweredAoe(center, 2.5f, _currentDefaultDmgMult, 1.5f);
         }
     }
 

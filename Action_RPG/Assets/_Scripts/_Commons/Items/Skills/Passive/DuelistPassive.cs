@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System;
 
 public class DuelistPassive : SkillBehavior
 {
@@ -157,12 +158,15 @@ public class DuelistPassive : SkillBehavior
             // CHỈ XỬ LÝ PERFECT PARRY CHO PLAYER
             if (isPlayer)
             {
-                if (currentHoldTimer <= perfectParryStartTime)
+                // stats.parryWindow được cộng từ các node "Perfect Parry Window" trong skill tree
+                float effectivePerfectWindow = perfectParryStartTime + stats.parryWindow;
+
+                if (currentHoldTimer <= effectivePerfectWindow)
                 {
                     if (!stats.isPerfectParryWindow) Debug.Log("<color=cyan>Duelist: Entering Perfect Window!</color>");
                     stats.isPerfectParryWindow = true;
                 }
-                else if (currentHoldTimer > perfectParryStartTime && currentHoldTimer <= maxParryDuration)
+                else if (currentHoldTimer > effectivePerfectWindow && currentHoldTimer <= maxParryDuration)
                 {
                     stats.isPerfectParryWindow = false;
                 }
@@ -217,9 +221,13 @@ public class DuelistPassive : SkillBehavior
             // Debug.Log("Duelist: End Parry.");
     }
 
+    // Sự kiện để Core Mechanic handlers đăng ký (CM1, CM2)
+    public event Action<bool, Stats> OnParrySuccessEvent;
+
     // --- HÀM XỬ LÝ KHI PARRY THÀNH CÔNG (GỌI TỪ STATS) ---
     public void OnParrySuccess(bool isPerfect, Stats attacker)
     {
+        OnParrySuccessEvent?.Invoke(isPerfect, attacker);
         if (isPerfect)
         {
             Debug.Log("<color=yellow>PERFECT PARRY SUCCESS!</color>");

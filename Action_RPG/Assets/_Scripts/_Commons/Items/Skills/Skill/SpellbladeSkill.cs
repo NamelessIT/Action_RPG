@@ -25,6 +25,13 @@ public class SpellbladeSkill : SkillBehavior
     public GameObject counterBlastVfxPrefab;  // Hiệu ứng nổ khi phản đòn thành công
 
     private EquipmentManager equipmentManager;
+    private AllyStats allyStats;
+
+    // Cached effective values per Use()
+    private float _effectiveMarkDuration;
+    private float _effectiveBaseDmgMult;
+    private float _effectiveCounterStunDur;
+    private float _effectiveCounterDmgMult;
 
     // --- LỚP LƯU TRỮ DỮ LIỆU ẤN KÝ ---
     private class MarkedEnemy
@@ -41,6 +48,7 @@ public class SpellbladeSkill : SkillBehavior
     {
         base.Initialize(myStats, myData, myPlayer);
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
+        allyStats = myStats;
     }
 
     protected override void OnEquip() { }
@@ -110,6 +118,18 @@ public class SpellbladeSkill : SkillBehavior
     // ==========================================================
     private IEnumerator WaveRoutine()
     {
+        // Mage U1:   +20% markDuration (time window for counter)  | Mage U3:   +20% baseDamageMultiplier
+        // Duelist U1: +20% counterStunDuration                    | Duelist U3: +20% counterDamageMult
+        float dU1 = allyStats != null ? allyStats.duelistSkillU1 : 0f;
+        float dU3 = allyStats != null ? allyStats.duelistSkillU3 : 0f;
+        float mU1 = allyStats != null ? allyStats.mageSkillU1    : 0f;
+        float mU3 = allyStats != null ? allyStats.mageSkillU3    : 0f;
+
+        _effectiveMarkDuration    = markDuration          * (1f + mU1);
+        _effectiveBaseDmgMult     = baseDamageMultiplier  * (1f + mU3);
+        _effectiveCounterStunDur  = counterStunDuration   * (1f + dU1);
+        _effectiveCounterDmgMult  = counterDamageMult     * (1f + dU3);
+
         player.isAttacking = true;
 
         Vector3 forward = stats.facingDirection;
@@ -151,7 +171,7 @@ public class SpellbladeSkill : SkillBehavior
         float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
 
         // 3. GÂY SÁT THƯƠNG VÀ ĐÁNH DẤU
-        float currentDamageMult = baseDamageMultiplier;
+        float currentDamageMult = _effectiveBaseDmgMult; // Mage U3
 
         for (int i = 0; i < hitEnemies.Count; i++)
         {
@@ -183,19 +203,15 @@ public class SpellbladeSkill : SkillBehavior
             if (!markedEnemies.ContainsKey(enemy))
             {
                 EnemyCombat enemyCombat = enemy.GetComponent<EnemyCombat>();
-                //GameObject vfx = null;
-                //if (markVfxPrefab) vfx = Instantiate(markVfxPrefab, enemy.transform.position + Vector3.up * 2f, Quaternion.identity, enemy.transform);
-
                 markedEnemies[enemy] = new MarkedEnemy
                 {
-                    timer = markDuration,
-                    //vfxInstance = vfx,
+                    timer = _effectiveMarkDuration, // Mage U1
                     combatComponent = enemyCombat
                 };
             }
             else
             {
-                markedEnemies[enemy].timer = markDuration; // Làm mới nếu đã có
+                markedEnemies[enemy].timer = _effectiveMarkDuration; // Refresh
             }
         }
 
@@ -224,7 +240,8 @@ public class SpellbladeSkill : SkillBehavior
         bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
         float t = CombatMath.CalculateDirectionFactor(transform, enemy);
 
-        var dmgTuple = CombatMath.CalculateFullDamage(stats, enemy, t, isCrit, data, currentWpn, counterDamageMult);
+        // Duelist U3 scales counterDamageMult, Duelist U1 scales stun
+        var dmgTuple = CombatMath.CalculateFullDamage(stats, enemy, t, isCrit, data, currentWpn, _effectiveCounterDmgMult);
 
         DamageInfo info = new DamageInfo
         {
@@ -234,9 +251,9 @@ public class SpellbladeSkill : SkillBehavior
             magicDamage = dmgTuple.magic,
             trueDamage = dmgTuple.trueDmg,
             isCrit = isCrit,
-            isStun = true,                  // Choáng cứng
-            stunDuration = counterStunDuration,
-            impactLevel = 2                 // Đảm bảo phá Siêu Giáp
+            isStun = true,
+            stunDuration = _effectiveCounterStunDur, // Duelist U1
+            impactLevel = 2
         };
 
         enemy.TakeDamage(info);

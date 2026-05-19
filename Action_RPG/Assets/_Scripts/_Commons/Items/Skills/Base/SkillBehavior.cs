@@ -32,7 +32,8 @@ public abstract class SkillBehavior : MonoBehaviour
     {
         // 1. Kiểm tra Cooldown
         // Giảm trừ thời gian hồi chiêu dựa trên bonusCdr (Giả sử 0.2 = giảm 20%)
-        float finalCooldown = data.cooldown * (1f - stats.cooldownReduction);
+        float flatReduction = (stats is AllyStats a) ? a.flatSkillCooldownReduction : 0f;
+        float finalCooldown = Mathf.Max(0f, data.cooldown * (1f - stats.cooldownReduction) - flatReduction);
 
         if (Time.time < lastUseTime + finalCooldown)
         {

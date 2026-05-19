@@ -29,16 +29,24 @@ public class InfiltratorSkill : SkillBehavior
     // --- Trạng thái hệ thống ---
     private SpriteRenderer playerSprite;
     private EquipmentManager equipmentManager;
+    private AllyStats allyStats;
     private Coroutine invisCoroutine;
     private GameObject currentInvisVfx;
 
-    private bool isPhantomStrikeReady = false; // Cờ chờ đòn đánh tiếp theo
+    private bool isPhantomStrikeReady = false;
+
+    // Cached effective values per Use()
+    private float _effectiveInvisDur;
+    private float _effectiveStunDur;
+    private float _effectiveBackstabMult;
+    private float _effectiveCompanionDmgMult;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
         base.Initialize(myStats, myData, myPlayer);
         playerSprite = myPlayer.GetComponentInChildren<SpriteRenderer>();
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
+        allyStats = myStats;
     }
 
     protected override void OnEquip() { }
@@ -68,7 +76,18 @@ public class InfiltratorSkill : SkillBehavior
     {
         if (!base.Use()) return false;
 
-        // Bật tàng hình và chờ lệnh
+        // Rogue U1:   +20% invisibilityDuration   | Rogue U3:   +20% backstab damage
+        // Catalyst U1: +20% stun duration         | Catalyst U3: +20% companion damage
+        float rU1 = allyStats != null ? allyStats.rogueSkillU1    : 0f;
+        float rU3 = allyStats != null ? allyStats.rogueSkillU3    : 0f;
+        float cU1 = allyStats != null ? allyStats.catalystSkillU1 : 0f;
+        float cU3 = allyStats != null ? allyStats.catalystSkillU3 : 0f;
+
+        _effectiveInvisDur          = invisibilityDuration   * (1f + rU1);
+        _effectiveBackstabMult      = data.skillPhysicalMultiplier * (1f + rU3);
+        _effectiveStunDur           = stunDuration           * (1f + cU1);
+        _effectiveCompanionDmgMult  = companionDamageMult    * (1f + cU3);
+
         if (invisCoroutine != null) StopCoroutine(invisCoroutine);
         invisCoroutine = StartCoroutine(InvisibilityRoutine());
 
@@ -86,9 +105,9 @@ public class InfiltratorSkill : SkillBehavior
         if (playerSprite) playerSprite.enabled = false;
         if (invisAuraVfx) currentInvisVfx = Instantiate(invisAuraVfx, transform);
 
-        Debug.Log("<color=cyan>INFILTRATOR: Bước Chân Bóng Tối (Tàng hình 4s)!</color>");
+        Debug.Log($"<color=cyan>INFILTRATOR: Invisible {_effectiveInvisDur:F1}s!</color>");
 
-        yield return new WaitForSeconds(invisibilityDuration);
+        yield return new WaitForSeconds(_effectiveInvisDur); // Rogue U1
 
         BreakInvisibility(false);
     }
@@ -198,8 +217,8 @@ public class InfiltratorSkill : SkillBehavior
 
                 if (companionStrikeVfx) Instantiate(companionStrikeVfx, target.transform.position, Quaternion.identity);
 
-                // Gây sát thương của thú cưng
-                var compDmg = CombatMath.CalculateFullDamage(compStats, target, 0.5f, false, null, null, companionDamageMult);
+                // Catalyst U3 scales companion damage, Catalyst U1 scales stun
+                var compDmg = CombatMath.CalculateFullDamage(compStats, target, 0.5f, false, null, null, _effectiveCompanionDmgMult);
                 DamageInfo compInfo = new DamageInfo
                 {
                     sourcePosition = companion.transform.position,
@@ -208,8 +227,8 @@ public class InfiltratorSkill : SkillBehavior
                     magicDamage = compDmg.magic,
                     trueDamage = compDmg.trueDmg,
                     isStun = true,
-                    stunDuration = stunDuration,
-                    impactLevel = 2 // Đảm bảo phá siêu giáp
+                    stunDuration = _effectiveStunDur, // Catalyst U1
+                    impactLevel = 2
                 };
                 target.TakeDamage(compInfo);
 
@@ -244,8 +263,8 @@ public class InfiltratorSkill : SkillBehavior
             float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
             bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
-            // Ép t = 1.0f (Sát thương đâm lén)
-            var bsDamage = CombatMath.CalculateFullDamage(stats, target, 1.0f, isCrit, data, currentWpn, data.skillPhysicalMultiplier);
+            // Rogue U3 scales backstab damage
+            var bsDamage = CombatMath.CalculateFullDamage(stats, target, 1.0f, isCrit, data, currentWpn, _effectiveBackstabMult);
 
             DamageInfo bsInfo = new DamageInfo
             {

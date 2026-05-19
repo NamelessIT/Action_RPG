@@ -19,4 +19,94 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c04eb6a558ffed7488235f14f594ec84, type: 2}
   - {fileID: 11400000, guid: d8700d43dc9b5174bb3b45c95554420c, type: 2}
   - {fileID: 11400000, guid: 2414c2152b54c6e48bcbc3008a41821a, type: 2}
-  fusionSkills: []
+  fusionSkills:
+  - classA: Rogue
+    classB: Duelist
+    fusionNodes:
+    - nodeId: SwordMasterSkill
+      nodeName: SwordMasterSkill
+      nodeDescription: 
+      nodeType: 0
+      skillData: {fileID: 11400000, guid: 5b8076e3c4bf2ca4583d803de2e9d628, type: 2}
+      statGains: []
+      classGrantType: 2
+      classGrantName: SwordMaster
+      unlockCost: 0
+      requiredLevel: 0
+      prerequisiteNodeIds: []
+      uiPosition: {x: 0, y: 0}
+  - classA: Rogue
+    classB: Mage
+    fusionNodes:
+    - nodeId: TricksterSkill
+      nodeName: TricksterSkill
+      nodeDescription: 
+      nodeType: 0
+      skillData: {fileID: 11400000, guid: aea485bbbd1deb1478222353be9040b7, type: 2}
+      statGains: []
+      classGrantType: 2
+      classGrantName: Trickster
+      unlockCost: 0
+      requiredLevel: 0
+      prerequisiteNodeIds: []
+      uiPosition: {x: 0, y: 0}
+  - classA: Rogue
+    classB: Catalyst
+    fusionNodes:
+    - nodeId: InfiltratorSkill
+      nodeName: InfiltratorSkill
+      nodeDescription: 
+      nodeType: 0
+      skillData: {fileID: 11400000, guid: 09a57ce16a247354d97e1744af36a067, type: 2}
+      statGains: []
+      classGrantType: 2
+      classGrantName: Infiltrator
+      unlockCost: 0
+      requiredLevel: 0
+      prerequisiteNodeIds: []
+      uiPosition: {x: 0, y: 0}
+  - classA: Duelist
+    classB: Mage
+    fusionNodes:
+    - nodeId: SpellbladeSkill
+      nodeName: SpellbladeSkill
+      nodeDescription: 
+      nodeType: 0
+      skillData: {fileID: 11400000, guid: 16257125e2452ae45b24c17275292f0c, type: 2}
+      statGains: []
+      classGrantType: 2
+      classGrantName: Spellblade
+      unlockCost: 0
+      requiredLevel: 0
+      prerequisiteNodeIds: []
+      uiPosition: {x: 0, y: 0}
+  - classA: Duelist
+    classB: Catalyst
+    fusionNodes:
+    - nodeId: TacticianSkill
+      nodeName: TacticianSkill
+      nodeDescription: 
+      nodeType: 0
+      skillData: {fileID: 11400000, guid: 259e8156909c9aa449642bd914a50951, type: 2}
+      statGains: []
+      classGrantType: 2
+      classGrantName: Tactician
+      unlockCost: 0
+      requiredLevel: 0
+      prerequisiteNodeIds: []
+      uiPosition: {x: 0, y: 0}
+  - classA: Mage
+    classB: Catalyst
+    fusionNodes:
+    - nodeId: SpellbinderSkill
+      nodeName: SpellbinderSkill
+      nodeDescription: 
+      nodeType: 0
+      skillData: {fileID: 11400000, guid: d031229a2b295f1408fb10d1c6300a34, type: 2}
+      statGains: []
+      classGrantType: 2
+      classGrantName: Spellbinder
+      unlockCost: 0
+      requiredLevel: 0
+      prerequisiteNodeIds: []
+      uiPosition: {x: 0, y: 0}

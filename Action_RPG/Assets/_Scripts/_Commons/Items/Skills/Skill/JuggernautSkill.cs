@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -15,31 +15,39 @@ public class JuggernautSkill : SkillBehavior
 
     [Header("Low HP Scaling")]
     public float baseRadius = 3.0f;
-    public float maxBonusRadius = 2.0f; // Máu thấp nhất thì cộng thêm 2m radius
+    public float maxBonusRadius = 2.0f;
     public float baseKnockback = 5f;
-    public float maxBonusKnockback = 5f; // Máu thấp nhất thì đẩy mạnh thêm 10
+    public float maxBonusKnockback = 5f;
 
     [Header("Buffs")]
-    public float healCapPercent = 0.3f; // Hồi tối đa 30% HP
+    public float healCapPercent = 0.3f;
     public float bonusSpeed = 0.2f;
     public float speedBuffDuration = 3.0f;
 
     private bool isStanceActive = false;
     private Coroutine stanceCoroutine;
     private GameObject currentAuraInstance;
-    private EquipmentManager equipmentManager; // Để lấy vũ khí tính damage nếu cần
+    private EquipmentManager equipmentManager;
+    private AllyStats allyStats;
+
+    // Cached effective values set when stance starts
+    private float _effectiveDefBonus;
+    private float _effectiveArmorScaling;
+    private float _effectiveMSScaling;
+    private float _effectiveBonusSpeed;
+    private float _effectiveBRU3; // BloodReaver U3 applied to finalMultiplier in counter
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
         base.Initialize(myStats, myData, myPlayer);
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
+        allyStats = myStats;
     }
 
     protected override void OnEquip() { }
 
     protected override void OnUnequip()
     {
-        // Dọn dẹp nếu đang dùng mà tháo skill
         if (isStanceActive)
         {
             EndStance(false);
@@ -48,50 +56,50 @@ public class JuggernautSkill : SkillBehavior
 
     public override bool Use()
     {
-        if (!base.Use()) return false; // Check cooldown & mana
-
-        // Bắt đầu thế thủ
+        if (!base.Use()) return false;
         StartStance();
         return true;
     }
 
     private void StartStance()
     {
-        isStanceActive = true;
+        // Vanguard U1: +20% Defense Value buff
+        // Vanguard U3: +20% Armor/MR scale damage (in counter)
+        // BloodReaver U1: +20% bonusMoveSpeed buff
+        // BloodReaver U3: +20% scale damage (finalMultiplier in counter)
+        float vU1  = allyStats != null ? allyStats.vanguardSkillU1    : 0f;
+        float vU3  = allyStats != null ? allyStats.vanguardSkillU3    : 0f;
+        float brU1 = allyStats != null ? allyStats.bloodReaverSkillU1 : 0f;
+        float brU3 = allyStats != null ? allyStats.bloodReaverSkillU3 : 0f;
 
-        // 1. Khóa tấn công (nhưng vẫn cho di chuyển)
+        _effectiveDefBonus    = defenseValueBonus * (1f + vU1);
+        _effectiveArmorScaling = armorScaling      * (1f + vU3);
+        _effectiveMSScaling    = msScaling         * (1f + vU3);
+        _effectiveBonusSpeed   = bonusSpeed        * (1f + brU1);
+        _effectiveBRU3         = brU3;
+
+        isStanceActive = true;
         player.isStance = true;
 
-        // 2. Tăng Defense Value
-        stats.defenseValue += defenseValueBonus;
-        Debug.Log($"<color=red>Juggernaut Stance!</color> Def +{defenseValueBonus}");
+        stats.defenseValue += _effectiveDefBonus;
+        Debug.Log($"<color=red>Juggernaut Stance!</color> Def +{_effectiveDefBonus}");
 
-        // 3. Hiệu ứng Khí đỏ 
-
-        // 4. Lắng nghe sự kiện bị đánh
         stats.OnDamageReceived += OnHitTrigger;
 
-        // 5. Đếm ngược 3 giây
         stanceCoroutine = StartCoroutine(StanceTimer());
     }
 
     private IEnumerator StanceTimer()
     {
         yield return new WaitForSeconds(stanceDuration);
-
-        // Hết giờ mà không bị đánh -> Kết thúc buồn tẻ
         EndStance(false);
         Debug.Log("Juggernaut: Hết thời gian, không phản đòn.");
     }
 
-    // Hàm này được gọi TỰ ĐỘNG khi Stats bị trừ máu
     private void OnHitTrigger(float damageTaken, Stats target)
     {
         if (!isStanceActive) return;
-
         Debug.Log("<color=yellow>Juggernaut: KÍCH HOẠT PHẢN ĐÒN!</color>");
-
-        // Dừng Stance ngay lập tức và chuyển sang Counter
         EndStance(true);
     }
 
@@ -100,16 +108,13 @@ public class JuggernautSkill : SkillBehavior
         if (!isStanceActive) return;
 
         isStanceActive = false;
-
-        // 1. Trả lại trạng thái cũ
         player.isStance = false;
-        stats.defenseValue -= defenseValueBonus;
-        stats.OnDamageReceived -= OnHitTrigger; // Ngừng lắng nghe
+        stats.defenseValue -= _effectiveDefBonus;
+        stats.OnDamageReceived -= OnHitTrigger;
 
         if (stanceCoroutine != null) StopCoroutine(stanceCoroutine);
         if (currentAuraInstance != null) Destroy(currentAuraInstance);
 
-        // 2. Nếu kích hoạt phản đòn
         if (triggerCounter)
         {
             StartCoroutine(CounterAttackRoutine());
@@ -118,23 +123,16 @@ public class JuggernautSkill : SkillBehavior
 
     private IEnumerator CounterAttackRoutine()
     {
-        // 1. Khóa di chuyển để thực hiện đòn quét (Animation)
         player.isAttacking = true;
 
-        // animator.SetTrigger("JuggernautSpin");
+        float hpPercent = stats.currentHp / stats.maxHp;
+        float missingHpRatio = 1.0f - hpPercent;
 
-        // 2. Tính toán tầm quét và lực đẩy dựa trên Máu
-        float hpPercent = stats.currentHp / stats.maxHp; // 0.1 (máu thấp) -> 1.0 (full máu)
-        float missingHpRatio = 1.0f - hpPercent; // 0.9 (máu thấp) -> 0.0 (full máu)
-
-        float finalRadius = baseRadius + (missingHpRatio * maxBonusRadius);
+        float finalRadius    = baseRadius    + (missingHpRatio * maxBonusRadius);
         float finalKnockback = baseKnockback + (missingHpRatio * maxBonusKnockback);
 
         Debug.Log($"Counter: HP {hpPercent * 100:F0}% -> Radius: {finalRadius:F1}, Knockback: {finalKnockback:F1}");
 
-        // 3. Tạo VFX Quét
-
-        // 4. Gây sát thương
         Collider[] hits = Physics.OverlapSphere(transform.position, finalRadius, player.dangerLayer);
         float totalDamageDealt = 0f;
 
@@ -148,27 +146,17 @@ public class JuggernautSkill : SkillBehavior
             }
         }
 
-        // 5. Hồi máu (Lifesteal)
         if (totalDamageDealt > 0)
         {
-            float healAmount = totalDamageDealt; // Hồi dựa trên damage
-            float maxHeal = stats.maxHp * healCapPercent;
-
-            // Kẹp giá trị hồi máu (Min)
-            healAmount = Mathf.Min(healAmount, maxHeal);
-
+            float healAmount = Mathf.Min(totalDamageDealt, stats.maxHp * healCapPercent);
             stats.currentHp += healAmount;
             if (stats.currentHp > stats.maxHp) stats.currentHp = stats.maxHp;
-
             Debug.Log($"<color=green>Hồi phục: {healAmount} HP</color>");
         }
 
-        // 6. Buff Tốc chạy
         StartCoroutine(SpeedBuffRoutine());
 
-        // Chờ animation xong
         yield return new WaitForSeconds(0.4f);
-
         player.isAttacking = false;
     }
 
@@ -177,62 +165,33 @@ public class JuggernautSkill : SkillBehavior
         stats.EnterCombat();
         WeaponData currentWpn = equipmentManager.currentWeapon;
 
-        // 1. Tính lượng sát thương cộng thêm từ chỉ số (Scaling)
-        // (Armor * 1.5 + MagicResist * 1.5)
-        float scalingDmg = (stats.armor * armorScaling) + (stats.magicResist * msScaling);
+        // Vanguard U3 scales Armor/MR contribution
+        float scalingDmg = (stats.armor * _effectiveArmorScaling) + (stats.magicResist * _effectiveMSScaling);
 
-        // 2. Tính Damage gốc từ Skill (Dựa trên Physical Attack và Skill Multiplier)
-        // Ta cần tính trước cái này để làm mẫu số quy đổi
         float basePhyAtk = stats.physicalAtk;
-        if (basePhyAtk <= 0) basePhyAtk = 1f; // Tránh chia cho 0 nếu stats lỗi
+        if (basePhyAtk <= 0) basePhyAtk = 1f;
 
-        // Damage chuẩn của skill theo data (Ví dụ Atk = 100, SkillMult = 1.5 -> Raw = 150)
         float standardSkillDmg = basePhyAtk * data.skillPhysicalMultiplier;
+        float totalRawDamage   = standardSkillDmg + scalingDmg;
 
-        // 3. Quy đổi Scaling Damage thành Multiplier
-        // Ta muốn: Tổng Damage = StandardSkillDmg + ScalingDmg
-        // Mà công thức CombatMath là: Atk * (SkillMult * FinalMult)
-        // => Ta cần tìm FinalMult sao cho kết quả bằng tổng trên.
-
-        float totalRawDamage = standardSkillDmg + scalingDmg;
-
-        // Hệ số nhân cuối cùng sẽ được đưa vào hàm
         float finalMultiplier = 1.0f;
-
         if (standardSkillDmg > 0)
-        {
-            // Tỷ lệ tăng thêm = Tổng / Gốc
             finalMultiplier = totalRawDamage / standardSkillDmg;
-        }
 
-        // 4. Tính toán các thông số phụ
+        // BloodReaver U3: +20% overall damage
+        finalMultiplier *= (1f + _effectiveBRU3);
+
         float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
         bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-
-        // Tính hệ số hướng (Phản đòn quét tròn nên t có thể tính hoặc mặc định 1)
         float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
 
-        // 5. GỌI HÀM CHUẨN CỦA HỆ THỐNG
-        // Hàm này sẽ tự lấy (Atk * SkillData.Mult) * finalMultiplier
-        // Kết quả sẽ tương đương (Standard + Scaling) rồi mới trừ Giáp
-        var dmgTuple = CombatMath.CalculateFullDamage(
-            stats,
-            enemyStats,
-            t,
-            isCrit,
-            data,
-            currentWpn,
-            finalMultiplier // <--- Bí thuật nằm ở đây
-        );
+        var dmgTuple = CombatMath.CalculateFullDamage(stats, enemyStats, t, isCrit, data, currentWpn, finalMultiplier);
 
-        // 6. Tạo DamageInfo & Gửi đi
         DamageInfo info = new DamageInfo();
         info.sourcePosition = transform.position;
         info.isCrit = isCrit;
         info.physDamage = dmgTuple.phys;
         info.magicDamage = dmgTuple.magic;
-         // Damage cuối cùng (đã trừ giáp)
-
         info.isStun = true;
         info.stunDuration = stunDuration;
         info.isKnockback = true;
@@ -241,20 +200,16 @@ public class JuggernautSkill : SkillBehavior
 
         enemyStats.TakeDamage(info);
 
-        // Debug để kiểm tra
-        // Debug.Log($"Counter Dmg: Base({standardSkillDmg}) + Scale({scalingDmg}) = Raw({totalRawDamage}) -> Final({damage})");
-
-        return dmgTuple.phys + dmgTuple.magic + dmgTuple.trueDmg; // Trả về damage thực tế gây ra để hồi máu
+        return dmgTuple.phys + dmgTuple.magic + dmgTuple.trueDmg;
     }
 
     private IEnumerator SpeedBuffRoutine()
     {
-        // Tăng tốc chạy thủ công
-        stats.bonusMoveSpeed += bonusSpeed;
+        // BloodReaver U1 scales bonusSpeed
+        stats.bonusMoveSpeed += _effectiveBonusSpeed;
         stats.CalculateMoveSpeedOnly();
         yield return new WaitForSeconds(speedBuffDuration);
-
-        stats.bonusMoveSpeed -= bonusSpeed;
+        stats.bonusMoveSpeed -= _effectiveBonusSpeed;
         stats.CalculateMoveSpeedOnly();
     }
 }
