@@ -35,9 +35,11 @@ public class MageSkill : SkillBehavior
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
-        base.Initialize(myStats, myData, myPlayer);
+        // [FIX] Gán ref TRƯỚC base.Initialize() vì base gọi OnEquip() ngay lập tức.
+        // Nếu gán sau, OnEquip() thấy playerController = null → không subscribe được events.
         playerController = myPlayer;
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
+        base.Initialize(myStats, myData, myPlayer);
     }
 
     protected override void OnEquip()

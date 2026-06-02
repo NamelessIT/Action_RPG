@@ -148,7 +148,8 @@ public class DuelistSignature : SkillBehavior
         yield return new WaitForSecondsRealtime(0.3f);
 
         // --- PHASE 3: KẾT THÚC ---
-        Time.timeScale = 1.0f;
+        // Tôn trọng UIPauseManager: nếu UI đang mở thì giữ pause (0), không ép 1 (tránh unpause oan).
+        Time.timeScale = UIPauseManager.ResumeTimeScale;
         Time.fixedDeltaTime = 0.02f; // Trả lại vật lý bình thường
 
         stats.isInvincible = false;

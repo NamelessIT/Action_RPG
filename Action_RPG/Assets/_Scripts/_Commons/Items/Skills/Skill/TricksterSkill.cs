@@ -48,9 +48,13 @@ public class TricksterSkill : SkillBehavior
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
-        base.Initialize(myStats, myData, myPlayer);
+        // [FIX] Gán ref TRƯỚC base.Initialize() vì base gọi OnEquip() ngay lập tức.
+        // Trước đây playerController KHÔNG bao giờ được gán → Trickster không bao giờ
+        // subscribe attack/movement/weapon events. Gán đủ ref ở đây để OnEquip() chạy đúng.
+        playerController = myPlayer;
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
         playerSprite = myPlayer.GetComponentInChildren<SpriteRenderer>();
+        base.Initialize(myStats, myData, myPlayer);
     }
 
     protected override void OnEquip()

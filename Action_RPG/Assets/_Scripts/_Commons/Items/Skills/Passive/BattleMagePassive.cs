@@ -29,8 +29,8 @@ public class BattleMagePassive : SkillBehavior
 
     protected override void OnEquip()
     {
-        // 1. Cộng Magic Life Steal
-        stats.magicLifeSteal += 0.1f;
+        // 1. Cộng Magic Life Steal — dùng cùng biến config với OnUnequip để apply/remove khớp nhau
+        stats.magicLifeSteal += magicLifeStealBonus;
         Debug.Log($"[BattleMage] +{magicLifeStealBonus * 100}% Magic Life Steal");
     }
 

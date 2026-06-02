@@ -336,6 +336,7 @@ public class EquipmentManager : MonoBehaviour
         if (id == "SHD_CS_T3_02") allyStats.bonusSinGain -= 0.15f;
         if (id == "SHD_CS_T3_04") allyStats.bonusMoveSpeed -= 0.10f;
         if (id == "SHD_CS_T5_02") allyStats.bonusHpGain -= 4.0f;
+        if (id == "SHD_CS_T5_04") allyStats.bonusSinGain -= 1.0f;
     }
     // --------------- ACCESSORY (5 SLOTS) ---------------
     // 1. Trang bị Accessory (Tự động nhận diện slot dựa trên Type)
@@ -521,8 +522,8 @@ public class EquipmentManager : MonoBehaviour
             case StatModifier.StatType.KnockBackRes: allyStats.resistanceKnockBack += value; break;
             case StatModifier.StatType.EffectRes: allyStats.resistanceEffect += value; break;
 
-            case StatModifier.StatType.FlatHpGain: allyStats.hpGain += value; break;
-            case StatModifier.StatType.FlatSinGain: allyStats.hpGain += value; break;
+            case StatModifier.StatType.FlatHpGain: allyStats.flatHpGain += value; break;
+            case StatModifier.StatType.FlatSinGain: allyStats.flatSinGain += value; break;
 
                 // ... Thêm các case cho các chỉ số khác
         }

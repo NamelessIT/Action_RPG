@@ -101,6 +101,11 @@ public class DevToolPanel : MonoBehaviour
     //  UNITY LIFECYCLE
     // ============================================================
 
+    // Pause game khi DevTool bật, gỡ khi tắt — qua UIPauseManager tập trung.
+    // Dùng OnEnable/OnDisable nên bắt được mọi cách mở/đóng (phím V, nút TogglePanel...).
+    private void OnEnable()  => UIPauseManager.SetLock("DevTool", true);
+    private void OnDisable() => UIPauseManager.SetLock("DevTool", false);
+
     private void Awake()
     {
         _playerStats      = FindFirstObjectByType<PlayerStats>();
@@ -647,7 +652,7 @@ public class DevToolPanel : MonoBehaviour
         PlayerPrefs.SetString("SelectedCharacter", "Chris");
         PlayerPrefs.Save();
         Debug.Log("[DevTool] Chuyển sang Chris — reloading scene...");
-        Time.timeScale = 1f;
+        UIPauseManager.ClearAll(); // gỡ mọi khóa pause trước khi load scene mới
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
@@ -657,7 +662,7 @@ public class DevToolPanel : MonoBehaviour
         PlayerPrefs.SetString("SelectedCharacter", "Leo");
         PlayerPrefs.Save();
         Debug.Log("[DevTool] Chuyển sang Leo — reloading scene...");
-        Time.timeScale = 1f;
+        UIPauseManager.ClearAll(); // gỡ mọi khóa pause trước khi load scene mới
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
@@ -705,7 +710,7 @@ public class DevToolPanel : MonoBehaviour
         Debug.Log("[DevTool] ResetGame — đã xóa toàn bộ tiến trình Skill Tree.");
 
         // 4. Reload scene
-        Time.timeScale = 1f;
+        UIPauseManager.ClearAll(); // gỡ mọi khóa pause trước khi load scene mới
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         Debug.Log("[DevTool] ResetGame — reloading scene...");
     }

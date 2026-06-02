@@ -81,7 +81,7 @@ public class EnemyCombat : MonoBehaviour
 
         if (Time.time < lastAttackTime + cooldownTime) return;
 
-        StartCoroutine(EnemyAttackRoutine());
+        currentAttackCoroutine = StartCoroutine(EnemyAttackRoutine());
     }
 
 protected IEnumerator EnemyAttackRoutine()
@@ -114,21 +114,24 @@ protected IEnumerator EnemyAttackRoutine()
 
             if (animator != null)
             {
-                // Ưu tiên Bool (animation blend dài), nếu không thì dùng Trigger
+                // [CHƯA CÓ CLIP] Telegraph animation: tạm comment animator.Set, chỉ log.
+                // Ưu tiên Bool (animation blend dài), nếu không thì dùng Trigger.
                 if (!string.IsNullOrEmpty(telegraphAnimBool))
-                    animator.SetBool(telegraphAnimBool, true);
+                    // animator.SetBool(telegraphAnimBool, true);
+                    Debug.Log($"[EnemyCombat] {gameObject.name} telegraph START → (comment) animator.SetBool(\"{telegraphAnimBool}\", true)");
                 else if (!string.IsNullOrEmpty(telegraphAnimTrigger))
-                    //animator.SetTrigger(telegraphAnimTrigger);
-                    Debug.Log("EnemyCombat: //animator.SetTrigger(telegraphAnimTrigger);");
+                    // animator.SetTrigger(telegraphAnimTrigger);
+                    Debug.Log($"[EnemyCombat] {gameObject.name} telegraph → (comment) animator.SetTrigger(\"{telegraphAnimTrigger}\")");
             }
 
             yield return new WaitForSeconds(telegraphDuration);
 
             isTelegraphing = false;
 
-            // Tắt Bool nếu đã bật
+            // Tắt Bool nếu đã bật [CHƯA CÓ CLIP] — comment animator.Set, chỉ log
             if (animator != null && !string.IsNullOrEmpty(telegraphAnimBool))
-                animator.SetBool(telegraphAnimBool, false);
+                // animator.SetBool(telegraphAnimBool, false);
+                Debug.Log($"[EnemyCombat] {gameObject.name} telegraph END → (comment) animator.SetBool(\"{telegraphAnimBool}\", false)");
         }
         // ─────────────────────────────────────────────────────────────────────
 
@@ -172,21 +175,37 @@ protected IEnumerator EnemyAttackRoutine()
         isAttacking = false;
         currentComboStep++;
         if (currentComboStep >= maxCombo) currentComboStep = 0;
+        currentAttackCoroutine = null; // routine kết thúc bình thường
     }
 
     // [MỚI] Hàm hỗ trợ Cancel Attack (Để Boss dùng)
     public void CancelAttack()
     {
-        if (isAttacking && currentAttackCoroutine != null)
+        // Không có gì để hủy
+        if (currentAttackCoroutine == null && !isAttacking && !isTelegraphing) return;
+
+        if (currentAttackCoroutine != null)
         {
             StopCoroutine(currentAttackCoroutine);
-            isAttacking = false;
-
-            // Reset Animation trigger nếu cần
-            if (animator != null) animator.ResetTrigger("Attack");
-
-            Debug.Log($"{gameObject.name} đã HỦY đòn đánh!");
+            currentAttackCoroutine = null;
         }
+
+        isAttacking = false;
+
+        // Đang trong pha telegraph thì StopCoroutine không tự dọn — reset thủ công
+        if (isTelegraphing)
+        {
+            isTelegraphing = false;
+            // [CHƯA CÓ CLIP] — comment animator.Set, chỉ log
+            if (animator != null && !string.IsNullOrEmpty(telegraphAnimBool))
+                // animator.SetBool(telegraphAnimBool, false);
+                Debug.Log($"[EnemyCombat] {gameObject.name} CancelAttack telegraph reset → (comment) animator.SetBool(\"{telegraphAnimBool}\", false)");
+        }
+
+        // Reset Animation trigger nếu cần
+        if (animator != null) animator.ResetTrigger("Attack");
+
+        Debug.Log($"{gameObject.name} đã HỦY đòn đánh!");
     }
 
     // Hàm kiểm tra va chạm và gây damage

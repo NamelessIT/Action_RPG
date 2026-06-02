@@ -354,8 +354,9 @@ public class AllyStats : Stats
         // 2. Chờ thời gian thực (Vì Time.time đang bị chậm nên không dùng WaitForSeconds thường được)
         yield return new WaitForSecondsRealtime(slowMotionDuration);
 
-        // 3. Trả lại thời gian bình thường
-        Time.timeScale = 1.0f;
+        // 3. Trả lại thời gian bình thường — nhưng tôn trọng UIPauseManager:
+        // nếu người chơi mở UI (Inventory/SkillTree/DevTool) trong lúc slow-mo, giữ pause (0) thay vì ép 1.
+        Time.timeScale = UIPauseManager.ResumeTimeScale;
         Time.fixedDeltaTime = 0.02f;
     }
 
