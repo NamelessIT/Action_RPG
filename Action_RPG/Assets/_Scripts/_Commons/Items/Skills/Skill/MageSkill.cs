@@ -1,43 +1,57 @@
 using UnityEngine;
 using System.Collections;
-using System.Collections.Generic;
 
-public class MageSkill : SkillBehavior
+/// <summary>
+/// Skill có đòn đánh cường hóa THAY THẾ đòn đánh thường.
+/// RangedAttackHandler hỏi cờ này để KHÔNG bắn đạn thường khi đòn này sẽ bị cường hóa tiêu hao.
+/// </summary>
+public interface IEmpoweredAttackProvider
 {
-    [Header("Empower Settings")]
+    bool WillEmpowerAttack(bool isHeavy);
+}
+
+/// <summary>
+/// MageSkill — "Arcane Empowerment".
+/// Kích hoạt → nhận buff 5s. Đòn đánh thường KẾ TIẾP trong 5s sẽ được cường hóa theo hướng
+/// di chuyển (khi cầm Grimoire), rồi xóa buff. Toàn bộ logic 8 hướng nằm trong
+/// <see cref="ArcaneEmpowerment"/> (dùng chung với TricksterSkill).
+/// </summary>
+public class MageSkill : SkillBehavior, IEmpoweredAttackProvider
+{
+    [Header("Buff")]
     public float buffDuration = 5.0f;
 
-    [Header("Default (No Grimoire / No Direction)")]
-    public float defaultBonusDamage = 2.5f;
-    public float defaultStunDuration = 1.5f;
+    [Header("Đòn cường hóa 8 hướng (dùng chung)")]
+    public ArcaneEmpowerment empower = new ArcaneEmpowerment();
 
-    [Header("VFX Prefabs (Gắn vào đây)")]
-    public GameObject empowerAuraVfx;
-    public GameObject blastVfx;  // Dùng chung cho nổ phép
-
-    // Trạng thái hệ thống
+    // --- State & refs ---
     private bool isEmpowered = false;
+    private int consumedFrame = -1; // frame buff bị tiêu hao (để MagePassive cùng dispatch bỏ qua)
     private Coroutine buffCoroutine;
-    private GameObject currentAuraVfx;
 
-    // Tham chiếu
     private PlayerController playerController;
     private EquipmentManager equipmentManager;
+    private MagePassive magePassive;
     private bool isGrimoireEquipped = false;
-    private Direction8 currentDirection = Direction8.None;
-    private string requiredWeaponName = "Grimoire";
+    private EmpowerDirection currentDirection = EmpowerDirection.None;
 
-    private enum Direction8
-    {
-        None = 0, N = 1, NE = 2, E = 3, SE = 4,
-        S = 5, SW = 6, W = 7, NW = 8
-    }
+    /// <summary>
+    /// MagePassive hỏi cờ này để ƯU TIÊN skill: true khi buff đang bật hoặc vừa tiêu hao
+    /// NGAY trong frame này (an toàn với mọi thứ tự gọi sự kiện).
+    /// </summary>
+    public bool ShouldSuppressPassive => isEmpowered || consumedFrame == Time.frameCount;
+
+    public bool WillEmpowerAttack(bool isHeavy) => isEmpowered && !isHeavy;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
-        base.Initialize(myStats, myData, myPlayer);
+        // Gán refs TRƯỚC base.Initialize: base gọi OnEquip() (đăng ký sự kiện) ngay trong nó.
         playerController = myPlayer;
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
+        magePassive = myPlayer.GetComponent<MagePassive>();
+        base.Initialize(myStats, myData, myPlayer);
+
+        empower.Setup(this, stats, playerController.dangerLayer, magePassive);
     }
 
     protected override void OnEquip()
@@ -63,48 +77,32 @@ public class MageSkill : SkillBehavior
     }
 
     // ==========================================================
-    // LẮNG NGHE INPUT & VŨ KHÍ
+    // INPUT & VŨ KHÍ
     // ==========================================================
     private void OnMovementInput(Vector2 input)
     {
-        if (input == Vector2.zero)
-        {
-            currentDirection = Direction8.None;
-            return;
-        }
-
-        float angle = Mathf.Atan2(input.y, input.x) * Mathf.Rad2Deg;
-        if (angle < 0) angle += 360f;
-
-        if (angle >= 337.5f || angle < 22.5f) currentDirection = Direction8.E;
-        else if (angle >= 22.5f && angle < 67.5f) currentDirection = Direction8.NE;
-        else if (angle >= 67.5f && angle < 112.5f) currentDirection = Direction8.N;
-        else if (angle >= 112.5f && angle < 157.5f) currentDirection = Direction8.NW;
-        else if (angle >= 157.5f && angle < 202.5f) currentDirection = Direction8.W;
-        else if (angle >= 202.5f && angle < 247.5f) currentDirection = Direction8.SW;
-        else if (angle >= 247.5f && angle < 292.5f) currentDirection = Direction8.S;
-        else if (angle >= 292.5f && angle < 337.5f) currentDirection = Direction8.SE;
+        currentDirection = ArcaneEmpowerment.DirectionFromInput(input, currentDirection);
     }
 
-    private void OnWeaponEquipped(WeaponData weapon) { CheckGrimoireEquipped(weapon); }
+    private void OnWeaponEquipped(WeaponData weapon) => CheckGrimoireEquipped(weapon);
 
     private void CheckGrimoireEquipped(WeaponData weapon)
     {
-        isGrimoireEquipped = (weapon != null && weapon.weaponName == requiredWeaponName);
+        // Ưu tiên trạng thái của nội tại (đã tính bypass); fallback theo weaponType.
+        if (magePassive != null) isGrimoireEquipped = magePassive.IsGrimoireActive;
+        else isGrimoireEquipped = (weapon != null && weapon.weaponType == WeaponData.WeaponType.Grimoire);
     }
 
     // ==========================================================
-    // KÍCH HOẠT SKILL (BẬT BUFF)
+    // KÍCH HOẠT (BẬT BUFF)
     // ==========================================================
     public override bool Use()
     {
         if (!base.Use()) return false;
 
+        CheckGrimoireEquipped(equipmentManager?.currentWeapon);
+
         isEmpowered = true;
-
-        //if (currentAuraVfx != null) Destroy(currentAuraVfx);
-        //if (empowerAuraVfx != null) currentAuraVfx = Instantiate(empowerAuraVfx, transform);
-
         if (buffCoroutine != null) StopCoroutine(buffCoroutine);
         buffCoroutine = StartCoroutine(BuffTimeoutRoutine());
 
@@ -122,196 +120,18 @@ public class MageSkill : SkillBehavior
     private void RemoveBuff()
     {
         isEmpowered = false;
-        //if (currentAuraVfx != null) Destroy(currentAuraVfx);
         if (buffCoroutine != null) { StopCoroutine(buffCoroutine); buffCoroutine = null; }
     }
 
     // ==========================================================
-    // BẮT SỰ KIỆN ĐÁNH ĐỂ XẢ BUFF
+    // XẢ BUFF KHI ĐÁNH
     // ==========================================================
     private void OnAttackPerformed(int stepIndex, bool isHeavy)
     {
-        if (!isEmpowered) return;
+        if (!isEmpowered || isHeavy) return; // chỉ cường hóa đòn đánh THƯỜNG
+        consumedFrame = Time.frameCount;     // đánh dấu frame tiêu hao để passive bỏ qua
+        RemoveBuff();
 
-        RemoveBuff(); // Tiêu hao buff ngay lập tức
-
-        Vector3 forward = stats.facingDirection;
-        if (forward == Vector3.zero) forward = transform.forward;
-        forward.y = 0; forward.Normalize();
-
-        if (!isGrimoireEquipped || currentDirection == Direction8.None)
-        {
-            // --- ĐÒN CƠ BẢN ---
-            Debug.Log("<color=orange>MAGE: Vụ Nổ Phép Thuật (Default)!</color>");
-            DealEmpoweredAoe(
-                center: transform.position + forward * 1.5f,
-                radius: 2.0f,
-                dmgMult: defaultBonusDamage,
-                stunTime: defaultStunDuration
-            );
-        }
-        else
-        {
-            // --- 8 ĐÒN CƯỜNG HÓA VỚI GRIMOIRE ---
-            switch (currentDirection)
-            {
-                case Direction8.N: // HELLFIRE: Nổ to x3, Thiêu đốt 5s
-                    Debug.Log("<color=red>MAGE (N): HELLFIRE!</color>");
-                    DealEmpoweredAoe(transform.position + forward * 3f, 4f, 3.0f, 0f, stats.magicAtk * 0.1f, 4f);
-                    break;
-
-                case Direction8.NE: // GRAND HURRICANE: Nổ diện rộng
-                    Debug.Log("<color=red>MAGE (NE): GRAND HURRICANE!</color>");
-                    DealEmpoweredAoe(transform.position, 5f, 2.0f, 0.5f);
-                    break;
-
-                case Direction8.E: // TAILWIND: Buff siêu tốc cho bản thân (Không nổ)
-                    Debug.Log("<color=green>MAGE (E): TAILWIND (+Tốc chạy/Tốc đánh)!</color>");
-                    StartCoroutine(TailwindBuffRoutine());
-                    break;
-
-                case Direction8.SE: // BLIZZARD: Sát thương lớn diện rộng + Làm chậm
-                    Debug.Log("<color=cyan>MAGE (SE): BLIZZARD!</color>");
-                    DealEmpoweredAoe(transform.position + forward * 3f, 5f, 2.5f, 0f, 0f, 0f, 0.5f, 3f);
-                    break;
-
-                case Direction8.S: // ABSOLUTE ZERO: Sát thương nhỏ, Choáng diện siêu rộng 3s
-                    Debug.Log("<color=cyan>MAGE (S): ABSOLUTE ZERO!</color>");
-                    DealEmpoweredAoe(transform.position, 6f, 0.5f, 3.0f);
-                    break;
-
-                case Direction8.SW: // FLASH FROST: Nổ chậm 80%
-                    Debug.Log("<color=blue>MAGE (SW): FLASH FROST!</color>");
-                    DealEmpoweredAoe(transform.position + forward * 2f, 4f, 1.5f, 0f, 0f, 0f, 0.8f, 4f);
-                    break;
-
-                case Direction8.W: // EARTHQUAKE: Đập bể 30% giáp phép
-                    Debug.Log("<color=yellow>MAGE (W): EARTHQUAKE!</color>");
-                    DealEmpoweredAoe(transform.position, 5f, 2.0f, 0.5f, 0f, 0f, 0f, 0f, 0.3f, 5f);
-                    break;
-
-                case Direction8.NW: // MAGMA ERUPTION: Choáng 1s + Thiêu Đốt
-                    Debug.Log("<color=orange>MAGE (NW): MAGMA ERUPTION!</color>");
-                    DealEmpoweredAoe(transform.position + forward * 2.5f, 3.5f, 2.0f, 1.0f, stats.magicAtk * 0.08f, 3f);
-                    break;
-            }
-        }
-    }
-
-    // ==========================================================
-    // HÀM TÍNH TOÁN DÙNG CHUNG (DỰA TRÊN CODE CỦA BẠN)
-    // ==========================================================
-    private void DealEmpoweredAoe(
-        Vector3 center, float radius, float dmgMult,
-        float stunTime = 0f, float burnDps = 0f, float burnTime = 0f,
-        float slowPercent = 0f, float slowTime = 0f,
-        float mrShredPercent = 0f, float shredTime = 0f)
-    {
-        // 1. Kích hoạt hiệu ứng hình ảnh dùng chung (nếu có)
-        //if (blastVfx != null) Instantiate(blastVfx, center, Quaternion.identity);
-
-        // 2. Quét mục tiêu
-        Collider[] hits = Physics.OverlapSphere(center, radius, playerController.dangerLayer);
-
-        stats.EnterCombat();
-        WeaponData currentWpn = equipmentManager.currentWeapon;
-        float totalCritChance = stats.critChance;
-
-        foreach (var hit in hits)
-        {
-            Stats enemyStats = hit.GetComponent<Stats>();
-            if (enemyStats != null && enemyStats.currentHp > 0)
-            {
-                // [TÍNH TOÁN CỦA BẠN]
-                float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
-                bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-                var dmgTuple = CombatMath.CalculateFullDamage(
-                    stats, enemyStats, t, isCrit, data, currentWpn, dmgMult
-                );
-
-                DamageInfo info = new DamageInfo
-                {
-                    sourcePosition = transform.position,
-                    attacker = stats,
-                    physDamage = dmgTuple.phys,
-                    magicDamage = dmgTuple.magic,
-                    trueDamage = dmgTuple.trueDmg,
-                    isCrit = isCrit,
-                    isStun = (stunTime > 0),
-                    stunDuration = stunTime,
-                    impactLevel = 1
-                };
-
-                enemyStats.TakeDamage(info);
-
-                // --- Áp dụng các hiệu ứng kèm theo ---
-                if (burnDps > 0)
-                    enemyStats.ApplyBleed(burnDps, burnTime);
-
-                if (slowPercent > 0)
-                    StartCoroutine(TempSlowRoutine(enemyStats, slowPercent, slowTime));
-
-                if (mrShredPercent > 0)
-                    StartCoroutine(TempShredRoutine(enemyStats, mrShredPercent, shredTime));
-            }
-        }
-    }
-
-    // ==========================================================
-    // CÁC COROUTINE HIỆU ỨNG TẠM THỜI (DEBUFF / BUFF)
-    // ==========================================================
-
-    private IEnumerator TempSlowRoutine(Stats enemy, float slowPercent, float duration)
-    {
-        if (enemy != null && enemy.currentHp > 0)
-        {
-            enemy.baseMoveSpeed -= slowPercent;
-            yield return new WaitForSeconds(duration);
-            if (enemy != null) enemy.baseMoveSpeed += slowPercent;
-        }
-    }
-
-    private IEnumerator TempShredRoutine(Stats enemy, float shredPercent, float duration)
-    {
-        if (enemy != null && enemy.currentHp > 0)
-        {
-            float amountToShred = enemy.magicResist * shredPercent;
-            enemy.magicResist -= amountToShred;
-            yield return new WaitForSeconds(duration);
-            if (enemy != null && enemy.currentHp > 0) enemy.magicResist += amountToShred;
-        }
-    }
-
-    private IEnumerator TailwindBuffRoutine()
-    {
-        float speedBuff = 0.5f; // +50% Tốc chạy và Tốc đánh
-        stats.bonusMoveSpeed += speedBuff;
-        stats.bonusAttackSpeed += speedBuff;
-
-        if (stats is AllyStats ally)
-        {
-            ally.CalculateMoveSpeedOnly();
-            ally.CalculateCombatStatsOnly();
-        }
-
-        yield return new WaitForSeconds(5.0f);
-
-        stats.bonusMoveSpeed -= speedBuff;
-        stats.bonusAttackSpeed -= speedBuff;
-
-        if (stats is AllyStats allyRevert)
-        {
-            allyRevert.CalculateMoveSpeedOnly();
-            allyRevert.CalculateCombatStatsOnly();
-        }
-    }
-
-    void OnDrawGizmosSelected()
-    {
-        Vector3 forward = Application.isPlaying && stats != null ? stats.facingDirection : transform.forward;
-        if (forward == Vector3.zero) forward = transform.forward;
-
-        Gizmos.color = Color.magenta;
-        Gizmos.DrawWireSphere(transform.position + forward * 1.5f, 2.5f); // Mô phỏng vùng nổ Default
+        empower.Execute(currentDirection, isGrimoireEquipped);
     }
 }

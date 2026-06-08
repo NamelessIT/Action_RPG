@@ -50,9 +50,9 @@ public class SwordMasterSkill : SkillBehavior
 
         // 1. THANH TẨY MỌI HIỆU ỨNG BẤT LỢI (CLEANSE)
         stats.BreakCrowdControl(); // Giải phóng khỏi Stun, Knockback
-        //stats.isBleeding = false;  // Cầm máu
+        stats.ClearDebuffs();      // Xóa debuff DoT (Bleed, Burn)
 
-        Debug.Log("<color=green>SWORD MASTER: Giải trừ khống chế!</color>");
+        Debug.Log("<color=green>SWORD MASTER: Giải trừ khống chế & debuff!</color>");
 
         // 2. KÍCH HOẠT TRẠNG THÁI SWIFTNESS
         if (swiftnessCoroutine != null) StopCoroutine(swiftnessCoroutine);
@@ -74,7 +74,7 @@ public class SwordMasterSkill : SkillBehavior
 
             _effectiveBuffDuration  = buffDuration  * (1f + rU1);
             _effectiveStunDuration  = stunDuration  * (1f + dU1);
-            _effectiveBackstabMult  = data.skillPhysicalMultiplier * (1f + rU3) * (1f + dU3);
+            _effectiveBackstabMult  = data.skillPhysicalMultiplier * (1f + rU3 + dU3);
 
             isSwiftnessActive = true;
 
@@ -90,6 +90,7 @@ public class SwordMasterSkill : SkillBehavior
                 {
                     allyStats.isPerfectDodgeSuccess = false;
                     ExecutePerfectCounter();
+                    break; // Chỉ kích hoạt 1 lần, phản đòn xong là thoát Swiftness ngay
                 }
 
                 timer += Time.deltaTime;
@@ -184,26 +185,8 @@ public class SwordMasterSkill : SkillBehavior
         // 4. TUNG ĐÒN BACKSTAB CHÍ MẠNG
         //if (backstabVfxPrefab) Instantiate(backstabVfxPrefab, targetEnemy.transform.position, Quaternion.LookRotation(enemyForward));
 
-        WeaponData currentWpn = equipmentManager != null ? equipmentManager.currentWeapon : null;
-        float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
-        bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-
-        // Ép t = 1.0f để hệ thống luôn tính sát thương này là đâm lén (Backstab Bonus)
+        // Player đã đứng sau lưng địch, direction tự nhiên = backstab
         // Rogue U3 * Duelist U3 both boost backstab damage
-        var dmgTuple = CombatMath.CalculateFullDamage(
-            stats, targetEnemy, 1.0f, isCrit, data, currentWpn, _effectiveBackstabMult
-        );
-
-        DamageInfo damageInfo = new DamageInfo
-        {
-            sourcePosition = transform.position,
-            attacker = stats,
-            physDamage = dmgTuple.phys,
-            magicDamage = dmgTuple.magic,
-            trueDamage = dmgTuple.trueDmg,
-            isCrit = isCrit
-        };
-
-        targetEnemy.TakeDamage(damageInfo);
+        DamageHelper.ApplyStandardDamage(stats, targetEnemy, transform, _effectiveBackstabMult, data, equipmentManager != null ? equipmentManager.currentWeapon : null, 0);
     }
 }

@@ -112,26 +112,7 @@ public class WarriorSkill : SkillBehavior
         stats.EnterCombat();
 
         // 1. Gây Sát Thương & Stun
-        WeaponData currentWpn = equipmentManager.currentWeapon;
-        float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
-        bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-        float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
-
-        var dmgTuple = CombatMath.CalculateFullDamage(
-            stats, enemyStats, t, isCrit, data, currentWpn, 1f
-        );
-
-        DamageInfo info = new DamageInfo();
-        info.sourcePosition = transform.position;
-        info.isCrit = isCrit;
-        info.physDamage = dmgTuple.phys;
-        info.magicDamage = dmgTuple.magic;
-        info.trueDamage = dmgTuple.trueDmg;
-        info.isStun = true;
-        info.stunDuration = stunDuration;
-        info.attacker = stats;
-
-        enemyStats.TakeDamage(info);
+        DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, 1f, data, equipmentManager.currentWeapon, 0, true, stunDuration);
 
         // 2. Phá Giáp (Sử dụng hàm của bạn)
         ApplyDefenseReduction(enemyStats, armorBreakPercent, armorBreakDuration);

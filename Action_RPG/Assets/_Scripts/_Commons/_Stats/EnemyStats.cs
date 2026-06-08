@@ -210,8 +210,11 @@ public class EnemyStats : Stats
             PlayerStats playerStats = FindFirstObjectByType<PlayerStats>();
             if (playerStats != null)
             {
-                playerStats.AddExp(expReward);
-                Debug.Log($"[EnemyStats] 🎖️ {gameObject.name} chết → Player nhận {expReward} EXP");
+                float xpGain = expReward;
+                MagePassive magePassive = playerStats.GetComponent<MagePassive>();
+                if (magePassive != null) xpGain *= magePassive.GetXpBonusMultiplier();
+                playerStats.AddExp(xpGain);
+                Debug.Log($"[EnemyStats] 🎖️ {gameObject.name} chết → Player nhận {xpGain} EXP");
             }
         }
 

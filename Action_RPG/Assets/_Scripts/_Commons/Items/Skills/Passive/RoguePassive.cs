@@ -7,7 +7,7 @@ public class RoguePassive : SkillBehavior
     {
         // 1. Tăng hiệu quả xuyên giáp khi Backstab lên 100% (1.0f)
         stats.armorBackstabReduce += 0.5f;
-        stats.magicResistBackstabReduce = 0.5f;
+        stats.magicResistBackstabReduce += 0.5f;
 
         // 2. Đăng ký sự kiện Kill
         stats.OnKillEnemy += HandleKillEnemy;

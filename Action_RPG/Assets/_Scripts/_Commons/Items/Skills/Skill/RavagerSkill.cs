@@ -62,17 +62,17 @@ public class RavagerSkill : SkillBehavior
 
     private IEnumerator BerserkRoutine()
     {
-        // Warrior U1:     +20% stun duration     | Warrior U3:     +20% physAtkPercent (damage)
-        // BloodReaver U1: +20% moveSpeedBonus     | BloodReaver U3: +20% atkSpeedBonus (damage)
+        // Warrior U1:     +20% stun duration              | Warrior U3:     +20% physAtkPercent (damage)
+        // BloodReaver U1: +20% moveSpeedBonus              | BloodReaver U3: +20% physAtkPercent (damage, cộng dồn Warrior U3)
         float wU1  = allyStats != null ? allyStats.warriorSkillU1    : 0f;
         float wU3  = allyStats != null ? allyStats.warriorSkillU3    : 0f;
         float brU1 = allyStats != null ? allyStats.bloodReaverSkillU1 : 0f;
         float brU3 = allyStats != null ? allyStats.bloodReaverSkillU3 : 0f;
 
-        _appliedStunDur       = stunDuration    * (1f + wU1);
-        _appliedPhysAtkPercent = physAtkPercent  * (1f + wU3);
+        _appliedStunDur        = stunDuration    * (1f + wU1);
+        _appliedPhysAtkPercent = physAtkPercent  * (1f + wU3 + brU3); // brU3 scale vào damage, không vào atkSpeed
         _appliedMoveSpeedBonus = moveSpeedBonus  * (1f + brU1);
-        _appliedAtkSpeedBonus  = atkSpeedBonus   * (1f + brU3);
+        _appliedAtkSpeedBonus  = atkSpeedBonus;
 
         player.isBerserk = true;
         stats.isHealingBlocked = true;

@@ -14,7 +14,7 @@ public class VanguardLiteSignature : SkillBehavior
     public float vitScaling = 2.0f;       // Sát thương cộng thêm = VIT x 2
     public float armorScaling = 1.0f;     // + Armor x 1
     public float mrScaling = 1.0f;        // + MagicResist x 1
-    public float damageIncreasePerHit = 0.2f; // Trúng càng nhiều càng đau (+20% mỗi hit dính liên tục)
+    public float damageIncreasePerHit = 0.1f; // Trúng càng nhiều càng đau (+10% mỗi hit dính liên tục)
 
     [Header("CC Settings (3rd Hit)")]
     public int hitsToStun = 3;            // Trúng 3 lần thì bị CC
@@ -113,33 +113,11 @@ public class VanguardLiteSignature : SkillBehavior
 
                 stats.EnterCombat();
                 WeaponData currentWpn = equipmentManager.currentWeapon;
-                float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
-                bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
-                // Tính sát thương xuyên qua giáp địch
-                var dmgTuple = CombatMath.CalculateFullDamage(
-                    stats, enemy, 1.0f, isCrit, data, currentWpn, damageMultiplier
-                );
+                bool isStunHit = (currentHits == hitsToStun);
+                if (isStunHit) Debug.Log($"<color=orange>Vanguard Spin:</color> Đập văng {enemy.name} (Trúng 3 hit)!");
 
-                // --- ÁP DỤNG DAMAGE & HIỆU ỨNG ---
-                DamageInfo info = new DamageInfo();
-                info.sourcePosition = transform.position;
-                info.isCrit = isCrit;
-                info.physDamage = dmgTuple.phys;
-                info.magicDamage = dmgTuple.magic;
-                info.trueDamage = dmgTuple.trueDmg;
-
-                // Đủ 3 hit -> Nổ CC
-                if (currentHits == hitsToStun)
-                {
-                    info.isKnockback = true;
-                    info.knockbackForce = knockbackForce;
-                    info.isStun = true;
-                    info.stunDuration = stunDuration;
-                    Debug.Log($"<color=orange>Vanguard Spin:</color> Đập văng {enemy.name} (Trúng 3 hit)!");
-                }
-
-                enemy.TakeDamage(info);
+                DamageHelper.ApplyStandardDamage(stats, enemy, transform, damageMultiplier, data, currentWpn, 0, isStunHit, isStunHit ? stunDuration : 0f, isStunHit, isStunHit ? knockbackForce : 0f);
             }
         }
     }

@@ -1,55 +1,64 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static UnityEngine.AdaptivePerformance.Provider.AdaptivePerformanceSubsystemDescriptor;
+using UnityEngine.AI;
 
+/// <summary>
+/// WardenSkill — "Seismic Slam".
+/// Nhảy lên cao rồi cắm vũ khí xuống đất theo hướng xéo trước mặt (BẤT TỬ khi ở trên không,
+/// không thể bị ngăn cản, không tự cancel). Trong lúc lao xuống đẩy lùi kẻ địch về phía trước.
+/// Vừa tiếp đất là tung 2 đòn chém VỀ PHÍA TRƯỚC:
+///  • Đòn 1: sát thương vật lý 100% physicalAtk + scale theo Armor/MR của bản thân (1 lần damage).
+///  • Đòn 2: sát thương CHUẨN + choáng, scale theo Armor/MR/VIT của bản thân và maxHp của mục tiêu.
+/// Sau đó nhận 150 Defense Value trong 3s.
+/// </summary>
 public class WardenSkill : SkillBehavior
 {
-    [Header("Phase 1: Leap & Slam Settings")]
-    public float jumpDistance = 2.0f;       // Khoảng cách nhảy tới
-    public float jumpHeight = 2.0f;         // Độ cao của cú nhảy
-    public float jumpDuration = 0.5f;       // Thời gian nhảy
+    [Header("Phase 1: Nhảy & Cắm xuống")]
+    public float jumpDistance = 2.0f;     // tầm nhảy tối đa (tự rút ngắn nếu có địch chắn trước)
+    public float jumpHeight = 2.5f;
+    public float jumpDuration = 0.5f;
 
-    [Header("Phase 2: Dash & Push Settings")]
-    public float dashSpeed = 5.0f;         // Tốc độ lướt đẩy địch
-    public float dashDuration = 0.4f;       // Thời gian lướt
-    public float pushHitRadius = 1.5f;      // Bán kính hút/đẩy quái
+    [Header("Lướt theo & ủi địch (sau khi tiếp đất)")]
+    public float dashSpeed = 6.0f;        // tốc độ lướt theo tới gần
+    public float dashDuration = 0.35f;    // thời gian lướt theo
+    public float pushHitRadius = 2.2f;    // bán kính bắt địch để ủi
+    public float pushStandoff = 1.2f;     // giữ địch cách trước mặt khoảng này khi ủi
 
-    [Header("Phase 3: Slash 1 (Armor/MR Scaling)")]
-    public float slash1Radius = 3.0f;
-    public float slash1BaseMultiplier = 1.0f; // Hệ số cơ bản
-    public float armorToDamageScale = 1.5f;   // 1 Armor = 1.5 Sát thương
-    public float mrToDamageScale = 1.5f;      // 1 MR = 1.5 Sát thương
+    [Header("Vùng chém (về phía trước)")]
+    public float slashWidth = 2.0f;       // bề rộng
+    public float slashRange = 3.5f;       // chiều dài về trước (đủ phủ kẻ địch vừa bị đẩy)
 
-    [Header("Phase 4: Slash 2 (True Damage)")]
-    public float slash2Radius = 3.5f;
-    public float flatTrueDamageBase = 50f;    // Sát thương chuẩn cơ bản
-    public float vitToTrueDamageScale = 2.0f; // 1 VIT = 2 Sát thương chuẩn
-    public float armorToTrueDamageScale = 0.5f;
-    public float mrToTrueDamageScale = 0.5f;
-    public float targetMaxHpPercent = 0.05f;  // 5% Max HP của mục tiêu
-    public float stunDuration = 2.0f;         // Choáng 2 giây
+    [Header("Đòn 1 — Vật lý (scale Armor/MR)")]
+    public float slash1BaseMultiplier = 1.0f; // 100% physicalAtk
+    public float armorToDamageScale = 1.5f;   // +150% Armor
+    public float mrToDamageScale = 1.5f;      // +150% MR
 
-    [Header("Phase 5: Self Buff")]
-    public float defenseValueBuff = 150f;     // Nhận 150 DV
-    public float buffDuration = 3.0f;         // Tồn tại 3s
+    [Header("Đòn 2 — Sát thương chuẩn + choáng")]
+    public float flatTrueDamageBase = 50f;
+    public float vitToTrueDamageScale = 2.0f;   // +2 / VIT
+    public float armorToTrueDamageScale = 0.5f; // +50% Armor
+    public float mrToTrueDamageScale = 0.5f;    // +50% MR
+    public float targetMaxHpPercent = 0.05f;    // +5% maxHp của mục tiêu
+    public float stunDuration = 2.0f;
 
-    [Header("VFX Prefabs")]
-    public GameObject slamVfxPrefab;
+    [Header("Phase cuối: Tự buff")]
+    public float defenseValueBuff = 150f;
+    public float buffDuration = 3.0f;
+
+    [Header("VFX Prefabs (tuỳ chọn)")]
     public GameObject slash1VfxPrefab;
     public GameObject slash2VfxPrefab;
     public GameObject buffVfxPrefab;
 
     private Rigidbody rb;
     private EquipmentManager equipmentManager;
-    private AllyStats allyStats;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
-        base.Initialize(myStats, myData, myPlayer);
         rb = myPlayer.GetComponent<Rigidbody>();
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
-        allyStats = myStats;
+        base.Initialize(myStats, myData, myPlayer);
     }
 
     protected override void OnEquip() { }
@@ -64,203 +73,145 @@ public class WardenSkill : SkillBehavior
 
     private IEnumerator WardenSkillRoutine()
     {
-        // ==========================================
-        // SETUP TRẠNG THÁI (KHÔNG THỂ CANCEL)
-        // ==========================================
-        // Vanguard U1: +20% Defense Value buff | Vanguard U3: +20% Armor/MR scale damage
-        // Warrior U1:  +20% stun duration      | Warrior U3:  +20% scale damage (slash1Mult, trueDmgBase)
-        float vU1 = allyStats != null ? allyStats.vanguardSkillU1 : 0f;
-        float vU3 = allyStats != null ? allyStats.vanguardSkillU3 : 0f;
-        float wU1 = allyStats != null ? allyStats.warriorSkillU1  : 0f;
-        float wU3 = allyStats != null ? allyStats.warriorSkillU3  : 0f;
+        // Vanguard U1: +20% Defense Value | Vanguard U3: +20% scale Armor/MR
+        // Warrior U1:  +20% stun          | Warrior U3:  +20% sát thương cơ bản
+        float vU1 = stats != null ? stats.vanguardSkillU1 : 0f;
+        float vU3 = stats != null ? stats.vanguardSkillU3 : 0f;
+        float wU1 = stats != null ? stats.warriorSkillU1  : 0f;
+        float wU3 = stats != null ? stats.warriorSkillU3  : 0f;
 
-        float effectiveDefBuff        = defenseValueBuff     * (1f + vU1);
-        float effectiveArmorToDmg     = armorToDamageScale   * (1f + vU3);
-        float effectiveMRToDmg        = mrToDamageScale      * (1f + vU3);
-        float effectiveArmorToTrue    = armorToTrueDamageScale * (1f + vU3);
-        float effectiveMRToTrue       = mrToTrueDamageScale    * (1f + vU3);
-        float effectiveStunDur        = stunDuration          * (1f + wU1);
-        float effectiveSlash1Mult     = slash1BaseMultiplier  * (1f + wU3);
-        float effectiveTrueDmgBase    = flatTrueDamageBase    * (1f + wU3);
+        float effDefBuff       = defenseValueBuff      * (1f + vU1);
+        float effArmorToDmg    = armorToDamageScale    * (1f + vU3);
+        float effMRToDmg       = mrToDamageScale       * (1f + vU3);
+        float effArmorToTrue   = armorToTrueDamageScale * (1f + vU3);
+        float effMRToTrue      = mrToTrueDamageScale    * (1f + vU3);
+        float effStun          = stunDuration           * (1f + wU1);
+        float effSlash1Mult    = slash1BaseMultiplier   * (1f + wU3);
+        float effTrueDmgBase   = flatTrueDamageBase      * (1f + wU3);
 
-        player.isUsingSpecialSkill = true; // Khóa toàn bộ input của người chơi
+        player.isUsingSpecialSkill = true; // khóa input — không tự cancel
 
         Vector3 forward = stats.facingDirection;
         if (forward == Vector3.zero) forward = player.transform.forward;
         forward.y = 0; forward.Normalize();
+        Quaternion rot = Quaternion.LookRotation(forward);
 
         bool originalUseGravity = rb.useGravity;
         rb.useGravity = false;
         rb.linearVelocity = Vector3.zero;
 
-        // Lưu Super Armor cũ để trả lại
         bool oldIsSuperArmor = stats.isSuperArmor;
         int oldSuperArmorLevel = stats.superArmorLevel;
-
         WaitForFixedUpdate waitFixed = new WaitForFixedUpdate();
 
         try
         {
-            // ==========================================
-            // PHASE 1: JUMP & SLAM (BẤT TỬ)
-            // ==========================================
+            stats.isSuperArmor = true;
+            stats.superArmorLevel = 99; // không thể bị ngăn cản suốt skill
+
+            // ---------- PHASE 1: NHẢY + CẮM XUỐNG ----------
             stats.isInvincible = true;
             Debug.Log("<color=cyan>WARDEN: NHẢY LÊN CAO!</color>");
 
             Vector3 startPos = transform.position;
-            Vector3 targetPos = startPos + forward * jumpDistance;
 
-            // Tìm điểm tiếp đất an toàn trên NavMesh (tránh kẹt tường)
-            UnityEngine.AI.NavMeshHit hit;
-            if (UnityEngine.AI.NavMesh.SamplePosition(targetPos, out hit, 2.0f, UnityEngine.AI.NavMesh.AllAreas))
-                targetPos = hit.position;
+            // Không nhảy QUA đầu kẻ địch: rút ngắn tầm nhảy tới kẻ địch gần nhất phía trước.
+            float landDist = Mathf.Min(jumpDistance, NearestFrontEnemyDistance(startPos, forward, jumpDistance));
+            Vector3 targetPos = startPos + forward * landDist;
+            if (NavMesh.SamplePosition(targetPos, out var navHit, 2.0f, NavMesh.AllAreas))
+                targetPos = navHit.position;
 
             float timer = 0f;
             while (timer < jumpDuration)
             {
                 float t = timer / jumpDuration;
-                // Tạo quỹ đạo Parabol (Lerp ngang + Sin dọc)
-                Vector3 currentPos = Vector3.Lerp(startPos, targetPos, t);
-                currentPos.y += Mathf.Sin(t * Mathf.PI) * jumpHeight;
-
-                rb.MovePosition(currentPos);
+                Vector3 cur = Vector3.Lerp(startPos, targetPos, t);
+                cur.y += Mathf.Sin(t * Mathf.PI) * jumpHeight;
+                rb.MovePosition(cur);
 
                 timer += Time.fixedDeltaTime;
                 yield return waitFixed;
             }
+            rb.MovePosition(targetPos);
+            stats.isInvincible = false; // tiếp đất → hết bất tử
 
-            stats.isInvincible = false;
-            //if (slamVfxPrefab != null) Instantiate(slamVfxPrefab, transform.position, Quaternion.identity);
-
-            // ==========================================
-            // PHASE 2: DASH & PUSH (UNSTOPPABLE)
-            // ==========================================
-            stats.isSuperArmor = true;
-            stats.superArmorLevel = 99; // Miễn nhiễm mọi CC
-            Debug.Log("<color=orange>WARDEN: LƯỚT ỦI ĐỊCH!</color>");
-
-            timer = 0f;
-            while (timer < dashDuration)
+            // ---------- PHASE 2: LƯỚT THEO + ỦI ĐỊCH ----------
+            // Lướt về phía trước bám theo, giữ kẻ địch ngay trước mặt (không bị bỏ lại xa) rồi mới chém.
+            Debug.Log("<color=orange>WARDEN: LƯỚT THEO ỦI ĐỊCH!</color>");
+            float dashTimer = 0f;
+            while (dashTimer < dashDuration)
             {
-                float dt = Time.fixedDeltaTime;
-                rb.linearVelocity = forward * dashSpeed;
-
-                Vector3 centerPoint = transform.position + Vector3.up * 0.5f;
-                Collider[] pushHits = Physics.OverlapSphere(centerPoint, pushHitRadius, player.dangerLayer);
-                Vector3 nextFramePos = rb.position + (forward * dashSpeed * dt);
-
-                foreach (var col in pushHits)
-                {
-                    Stats enemy = col.GetComponent<Stats>();
-                    if (enemy != null && enemy.currentHp > 0)
-                    {
-                        // Hàm đẩy quái dính vào người (Drag)
-                        HandleContinuousPush(col.gameObject, forward, nextFramePos);
-                    }
-                }
-
-                timer += dt;
+                Vector3 nextPos = rb.position + forward * dashSpeed * Time.fixedDeltaTime;
+                rb.MovePosition(nextPos);
+                DragEnemiesForward(nextPos, forward);
+                dashTimer += Time.fixedDeltaTime;
                 yield return waitFixed;
             }
-            rb.linearVelocity = Vector3.zero; // Dừng lại sau khi lướt
+            rb.linearVelocity = Vector3.zero;
 
-            // ==========================================
-            // PHASE 3: CHÉM ĐÒN 1 (SCALE ARMOR & MR)
-            // ==========================================
-            yield return new WaitForSeconds(0.1f); // Nhịp delay để vung vũ khí
+            if (slash1VfxPrefab) Instantiate(slash1VfxPrefab, transform.position + forward * (slashRange * 0.5f), rot);
+            yield return new WaitForSeconds(0.1f);
+
+            // ---------- ĐÒN 1: VẬT LÝ (1 lần damage, scale Armor/MR) ----------
             Debug.Log("<color=yellow>WARDEN: CHÉM ĐÒN 1!</color>");
-
-            //if (slash1VfxPrefab != null) Instantiate(slash1VfxPrefab, transform.position + forward, Quaternion.LookRotation(forward));
+            Vector3 c1 = transform.position + forward * (slashRange * 0.5f);
+            VisualDebugHelper.DrawBox(c1, new Vector3(slashWidth, 2f, slashRange), rot, new Color(1f, 0.9f, 0.2f, 0.4f), 0.2f);
 
             stats.EnterCombat();
-            WeaponData currentWpn = equipmentManager != null ? equipmentManager.currentWeapon : null;
-            float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
-
-            Collider[] slash1Hits = Physics.OverlapSphere(transform.position + forward, slash1Radius, player.dangerLayer);
-            foreach (var col in slash1Hits)
+            float bonusDef = stats.armor * effArmorToDmg + stats.magicResist * effMRToDmg;
+            foreach (Stats e in ForwardEnemies(c1, rot))
             {
-                Stats enemyStats = col.GetComponent<Stats>();
-                if (enemyStats != null && enemyStats.currentHp > 0)
+                // Base 100% physicalAtk (qua CombatMath → có giáp + crit) GỘP với phần Armor/MR
+                // (bỏ qua giáp địch) thành MỘT lần TakeDamage duy nhất.
+                float t = CombatMath.CalculateDirectionFactor(transform, e);
+                bool crit = CombatMath.CheckIsCrit(stats.critChance);
+                var dmg = CombatMath.CalculateFullDamage(stats, e, t, crit, null, null, effSlash1Mult);
+                float total = dmg.phys + dmg.magic + bonusDef;
+
+                e.TakeDamage(new DamageInfo
                 {
-                    float tFactor = CombatMath.CalculateDirectionFactor(transform, enemyStats);
-                    bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-
-                    // Sát thương chuẩn bị từ hệ thống
-                    var baseDamage = CombatMath.CalculateFullDamage(stats, enemyStats, tFactor, isCrit, data, currentWpn, effectiveSlash1Mult);
-
-                    // Cộng thêm sát thương từ Armor và Magic Resist (scale bởi Vanguard U3)
-                    float bonusFromDef = (stats.armor * effectiveArmorToDmg) + (stats.magicResist * effectiveMRToDmg);
-                    DamageInfo info1 = new DamageInfo
-                    {
-                        sourcePosition = transform.position,
-                        attacker = stats,
-
-                        // Bóc tách gói hàng: Cộng sát thương từ Giáp thẳng vào sát thương Vật lý
-                        physDamage = baseDamage.phys + bonusFromDef,
-                        magicDamage = baseDamage.magic,
-                        trueDamage = baseDamage.trueDmg,
-
-                        isCrit = isCrit,
-                        impactLevel = 1
-                    };
-                    enemyStats.TakeDamage(info1);
-                }
+                    physDamage = total,
+                    attacker = stats,
+                    sourcePosition = transform.position,
+                    isCrit = crit,
+                    impactLevel = 1
+                });
             }
 
-            // ==========================================
-            // PHASE 4: CHÉM ĐÒN 2 (TRUE DAMAGE + STUN 2S)
-            // ==========================================
-            yield return new WaitForSeconds(0.3f); // Nhịp delay dồn sức
+            // ---------- ĐÒN 2: SÁT THƯƠNG CHUẨN + CHOÁNG ----------
+            yield return new WaitForSeconds(0.3f);
             Debug.Log("<color=red>WARDEN: CHÉM ĐÒN 2 (SÁT THƯƠNG CHUẨN)!</color>");
+            Vector3 c2 = transform.position + forward * (slashRange * 0.5f);
+            VisualDebugHelper.DrawBox(c2, new Vector3(slashWidth, 2f, slashRange), rot, new Color(1f, 0.15f, 0.15f, 0.5f), 0.25f);
+            if (slash2VfxPrefab) Instantiate(slash2VfxPrefab, c2, rot);
 
-            //if (slash2VfxPrefab != null) Instantiate(slash2VfxPrefab, transform.position + forward, Quaternion.LookRotation(forward));
-
-            Collider[] slash2Hits = Physics.OverlapSphere(transform.position + forward, slash2Radius, player.dangerLayer);
-            foreach (var col in slash2Hits)
+            float selfVit = stats.VIT;
+            foreach (Stats e in ForwardEnemies(c2, rot))
             {
-                Stats enemyStats = col.GetComponent<Stats>();
-                if (enemyStats != null && enemyStats.currentHp > 0)
+                float trueDamage = effTrueDmgBase
+                                 + stats.armor * effArmorToTrue
+                                 + stats.magicResist * effMRToTrue
+                                 + selfVit * vitToTrueDamageScale
+                                 + e.maxHp * targetMaxHpPercent;
+
+                e.TakeDamage(new DamageInfo
                 {
-                    // Lấy chỉ số VIT từ AllyStats
-                    float currentVit = allyStats != null ? allyStats.VIT : 0f;
-
-                    // Tính toán Sát thương chuẩn (True Damage, Vanguard U3 scale armor/MR portion)
-                    float trueDamage = effectiveTrueDmgBase
-                                     + (stats.armor * effectiveArmorToTrue)
-                                     + (stats.magicResist * effectiveMRToTrue)
-                                     + (currentVit * vitToTrueDamageScale)
-                                     + (enemyStats.maxHp * targetMaxHpPercent);
-
-                    // Khởi tạo DamageInfo không cần chạy qua CombatMath để bỏ qua chỉ số giảm thương của địch
-                    DamageInfo info2 = new DamageInfo
-                    {
-                        sourcePosition = transform.position,
-                        attacker = stats,
-                        trueDamage = trueDamage, // Trừ thẳng số máu này
-                        isCrit = false, // True damage thường không chí mạng, nếu bạn muốn có thể thêm vào
-                        isStun = true,
-                        stunDuration = effectiveStunDur, // Warrior U1
-                        impactLevel = 2 // Phá Siêu giáp
-                    };
-
-                    enemyStats.TakeDamage(info2);
-                    Debug.Log($"<color=red>True Damage:</color> Gây {trueDamage} sát thương chuẩn lên {enemyStats.name}!");
-                }
+                    sourcePosition = transform.position,
+                    attacker = stats,
+                    trueDamage = trueDamage, // bỏ qua giáp/kháng phép
+                    isStun = true,
+                    stunDuration = effStun,
+                    impactLevel = 2 // phá siêu giáp
+                });
+                Debug.Log($"<color=red>True Damage:</color> {trueDamage:F0} lên {e.name}");
             }
 
-            // ==========================================
-            // PHASE 5: TỰ BUFF DEFENSE VALUE TRONG 3 GIÂY
-            // ==========================================
-            StartCoroutine(DefenseBuffRoutine(effectiveDefBuff)); // Vanguard U1
-            // Đợi thêm 0.2s để kết thúc dáng dấp rồi mới cho di chuyển lại
+            // ---------- TỰ BUFF DEFENSE VALUE ----------
+            StartCoroutine(DefenseBuffRoutine(effDefBuff));
             yield return new WaitForSeconds(0.2f);
-
         }
         finally
         {
-            // ==========================================
-            // CLEANUP TRẠNG THÁI AN TOÀN TỐI ĐA
-            // ==========================================
             rb.useGravity = originalUseGravity;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
@@ -273,45 +224,102 @@ public class WardenSkill : SkillBehavior
         }
     }
 
-    // Hàm bế quái đi theo (Dựa theo thuật toán của ChrisSkill)
-    private void HandleContinuousPush(GameObject enemyObj, Vector3 dashDir, Vector3 playerNextPos)
+    // Khoảng cách tới kẻ địch gần nhất PHÍA TRƯỚC (trong tầm), để không nhảy qua đầu.
+    private float NearestFrontEnemyDistance(Vector3 origin, Vector3 forward, float maxDist)
     {
-        Rigidbody enemyRb = enemyObj.GetComponent<Rigidbody>();
-        if (enemyRb != null)
+        Collider[] hits = Physics.OverlapSphere(origin, maxDist, player.dangerLayer);
+        float min = maxDist;
+        HashSet<Stats> seen = new HashSet<Stats>();
+        foreach (var col in hits)
         {
-            Vector3 idealPos = playerNextPos + (dashDir * 1.5f); // Đẩy ra trước mặt 1.5m
-            idealPos.y = enemyRb.position.y;
-            enemyRb.MovePosition(idealPos);
+            Stats e = col.GetComponentInParent<Stats>();
+            if (e == null || e.currentHp <= 0 || !seen.Add(e)) continue;
 
-            if (!enemyRb.isKinematic) enemyRb.linearVelocity = Vector3.zero;
+            Vector3 to = e.transform.position - origin; to.y = 0f;
+            if (to.sqrMagnitude < 0.0001f) { min = 0f; continue; }     // trùng vị trí → không nhảy
+            if (Vector3.Angle(forward, to) > 60f) continue;            // chỉ tính phía trước
+            float d = to.magnitude;
+            if (d < min) min = d;
+        }
+        return min;
+    }
+
+    // Ủi kẻ địch ĐI THEO trước mặt: giữ địch cách player ~pushStandoff về phía trước,
+    // để player lướt tới đâu địch bị đẩy tới đó (không bị bỏ lại xa).
+    private void DragEnemiesForward(Vector3 playerPos, Vector3 forward)
+    {
+        Collider[] hits = Physics.OverlapSphere(playerPos + Vector3.up * 0.5f, pushHitRadius, player.dangerLayer);
+        HashSet<Stats> done = new HashSet<Stats>();
+        foreach (var col in hits)
+        {
+            Stats e = col.GetComponentInParent<Stats>();
+            if (e == null || e.currentHp <= 0 || !done.Add(e)) continue;
+
+            // Chỉ ủi kẻ địch ở phía trước (không kéo kẻ ở sau lưng).
+            Vector3 to = e.transform.position - playerPos; to.y = 0f;
+            if (Vector3.Dot(to, forward) < -0.2f) continue;
+
+            Vector3 ideal = playerPos + forward * pushStandoff;
+            ideal.y = e.transform.position.y;
+
+            NavMeshAgent agent = e.GetComponentInParent<NavMeshAgent>();
+            if (agent != null && agent.enabled && agent.isOnNavMesh)
+            {
+                agent.velocity = Vector3.zero;
+                agent.Warp(ideal);
+            }
+            else
+            {
+                e.transform.position = ideal;
+            }
         }
     }
 
-    // Coroutine xử lý nhận 150 Defense Value
+    // Kẻ địch trong hộp VỀ PHÍA TRƯỚC (center đã đẩy ra trước nửa chiều dài), dedupe.
+    private List<Stats> ForwardEnemies(Vector3 center, Quaternion rot)
+    {
+        Collider[] hits = Physics.OverlapBox(center, new Vector3(slashWidth * 0.5f, 1f, slashRange * 0.5f), rot, player.dangerLayer);
+        List<Stats> result = new List<Stats>();
+        HashSet<Stats> seen = new HashSet<Stats>();
+        foreach (var col in hits)
+        {
+            Stats e = col.GetComponentInParent<Stats>();
+            if (e != null && e.currentHp > 0 && seen.Add(e)) result.Add(e);
+        }
+        return result;
+    }
+
     private IEnumerator DefenseBuffRoutine(float buffAmount)
     {
         stats.defenseValue += buffAmount;
-        Debug.Log($"<color=green>WARDEN BUFF:</color> Nhận {buffAmount} Defense Value. Tổng hiện tại: {stats.defenseValue}");
+        Debug.Log($"<color=green>WARDEN BUFF:</color> +{buffAmount} Defense Value (tổng {stats.defenseValue}).");
 
-        GameObject buffVfx = null;
-        if (buffVfxPrefab != null) buffVfx = Instantiate(buffVfxPrefab, transform);
+        // VFX (tạm): aura phòng thủ NHỎ, BÁM THEO người.
+        GameObject aura = MageVfxHelper.AttachSphere(transform, 0.6f, new Color(0.2f, 0.5f, 1f, 0.3f));
+        aura.transform.localPosition = Vector3.up * 1f;
+        GameObject buffVfx = buffVfxPrefab != null ? Instantiate(buffVfxPrefab, transform) : null;
 
         yield return new WaitForSeconds(buffDuration);
 
         stats.defenseValue -= buffAmount;
+        if (aura != null) Destroy(aura);
         if (buffVfx != null) Destroy(buffVfx);
-        Debug.Log($"<color=gray>Warden Buff Hết hạn:</color> Defense Value trở về {stats.defenseValue}");
+        Debug.Log($"<color=gray>Warden Buff hết hạn:</color> Defense Value còn {stats.defenseValue}.");
     }
 
     void OnDrawGizmosSelected()
     {
-        Vector3 forward = Application.isPlaying && stats != null ? stats.facingDirection : transform.forward;
-        if (forward == Vector3.zero) forward = transform.forward;
+        Vector3 forward = (Application.isPlaying && stats != null && stats.facingDirection != Vector3.zero)
+            ? stats.facingDirection : transform.forward;
+        forward.y = 0f;
+        if (forward == Vector3.zero) return;
+        forward.Normalize();
+        Quaternion rot = Quaternion.LookRotation(forward);
 
+        Matrix4x4 old = Gizmos.matrix;
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position + forward, slash1Radius);
-
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position + forward, slash2Radius);
+        Gizmos.matrix = Matrix4x4.TRS(transform.position + forward * (slashRange * 0.5f), rot, Vector3.one);
+        Gizmos.DrawWireCube(Vector3.zero, new Vector3(slashWidth, 2f, slashRange));
+        Gizmos.matrix = old;
     }
 }

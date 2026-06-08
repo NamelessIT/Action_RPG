@@ -172,32 +172,7 @@ public class VanguardSkill : SkillBehavior
             Stats enemyStats = hit.GetComponent<Stats>();
             if (enemyStats != null && enemyStats.currentHp > 0)
             {
-                float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
-                bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-                float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
-
-                var dmgTuple = CombatMath.CalculateFullDamage(
-                    stats, enemyStats, t, isCrit, data, currentWpn, data.skillPhysicalMultiplier // Sử dụng multiplier của skill để tính sát thương đập đất
-                );
-
-                DamageInfo info = new DamageInfo();
-                info.sourcePosition = transform.position;
-                info.attacker = stats;
-                info.physDamage = dmgTuple.phys;
-                info.magicDamage = dmgTuple.magic;
-                info.trueDamage = dmgTuple.trueDmg;
-                info.isCrit = isCrit;
-
-                // Gây choáng 1.5s
-                info.isStun = true;
-                info.stunDuration = stunDuration;
-
-                // Đập lùi ra xa một chút cho có lực
-                info.isKnockback = true;
-                info.knockbackForce = 5f;
-                info.impactLevel = 2; // Phá siêu giáp
-
-                enemyStats.TakeDamage(info);
+                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillPhysicalMultiplier, data, currentWpn, 2, true, stunDuration);
             }
         }
     }

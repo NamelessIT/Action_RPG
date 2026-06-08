@@ -64,7 +64,7 @@ public class AllyStats : Stats
     [Header("--- Cooldown ---")]
     public float baseCdr = 0;
     public float cooldownReduction;
-    public float cdrPerAGI=0.0015f;
+    public float cdrPerAGI=0.0005f;
     public float bonusCdr;
 
     [Header("--- Special Stats (Skill Tree) ---")]

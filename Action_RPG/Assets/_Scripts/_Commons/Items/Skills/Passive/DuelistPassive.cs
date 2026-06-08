@@ -11,21 +11,25 @@ public class DuelistPassive : SkillBehavior
     [Tooltip("Tổng thời gian tối đa được phép giữ Parry (0.5s)")]
     public float maxParryDuration = 0.5f;
 
-    [Tooltip("Thời điểm bắt đầu tính là Perfect (0.4s). Tức là từ 0.4s đến 0.5s là Perfect.")]
+    [Tooltip("Thời điểm bắt đầu tính Perfect Parry là từ 0s. Tức là từ 0.0s đến 0.1s là Perfect.")]
     public float perfectParryStartTime = 0.1f;
 
     [Tooltip("Thời gian hồi chiêu sau khi buông nút hoặc hết giờ")]
     public float parryCooldown = 3.0f; // Tăng lên xíu vì skill này mạnh
 
     [Header("Counter Attack Settings")]
-    [Tooltip("Thời gian tồn tại của Buff Phản công (5s)")]
-    public float counterDuration = 5.0f;
+    [Tooltip("Thời gian tồn tại của Buff Phản công (2s)")]
+    public float counterDuration = 2.0f;
+
+    [Tooltip("Thời gian tồn tại của Buff 'Kẻ chiến thắng' (3s)")]
+    public float winnerBuffDuration = 3.0f;
 
     // --- State ---
     private float currentHoldTimer = 0f;    // Đếm thời gian đã giữ nút
     public float currentCooldown = 0f;
     private float currentCounterBuffTimer = 0f; // Đếm ngược buff Crit
     public bool hasEmpoweredAttack = false; // Báo hiệu đòn đánh tiếp theo được Cường hóa
+    private float empoweredAttackTimer = 0f; // Đếm ngược buff "Kẻ chiến thắng"
 
     private bool isHoldingButton = false;   // Trạng thái đang giữ nút
 
@@ -64,8 +68,19 @@ public class DuelistPassive : SkillBehavior
         // 1. Giảm Cooldown
         if (currentCooldown > 0) currentCooldown -= Time.deltaTime;
 
-        // 2. Giảm Timer Buff Counter (Buff 5 giây)
+        // 2. Giảm Timer Buff Counter (Buff 2 giây)
         if (currentCounterBuffTimer > 0) currentCounterBuffTimer -= Time.deltaTime;
+
+        // 2b. Giảm Timer Buff "Kẻ chiến thắng" (3 giây) — hết giờ thì mất buff
+        if (hasEmpoweredAttack)
+        {
+            empoweredAttackTimer -= Time.deltaTime;
+            if (empoweredAttackTimer <= 0f)
+            {
+                hasEmpoweredAttack = false;
+                Debug.Log("<color=gray>Duelist: Buff 'Kẻ chiến thắng' đã hết hạn.</color>");
+            }
+        }
 
         // 3. LOGIC INPUT (CHỈ PLAYER)
         if (isLearned && isPlayer)
@@ -232,7 +247,7 @@ public class DuelistPassive : SkillBehavior
         {
             Debug.Log("<color=yellow>PERFECT PARRY SUCCESS!</color>");
 
-            // 1. Kích hoạt Buff Counter (Kéo dài 5s)
+            // 1. Kích hoạt Buff Counter (Kéo dài 2s)
             currentCounterBuffTimer = counterDuration;
 
             // 2. Stun kẻ địch
@@ -260,6 +275,7 @@ public class DuelistPassive : SkillBehavior
         {
             Debug.Log("<color=magenta>Duelist: Kẻ địch Thách Đấu đã sập bẫy! Đòn tiếp theo x2 Sát thương!</color>");
             hasEmpoweredAttack = true; // Nhận buff Cường hóa đòn đánh
+            empoweredAttackTimer = winnerBuffDuration; // Buff "Kẻ chiến thắng" tồn tại 3s
             
             // Xóa ấn trên đầu kẻ địch luôn để không lạm dụng
             attacker.isChallenged = false; 

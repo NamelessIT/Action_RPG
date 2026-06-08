@@ -102,7 +102,7 @@ public class DamageNumberPopup : MonoBehaviour
         if (info.magicDamage > 0f) SpawnLine(info.magicDamage, info.isCrit, ColMagic, idx++);
         if (info.trueDamage  > 0f) SpawnLine(info.trueDamage,  info.isCrit, ColTrue,  idx++);
 
-        if (idx == 0) SpawnLine(0f, false, Color.gray, 0, "BLOCKED");
+        //if (idx == 0) SpawnLine(0f, false, Color.gray, 0, "BLOCKED");
     }
 
     public void ShowHeal(float amount, Vector3 worldPos)

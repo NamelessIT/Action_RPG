@@ -907,8 +907,8 @@ public class PlayerController : MonoBehaviour
         float totalCritChance = stats.critChance;
         if (currentWpn != null) totalCritChance += currentWpn.bonusCritChance;
 
-        // Gộp cả 2 loại buff (Perfect Parry Counter VÀ Challenge đều auto Crit và xuyên giáp)
-        bool forceCritOrTrueDamage = isDuelistCounterActive || isDuelistEmpoweredAttackActive;
+        // Perfect Parry Counter auto Crit và xuyên giáp)
+        bool forceCritOrTrueDamage = isDuelistCounterActive;
 
         bool isCrit = forceCritOrTrueDamage || CombatMath.CheckIsCrit(totalCritChance);
         bool ignoreReduction = forceCritOrTrueDamage;

@@ -9,7 +9,7 @@ public class MageSignature : SkillBehavior
     public float stormDuration = 5.0f;      // Bão tồn tại 5s
     public float tickRate = 0.5f;           // Giật sát thương mỗi 0.5s
     public float stormRadius = 5.0f;        // Bán kính cơn bão
-    public float spawnOffsetDistance = 5.0f; // Khoảng cách từ người chơi đến tâm bão
+    public float spawnOffsetDistance = 3.0f; // Khoảng cách từ người chơi đến tâm bão
     //public float damageMultiplierPerTick = 0.6f; // Sát thương mỗi nhịp (0.6 * 10 nhịp = x6 sát thương tổng)
 
     [Header("--- Fire Effect ---")]
@@ -18,15 +18,15 @@ public class MageSignature : SkillBehavior
 
     [Header("--- Ice Effect ---")]
     public float chillDuration = 3.0f;      // Tê tái duy trì 3s
-    public float slowPercent = 0.7f;        // Làm chậm 70%
+    public float slowPercent = 0.4f;        // Làm chậm 40%
 
     [Header("--- Wind Effect (Self Buff) ---")]
     public float hazeDuration = 5.0f;       // Tăng tốc bản thân 5s
-    public float selfSpeedBuff = 0.5f;      // Tăng 50% Tốc chạy & Tốc đánh
+    public float selfSpeedBuff = 0.3f;      // Tăng 30% Tốc chạy & Tốc đánh
 
     [Header("--- Earth Effect ---")]
     public float sunderDuration = 3.0f;     // Giảm thủ duy trì 3s
-    public float defReductionPercent = 0.35f; // Giảm 35% Armor & MagicResist
+    public float defReductionPercent = 0.25f; // Giảm 35% Armor & MagicResist
 
     [Header("VFX Prefabs")]
     public GameObject stormVfxPrefab;       // Hiệu ứng siêu bão kéo dài 5s
@@ -80,7 +80,7 @@ public class MageSignature : SkillBehavior
             }
             foreach (var enemy in expiredSlows)
             {
-                if (enemy != null) enemy.baseMoveSpeed += slowPercent; // Trả lại tốc độ
+                if (enemy != null) enemy.baseMoveSpeed /= (1-slowPercent); // Trả lại tốc độ
                 activeSlows.Remove(enemy);
             }
         }
@@ -159,7 +159,6 @@ public class MageSignature : SkillBehavior
 
         stats.EnterCombat();
         WeaponData currentWpn = equipmentManager != null ? equipmentManager.currentWeapon : null;
-        float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
 
         foreach (var hit in hits)
         {
@@ -167,33 +166,16 @@ public class MageSignature : SkillBehavior
             if (enemyStats != null && enemyStats.currentHp > 0)
             {
                 // A. GÂY SÁT THƯƠNG HỖN HỢP
-                float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
-                bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-
-                var dmgTuple = CombatMath.CalculateFullDamage(
-                    stats, enemyStats, t, isCrit, data, currentWpn, data.skillMagicMultiplier
-                );
-
-                DamageInfo info = new DamageInfo();
-                info.sourcePosition = centerPos;
-                info.attacker = stats;
-                info.physDamage = dmgTuple.phys;
-                info.magicDamage = dmgTuple.magic;
-                info.trueDamage = dmgTuple.trueDmg;
-                info.isCrit = isCrit;
-                info.isStun = true; // Gây giật nhẹ liên tục để khó thoát ra
-                info.stunDuration = 0.2f;
-
-                enemyStats.TakeDamage(info);
+                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 0, true, 0.2f);
 
                 // B. REFRESH DEBUFF (LỬA)
                 float burnDps = stats.magicAtk * burnDamagePercent;
-                enemyStats.ApplyBleed(burnDps, burnDuration);
+                enemyStats.ApplyBurn(burnDps, burnDuration);
 
                 // C. REFRESH DEBUFF (BĂNG - Làm chậm)
                 if (!activeSlows.ContainsKey(enemyStats))
                 {
-                    enemyStats.baseMoveSpeed -= slowPercent; // Trừ lần đầu
+                    enemyStats.baseMoveSpeed *= (1-slowPercent); // Trừ lần đầu
                 }
                 activeSlows[enemyStats] = chillDuration; // Cập nhật/Làm mới thời gian
 
@@ -241,7 +223,7 @@ public class MageSignature : SkillBehavior
     {
         foreach (var enemy in activeSlows.Keys)
         {
-            if (enemy != null) enemy.baseMoveSpeed += slowPercent;
+            if (enemy != null) enemy.baseMoveSpeed /= (1 - slowPercent);
         }
         activeSlows.Clear();
 

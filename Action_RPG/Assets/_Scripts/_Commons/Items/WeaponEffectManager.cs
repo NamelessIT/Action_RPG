@@ -143,12 +143,11 @@ public class WeaponEffectManager : MonoBehaviour
     {
         if (attackHitCounter % 3 == 0)
         {
-            float dmg = stats.magicAtk * 0.3f;
             Collider[] hits = Physics.OverlapSphere(target.transform.position, 2f, player.dangerLayer);
             foreach (var hit in hits)
             {
                 Stats e = hit.GetComponent<Stats>();
-                if (e != null) e.TakeDamage(new DamageInfo { magicDamage = dmg, attacker = stats });
+                if (e != null) DamageHelper.ApplyQuickProcDamage(stats, e, 0f, 0.3f, transform);
             }
             VisualDebugHelper.DrawSphere(target.transform.position, 2f, new Color(0, 1, 1, 0.5f), 0.5f);
         }
@@ -171,8 +170,7 @@ public class WeaponEffectManager : MonoBehaviour
         if (sw_t3_03_empowered)
         {
             sw_t3_03_empowered = false;
-            float dmg = stats.physicalAtk * 0.5f;
-            target.TakeDamage(new DamageInfo { physDamage = dmg, attacker = stats });
+            DamageHelper.ApplyQuickProcDamage(stats, target, 0.5f, 0f, transform);
             StartCoroutine(ReduceArmorRoutine(target, 0.15f, 3f));
             VisualDebugHelper.DrawSphere(target.transform.position, 1.5f, new Color(0, 0, 1, 0.5f), 0.5f); // Sóng xanh lam
         }
@@ -191,12 +189,12 @@ public class WeaponEffectManager : MonoBehaviour
             Stats target2 = hits[UnityEngine.Random.Range(0, hits.Length)].GetComponent<Stats>();
             if (target1)
             {
-                target1.TakeDamage(new DamageInfo { physDamage = stats.physicalAtk * 1.2f, attacker = stats });
+                DamageHelper.ApplyQuickProcDamage(stats, target1, 1.2f, 0f, transform);
                 VisualDebugHelper.DrawBox(target1.transform.position + Vector3.up * 2, new Vector3(0.2f, 1.5f, 0.2f), Quaternion.identity, Color.white, 0.5f);
             }
             if (target2)
             {
-                target2.TakeDamage(new DamageInfo { magicDamage = stats.magicAtk * 1.2f, attacker = stats });
+                DamageHelper.ApplyQuickProcDamage(stats, target2, 0f, 1.2f, transform);
                 VisualDebugHelper.DrawBox(target2.transform.position + Vector3.up * 2, new Vector3(0.2f, 1.5f, 0.2f), Quaternion.identity, Color.magenta, 0.5f);
             }
         }
@@ -264,8 +262,7 @@ public class WeaponEffectManager : MonoBehaviour
                 Stats e = hit.GetComponent<Stats>();
                 if (e != null)
                 {
-                    DamageInfo info = CreateProcDamage(e, isC, 0f, 1.0f);
-                    e.TakeDamage(info);
+                    DamageHelper.ApplyQuickProcDamage(stats, e, 0f, 1.0f, transform);
                     StartCoroutine(SlowEnemyRoutine(e, 0.3f, 3f));
                 }
             }
@@ -404,8 +401,7 @@ public class WeaponEffectManager : MonoBehaviour
             player.transform.position = targetPos;
             player.isDashing = false;
 
-            DamageInfo info = CreateProcDamage(closest, true, 3.0f, 0f);
-            closest.TakeDamage(info);
+            DamageHelper.ApplyStandardDamage(stats, closest, transform, 3.0f, null, null, 0, false, 0f, true);
             sw_t5_04_seeds.Remove(closest);
 
             VisualDebugHelper.DrawSphere(closest.transform.position, 3f, new Color(1, 0, 0, 0.5f), 0.5f); // Nổ máu
@@ -421,7 +417,7 @@ public class WeaponEffectManager : MonoBehaviour
         float t = CombatMath.CalculateDirectionFactor(transform, target);
         if (t == 1.0f)
         {
-            target.TakeDamage(new DamageInfo { physDamage = stats.physicalAtk * 0.1f, attacker = stats });
+            DamageHelper.ApplyQuickProcDamage(stats, target, 0.1f, 0f, transform);
         }
     }
 
@@ -615,17 +611,6 @@ public class WeaponEffectManager : MonoBehaviour
 
     // =========================================================================================
     #region [ TIỆN ÍCH DÙNG CHUNG CỦA MANAGER ]
-
-    private DamageInfo CreateProcDamage(Stats target, bool isCrit, float physMult, float magicMult)
-    {
-        float t = CombatMath.CalculateDirectionFactor(transform, target);
-        var dmgTuple = CombatMath.CalculateFullDamage(stats, target, t, isCrit, null, eqManager.currentWeapon, 1f);
-
-        DamageInfo info = new DamageInfo { attacker = stats, isCrit = isCrit, sourcePosition = transform.position };
-        info.physDamage = stats.physicalAtk * physMult;
-        info.magicDamage = stats.magicAtk * magicMult;
-        return info;
-    }
 
     private IEnumerator ReduceArmorRoutine(Stats target, float percent, float duration, Action onComplete = null)
     {

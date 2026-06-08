@@ -993,31 +993,12 @@ public class CoreShieldEffectManager : MonoBehaviour
             // Trừ 1 Sin Charge
             stats.currentSin -= 1f;
 
-            // Tính toán lượng 20% sát thương dôi ra
+            // 4. GIÁNG ĐÒN PHỤ (20% sức mạnh, kế thừa crit của đòn đánh gốc)
             WeaponData currentWpn = eqManager != null ? eqManager.currentWeapon : null;
-            float t = CombatMath.CalculateDirectionFactor(transform, target);
-
-            // Gọi CombatMath với hệ số phụ (externalMult) = 0.2f để lấy chuẩn 20% sức mạnh gốc
-            var extraDmg = CombatMath.CalculateFullDamage(
-                stats, target, t, isC, null, currentWpn, 0.2f
-            );
-
-            // 4. ĐÓNG GÓI VÀ GIÁNG ĐÒN
-            DamageInfo extraInfo = new DamageInfo
-            {
-                sourcePosition = transform.position,
-                attacker = stats,
-                physDamage = extraDmg.phys,
-                magicDamage = extraDmg.magic,
-                trueDamage = extraDmg.trueDmg,
-                isCrit = isC, // Vẫn kế thừa tỉ lệ chí mạng của đòn đánh gốc
-                impactLevel = 0 // Đòn phụ tàng hình không được gây giật lùi thêm
-            };
-
-            target.TakeDamage(extraInfo);
+            DamageHelper.ApplyStandardDamage(stats, target, transform, 0.2f, null, currentWpn, 0, false, 0f, isC);
 
             // Debug để bạn dễ test trong Unity Console
-            Debug.Log($"<color=orange>[SHD_CS_T5_07]</color> Tiêu hao 1 Sin Charge! Bồi thêm 20% sát thương ({extraInfo.TotalRawDamage}) vào đòn đánh thường.");
+            Debug.Log("<color=orange>[SHD_CS_T5_07]</color> Tiêu hao 1 Sin Charge! Bồi thêm 20% sát thương vào đòn đánh thường.");
         }
     }
 

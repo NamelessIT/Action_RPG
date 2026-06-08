@@ -6,7 +6,7 @@ public class DuelistLiteSignature : SkillBehavior
 {
     [Header("Buff Settings")]
     public float buffDuration = 5.0f;
-    public float critChanceBuff = 1.0f;     // +100% (1.0)
+    public float critChanceBuff = 0.5f;     // +50%
     public float moveSpeedBuff = 0.2f;      // +20%
     public float attackSpeedBuff = 0.2f;    // +20%
 

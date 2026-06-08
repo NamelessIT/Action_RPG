@@ -12,12 +12,12 @@ public class PaladinSkill : SkillBehavior
     [Header("Damage Scaling")]
     // Sát thương phép cơ bản sẽ nhân với data.SkillMagicMultiplier
     // Cộng thêm % Armor và % MagicResist
-    public float armorScaling = 0.5f; // +50% Armor vào sát thương
-    public float mrScaling = 0.5f;    // +50% Kháng phép vào sát thương
+    public float armorScaling = 0.2f; // +20% Armor vào sát thương
+    public float mrScaling = 0.2f;    // +20% Kháng phép vào sát thương
 
     [Header("Healing")]
     public float healPerEnemyPercent = 0.01f; // Hồi 1% máu mỗi địch mỗi tick
-    public float maxHealPerTick = 0.5f;      // Tối đa hồi 50% mỗi tick
+    public float maxHealPerTick = 0.05f;      // Tối đa hồi 5% mỗi tick
 
     [Header("VFX")]
     public GameObject sanctuaryVfxPrefab;
@@ -125,37 +125,11 @@ public class PaladinSkill : SkillBehavior
 
         float finalMultiplier = 1.0f;
         if (baseMagicDmg > 0)
-        {
             finalMultiplier = totalRawDamage / baseMagicDmg;
-        }
         else
-        {
             finalMultiplier = (totalRawDamage > 0) ? totalRawDamage : 0f;
-        }
 
-        float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
-        bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-
-        var dmgTuple = CombatMath.CalculateFullDamage(
-            stats,
-            enemyStats,
-            0.5f,
-            isCrit,
-            data,
-            currentWpn,
-            finalMultiplier
-        );
-
-        DamageInfo info = new DamageInfo();
-        info.sourcePosition = transform.position;
-        info.isCrit = isCrit;
-        info.physDamage = dmgTuple.phys;
-        info.magicDamage = dmgTuple.magic;
-        info.trueDamage = dmgTuple.trueDmg;
-        info.isKnockback = false;
-        info.attacker = stats;
-
-        enemyStats.TakeDamage(info);
+        DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, finalMultiplier, data, currentWpn, 0);
     }
 
     private void ApplyHealing(int enemyCount)

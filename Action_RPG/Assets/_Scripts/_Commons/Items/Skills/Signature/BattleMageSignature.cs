@@ -102,7 +102,6 @@ public class BattleMageSignature : SkillBehavior
 
         stats.EnterCombat();
         WeaponData currentWpn = equipmentManager != null ? equipmentManager.currentWeapon : null;
-        float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
 
         foreach (var hit in hits)
         {
@@ -112,24 +111,9 @@ public class BattleMageSignature : SkillBehavior
                 currentTickEnemies.Add(enemyStats);
 
                 // --- A. GÂY SÁT THƯƠNG RÚT MÁU ---
-                bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-                float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
-
-                // Gây sát thương (Scale theo cả Vật lý lẫn Phép thuật tùy vũ khí)
-                var dmgTuple = CombatMath.CalculateFullDamage(
-                    stats, enemyStats, t, isCrit, data, currentWpn, data.skillMagicMultiplier
-                );
-
-                DamageInfo info = new DamageInfo();
-                info.sourcePosition = transform.position;
-                info.attacker = stats;
-                info.physDamage = dmgTuple.phys;
-                info.magicDamage = dmgTuple.magic;
-                info.trueDamage = dmgTuple.trueDmg;
-                info.isCrit = isCrit;
-
-                enemyStats.TakeDamage(info);
-                totalDamageDealtThisTick += info.TotalRawDamage;
+                float hpBefore = enemyStats.currentHp;
+                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 0);
+                totalDamageDealtThisTick += Mathf.Max(0f, hpBefore - enemyStats.currentHp);
 
                 // --- B. ÁP DỤNG LÀM CHẬM (Nếu kẻ địch mới bước vào) ---
                 if (!slowedEnemies.Contains(enemyStats))

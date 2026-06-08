@@ -12,18 +12,18 @@ public class MageLiteSignature : SkillBehavior
     [Header("--- Fire Effect ---")]
     public float burnDuration = 5.0f;       // Thiêu đốt 5s
     [Tooltip("Hệ số sát thương thiêu đốt tính theo % Magic Attack")]
-    public float burnDamagePercent = 0.15f; // Sát thương Burn = 15% MagicAtk/tick (0.5s)
+    public float burnDamagePercent = 0.15f; // Sát thương Burn = 15% MagicAtk/tick (1s)
 
     [Header("--- Ice Effect ---")]
-    public float chillDuration = 4.0f;      // Tê tái (Chậm) 4s
-    public float slowPercent = 0.6f;        // Làm chậm 60%
+    public float chillDuration = 5.0f;      // Tê tái (Chậm) 5s
+    public float slowPercent = 0.4f;        // Làm chậm 40%
 
     [Header("--- Wind Effect (Self Buff) ---")]
     public float hazeDuration = 5.0f;       // Tăng tốc 5s
-    public float selfSpeedBuff = 0.4f;      // Tăng 40% Tốc chạy & Tốc đánh
+    public float selfSpeedBuff = 0.3f;      // Tăng 30% Tốc chạy & Tốc đánh
 
     [Header("--- Earth Effect ---")]
-    public float sunderDuration = 6.0f;     // Giảm thủ 6s
+    public float sunderDuration = 5.0f;     // Giảm thủ 5s
     public float defReductionPercent = 0.25f; // Giảm 25% Armor & MagicResist
 
     [Header("VFX Prefabs (Gắn hiệu ứng nổ vào đây)")]
@@ -77,38 +77,19 @@ public class MageLiteSignature : SkillBehavior
         stats.EnterCombat();
         WeaponData currentWpn = equipmentManager != null ? equipmentManager.currentWeapon : null;
 
-        // Tỷ lệ Crit tổng (Thân + Vũ khí)
-        float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
-
         // --- 3. ÁP DỤNG SÁT THƯƠNG VÀ HIỆU ỨNG LÊN TỪNG KẺ ĐỊCH ---
         foreach (var hit in hits)
         {
             Stats enemyStats = hit.GetComponent<Stats>();
             if (enemyStats != null && enemyStats.currentHp > 0)
             {
-                // [TÍNH TOÁN CỦA BẠN] Tinh Crit, Tính t (Hệ số hướng)
-                float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
-                bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-
-                // Tính sát thương (x3)
-                var dmgTuple = CombatMath.CalculateFullDamage(
-                    stats, enemyStats, t, isCrit, data, currentWpn, data.skillMagicMultiplier
-                );
-
-                DamageInfo info = new DamageInfo();
-                info.sourcePosition = transform.position;
-                info.attacker = stats;
-                info.physDamage = dmgTuple.phys;
-                info.magicDamage = dmgTuple.magic;
-                info.trueDamage = dmgTuple.trueDmg;
-                info.isCrit = isCrit;
-
-                enemyStats.TakeDamage(info);
+                // Tính sát thương (x3, hỗn hợp)
+                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 0);
 
                 // --- Gây 4 loại Debuff Nguyên Tố ---
-                // A. Lửa (Thiêu Đốt - Sử dụng hàm rỉ máu chuẩn của bạn)
+                // A. Lửa (Thiêu Đốt - Sử dụng hàm thiêu đốt chuẩn)
                 float burnDps = stats.magicAtk * burnDamagePercent;
-                enemyStats.ApplyBleed(burnDps, burnDuration);
+                enemyStats.ApplyBurn(burnDps, burnDuration);
 
                 // B. Băng (Làm Chậm)
                 StartCoroutine(TempSlowRoutine(enemyStats, slowPercent, chillDuration));
@@ -135,10 +116,10 @@ public class MageLiteSignature : SkillBehavior
     {
         if (enemy != null && enemy.currentHp > 0)
         {
-            enemy.baseMoveSpeed -= percent;
+            enemy.baseMoveSpeed *= (1-percent);
             // enemyStats is a parent variable, you may need a component variable in the new context if it is not defined
             yield return new WaitForSeconds(duration);
-            if (enemy != null) enemy.baseMoveSpeed += percent;
+            if (enemy != null) enemy.baseMoveSpeed /= (1-percent);
         }
     }
 

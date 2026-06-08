@@ -13,7 +13,22 @@
       "Read(//c/Users/xuand/OneDrive/Desktop/ARPG/Docs/**)",
       "Bash(pandoc \"Kết hợp class.docx\" -t markdown)",
       "Bash(python -X utf8 -c ' *)",
-      "Bash(pandoc \"Bảng chi tiết upgrade skill.docx\" -t markdown)"
+      "Bash(pandoc \"Bảng chi tiết upgrade skill.docx\" -t markdown)",
+      "Bash(pandoc \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Docs\\\\Refactor Hệ thống sát thương.docx\" -o /tmp/damage_refactor.md)",
+      "Read(//tmp/**)",
+      "Bash(python3 -c ' *)",
+      "Bash(ls -la \"Tổng hợp Kĩ năng.docx\")",
+      "Bash(dir \"Tổng hợp Kĩ năng.docx\")",
+      "Bash(extract-text \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Docs\\\\Kết hợp class.docx\")",
+      "Bash(ls \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Data\\\\\" \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Docs\\\\\" 2>&1; which pandoc python python3 2>&1)",
+      "Bash(python scripts/office/unpack.py \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Data\\\\Skill tree.docx\" /tmp/skilltree/)",
+      "Bash(python scripts/office/unpack.py \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Docs\\\\Kết hợp class.docx\" /tmp/kethop/)",
+      "Bash(python -c \"import docx; print\\('ok'\\)\")",
+      "Bash(pip install *)",
+      "Bash(cat)",
+      "Bash(python /tmp/extract.py \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Data\\\\Skill tree.docx\")",
+      "Bash(PYTHONIOENCODING=utf-8 python /tmp/extract.py \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Docs\\\\Tổng hợp Kĩ năng.docx\")",
+      "Bash(PYTHONIOENCODING=utf-8 python /tmp/find_mage.py \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Docs\\\\Tổng hợp Kĩ năng.docx\" \"magepassive\")"
     ]
   }
 }

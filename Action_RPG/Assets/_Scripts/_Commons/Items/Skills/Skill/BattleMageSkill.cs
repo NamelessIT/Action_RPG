@@ -61,34 +61,13 @@ public class BattleMageSkill : SkillBehavior
         int hitCount = 0;
         stats.EnterCombat();
         WeaponData currentWpn = equipmentManager != null ? equipmentManager.currentWeapon : null;
-        float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
 
         foreach (var hit in hits)
         {
             Stats enemyStats = hit.GetComponent<Stats>();
             if (enemyStats != null && enemyStats.currentHp > 0)
             {
-                // Tính toán sát thương phép
-                float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
-                bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-
-                // Sử dụng data.skillMagicMultiplier của bạn
-                var dmgTuple = CombatMath.CalculateFullDamage(
-                    stats, enemyStats, t, isCrit, data, currentWpn, data.skillMagicMultiplier
-                );
-
-                DamageInfo info = new DamageInfo();
-                info.sourcePosition = transform.position;
-                info.attacker = stats;
-                info.physDamage = dmgTuple.phys;
-                info.magicDamage = dmgTuple.magic;
-                info.trueDamage = dmgTuple.trueDmg;
-                info.isCrit = isCrit;
-                info.isStun = true;
-                info.stunDuration = stunDuration;
-                info.impactLevel = 1;
-
-                enemyStats.TakeDamage(info);
+                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 1, true, stunDuration);
                 hitCount++;
             }
         }

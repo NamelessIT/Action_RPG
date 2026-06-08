@@ -164,63 +164,18 @@ public class ChrisSkill : SkillBehavior
         }
     }
 
-    // ... (Hàm ApplyDamage và OnDrawGizmos giữ nguyên) ...
     private void ApplyDamage(Stats enemyStats, Vector3 dashDir)
     {
-        // --- CHUẨN BỊ DỮ LIỆU SÁT THƯƠNG ---
         stats.EnterCombat();
 
-        // 1. Tính toán hướng và góc va chạm
+        // Tính góc va chạm để xác định impactLevel
         Vector3 impactDir = (enemyStats.transform.position - transform.position);
         impactDir.y = 0;
         impactDir.Normalize();
-
         float angle = Vector3.Angle(dashDir, impactDir);
-        float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
+        int impactLevel = (angle <= headOnAngle) ? 2 : 1;
 
-        // 2. Tính Crit
-        WeaponData currentWpn = equipmentManager != null ? equipmentManager.currentWeapon : null;
-        float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
-        bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-
-        // 3. TẠO DAMAGE INFO
-        DamageInfo info = new DamageInfo();
-        info.sourcePosition = transform.position;
-        info.isCrit = isCrit;
-
-        // --- LOGIC KNOCKBACK / STUN ---
-        // Lưu ý: Logic đẩy lùi của Stats.cs là "Impulse" (đẩy văng ra).
-        // Còn logic của Skill này là "Drag" (kéo đi theo).
-        // Khi ApplyDamage (lần đầu chạm), ta vẫn có thể gây Stun để Enemy không đánh trả được trong lúc bị ủi.
-
-        info.isKnockback = false; // Tắt Knockback của hệ thống Stats để tránh xung đột với việc "ủi" tay bo của ta
-        info.isStun = true;       // Gây choáng để nó đứng im cho mình ủi
-        info.stunDuration = dashDuration + 0.2f; // Choáng suốt quá trình ủi + một chút sau đó
-        info.attacker = stats;
-
-        if (angle <= headOnAngle)
-        {
-            // Case Húc Thẳng: Impact mạnh
-            info.impactLevel = 2;
-            Debug.Log("Húc trực diện!");
-        }
-        else
-        {
-            // Case Húc Sượt
-            info.impactLevel = 1;
-            Debug.Log("Húc bên rìa!");
-        }
-
-        // 4. Tính toán lượng Damage
-        var dmgTuple = CombatMath.CalculateFullDamage(
-            stats, enemyStats, t, isCrit, data, currentWpn, 1f
-        );
-        info.physDamage = dmgTuple.phys;
-        info.magicDamage = dmgTuple.magic;
-        info.trueDamage = dmgTuple.trueDmg;
-
-        // 5. GỬI ĐI
-        enemyStats.TakeDamage(info);
+        DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, 1f, data, equipmentManager != null ? equipmentManager.currentWeapon : null, impactLevel, true, dashDuration + 0.2f);
     }
     void OnDrawGizmosSelected()
     {
