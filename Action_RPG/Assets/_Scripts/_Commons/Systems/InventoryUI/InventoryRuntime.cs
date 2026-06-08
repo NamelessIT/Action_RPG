@@ -75,6 +75,28 @@ public class InventoryRuntime : MonoBehaviour
         return GetPageOffset(itemType) + localIndex;
     }
 
+    /// <summary>True nếu absoluteIndex nằm đúng trang (page) của itemType.</summary>
+    public static bool IsIndexValidForItemType(int absoluteIndex, InventoryItemRecord.InventoryItemType itemType)
+    {
+        int pageStart = GetPageOffset(itemType);
+        return absoluteIndex >= pageStart && absoluteIndex < pageStart + SLOTS_PER_PAGE;
+    }
+
+    /// <summary>True nếu trang của item còn chỗ chứa (ô trống hoặc ô stack được). Dùng để
+    /// kiểm tra TRƯỚC khi unequip/clear nguồn → tránh mất item khi trang đầy.</summary>
+    public bool HasRoomFor(InventoryItemRecord item)
+    {
+        if (item == null || _slots == null) return false;
+        int pageStart = GetPageOffset(item.ItemType);
+        int pageEnd   = pageStart + SLOTS_PER_PAGE;
+        for (int i = pageStart; i < pageEnd; i++)
+        {
+            if (_slots[i].IsEmpty) return true;
+            if (_slots[i].CanStackWith(item)) return true;
+        }
+        return false;
+    }
+
     // ─────────────────────────────────────────────────────────────
     //  READ
     // ─────────────────────────────────────────────────────────────
@@ -105,11 +127,12 @@ public class InventoryRuntime : MonoBehaviour
     /// Thêm item vào đúng trang dựa theo ItemType:
     /// 1. Tìm ô có cùng item trong trang → stack.
     /// 2. Nếu không → tìm ô trống đầu tiên trong trang.
-    /// 3. Nếu hết ô → log warning.
+    /// 3. Nếu hết ô → log warning, trả về FALSE (caller cần xử lý để không mất item).
     /// </summary>
-    public void AddItem(InventoryItemRecord item, int quantity = 1)
+    /// <returns>true nếu thêm/stack thành công; false nếu trang đầy (item KHÔNG được thêm).</returns>
+    public bool AddItem(InventoryItemRecord item, int quantity = 1)
     {
-        if (item == null) return;
+        if (item == null) return false;
 
         int pageStart = GetPageOffset(item.ItemType);
         int pageEnd   = pageStart + SLOTS_PER_PAGE;
@@ -123,7 +146,7 @@ public class InventoryRuntime : MonoBehaviour
                 Debug.Log($"[InventoryRuntime] Stack '{item.DisplayName}' x{quantity} vào slot {i} " +
                           $"(tổng: {_slots[i].Quantity})");
                 OnInventoryChanged?.Invoke();
-                return;
+                return true;
             }
         }
 
@@ -136,18 +159,28 @@ public class InventoryRuntime : MonoBehaviour
                 Debug.Log($"[InventoryRuntime] Thêm '{item.DisplayName}' x{quantity} vào slot {i} " +
                           $"(page: {item.ItemType})");
                 OnInventoryChanged?.Invoke();
-                return;
+                return true;
             }
         }
 
         Debug.LogWarning($"[InventoryRuntime] Trang {item.ItemType} đầy ({SLOTS_PER_PAGE} slots) " +
                          $"— không thể thêm '{item.DisplayName}'.");
+        return false;
     }
 
     /// <summary>Thêm item vào ô cụ thể (dùng khi kéo từ equipment về).</summary>
-    public void AddItemToSlot(int absoluteIndex, InventoryItemRecord item, int quantity = 1)
+    /// <returns>true nếu thêm thành công; false nếu thất bại (item KHÔNG được thêm).</returns>
+    public bool AddItemToSlot(int absoluteIndex, InventoryItemRecord item, int quantity = 1)
     {
-        if (item == null || absoluteIndex < 0 || absoluteIndex >= TOTAL_SLOTS) return;
+        if (item == null || absoluteIndex < 0 || absoluteIndex >= TOTAL_SLOTS) return false;
+
+        // Slot phải thuộc đúng trang của loại item; nếu không, để AddItem tự tìm ô đúng trang
+        if (!IsIndexValidForItemType(absoluteIndex, item.ItemType))
+        {
+            Debug.LogWarning($"[InventoryRuntime] Slot {absoluteIndex} không thuộc trang {item.ItemType} " +
+                             $"của '{item.DisplayName}' — chuyển sang tìm ô đúng trang.");
+            return AddItem(item, quantity);
+        }
 
         InventorySlot target = _slots[absoluteIndex];
         if (!target.IsEmpty && target.CanStackWith(item))
@@ -161,10 +194,10 @@ public class InventoryRuntime : MonoBehaviour
         else
         {
             // Ô bị chiếm bởi item khác → tìm ô trống trong đúng trang
-            AddItem(item, quantity);
-            return;
+            return AddItem(item, quantity);
         }
         OnInventoryChanged?.Invoke();
+        return true;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -220,6 +253,14 @@ public class InventoryRuntime : MonoBehaviour
         InventorySlot to   = _slots[toIndex];
 
         if (from.IsEmpty) return;
+
+        // Chỉ cho phép di chuyển trong đúng trang của loại item (không cho lệch trang)
+        if (!IsIndexValidForItemType(toIndex, from.Item.ItemType))
+        {
+            Debug.LogWarning($"[InventoryRuntime] Không thể chuyển '{from.Item.DisplayName}' " +
+                             $"sang slot {toIndex} — khác trang ({from.Item.ItemType}).");
+            return;
+        }
 
         if (!to.IsEmpty && from.CanStackWith(to.Item))
         {
@@ -362,8 +403,10 @@ public class InventoryRuntime : MonoBehaviour
             int qty       = Mathf.Max(1, saved.quantity);
             int targetIdx = saved.slotIndex;
 
-            // Dùng đúng slot nếu hợp lệ và trống
-            if (targetIdx >= 0 && targetIdx < TOTAL_SLOTS && _slots[targetIdx].IsEmpty)
+            // Dùng đúng slot nếu hợp lệ, ĐÚNG TRANG và trống
+            if (targetIdx >= 0 && targetIdx < TOTAL_SLOTS
+                && IsIndexValidForItemType(targetIdx, record.ItemType)
+                && _slots[targetIdx].IsEmpty)
                 _slots[targetIdx].Set(record, qty);
             else
                 AddItem(record, qty);  // fallback: tìm ô trống đúng trang

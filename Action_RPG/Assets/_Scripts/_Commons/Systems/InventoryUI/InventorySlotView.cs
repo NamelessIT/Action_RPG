@@ -151,8 +151,16 @@ public class InventorySlotView : MonoBehaviour,
             InventoryItemRecord item = InventoryDragContext.ActiveItem;
             if (item == null) return;
 
-            InventoryDragContext.ActiveEquipmentSource.ClearSlotWithoutReturningToInventory();
-            _runtime.AddItemToSlot(_slotIndex, item, 1);
+            // [FIX MẤT ITEM] Add TRƯỚC, chỉ clear nguồn (unequip) khi add thành công.
+            // Nếu add fail (trang đầy) mà đã clear trước thì item sẽ biến mất.
+            if (_runtime.AddItemToSlot(_slotIndex, item, 1))
+            {
+                InventoryDragContext.ActiveEquipmentSource.ClearSlotWithoutReturningToInventory();
+            }
+            else
+            {
+                Debug.LogWarning($"[InventorySlotView] Không thể trả '{item.DisplayName}' về ô {_slotIndex} — giữ nguyên trang bị.");
+            }
         }
     }
 

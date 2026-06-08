@@ -185,6 +185,7 @@ public class EnemyAI : MonoBehaviour
         if (combat.isAttacking || combat.isTelegraphing)
         {
             if (agent.isOnNavMesh) agent.isStopped = true;
+            if (animator != null) animator.SetBool("IsWalking", false); // tránh kẹt animation đi bộ khi đang gồng/đánh
             stats.EnterCombat();
             if (combat.isAttacking) lastAttackEndTime = Time.time;
             return;
@@ -920,7 +921,10 @@ public class EnemyAI : MonoBehaviour
         Vector3 dest = transform.position + dirAway * backOffDistance;
         NavMeshHit hit;
         if (NavMesh.SamplePosition(dest, out hit, backOffDistance + 1f, NavMesh.AllAreas))
+        {
+            agent.speed = stats.baseMoveSpeed * 0.8f; // lùi ra xa player với 80% tốc độ
             State_MoveTo(hit.position, "Post-Attack BackOff");
+        }
         else
             State_HoldAndFace();
     }

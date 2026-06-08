@@ -63,6 +63,20 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler, IBeginDragHandler, I
         // 3. Remove the dragged item from the bag (or clear previous slot source).
         // 4. If the slot already had an item, push that old item back into inventory.
         InventoryItemRecord previousItem = GetCurrentItem();
+
+        // [FIX MẤT ITEM] Nếu slot đang có món cũ phải trả về túi, kiểm tra túi còn chỗ TRƯỚC khi equip.
+        // Khi kéo từ inventory: ô nguồn sẽ giải phóng cùng trang nên luôn đủ chỗ → bỏ qua check.
+        // Khi kéo từ equipment slot khác (không giải phóng ô túi nào): phải đảm bảo có chỗ, nếu
+        // không thì huỷ thao tác để không làm bay mất món cũ.
+        bool sourceFreesInventorySlot = InventoryDragContext.ActiveInventorySlotSource >= 0
+                                        || InventoryDragContext.ActiveInventorySource != null;
+        if (previousItem != null && !sourceFreesInventorySlot
+            && _inventoryController != null && !_inventoryController.CanAccept(previousItem))
+        {
+            Debug.LogWarning($"[EquipmentSlotUI] Huỷ trang bị: túi đầy, không thể trả '{previousItem.DisplayName}' về.");
+            return;
+        }
+
         if (!TryEquip(draggedItem))
         {
             return;
@@ -86,7 +100,9 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler, IBeginDragHandler, I
 
         if (previousItem != null)
         {
-            _inventoryController.ReturnItemToInventory(previousItem);
+            // Đã kiểm tra CanAccept ở trên (hoặc nguồn vừa giải phóng 1 ô) → add gần như chắc chắn thành công.
+            if (!_inventoryController.ReturnItemToInventory(previousItem))
+                Debug.LogWarning($"[EquipmentSlotUI] Không trả được '{previousItem.DisplayName}' về túi (trang đầy).");
         }
 
         RefreshSlotVisual();
@@ -179,7 +195,14 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler, IBeginDragHandler, I
         InventoryItemRecord currentItem = GetCurrentItem();
         if (currentItem != null)
         {
-            _inventoryController.ReturnItemToInventory(currentItem);
+            // [FIX MẤT ITEM] Chỉ tháo trang bị khi đã trả được về túi thành công.
+            // Nếu trang túi đầy (ReturnItemToInventory=false) mà vẫn UnequipInternal thì item biến mất.
+            if (!_inventoryController.ReturnItemToInventory(currentItem))
+            {
+                Debug.LogWarning($"[EquipmentSlotUI] Túi đầy — không thể tháo '{currentItem.DisplayName}'. Giữ nguyên trang bị.");
+                RefreshSlotVisual();
+                return;
+            }
         }
 
         UnequipInternal();
@@ -189,6 +212,12 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler, IBeginDragHandler, I
     private bool TryEquip(InventoryItemRecord item)
     {
         if (_equipmentManager == null || item == null)
+        {
+            return false;
+        }
+
+        // Defense-in-depth: chặn sai loại slot kể cả khi không đi qua OnDrop (guard của _slotKind)
+        if (!item.CanEquipTo(_slotKind))
         {
             return false;
         }

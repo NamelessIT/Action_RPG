@@ -16,7 +16,7 @@ MonoBehaviour:
   skillName: 
   icon: {fileID: 0}
   skilDesc: 
-  skillType: 3
+  skillType: 4
   skillPhysicalMultiplier: 0
   skillMagicMultiplier: 0
   cooldown: 0

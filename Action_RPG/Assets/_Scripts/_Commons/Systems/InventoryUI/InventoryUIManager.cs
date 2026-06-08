@@ -3,6 +3,8 @@ using UnityEngine;
 public class InventoryUIManager : MonoBehaviour
 {
     [SerializeField] private GameObject _inventoryPanel;
+    [Tooltip("Tùy chọn — panel chi tiết chỉ số. Tự đóng theo khi đóng Inventory. Bỏ trống sẽ tự tìm trong scene.")]
+    [SerializeField] private StatDetailUI _statDetailUI;
 #pragma warning disable 0414
     [SerializeField] private KeyCode _toggleKey = KeyCode.B;
 #pragma warning restore 0414
@@ -11,6 +13,9 @@ public class InventoryUIManager : MonoBehaviour
 
     private void Awake()
     {
+        if (_statDetailUI == null)
+            _statDetailUI = FindFirstObjectByType<StatDetailUI>(FindObjectsInactive.Include);
+
         SetInventoryVisible(false);
     }
 
@@ -31,8 +36,12 @@ public class InventoryUIManager : MonoBehaviour
             _inventoryPanel.SetActive(isVisible);
         }
 
-        Time.timeScale = isVisible ? 0f : 1f;
-        Cursor.visible = isVisible;
-        Cursor.lockState = isVisible ? CursorLockMode.None : CursorLockMode.Locked;
+        // Đóng Inventory → đóng luôn StatDetail (nó là panel riêng, không phải con của Inventory
+        // nên không tự tắt theo). Tránh tình trạng StatDetailPanel lơ lửng sau khi bấm B.
+        if (!isVisible && _statDetailUI != null)
+            _statDetailUI.Hide();
+
+        // Pause/cursor do UIPauseManager quản lý tập trung (tránh panel này unpause khi panel khác còn mở)
+        UIPauseManager.SetLock("Inventory", isVisible);
     }
 }

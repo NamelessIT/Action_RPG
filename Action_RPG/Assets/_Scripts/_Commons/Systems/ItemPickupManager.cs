@@ -92,7 +92,13 @@ public class ItemPickupManager : MonoBehaviour
         }
 
         // ── Thêm vào inventory ────────────────────────────────────
-        _inventoryRuntime.AddItem(record);
+        // [FIX MẤT ITEM] Chỉ Destroy khỏi world khi add THÀNH CÔNG. Nếu trang đầy (AddItem=false)
+        // mà vẫn Destroy thì item biến mất vĩnh viễn → giữ lại world để player dọn túi rồi nhặt lại.
+        if (!_inventoryRuntime.AddItem(record))
+        {
+            Debug.LogWarning($"[ItemPickupManager] Túi (trang {record.ItemType}) đầy — KHÔNG nhặt được '{record.DisplayName}'. Giữ item dưới đất.");
+            return;
+        }
         Debug.Log($"[ItemPickupManager] ✅ Nhặt '{record.DisplayName}' (type: {record.ItemType}).");
 
         // ── Notification ──────────────────────────────────────────

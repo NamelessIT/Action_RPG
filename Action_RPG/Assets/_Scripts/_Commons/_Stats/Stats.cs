@@ -694,11 +694,16 @@ public class Stats : MonoBehaviour
         }
 
         // 4. Play Animation Die
+        // [CHƯA CÓ CLIP] Death animation: code đã sẵn sàng, tạm comment animator.Set, chỉ log.
+        // → Khi đã thêm parameter "Die"(Trigger)/"IsDead"(Bool) vào Animator Controller + clip,
+        //   bỏ comment 2 dòng animator.Set bên dưới là chạy.
         if (animator != null)
         {
-            //animator.SetTrigger("Die");
+            // animator.SetTrigger("Die");
+            Debug.Log($"[Stats] {gameObject.name} → Death anim (comment) animator.SetTrigger(\"Die\")");
             // Đảm bảo animator không chuyển sang state khác
-            //animator.SetBool("IsDead", true);
+            // animator.SetBool("IsDead", true);
+            Debug.Log($"[Stats] {gameObject.name} → Death anim (comment) animator.SetBool(\"IsDead\", true)");
         }
 
         // 5. Vô hiệu hóa Script điều khiển

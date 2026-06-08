@@ -611,17 +611,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 93f0edab9f6a41d4d9b54b51ca3d82f3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InventoryRuntime
---- !u!114 &613770081 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 8723988659741426169, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
-  m_PrefabInstance: {fileID: 9217491667451409061}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1 &729668870 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7512287450050852087, guid: ffc826fa965aa6444b0b691daeacc1f8, type: 3}
@@ -762,6 +751,17 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 6682846157171046443, guid: 35c4a2a0e118a5d4d9b3f4581ced571c, type: 3}
+--- !u!114 &803933774 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2789710801587216333, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
+  m_PrefabInstance: {fileID: 9217491667451409061}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2cdfe806fa4c5c6409e73d7d46394704, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StatDetailUI
 --- !u!1 &887608981
 GameObject:
   m_ObjectHideFlags: 0
@@ -2423,10 +2423,22 @@ PrefabInstance:
       propertyPath: _equipmentManager
       value: 
       objectReference: {fileID: 356537136}
+    - target: {fileID: 1140448356079732583, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.8338616
+      objectReference: {fileID: 0}
+    - target: {fileID: 1140448356079732583, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.35484
+      objectReference: {fileID: 0}
+    - target: {fileID: 1140448356079732583, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0.10002136
+      objectReference: {fileID: 0}
     - target: {fileID: 2128494997097577852, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
-      propertyPath: _refundButton
-      value: 
-      objectReference: {fileID: 613770081}
+      propertyPath: _nodeScale
+      value: 0.35
+      objectReference: {fileID: 0}
     - target: {fileID: 2321459399448319917, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
       propertyPath: _inventoryRuntime
       value: 
@@ -2523,10 +2535,6 @@ PrefabInstance:
       propertyPath: _equipmentManager
       value: 
       objectReference: {fileID: 356537136}
-    - target: {fileID: 3814398001646775502, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
-      propertyPath: m_text
-      value: Reset Skill Tree
-      objectReference: {fileID: 0}
     - target: {fileID: 4724280049812677257, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
       propertyPath: _equipmentManager
       value: 
@@ -2547,6 +2555,26 @@ PrefabInstance:
       propertyPath: _playerStats
       value: 
       objectReference: {fileID: 338991038}
+    - target: {fileID: 6375884596562751148, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.9657159
+      objectReference: {fileID: 0}
+    - target: {fileID: 6375884596562751148, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.45098037
+      objectReference: {fileID: 0}
+    - target: {fileID: 6375884596562751148, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -0.099998474
+      objectReference: {fileID: 0}
+    - target: {fileID: 6617098024046429264, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
+      propertyPath: m_MovementType
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6891507069154565279, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
+      propertyPath: _statDetailUI
+      value: 
+      objectReference: {fileID: 803933774}
     - target: {fileID: 7108372765741454486, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
       propertyPath: _equipmentManager
       value: 
@@ -2558,34 +2586,6 @@ PrefabInstance:
     - target: {fileID: 7821713441318657120, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
       propertyPath: m_Name
       value: Canvas
-      objectReference: {fileID: 0}
-    - target: {fileID: 8723988659741426169, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8723988659741426169, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8723988659741426169, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
-      value: 
-      objectReference: {fileID: 299251584}
-    - target: {fileID: 8723988659741426169, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
-      value: 2
-      objectReference: {fileID: 0}
-    - target: {fileID: 8723988659741426169, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: OnRefundClicked
-      objectReference: {fileID: 0}
-    - target: {fileID: 8723988659741426169, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: SkillTreeController, Assembly-CSharp
-      objectReference: {fileID: 0}
-    - target: {fileID: 8723988659741426169, guid: 53b714a824bdae44fac4c3b5cd091afb, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
-      value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

@@ -137,7 +137,8 @@ public class SkillManager : MonoBehaviour
 
                     Debug.Log($"Player trang bị Skill: {newSkill.skillName}");
                     currentSkill = newSkill;
-                    ApplySkillEffect(newSkill);
+                    // Chỉ giữ data ở slot nếu gắn được script
+                    if (!ApplySkillEffect(newSkill)) currentSkill = null;
                 }
                 break;
 
@@ -152,7 +153,8 @@ public class SkillManager : MonoBehaviour
 
                     Debug.Log($"Player trang bị Signature: {newSkill.skillName}");
                     currentSignature = newSkill;
-                    ApplySignatureEffect(newSkill);
+                    // Chỉ giữ data ở slot nếu gắn được script
+                    if (!ApplySignatureEffect(newSkill)) currentSignature = null;
                 }
                 break;
 
@@ -285,42 +287,66 @@ public class SkillManager : MonoBehaviour
         if (allyStats != null) allyStats.RecalculateStats();
     }
 
-    private void ApplySkillEffect(SkillData skill)
+    private bool ApplySkillEffect(SkillData skill)
     {
-        if (skill == null) return;
+        if (skill == null) return false;
 
-        if (skill.skillEffectCode != SkillData.SkillEffectCode.None)
+        // Skill chủ động bắt buộc có script effect — None là cấu hình sai cho slot Skill
+        if (skill.skillEffectCode == SkillData.SkillEffectCode.None)
         {
-            System.Type componentType = SkillFactory.GetSkillComponentType(skill.skillEffectCode);
-            if (componentType != null && !activeSkills.ContainsKey(skill))
-            {
-                if (!AssertPlayerRefs("ApplySkillEffect", skill.skillName)) return;
-
-                Debug.Log($">> Đang gắn script: {componentType.Name} vào Player");
-                SkillBehavior behavior = (SkillBehavior)gameObject.AddComponent(componentType);
-                behavior.Initialize(allyStats, skill, playerController);
-                activeSkills.Add(skill, behavior);
-            }
+            Debug.LogWarning($"[SkillManager] Skill '{skill.skillName}' có skillEffectCode=None " +
+                             $"(skillType={skill.skillType}) → không có script. Bỏ trang bị.");
+            return false;
         }
+
+        System.Type componentType = SkillFactory.GetSkillComponentType(skill.skillEffectCode);
+        if (componentType == null)
+        {
+            Debug.LogWarning($"[SkillManager] Skill '{skill.skillName}': SkillFactory chưa map " +
+                             $"skillEffectCode={skill.skillEffectCode} → null. Bỏ trang bị.");
+            return false;
+        }
+
+        if (activeSkills.ContainsKey(skill)) return true; // đã gắn rồi
+
+        if (!AssertPlayerRefs("ApplySkillEffect", skill.skillName)) return false;
+
+        Debug.Log($">> Đang gắn script: {componentType.Name} vào Player");
+        SkillBehavior behavior = (SkillBehavior)gameObject.AddComponent(componentType);
+        behavior.Initialize(allyStats, skill, playerController);
+        activeSkills.Add(skill, behavior);
+        return true;
     }
 
-    private void ApplySignatureEffect(SkillData skill)
+    private bool ApplySignatureEffect(SkillData skill)
     {
-        if (skill == null) return;
+        if (skill == null) return false;
 
-        if (skill.signatureEffectCode != SkillData.SignatureEffectCode.None)
+        // Signature bắt buộc có script effect — None là cấu hình sai cho slot Signature
+        if (skill.signatureEffectCode == SkillData.SignatureEffectCode.None)
         {
-            System.Type componentType = SkillFactory.GetSignatureComponentType(skill.signatureEffectCode);
-            if (componentType != null && !activeSkills.ContainsKey(skill))
-            {
-                if (!AssertPlayerRefs("ApplySignatureEffect", skill.skillName)) return;
-
-                Debug.Log($">> Đang gắn script: {componentType.Name} vào Player");
-                SkillBehavior behavior = (SkillBehavior)gameObject.AddComponent(componentType);
-                behavior.Initialize(allyStats, skill, playerController);
-                activeSkills.Add(skill, behavior);
-            }
+            Debug.LogWarning($"[SkillManager] Signature '{skill.skillName}' có signatureEffectCode=None " +
+                             $"(skillType={skill.skillType}) → không có script. Bỏ trang bị.");
+            return false;
         }
+
+        System.Type componentType = SkillFactory.GetSignatureComponentType(skill.signatureEffectCode);
+        if (componentType == null)
+        {
+            Debug.LogWarning($"[SkillManager] Signature '{skill.skillName}': SkillFactory chưa map " +
+                             $"signatureEffectCode={skill.signatureEffectCode} → null. Bỏ trang bị.");
+            return false;
+        }
+
+        if (activeSkills.ContainsKey(skill)) return true; // đã gắn rồi
+
+        if (!AssertPlayerRefs("ApplySignatureEffect", skill.skillName)) return false;
+
+        Debug.Log($">> Đang gắn script: {componentType.Name} vào Player");
+        SkillBehavior behavior = (SkillBehavior)gameObject.AddComponent(componentType);
+        behavior.Initialize(allyStats, skill, playerController);
+        activeSkills.Add(skill, behavior);
+        return true;
     }
 
     /// <summary>

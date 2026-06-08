@@ -34,6 +34,8 @@ public class SkillTreeController : MonoBehaviour
     [SerializeField] private RectTransform _nodeContainer;
     [SerializeField] private SkillNodeUI _skillNodePrefab;
     [SerializeField] private float _nodeScale = 0.2f;
+    [Tooltip("Kích thước gốc mỗi node (px) trước khi nhân Node Scale. Tránh để node anchor-stretch phình to che node khác.")]
+    [SerializeField] private Vector2 _nodeSize = new Vector2(100f, 100f);
 
     [Header("UI — Header (Optional)")]
     [SerializeField] private TextMeshProUGUI _skillPointText;
@@ -79,6 +81,8 @@ public class SkillTreeController : MonoBehaviour
     [SerializeField] private float _classColumnSpacingX = 220f;
     [Tooltip("Khoảng cách X giữa 3 sub-column trong T4 grid")]
     [SerializeField] private float _t4SubColSpacingX = 65f;
+    [Tooltip("Lề (px) thêm vào quanh cây khi tự tính size cho NodeContainer (để scroll có khoảng thở)")]
+    [SerializeField] private Vector2 _contentPadding = new Vector2(200f, 200f);
 
     // ─────────────────────────────────────────────────────────────
     //  STATE
@@ -134,14 +138,22 @@ public class SkillTreeController : MonoBehaviour
 
     public void SetPanelVisible(bool isVisible)
     {
+        // [GUARD] Chặn ngay trong controller (không chỉ ở phím C của PlayerController),
+        // phòng khi UI/Button gọi thẳng. Chỉ MỞ khi không có panel chặn KHÁC đang bật.
+        // Lúc này lock "SkillTree" chưa đặt → IsPaused=true nghĩa là panel khác (Inventory/DevTool) đang mở.
+        if (isVisible && !IsSkillTreeOpen && UIPauseManager.IsPaused)
+        {
+            Debug.LogWarning("[SkillTreeController] Không mở Skill Tree: đang có UI chặn khác mở.");
+            return;
+        }
+
         IsSkillTreeOpen = isVisible;
 
         if (_skillTreePanel != null)
             _skillTreePanel.SetActive(isVisible);
 
-        Time.timeScale   = isVisible ? 0f : 1f;
-        Cursor.visible   = isVisible;
-        Cursor.lockState = isVisible ? CursorLockMode.None : CursorLockMode.Locked;
+        // Pause/cursor do UIPauseManager quản lý tập trung
+        UIPauseManager.SetLock("SkillTree", isVisible);
 
         if (isVisible)
         {
@@ -192,6 +204,81 @@ public class SkillTreeController : MonoBehaviour
 
         if (_classNameText != null)
             _classNameText.text = "SKILL TREE";
+
+        // Sau khi spawn xong → tự co giãn NodeContainer ôm trọn mọi node (để ScrollRect kéo hết).
+        FitContainerToNodes();
+    }
+
+    /// <summary>
+    /// Tự tính bounding box của toàn bộ node (theo anchoredPosition × scale) rồi set sizeDelta
+    /// cho NodeContainer cho đủ lớn + đẩy node về tâm. Đây là cách thay thế Content Size Fitter —
+    /// vì node đặt thủ công bằng anchoredPosition nên Content Size Fitter (vốn chỉ đọc Layout Group)
+    /// sẽ co Content về 0 và làm mất scroll. KHÔNG dùng Content Size Fitter / Layout Group ở đây.
+    /// </summary>
+    private void FitContainerToNodes()
+    {
+        if (_nodeContainer == null || _spawnedNodes.Count == 0) return;
+
+        // Tắt mọi component layout gây xung đột (nếu lỡ gắn trong Editor)
+        var fitter = _nodeContainer.GetComponent<UnityEngine.UI.ContentSizeFitter>();
+        if (fitter != null && fitter.enabled)
+        {
+            fitter.enabled = false;
+            Debug.LogWarning("[SkillTreeController] Đã tắt Content Size Fitter trên NodeContainer " +
+                             "(không tương thích node đặt thủ công — gây mất scroll). Size do code tự tính.");
+        }
+        var layoutGroup = _nodeContainer.GetComponent<UnityEngine.UI.LayoutGroup>();
+        if (layoutGroup != null && layoutGroup.enabled)
+        {
+            layoutGroup.enabled = false;
+            Debug.LogWarning("[SkillTreeController] Đã tắt Layout Group trên NodeContainer " +
+                             "(ghi đè vị trí node thủ công). Size/vị trí do code tự quản lý.");
+        }
+
+        // Bounding box theo tâm từng node (anchoredPosition) + nửa kích thước thật (size × scale)
+        Vector2 halfNode = _nodeSize * (0.5f * _nodeScale);
+        float minX = float.MaxValue, maxX = float.MinValue;
+        float minY = float.MaxValue, maxY = float.MinValue;
+
+        foreach (var node in _spawnedNodes)
+        {
+            if (node == null) continue;
+            var rt = node.GetComponent<RectTransform>();
+            if (rt == null) continue;
+            Vector2 p = rt.anchoredPosition;
+            minX = Mathf.Min(minX, p.x - halfNode.x);
+            maxX = Mathf.Max(maxX, p.x + halfNode.x);
+            minY = Mathf.Min(minY, p.y - halfNode.y);
+            maxY = Mathf.Max(maxY, p.y + halfNode.y);
+        }
+
+        if (minX > maxX || minY > maxY) return; // không có node hợp lệ
+
+        float width  = (maxX - minX) + _contentPadding.x * 2f;
+        float height = (maxY - minY) + _contentPadding.y * 2f;
+
+        // Đảm bảo NodeContainer dùng anchor/pivot tâm để sizeDelta = kích thước thật vùng cuộn
+        _nodeContainer.anchorMin = new Vector2(0.5f, 0.5f);
+        _nodeContainer.anchorMax = new Vector2(0.5f, 0.5f);
+        _nodeContainer.pivot     = new Vector2(0.5f, 0.5f);
+        _nodeContainer.sizeDelta = new Vector2(width, height);
+
+        // Tâm bounding box (thường lệch xuống do cây trải từ +Y xuống -Y). Dời mọi node để
+        // bounding box căn giữa NodeContainer → không thừa khoảng trống 1 phía, kéo cân đối.
+        Vector2 boxCenter = new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
+        if (boxCenter.sqrMagnitude > 0.01f)
+        {
+            foreach (var node in _spawnedNodes)
+            {
+                if (node == null) continue;
+                var rt = node.GetComponent<RectTransform>();
+                if (rt == null) continue;
+                rt.anchoredPosition -= boxCenter;
+            }
+        }
+
+        Debug.Log($"[SkillTreeController] NodeContainer fit: size={width:F0}x{height:F0}, " +
+                  $"recenter offset={boxCenter}");
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -256,6 +343,13 @@ public class SkillTreeController : MonoBehaviour
         RectTransform rect = nodeUI.GetComponent<RectTransform>();
         if (rect != null)
         {
+            // Ép anchor/pivot về tâm + kích thước cố định. Nếu prefab để anchor stretch
+            // (0,0)-(1,1) + sizeDelta (0,0), node sẽ phình to bằng cả NodeContainer → background
+            // trắng phủ lên và chặn click các node khác. Ép cố định để mỗi node là 1 ô _nodeSize.
+            rect.anchorMin        = new Vector2(0.5f, 0.5f);
+            rect.anchorMax        = new Vector2(0.5f, 0.5f);
+            rect.pivot            = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta        = _nodeSize;
             rect.anchoredPosition = position;
             rect.localScale       = Vector3.one * _nodeScale;
         }

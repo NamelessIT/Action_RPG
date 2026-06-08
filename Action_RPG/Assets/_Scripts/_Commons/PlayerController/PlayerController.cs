@@ -2,6 +2,7 @@
 using Unity.Cinemachine;
 using System.Collections;
 using UnityEngine.Rendering;
+using UnityEngine.AI; // [FIX] tắt NavMeshObstacle gây enemy/companion né-đẩy player
 using System;
 using System.Collections.Generic; // [MỚI]
 using Game.Features.Player;
@@ -165,6 +166,17 @@ public class PlayerController : MonoBehaviour
 
         // [002-E] Initialize player vision manager
         InitializeVisionManager();
+
+        // [FIX BUG] Player có NavMeshObstacle (Carve=OFF) → trở thành vật cản RVO động,
+        // khiến mọi NavMeshAgent (enemy & companion) tự né/đẩy theo hướng vuông góc khi
+        // player dí sát từ bên hông (bất đối xứng trái/phải). Tắt obstacle để chỉ còn va
+        // chạm vật lý (Rigidbody) chặn lại — không né, không đẩy bất thường.
+        NavMeshObstacle navObstacle = GetComponent<NavMeshObstacle>();
+        if (navObstacle != null && navObstacle.enabled)
+        {
+            navObstacle.enabled = false;
+            Debug.Log("[PlayerController] Đã tắt NavMeshObstacle trên Player (fix enemy/companion né-đẩy khi dí sát bên hông).");
+        }
     }
 
     /// <summary>
@@ -189,7 +201,7 @@ public class PlayerController : MonoBehaviour
     {
         if (stats == null) return;
 
-        if (InventoryUIManager.IsInventoryOpen || SkillTreeController.IsSkillTreeOpen) return;
+        if (InventoryUIManager.IsInventoryOpen || SkillTreeController.IsSkillTreeOpen || IsDevToolOpen()) return;
 
         // [SỬA Ở ĐÂY] Khóa di chuyển vật lý nếu đang dùng skill, lướt, parry, hoặc ĐANG GỒNG
         // Bow heavy charge: cho phép di chuyển nhưng cản thường (isCharging block bị tắt)
@@ -212,17 +224,44 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // [MỚI] True khi người chơi đang gõ vào 1 ô input (InputField / TMP_InputField).
+    // Dùng để KHÔNG nuốt phím tắt (B/C/F/V...) thành lệnh game khi user đang gõ tìm kiếm.
+    private bool IsTypingInInputField()
+    {
+        var es = UnityEngine.EventSystems.EventSystem.current;
+        if (es == null) return false;
+        GameObject sel = es.currentSelectedGameObject;
+        if (sel == null) return false;
+        // InputField cũ (uGUI) hoặc TMP_InputField đều bắt được qua GetComponent
+        if (sel.GetComponent<UnityEngine.UI.InputField>() != null) return true;
+        if (sel.GetComponent<TMPro.TMP_InputField>() != null) return true;
+        return false;
+    }
+
+    // [MỚI] DevTool chỉ tồn tại trong Editor/Dev build — helper an toàn cho mọi build
+    private bool IsDevToolOpen()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        return _devToolPanel != null && _devToolPanel.gameObject.activeSelf;
+#else
+        return false;
+#endif
+    }
+
     void Update()
     {
         if (stats == null) return;
 
+        // Đang gõ vào ô tìm kiếm/input → bỏ qua mọi phím tắt (B/C/F/V) để không bị đóng UI ngoài ý muốn
+        if (IsTypingInInputField()) return;
+
         // B key được xử lý TRUỜC guard IsInventoryOpen để đóng và mở đều hoạt động
         if (Input.GetKeyDown(KeyCode.B))
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (_devToolPanel != null && _devToolPanel.gameObject.activeSelf)
-                return; // DevTool đang mở → không toggle inventory
-#endif
+            // Không MỞ inventory khi đang có panel chặn khác (DevTool / Skill Tree); vẫn cho ĐÓNG nếu đang mở
+            if (!InventoryUIManager.IsInventoryOpen && (IsDevToolOpen() || SkillTreeController.IsSkillTreeOpen))
+                return;
+
             if (_inventoryUIManager == null)
                 _inventoryUIManager = FindFirstObjectByType<InventoryUIManager>();
             _inventoryUIManager?.ToggleInventory();
@@ -232,8 +271,9 @@ public class PlayerController : MonoBehaviour
         // C key — Skill Tree (xử lý TRƯỚC guard để đóng/mở đều hoạt động)
         if (Input.GetKeyDown(KeyCode.C))
         {
-            // Cho phép đóng nếu đang mở, hoặc mở nếu không có UI nào khác đang bật
-            if (SkillTreeController.IsSkillTreeOpen || !InventoryUIManager.IsInventoryOpen)
+            // Cho phép đóng nếu đang mở; chỉ MỞ khi không có panel chặn nào khác (Inventory / DevTool)
+            if (SkillTreeController.IsSkillTreeOpen ||
+                (!InventoryUIManager.IsInventoryOpen && !IsDevToolOpen()))
             {
                 if (_skillTreeController == null)
                     _skillTreeController = FindFirstObjectByType<SkillTreeController>();
@@ -250,30 +290,17 @@ public class PlayerController : MonoBehaviour
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (Input.GetKeyDown(KeyCode.V))
         {
-            if (_devToolPanel != null && !InventoryUIManager.IsInventoryOpen)
+            if (_devToolPanel != null && !InventoryUIManager.IsInventoryOpen && !SkillTreeController.IsSkillTreeOpen)
             {
                 bool willShow = !_devToolPanel.gameObject.activeSelf;
                 _devToolPanel.gameObject.SetActive(willShow);
-
-                // Nếu mở DevTool → show cursor, pause game
-                if (willShow)
-                {
-                    Time.timeScale = 0f;
-                    Cursor.visible = true;
-                    Cursor.lockState = CursorLockMode.None;
-                }
-                else
-                {
-                    Time.timeScale = 1f;
-                    Cursor.visible = false;
-                    Cursor.lockState = CursorLockMode.Locked;
-                }
+                // Pause/cursor do UIPauseManager quản lý (DevToolPanel.OnEnable/OnDisable tự set lock)
             }
             return; // Prevent V from doing anything else
         }
 #endif
 
-        if (InventoryUIManager.IsInventoryOpen || SkillTreeController.IsSkillTreeOpen) return;
+        if (InventoryUIManager.IsInventoryOpen || SkillTreeController.IsSkillTreeOpen || IsDevToolOpen()) return;
 
         // --- 0. CÁC LOGIC NỀN (Luôn chạy bất kể trạng thái) ---
         UpdateTimersAndCombo(); // Tách logic reset combo ra hàm riêng cho gọn
