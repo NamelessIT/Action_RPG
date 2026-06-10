@@ -170,37 +170,15 @@ public class LeoSkill : SkillBehavior
         float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
         bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
-        // [QUAN TRỌNG] Tính hệ số hướng t
-        float t = 0f;
-        if (isFlankHit)
-        {
-            t = 0.5f; // Ép buộc t = 0.5 (Side Hit / Bên hông)
-            Debug.Log($"<color=cyan>Flank Attack!</color> {enemyStats.name}");
-        }
-        else
-        {
-            // Tính toán bình thường cho kẻ địch khác xung quanh
-            t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
-        }
+        // Tính t để truyền cho Notify (isFlankHit ép t=0.5; các địch khác tính tự nhiên)
+        float t = isFlankHit ? 0.5f : CombatMath.CalculateDirectionFactor(transform, enemyStats);
+        if (isFlankHit) Debug.Log($"<color=cyan>Flank Attack!</color> {enemyStats.name}");
 
-        var dmgTuple = CombatMath.CalculateFullDamage(
-            stats, enemyStats, t, isCrit, data, currentWpn, 1f
-        );
-
-        DamageInfo info = new DamageInfo();
-        info.sourcePosition = transform.position;
-        info.isCrit = isCrit;
-        info.isKnockback = false;
-        info.physDamage = dmgTuple.phys;
-        info.magicDamage = dmgTuple.magic;
-        info.trueDamage = dmgTuple.trueDmg;
-        info.attacker = stats;
-
-        enemyStats.TakeDamage(info);
+        DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, 1f, data, currentWpn, 0, false, 0f, isCrit);
 
         if (wasAlive && enemyStats.currentHp <= 0)
         {
-            // Side Hit (0.5) không kích hoạt AssassinPassive (cần 0.85), trừ khi bạn muốn sửa logic đó sau
+            // Side Hit (0.5) không kích hoạt AssassinPassive (cần 0.85)
             if (stats != null) stats.NotifyKillEnemy(enemyStats, (t >= 0.85f));
         }
         if (stats != null) stats.NotifyOnHitEnemy(enemyStats, t, isCrit);

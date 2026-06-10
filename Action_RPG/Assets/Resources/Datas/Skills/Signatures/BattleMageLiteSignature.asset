@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: BattleMageLiteSignature
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
   id: BattleMageLiteSignature
-  skillName: "V\u1EE5 N\u1ED5 N\u0103ng L\u01B0\u1EE3ng"
+  skillName: Mana Nova
   icon: {fileID: 0}
   skilDesc: "\"H\xE0nh \u0111\u1ED9ng: T\u1EE5 n\u0103ng l\u01B0\u1EE3ng r\u1ED3i
     ph\xE1t n\u1ED5 xung quanh ng\u01B0\u1EDDi.\n\nHi\u1EC7u \u1EE9ng: G\xE2y s\xE1t
@@ -23,7 +23,7 @@ MonoBehaviour:
   skillType: 3
   skillPhysicalMultiplier: 0
   skillMagicMultiplier: 1
-  cooldown: 0
+  cooldown: 12
   sinChargeReq: 60
   passiveEffectCode: 0
   skillEffectCode: 0

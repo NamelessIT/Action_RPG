@@ -20,7 +20,8 @@ public enum SkillNodeType
 {
     Stat,           // Tăng chỉ số thuần (baseVIT, armor, ...)
     Skill,          // Học/upgrade một SkillData
-    CoreMechanic    // Mở khóa cơ chế mới (không có stat gain, không có SkillData)
+    CoreMechanic,   // Mở khóa cơ chế mới (T4 N1, N6, N11)
+    UpgradeSkill    // Nâng cấp skill đang dùng (T4 N4, N9, N14)
 }
 
 /// <summary>

@@ -373,7 +373,7 @@ public static class SkillTreeAutoPopulate
 
         // T3
         n.Add(Skill(C+"_T3_N1","DuelistPassive","Học DuelistPassive Skill",T3,P(C+"_T2_N5"),5,ClassGrantType.GrantClass,"Duelist"));
-        n.Add(Stat (C+"_T3_N2","+7 STR / +0.04 ParryWindow","+7 baseSTR, +0.04 parryWindow",T3,P(C+"_T3_N1"),Gs(G(StatFieldType.BaseSTR,7),G(StatFieldType.ParryWindow,0.04f)),6));
+        n.Add(Stat (C+"_T3_N2","+7 STR / +0.04 Perfect Parry Window","+7 baseSTR, +0.04 Perfect Parry Window",T3,P(C+"_T3_N1"),Gs(G(StatFieldType.BaseSTR,7),G(StatFieldType.ParryWindow,0.04f)),6));
         n.Add(Skill(C+"_T3_N3","DuelistSkill","Học DuelistSkill Skill",T3,P(C+"_T3_N2"),7,ClassGrantType.CombineClasses));
         n.Add(Stat (C+"_T3_N4","+5% SignatureDmgBonus","+5% signatureDamageBonus",T3,P(C+"_T3_N3"),Gs(G(StatFieldType.SignatureDamageBonus,0.05f)),8));
         n.Add(Stat (C+"_T3_N5","+7 DEX / +6% CritMult","+7 baseDEX, +6% bonusCritMultiplier",T3,P(C+"_T3_N4"),Gs(G(StatFieldType.BaseDEX,7),G(StatFieldType.BonusCritMultiplier,0.06f)),9));
@@ -383,7 +383,7 @@ public static class SkillTreeAutoPopulate
         n.Add(Stat (C+"_T4_N2","+5 DEX / +5 STR","+5 baseDEX, +5 baseSTR",T4,P(C+"_T4_N1"),Gs(G(StatFieldType.BaseDEX,5),G(StatFieldType.BaseSTR,5)),11));
         n.Add(Stat (C+"_T4_N3","+10 Attribute Points","+10 điểm thuộc tính tự chọn",T4,P(C+"_T4_N2"),Gs(G(StatFieldType.AttributePointRemaining,10)),12));
         n.Add(Core (C+"_T4_N4","Stun +20% Duration","Core: Kỹ năng tăng 20% thời gian choáng",T4,P(C+"_T4_N3"),13));
-        n.Add(Stat (C+"_T4_N5","+0.06 ParryWindow","+0.06 parryWindow",T4,P(C+"_T4_N4"),Gs(G(StatFieldType.ParryWindow,0.06f)),14));
+        n.Add(Stat (C+"_T4_N5","+0.06 Perfect Parry Window","+0.06 Perfect Parry Window",T4,P(C+"_T4_N4"),Gs(G(StatFieldType.ParryWindow,0.06f)),14));
         n.Add(Core (C+"_T4_N6","Parried Enemy -20 DefVal 3s","Core: Kẻ địch bị Parry mất 20 DefenseValue trong 3 giây",T4,P(C+"_T4_N5"),15));
         n.Add(Stat (C+"_T4_N7","+5 DEX / +5 STR","+5 baseDEX, +5 baseSTR",T4,P(C+"_T4_N6"),Gs(G(StatFieldType.BaseDEX,5),G(StatFieldType.BaseSTR,5)),16));
         n.Add(Stat (C+"_T4_N8","+10 Attribute Points","+10 điểm thuộc tính tự chọn",T4,P(C+"_T4_N7"),Gs(G(StatFieldType.AttributePointRemaining,10)),17));
@@ -398,7 +398,7 @@ public static class SkillTreeAutoPopulate
         // T5
         n.Add(Skill(C+"_T5_N1","DuelistSignature","Học DuelistSignature Skill",T5,P(C+"_T4_N15"),25));
         n.Add(Stat (C+"_T5_N2","+15 DEX / +15 STR","+15 baseDEX, +15 baseSTR",T5,P(C+"_T5_N1"),Gs(G(StatFieldType.BaseDEX,15),G(StatFieldType.BaseSTR,15)),26));
-        n.Add(Stat (C+"_T5_N3","+0.1 ParryWindow / +12.5% SigDmg","+0.1 parryWindow, +12.5% signatureDamageBonus",T5,P(C+"_T5_N2"),Gs(G(StatFieldType.ParryWindow,0.10f),G(StatFieldType.SignatureDamageBonus,0.125f)),27));
+        n.Add(Stat (C+"_T5_N3","+0.1 Perfect Parry Window / +12.5% SigDmg","+0.1 Perfect Parry Window, +12.5% signatureDamageBonus",T5,P(C+"_T5_N2"),Gs(G(StatFieldType.ParryWindow,0.10f),G(StatFieldType.SignatureDamageBonus,0.125f)),27));
         n.Add(Stat (C+"_T5_N4","+15 DEX / +15 STR","+15 baseDEX, +15 baseSTR",T5,P(C+"_T5_N3"),Gs(G(StatFieldType.BaseDEX,15),G(StatFieldType.BaseSTR,15)),28));
         n.Add(Stat (C+"_T5_N5","+15% CritMultiplier","+15% bonusCritMultiplier",T5,P(C+"_T5_N4"),Gs(G(StatFieldType.BonusCritMultiplier,0.15f)),29));
 

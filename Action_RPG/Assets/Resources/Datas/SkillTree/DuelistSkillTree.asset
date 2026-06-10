@@ -102,8 +102,8 @@ MonoBehaviour:
     - Duelist_T2_N5
     uiPosition: {x: 0, y: -750}
   - nodeId: Duelist_T3_N2
-    nodeName: +7 STR / +0.04 ParryWindow
-    nodeDescription: +7 baseSTR, +0.04 parryWindow
+    nodeName: +7 STR / +0.04 Perfect Parry Window
+    nodeDescription: +7 baseSTR, +0.04 Perfect Parry Window
     nodeType: 0
     skillData: {fileID: 0}
     statGains:
@@ -211,7 +211,7 @@ MonoBehaviour:
   - nodeId: Duelist_T4_N4
     nodeName: Stun +20% Duration
     nodeDescription: "Core: K\u1EF9 n\u0103ng t\u0103ng 20% th\u1EDDi gian cho\xE1ng"
-    nodeType: 2
+    nodeType: 3
     skillData: {fileID: 0}
     statGains: []
     classGrantType: 0
@@ -222,8 +222,8 @@ MonoBehaviour:
     - Duelist_T4_N3
     uiPosition: {x: 0, y: -1950}
   - nodeId: Duelist_T4_N5
-    nodeName: +0.06 ParryWindow
-    nodeDescription: +0.06 parryWindow
+    nodeName: +0.06 Perfect Parry Window
+    nodeDescription: +0.06 Perfect Parry Window
     nodeType: 0
     skillData: {fileID: 0}
     statGains:
@@ -285,7 +285,7 @@ MonoBehaviour:
   - nodeId: Duelist_T4_N9
     nodeName: Cooldown -1s
     nodeDescription: "Core: Gi\u1EA3m 1 gi\xE2y cooldown k\u1EF9 n\u0103ng"
-    nodeType: 2
+    nodeType: 3
     skillData: {fileID: 0}
     statGains: []
     classGrantType: 0
@@ -359,7 +359,7 @@ MonoBehaviour:
   - nodeId: Duelist_T4_N14
     nodeName: Damage Scale +20%
     nodeDescription: "Core: K\u1EF9 n\u0103ng scale th\xEAm 20% s\xE1t th\u01B0\u01A1ng"
-    nodeType: 2
+    nodeType: 3
     skillData: {fileID: 0}
     statGains: []
     classGrantType: 0
@@ -415,8 +415,8 @@ MonoBehaviour:
     - Duelist_T5_N1
     uiPosition: {x: 0, y: -3900}
   - nodeId: Duelist_T5_N3
-    nodeName: +0.1 ParryWindow / +12.5% SigDmg
-    nodeDescription: +0.1 parryWindow, +12.5% signatureDamageBonus
+    nodeName: +0.1 Perfect Parry Window / +12.5% SigDmg
+    nodeDescription: +0.1 Perfect Parry Window, +12.5% signatureDamageBonus
     nodeType: 0
     skillData: {fileID: 0}
     statGains:

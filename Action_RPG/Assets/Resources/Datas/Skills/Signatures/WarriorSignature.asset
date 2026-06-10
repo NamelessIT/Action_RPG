@@ -23,7 +23,7 @@ MonoBehaviour:
   skillType: 3
   skillPhysicalMultiplier: 3.6
   skillMagicMultiplier: 0
-  cooldown: 0
+  cooldown: 18
   sinChargeReq: 120
   passiveEffectCode: 0
   skillEffectCode: 0

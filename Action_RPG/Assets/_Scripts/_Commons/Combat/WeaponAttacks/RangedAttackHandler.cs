@@ -29,7 +29,15 @@ public class RangedAttackHandler : IWeaponAttackHandler
         Vector3 spawnPos = ctx.PlayerPos + Vector3.up * ctx.Player.projectileSpawnOffsetY;
         Vector3 fireDir  = ResolveFireDirection(ctx);
 
-        if (ctx.Player.projectilePrefab != null)
+        // Đòn cường hóa (MageSkill / TricksterSkill) THAY THẾ đòn đánh thường: nếu đòn này sẽ bị
+        // cường hóa tiêu hao thì KHÔNG bắn đạn thường (tránh vừa ra đạn thường vừa ra đòn cường hóa).
+        bool empowerReplaces = false;
+        foreach (var provider in ctx.Player.GetComponents<IEmpoweredAttackProvider>())
+        {
+            if (provider.WillEmpowerAttack(ctx.IsHeavy)) { empowerReplaces = true; break; }
+        }
+
+        if (!empowerReplaces && ctx.Player.projectilePrefab != null)
         {
             GameObject projObj = Object.Instantiate(ctx.Player.projectilePrefab, spawnPos, Quaternion.identity);
             Projectile proj    = projObj.GetComponent<Projectile>();
@@ -41,6 +49,11 @@ public class RangedAttackHandler : IWeaponAttackHandler
                     proj.speed *= (1f + ctx.Stats.projectileSpeedBonus);
             }
         }
+
+        // Báo "đã thực hiện 1 đòn đánh" (1 lần/swing) — để các passive theo hướng (MagePassive)
+        // phóng kĩ năng đặc biệt N/SW/NW và set cooldown. Đòn xa nên fire 1 lần khi vung,
+        // không phụ thuộc có trúng địch hay không.
+        ctx.OnHitEvent?.Invoke(ctx.ComboStep, ctx.IsHeavy);
 
         yield return new WaitForSeconds(ctx.SwingDuration);
     }

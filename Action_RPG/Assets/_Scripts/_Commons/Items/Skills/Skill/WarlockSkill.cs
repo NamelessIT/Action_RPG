@@ -1,214 +1,217 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
+/// <summary>
+/// WarlockSkill — "Crimson Tether".
+/// Gắn 5 stack dấu ấn "Máu tươi" lên mọi kẻ địch quanh người (tồn tại 10s).
+/// Khi đánh trúng kẻ địch có dấu ấn → tiêu hao 1 stack, gây thêm sát thương phép theo
+/// lượng máu ĐÃ MẤT của mục tiêu, hồi 3% máu tối đa và +20% tốc chạy 3s (không cộng dồn).
+/// Số stack tối đa luôn ≤ 5 dù tái kích hoạt sớm.
+/// </summary>
 public class WarlockSkill : SkillBehavior
 {
-    [Header("Mark Settings")]
-    public float castRadius = 5.0f;      // Phạm vi gắn dấu ấn
-    public int maxStacks = 5;            // Số lượng stack tối đa
-    public float markDuration = 10.0f;   // Tồn tại 10 giây
+    [Header("Dấu ấn")]
+    public float castRadius = 5.0f;
+    public int maxStacks = 5;
+    public float markDuration = 10.0f;
 
-    [Header("Damage Settings")]
-    [Tooltip("Sát thương phép thêm = % Máu đã mất (0.1 = 10%)")]
+    [Header("Sát thương")]
+    [Tooltip("Sát thương phép thêm = % máu ĐÃ MẤT của mục tiêu (0.1 = 10%)")]
     public float missingHpDamagePercent = 0.10f;
 
-    [Header("Buff Settings")]
-    public float msBuffPercent = 0.20f;  // Tăng 20% Tốc chạy
-    public float msBuffDuration = 3.0f;  // Duy trì 3 giây
-    public float healPercent = 0.03f;    // Hồi 3% Max HP mỗi stack
+    [Header("Buff / Hồi máu")]
+    public float msBuffPercent = 0.20f;
+    public float msBuffDuration = 3.0f;
+    public float healPercent = 0.03f;
 
-    [Header("VFX")]
-    public GameObject markCastVfxPrefab; // Hiệu ứng tỏa ra khi dùng chiêu
-    public GameObject markHitVfxPrefab;  // Hiệu ứng lóe lên khi kích nổ stack
+    [Header("VFX (tuỳ chọn)")]
+    public GameObject markCastVfxPrefab;
+    public GameObject markHitVfxPrefab;
 
     private Rigidbody rb;
 
-    // Lớp để quản lý dữ liệu dấu ấn trên từng kẻ địch
+    private float _effCastRadius;
+    private float _effHealPercent;
+    private float _effMsBuffPercent;
+    private float _effMissingHpDmgPct;
+
     private class MarkData
     {
         public int stacks;
         public Coroutine expireRoutine;
+        public GameObject auraVfx;
     }
 
-    // Từ điển lưu trữ kẻ địch đang bị đánh dấu
     private Dictionary<Stats, MarkData> activeMarks = new Dictionary<Stats, MarkData>();
-
-    // Quản lý Coroutine buff tốc độ
     private Coroutine msBuffCoroutine;
+    private bool msBuffActive = false;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
-        base.Initialize(myStats, myData, myPlayer);
         rb = myPlayer.GetComponent<Rigidbody>();
+        base.Initialize(myStats, myData, myPlayer);
     }
 
     protected override void OnEquip()
     {
-        // Lắng nghe sự kiện đánh trúng địch (Từ AllyStats)
         stats.OnHitEnemy += HandleOnHitEnemy;
+        RefreshEffectiveValues();
     }
 
     protected override void OnUnequip()
     {
         stats.OnHitEnemy -= HandleOnHitEnemy;
 
-        // Dọn dẹp Coroutine xóa mark nếu tháo skill giữa chừng
         foreach (var kvp in activeMarks)
         {
             if (kvp.Value.expireRoutine != null) StopCoroutine(kvp.Value.expireRoutine);
+            if (kvp.Value.auraVfx != null) Destroy(kvp.Value.auraVfx);
         }
         activeMarks.Clear();
 
-        // Dọn dẹp Buff Tốc chạy
-        if (msBuffCoroutine != null)
+        if (msBuffActive)
         {
-            StopCoroutine(msBuffCoroutine);
-            stats.bonusMoveSpeed -= msBuffPercent;
+            if (msBuffCoroutine != null) StopCoroutine(msBuffCoroutine);
+            stats.bonusMoveSpeed -= _effMsBuffPercent;
             stats.CalculateMoveSpeedOnly();
+            msBuffActive = false;
             msBuffCoroutine = null;
         }
+    }
+
+    private void RefreshEffectiveValues()
+    {
+        // BattleMage U1: +20% tầm | BattleMage U3: +20% hồi máu
+        // BloodReaver U1: +20% buff tốc chạy | BloodReaver U3: +20% sát thương theo máu mất
+        float bmU1 = stats != null ? stats.battleMageSkillU1  : 0f;
+        float bmU3 = stats != null ? stats.battleMageSkillU3  : 0f;
+        float brU1 = stats != null ? stats.bloodReaverSkillU1 : 0f;
+        float brU3 = stats != null ? stats.bloodReaverSkillU3 : 0f;
+
+        _effCastRadius      = castRadius            * (1f + bmU1);
+        _effHealPercent     = healPercent           * (1f + bmU3);
+        _effMsBuffPercent   = msBuffPercent         * (1f + brU1);
+        _effMissingHpDmgPct = missingHpDamagePercent * (1f + brU3);
     }
 
     public override bool Use()
     {
         if (!base.Use()) return false;
+        RefreshEffectiveValues();
         StartCoroutine(CastRoutine());
         return true;
     }
 
     private IEnumerator CastRoutine()
     {
-        // 1. Khóa di chuyển để vận chiêu
         player.isAttacking = true;
         rb.linearVelocity = Vector3.zero;
 
-        // 2. Spawn VFX
-        //if (markCastVfxPrefab != null)
-        //{
-        //    Instantiate(markCastVfxPrefab, transform.position, Quaternion.identity);
-        //}
+        // VFX (tạm): vùng gắn dấu ấn.
+        VisualDebugHelper.DrawSphere(transform.position, _effCastRadius, new Color(0.8f, 0f, 0.2f, 0.15f), 0.5f);
+        if (markCastVfxPrefab) Instantiate(markCastVfxPrefab, transform.position, Quaternion.identity);
 
-        // 3. Quét địch trong phạm vi
-        Collider[] hits = Physics.OverlapSphere(transform.position, castRadius, player.dangerLayer);
+        Collider[] hits = Physics.OverlapSphere(transform.position, _effCastRadius, player.dangerLayer);
+        HashSet<Stats> done = new HashSet<Stats>();
         int markCount = 0;
-
         foreach (var hit in hits)
         {
-            Stats enemyStats = hit.GetComponent<Stats>();
-            if (enemyStats != null && enemyStats.currentHp > 0)
-            {
-                ApplyMark(enemyStats);
-                markCount++;
-            }
+            Stats e = hit.GetComponentInParent<Stats>();
+            if (e == null || e.currentHp <= 0 || !done.Add(e)) continue;
+            ApplyMark(e);
+            markCount++;
         }
 
-        Debug.Log($"<color=magenta>Warlock:</color> Gắn {maxStacks} dấu ấn Máu Tươi lên {markCount} kẻ địch!");
+        Debug.Log($"<color=magenta>WARLOCK:</color> Gắn dấu ấn {markCount} kẻ địch (tầm {_effCastRadius:F1}).");
 
-        // Khựng lại một xíu (Chờ animation)
         yield return new WaitForSeconds(0.3f);
         player.isAttacking = false;
     }
 
     private void ApplyMark(Stats target)
     {
-        if (activeMarks.ContainsKey(target))
+        if (activeMarks.TryGetValue(target, out MarkData mark))
         {
-            // Đã có dấu ấn -> Reset số stack và thời gian
-            MarkData data = activeMarks[target];
-            data.stacks = maxStacks;
-            if (data.expireRoutine != null) StopCoroutine(data.expireRoutine);
-            data.expireRoutine = StartCoroutine(MarkTimer(target));
+            // Tái kích hoạt: ĐẶT về tối đa (không cộng dồn vượt 5), làm mới thời gian.
+            mark.stacks = maxStacks;
+            if (mark.expireRoutine != null) StopCoroutine(mark.expireRoutine);
+            mark.expireRoutine = StartCoroutine(MarkTimer(target));
         }
         else
         {
-            // Chưa có -> Tạo mới
-            MarkData data = new MarkData();
-            data.stacks = maxStacks;
-            data.expireRoutine = StartCoroutine(MarkTimer(target));
-            activeMarks.Add(target, data);
+            MarkData newMark = new MarkData { stacks = maxStacks };
+            newMark.auraVfx = MageVfxHelper.AttachSphere(target.transform, 0.7f, new Color(0.7f, 0f, 0.1f, 0.4f));
+            newMark.auraVfx.transform.localPosition = Vector3.up * 1f;
+            newMark.expireRoutine = StartCoroutine(MarkTimer(target));
+            activeMarks.Add(target, newMark);
         }
     }
 
     private IEnumerator MarkTimer(Stats target)
     {
         yield return new WaitForSeconds(markDuration);
+        RemoveMark(target);
+    }
 
-        // Hết thời gian thì xóa khỏi danh sách
-        if (target != null && activeMarks.ContainsKey(target))
+    private void RemoveMark(Stats target)
+    {
+        if (target == null) { return; }
+        if (activeMarks.TryGetValue(target, out MarkData mark))
         {
+            if (mark.expireRoutine != null) StopCoroutine(mark.expireRoutine);
+            if (mark.auraVfx != null) Destroy(mark.auraVfx);
             activeMarks.Remove(target);
         }
     }
 
-    // --- HÀM NÀY CHẠY MỖI KHI BẠN ĐÁNH TRÚNG ĐỊCH ---
     private void HandleOnHitEnemy(Stats target, float t, bool isCrit)
     {
-        if (target != null && activeMarks.ContainsKey(target))
+        if (target == null || !activeMarks.TryGetValue(target, out MarkData mark)) return;
+        if (mark.stacks <= 0) return;
+
+        mark.stacks--;
+
+        // Sát thương phép thêm = % máu ĐÃ MẤT của mục tiêu (KHÔNG nhân skillMagicMultiplier).
+        if (target.currentHp > 0)
         {
-            MarkData mark = activeMarks[target];
-
-            if (mark.stacks > 0)
+            float missingHp = target.maxHp - target.currentHp;
+            float extraDamage = missingHp * _effMissingHpDmgPct;
+            if (extraDamage > 0f)
             {
-                // 1. Trừ 1 stack
-                mark.stacks--;
-
-                // 2. Gây thêm sát thương (Dựa trên máu đã mất)
-                if (target.currentHp > 0)
+                target.TakeDamage(new DamageInfo
                 {
-                    float missingHp = target.maxHp - target.currentHp;
-
-                    // Công thức: Máu đã mất * 10% * Hệ số Magic của Skill
-                    float extraDamage = missingHp * missingHpDamagePercent;
-                    if (data != null) extraDamage *= data.skillMagicMultiplier;
-
-                    DamageInfo extraInfo = new DamageInfo();
-                    extraInfo.magicDamage = extraDamage;
-                    extraInfo.sourcePosition = transform.position;
-                    // Sát thương nổ này có thể Crit ké theo đòn đánh gốc
-                    extraInfo.isCrit = isCrit;
-                    extraInfo.isKnockback = false;
-                    extraInfo.isStun = false;
-
-                    target.TakeDamage(extraInfo);
-
-                    //if (markHitVfxPrefab != null)
-                    //{
-                    //    Instantiate(markHitVfxPrefab, target.transform.position + Vector3.up, Quaternion.identity);
-                    //}
-                }
-
-                // 3. Kích hoạt Hồi máu & Tốc chạy
-                TriggerBuffAndHeal();
-
-                // 4. Nếu dùng hết stack thì gỡ dấu ấn
-                if (mark.stacks <= 0)
-                {
-                    if (mark.expireRoutine != null) StopCoroutine(mark.expireRoutine);
-                    activeMarks.Remove(target);
-                }
+                    magicDamage = extraDamage,
+                    attacker = stats,
+                    sourcePosition = transform.position,
+                    isCrit = isCrit
+                });
             }
+            if (markHitVfxPrefab) Instantiate(markHitVfxPrefab, target.transform.position, Quaternion.identity);
+            VisualDebugHelper.DrawSphere(target.transform.position + Vector3.up, 0.4f, new Color(1f, 0.1f, 0.2f, 0.5f), 0.15f);
         }
+
+        TriggerBuffAndHeal();
+
+        if (mark.stacks <= 0) RemoveMark(target);
     }
 
     private void TriggerBuffAndHeal()
     {
-        // A. Hồi máu (3%)
-        float healAmount = stats.maxHp * healPercent;
-        stats.Heal(healAmount);
+        // Hồi 3% máu tối đa mỗi lần tiêu stack.
+        stats.Heal(stats.maxHp * _effHealPercent);
 
-        // B. Buff Tốc Độ Di Chuyển
-        if (msBuffCoroutine != null)
+        // +20% tốc chạy 3s — KHÔNG cộng dồn, chỉ làm mới thời gian.
+        if (msBuffActive)
         {
-            // Nếu ĐANG BUFF -> Dừng đồng hồ cũ, chạy lại đồng hồ mới (Làm mới thời gian)
-            StopCoroutine(msBuffCoroutine);
+            if (msBuffCoroutine != null) StopCoroutine(msBuffCoroutine);
             msBuffCoroutine = StartCoroutine(MsBuffTimer());
         }
         else
         {
-            // Nếu CHƯA BUFF -> Cộng chỉ số và chạy đồng hồ
-            stats.bonusMoveSpeed += msBuffPercent;
-            stats.CalculateMoveSpeedOnly(); // Cập nhật tốc độ ngay lập tức
+            stats.bonusMoveSpeed += _effMsBuffPercent;
+            stats.CalculateMoveSpeedOnly();
+            msBuffActive = true;
             msBuffCoroutine = StartCoroutine(MsBuffTimer());
         }
     }
@@ -216,10 +219,9 @@ public class WarlockSkill : SkillBehavior
     private IEnumerator MsBuffTimer()
     {
         yield return new WaitForSeconds(msBuffDuration);
-
-        // Hết giờ -> Trừ trả lại chỉ số tốc độ
-        stats.bonusMoveSpeed -= msBuffPercent;
+        stats.bonusMoveSpeed -= _effMsBuffPercent;
         stats.CalculateMoveSpeedOnly();
+        msBuffActive = false;
         msBuffCoroutine = null;
     }
 }

@@ -64,7 +64,7 @@ public class AllyStats : Stats
     [Header("--- Cooldown ---")]
     public float baseCdr = 0;
     public float cooldownReduction;
-    public float cdrPerAGI=0.0015f;
+    public float cdrPerAGI=0.0005f;
     public float bonusCdr;
 
     [Header("--- Special Stats (Skill Tree) ---")]
@@ -90,6 +90,57 @@ public class AllyStats : Stats
     public float companionBonusHp = 0f;
     [Tooltip("% tăng bonusCdr của Companion (0.2 = +20%)")]
     public float companionBonusCdr = 0f;
+
+    [Header("--- Core Mechanic Flags (set by ClassCoreMechanicBase handlers) ---")]
+    // Vanguard
+    [HideInInspector] public bool vanguardCM3_NoBlockSlow;       // CM3: không giảm MoveSpeed khi block
+    // Warrior
+    [HideInInspector] public float heavyAttackWindupMult = 1f;   // CM1: 0.8 khi active (giảm 20% windup)
+    [HideInInspector] public int   heavyArmorBonus;              // CM2: +2 heavy armor khi active
+    [HideInInspector] public float heavyAttackDamageMult = 1f;   // CM3: 1.2 khi active (+20% heavy dmg)
+    // Rogue
+    [HideInInspector] public bool rogueCM1_DashPhaseEnemies;     // CM1: dash xuyên qua quái
+    [HideInInspector] public bool rogueCM2_FirstHitAfterDash;    // CM2: đòn đầu sau dash +10% dmg
+    [HideInInspector] public bool rogueCM3_BackstabAppliesDebuff;// CM3: backstab giảm armor+MS
+    // Duelist
+    [HideInInspector] public bool duelistCM1_ParryRestoresStamina; // CM1: parry hồi 10 stamina
+    [HideInInspector] public bool duelistCM2_ParryBreaksDefense;   // CM2: parry giảm 20 DefValue
+    [HideInInspector] public bool duelistCM3_AutoParry;            // CM3: tự động parry 1 đòn
+    // Mage
+    [HideInInspector] public bool mageCM1_ElementSwitchStamina;  // CM1: đổi nguyên tố hồi stamina
+    [HideInInspector] public bool mageCM2_OppositeElementBurst;  // CM2: nguyên tố đối diện x2 dmg
+    [HideInInspector] public bool mageCM3_ProjectilePhaseWalls;  // CM3: đạn xuyên tường
+    // BattleMage
+    [HideInInspector] public bool battleMageCM1_SinOnHpThreshold;  // CM1: hồi 10 sin khi HP thay đổi 20%
+    [HideInInspector] public bool battleMageCM2_ExcessHealShield;   // CM2: heal thừa → shield 3s
+    [HideInInspector] public bool battleMageCM3_CompanionHealShare; // CM3: companion nhận 5% heal của player
+    // BloodReaver
+    [HideInInspector] public bool bloodReaverCM1_LowHpStamina;    // CM1: HP < 50% giảm stamina 20%
+    [HideInInspector] public bool bloodReaverCM2_SlowImmuneVeryLow;// CM2: HP < 30% miễn nhiễm slow
+    [HideInInspector] public bool bloodReaverCM3_SelfDmgStacks;    // CM3: tự tiêu hao máu buff stack
+    // Catalyst
+    [HideInInspector] public bool catalystCM1_JointKillBuff;     // CM1: joint kill buff movespeed
+    [HideInInspector] public float catalystCM2_MarkDmgBonus;     // CM2: +0.5 dmg mult on marked
+    [HideInInspector] public bool catalystCM3_HealShareCompanion;// CM3: heal player → heal companion
+    // Upgrade Skill
+    [HideInInspector] public float flatSkillCooldownReduction;   // T4 N9: -1s per stack (universal)
+    // Per-class skill upgrade multipliers (+0.2 per unlock, read by fusion skill scripts)
+    [HideInInspector] public float vanguardSkillU1;     // +20% Defense Value buff
+    [HideInInspector] public float vanguardSkillU3;     // +20% Armor/MR scale damage
+    [HideInInspector] public float warriorSkillU1;      // +20% stun duration
+    [HideInInspector] public float warriorSkillU3;      // +20% scale damage
+    [HideInInspector] public float battleMageSkillU1;   // +20% skill range
+    [HideInInspector] public float battleMageSkillU3;   // +20% heal
+    [HideInInspector] public float bloodReaverSkillU1;  // +20% bonusMoveSpeed buff
+    [HideInInspector] public float bloodReaverSkillU3;  // +20% scale damage
+    [HideInInspector] public float rogueSkillU1;        // +20% skill effect duration
+    [HideInInspector] public float rogueSkillU3;        // +20% scale damage
+    [HideInInspector] public float duelistSkillU1;      // +20% stun duration
+    [HideInInspector] public float duelistSkillU3;      // +20% scale damage
+    [HideInInspector] public float mageSkillU1;         // +20% skill effect duration
+    [HideInInspector] public float mageSkillU3;         // +20% scale damage
+    [HideInInspector] public float catalystSkillU1;     // +20% stun duration
+    [HideInInspector] public float catalystSkillU3;     // +20% scale damage
 
     [Header("--- Class System ---")]
     [Tooltip("Danh sách class đã học (0–2 phần tử). Tự động cập nhật khi unlock node Skill Tree.")]

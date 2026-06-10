@@ -110,19 +110,8 @@ public class RogueLiteSignature : SkillBehavior
 
         WeaponData currentWpn = equipmentManager != null ? equipmentManager.currentWeapon : null;
 
-        var dmgTuple = CombatMath.CalculateFullDamage(
-            stats, furthestEnemy, 1.0f, true, data, currentWpn, data.skillPhysicalMultiplier
-        );
-
-        DamageInfo info = new DamageInfo();
-        info.sourcePosition = transform.position;
-        info.attacker = stats;
-        info.physDamage = dmgTuple.phys;
-        info.magicDamage = dmgTuple.magic;
-        info.trueDamage = dmgTuple.trueDmg;
-        info.isCrit = true;
-
-        furthestEnemy.TakeDamage(info);
+        // Player đã đứng sau lưng địch; isGuaranteedCrit = true (đâm lén chí mạng)
+        DamageHelper.ApplyStandardDamage(stats, furthestEnemy, transform, data.skillPhysicalMultiplier, data, currentWpn, 0, false, 0f, true);
 
         // 5. GÂY CHẢY MÁU ĐỘC LẬP (Không dùng hàm của Stats.cs)
         StartCoroutine(IndependentBleedRoutine(furthestEnemy, targetRadius));

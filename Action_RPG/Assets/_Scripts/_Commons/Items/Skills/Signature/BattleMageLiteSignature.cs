@@ -16,7 +16,7 @@ public class BattleMageLiteSignature : SkillBehavior
     [Header("Heal Scaling")]
     public float baseHealPercent = 0.02f;     // Hồi gốc 2% Max HP
     public float bonusHealPerEnemy = 0.015f;  // Thêm 1.5% Max HP cho MỖI kẻ địch
-    public float maxHealPercent = 0.20f;      // Giới hạn hồi tối đa 30% để tránh bất tử
+    public float maxHealPercent = 0.30f;      // Giới hạn hồi tối đa 30% để tránh bất tử
 
     [Header("VFX")]
     public GameObject chargeVfxPrefab;    // Hiệu ứng hút/tụ năng lượng
@@ -84,10 +84,12 @@ public class BattleMageLiteSignature : SkillBehavior
         {
             Debug.Log($"<color=purple>Arcane Burst:</color> Trúng {enemyCount} kẻ địch!");
 
+            // Chỉ tính cộng thêm từ kẻ địch THỨ 2 trở đi
+            int bonusEnemies = Mathf.Max(0, enemyCount - 1);
+
             // 3. TÍNH TOÁN CỘNG DỒN SÁT THƯƠNG
-            // Công thức: Multiplier = Base (1.0) + (Số địch * 0.2)
-            // Ví dụ: Trúng 5 địch -> Multiplier = 1.0 + 1.0 = 2.0 (x2 Damage)
-            float finalDamageMultiplier = data.skillMagicMultiplier + (enemyCount * bonusDamagePerEnemy);
+            // Công thức: Multiplier = Base + (Số địch từ thứ 2 trở đi * 0.2)
+            float finalDamageMultiplier = data.skillMagicMultiplier + (bonusEnemies * bonusDamagePerEnemy);
             finalDamageMultiplier = Mathf.Min(finalDamageMultiplier, maxDamage); // Giới hạn không quá 300%
             // Gây sát thương lên tất cả kẻ địch trong danh sách
             foreach (Stats enemy in validEnemies)
@@ -96,9 +98,9 @@ public class BattleMageLiteSignature : SkillBehavior
             }
 
             // 4. TÍNH TOÁN HỒI MÁU
-            // Công thức: Heal = Base (2%) + (Số địch * 1.5%)
-            float totalHealPercent = baseHealPercent + (enemyCount * bonusHealPerEnemy);
-            totalHealPercent = Mathf.Min(totalHealPercent, maxHealPercent); // Giới hạn không quá 20%
+            // Công thức: Heal = Base (2%) + (Số địch từ thứ 2 trở đi * 1.5%)
+            float totalHealPercent = baseHealPercent + (bonusEnemies * bonusHealPerEnemy);
+            totalHealPercent = Mathf.Min(totalHealPercent, maxHealPercent); // Giới hạn hồi máu
 
             float healAmount = stats.maxHp * totalHealPercent;
             stats.Heal(healAmount); // Sử dụng hàm Heal có sẵn trong Stats.cs chặn hồi máu nếu dính debuff
@@ -118,30 +120,7 @@ public class BattleMageLiteSignature : SkillBehavior
     private void ApplyDamage(Stats enemyStats, float multiplier)
     {
         stats.EnterCombat();
-        WeaponData currentWpn = equipmentManager.currentWeapon;
-
-        float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
-        bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-
-        float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
-
-        // CalculateFullDamage sẽ dùng multiplier được cộng dồn (Truyền vào cuối hàm)
-        var dmgTuple = CombatMath.CalculateFullDamage(
-            stats, enemyStats, t, isCrit, data, currentWpn, multiplier
-        );
-
-        DamageInfo info = new DamageInfo();
-        info.sourcePosition = transform.position;
-        info.isCrit = isCrit;
-        info.physDamage = dmgTuple.phys;
-        info.magicDamage = dmgTuple.magic;
-        info.trueDamage = dmgTuple.trueDmg;
-        info.isKnockback = true;     // Nổ thì đẩy lùi quái một chút cho có lực
-        info.knockbackForce = 2f;
-        info.isStun = false;
-        info.attacker = stats;
-
-        enemyStats.TakeDamage(info);
+        DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, multiplier, data, equipmentManager.currentWeapon, 0);
     }
 
     void OnDrawGizmosSelected()

@@ -438,6 +438,10 @@ public class Stats : MonoBehaviour
         // [MỚI] Trừ vào Shield trước (Nếu có)
         if (currentShield > 0)
         {
+            if (damageToTake == 0)
+            {
+                Debug.Log($"{gameObject.name} chặn toàn bộ sát thương bằng Shield!");
+            }
             float damageBlocked = Mathf.Min(damageToTake, currentShield);
             currentShield -= damageBlocked;
             damageToTake -= damageBlocked;
@@ -451,10 +455,6 @@ public class Stats : MonoBehaviour
             currentHp -= damageToTake;
             Debug.Log($"{gameObject.name} nhận {damageToTake}");
             OnDamageReceived?.Invoke(damageToTake, this);
-        }
-        else
-        {
-            Debug.Log($"{gameObject.name} chặn toàn bộ sát thương bằng Shield!");
         }
 
         // Hiển thị số sát thương nổi lên màn hình (cả bị chặn lẫn xuyên qua Shield)
@@ -784,6 +784,17 @@ public class Stats : MonoBehaviour
         }
 
         Debug.Log($"<color=orange>{gameObject.name} đã THOÁT KHỎI KHỐNG CHẾ!</color>");
+    }
+    // [MỚI] Hàm xóa các hiệu ứng bất lợi dạng DoT hiện có (Bleed, Burn)
+    public void ClearDebuffs()
+    {
+        if (bleedCoroutine != null) { StopCoroutine(bleedCoroutine); bleedCoroutine = null; }
+        bleedTimer = 0f;
+        isBleeding = false;
+
+        if (burnCoroutine != null) { StopCoroutine(burnCoroutine); burnCoroutine = null; }
+        burnTimer = 0f;
+        isBurning = false;
     }
     // ==========================================
     // [MỚI] HỆ THỐNG KINH NGHIỆM VÀ LÊN CẤP

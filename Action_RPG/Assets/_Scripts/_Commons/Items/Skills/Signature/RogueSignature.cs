@@ -92,25 +92,8 @@ public class RogueSignature : SkillBehavior
             // Hiệu ứng chém
             //if (slashVfxPrefab) Instantiate(slashVfxPrefab, currentTarget.transform.position, Quaternion.LookRotation(enemyForward));
 
-            // Gây sát thương (Ép t = 1.0f để tính là Đâm Lén)
-            float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
-            bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-
-            var dmgTuple = CombatMath.CalculateFullDamage(
-                stats, currentTarget, 1.0f, isCrit, data, currentWpn, data.skillPhysicalMultiplier
-            );
-
-            DamageInfo info = new DamageInfo();
-            info.sourcePosition = transform.position;
-            info.attacker = stats;
-            info.physDamage = dmgTuple.phys;
-            info.magicDamage = dmgTuple.magic;
-            info.trueDamage = dmgTuple.trueDmg;
-            info.isCrit = isCrit;
-            info.isStun = true; // Kích nhẹ hiệu ứng giật lùi/choáng ngắn
-            info.stunDuration = 0.2f;
-
-            currentTarget.TakeDamage(info);
+            // Gây sát thương (Player đứng sau lưng địch, direction tự nhiên = backstab)
+            DamageHelper.ApplyStandardDamage(stats, currentTarget, transform, data.skillPhysicalMultiplier, data, currentWpn, 0, true, 0.2f);
 
             // Chờ một khoảng siêu ngắn trước khi nhảy sang mục tiêu tiếp theo
             yield return new WaitForSeconds(timeBetweenSlashes);

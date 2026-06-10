@@ -215,17 +215,21 @@ namespace Systems
             float cooldownTimer = 0f;
             SkillBehavior behavior = skillManager.GetActiveSkillBehavior(activeSkillData);
 
+            AllyStats allyStats = playerStats != null ? playerStats.GetComponent<AllyStats>() : null;
+            float flatRed = allyStats != null ? allyStats.flatSkillCooldownReduction : 0f;
+            float finalCooldown = Mathf.Max(0f, activeSkillData.cooldown * (1f - playerStats.cooldownReduction) - flatRed);
+
             if (behavior != null)
             {
                 float timeSinceLastUse = Time.time - behavior.lastUseTime;
-                if (timeSinceLastUse < activeSkillData.cooldown)
+                if (timeSinceLastUse < finalCooldown)
                 {
-                    cooldownTimer = activeSkillData.cooldown - timeSinceLastUse;
+                    cooldownTimer = finalCooldown - timeSinceLastUse;
                 }
             }
 
             // Tránh lỗi chia cho 0 nếu skill vô tình set cooldown = 0
-            float maxCooldown = activeSkillData.cooldown > 0 ? activeSkillData.cooldown : 1f;
+            float maxCooldown = finalCooldown > 0 ? finalCooldown : 1f;
 
             if (cooldownTimer > 0)
             {

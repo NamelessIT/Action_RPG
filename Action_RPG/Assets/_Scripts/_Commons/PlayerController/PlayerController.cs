@@ -422,7 +422,9 @@ public class PlayerController : MonoBehaviour
             }
 
             // ── Tự động tung Heavy nếu giữ quá lâu ───────────────────────
-            float maxCharge = (currentWep?.heavyChargeTime ?? stats.heavyAttackChargeTime) + 2.0f;
+            float baseMaxCharge = currentWep?.heavyChargeTime ?? stats.heavyAttackChargeTime;
+            AllyStats allyMaxCharge = stats as AllyStats;
+            float maxCharge = baseMaxCharge * (allyMaxCharge != null ? allyMaxCharge.heavyAttackWindupMult : 1f) + 2.0f;
             if (chargeTimer >= maxCharge)
             {
                 isCharging    = false;
@@ -448,7 +450,9 @@ public class PlayerController : MonoBehaviour
             if (isCharging)
             {
                 isCharging = false;
-                float threshold = currentWep?.heavyChargeTime ?? stats.heavyAttackChargeTime;
+                float baseThreshold = currentWep?.heavyChargeTime ?? stats.heavyAttackChargeTime;
+                AllyStats allyThresh = stats as AllyStats;
+                float threshold = baseThreshold * (allyThresh != null ? allyThresh.heavyAttackWindupMult : 1f);
                 if (chargeTimer >= threshold) PerformAttack(true);
                 else                          PerformAttack(false);
             }
@@ -549,6 +553,13 @@ public class PlayerController : MonoBehaviour
         stats.lastDashTime = Time.time;
         stats.isInvincible = true;
 
+        // CM1 Rogue: Dash xuyên qua quái
+        AllyStats allyDash = stats as AllyStats;
+        bool dashPhaseActive = allyDash != null && allyDash.rogueCM1_DashPhaseEnemies;
+        int enemyLayerIdx = LayerMask.NameToLayer("Enemy");
+        if (dashPhaseActive && enemyLayerIdx >= 0)
+            Physics.IgnoreLayerCollision(gameObject.layer, enemyLayerIdx, true);
+
         // --- [MỚI] KÍCH HOẠT ANIMATION DASH ---
         //if (animator != null)
         //{
@@ -576,6 +587,9 @@ public class PlayerController : MonoBehaviour
         // I-frames kéo dài toàn bộ thời gian dash để dodge thực sự có ý nghĩa
         yield return new WaitForSeconds(duration);
         stats.isInvincible = false;
+        // CM1 Rogue: khôi phục collision sau dash
+        if (dashPhaseActive && enemyLayerIdx >= 0)
+            Physics.IgnoreLayerCollision(gameObject.layer, enemyLayerIdx, false);
 
         rb.linearVelocity = Vector3.zero;
         isDashing = false;
@@ -769,10 +783,21 @@ public class PlayerController : MonoBehaviour
         }
 
         // Setup Multiplier — dùng heavyDamageMultiplier từ WeaponData nếu có
+        AllyStats allyAttack = stats as AllyStats;
+        int heavyArmorApplied = 0;
         if (isHeavy)
         {
             float wepMultiplier = equipmentManager?.currentWeapon?.heavyDamageMultiplier ?? 0f;
-            currentDamageMultiplier = wepMultiplier > 0f ? wepMultiplier : stats.heavyAttackCharge;
+            float baseMult = wepMultiplier > 0f ? wepMultiplier : stats.heavyAttackCharge;
+            // CM3: Heavy Attack gây thêm 20% sát thương
+            float heavyDmgMult = allyAttack != null ? allyAttack.heavyAttackDamageMult : 1f;
+            currentDamageMultiplier = baseMult * heavyDmgMult;
+            // CM2: Heavy Attack khó bị ngắt hơn (+heavyArmorBonus armor trong lúc swing)
+            if (allyAttack != null && allyAttack.heavyArmorBonus > 0)
+            {
+                heavyArmorApplied = allyAttack.heavyArmorBonus;
+                allyAttack.armor += heavyArmorApplied;
+            }
         }
         else currentDamageMultiplier = 1.0f;
 
@@ -818,6 +843,9 @@ public class PlayerController : MonoBehaviour
 
         isAttacking = false;
         currentDamageMultiplier = 1.0f;
+        // CM2: hoàn trả heavy armor bonus sau khi swing xong
+        if (heavyArmorApplied > 0 && allyAttack != null)
+            allyAttack.armor -= heavyArmorApplied;
 
         // 7. Input Buffer
         if (nextAttackQueued)
@@ -906,8 +934,8 @@ public class PlayerController : MonoBehaviour
         float totalCritChance = stats.critChance;
         if (currentWpn != null) totalCritChance += currentWpn.bonusCritChance;
 
-        // Gộp cả 2 loại buff (Perfect Parry Counter VÀ Challenge đều auto Crit và xuyên giáp)
-        bool forceCritOrTrueDamage = isDuelistCounterActive || isDuelistEmpoweredAttackActive;
+        // Perfect Parry Counter auto Crit và xuyên giáp)
+        bool forceCritOrTrueDamage = isDuelistCounterActive;
 
         bool isCrit = forceCritOrTrueDamage || CombatMath.CheckIsCrit(totalCritChance);
         bool ignoreReduction = forceCritOrTrueDamage;

@@ -155,27 +155,7 @@ public class WarriorSignature : SkillBehavior
         else
         {
             // MỤC TIÊU TRÊN 20% MÁU -> NHẬN SÁT THƯƠNG DIỆN RỘNG NHƯ BÌNH THƯỜNG
-            float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
-            bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-            float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
-
-            var dmgTuple = CombatMath.CalculateFullDamage(
-                stats, enemyStats, t, isCrit, data, currentWpn, data.skillPhysicalMultiplier
-            );
-
-            DamageInfo info = new DamageInfo();
-            info.sourcePosition = transform.position;
-            info.isCrit = isCrit;
-            info.physDamage = dmgTuple.phys;
-            info.magicDamage = dmgTuple.magic;
-            info.trueDamage = dmgTuple.trueDmg;
-            info.isStun = true;        // Giáng mạnh từ trên không xuống nên gây choáng
-            info.stunDuration = 1.5f;
-            info.isKnockback = true;
-            info.knockbackForce = 3f;
-            info.attacker = stats;
-
-            enemyStats.TakeDamage(info);
+            DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillPhysicalMultiplier, data, currentWpn, 0, true, 1.5f);
         }
     }
 

@@ -83,26 +83,7 @@ public class CatalystSkill : SkillBehavior
 
             // --- GÂY SÁT THƯƠNG PHÉP ---
             stats.EnterCombat();
-            WeaponData currentWpn = equipmentManager.currentWeapon;
-            float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
-            bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-            float t = CombatMath.CalculateDirectionFactor(transform, bestTarget);
-
-
-            var dmgTuple = CombatMath.CalculateFullDamage(
-                stats, bestTarget, t, isCrit, data, currentWpn, data.skillMagicMultiplier
-            );
-
-            DamageInfo info = new DamageInfo();
-            info.sourcePosition = transform.position;
-            info.isCrit = isCrit;
-            info.physDamage = dmgTuple.phys;
-            info.magicDamage = dmgTuple.magic;
-            info.trueDamage = dmgTuple.trueDmg;
-            info.isStun = true;
-            info.stunDuration = 1f; // Vì là tia sáng nên stun 1 giây
-
-            bestTarget.TakeDamage(info);
+            DamageHelper.ApplyStandardDamage(stats, bestTarget, transform, data.skillMagicMultiplier, data, equipmentManager.currentWeapon, 0, true, 1f);
             // ---------------------------
 
             // Hiện VFX trên đầu mục tiêu

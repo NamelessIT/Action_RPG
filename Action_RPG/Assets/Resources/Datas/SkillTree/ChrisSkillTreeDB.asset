@@ -19,4 +19,94 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 21d0cb911afe8594c9d11df0ccc95b2e, type: 2}
   - {fileID: 11400000, guid: 3a88b51fef8f6f94cb0a027e95946157, type: 2}
   - {fileID: 11400000, guid: 8f27450bf1ec75745b08ab663fedbdcf, type: 2}
-  fusionSkills: []
+  fusionSkills:
+  - classA: Vanguard
+    classB: Warrior
+    fusionNodes:
+    - nodeId: WardenSkill
+      nodeName: WardenSkill
+      nodeDescription: 
+      nodeType: 1
+      skillData: {fileID: 11400000, guid: c30fbe995163d074db5d926236b5011c, type: 2}
+      statGains: []
+      classGrantType: 2
+      classGrantName: Warden
+      unlockCost: 0
+      requiredLevel: 0
+      prerequisiteNodeIds: []
+      uiPosition: {x: 0, y: 0}
+  - classA: Vanguard
+    classB: BattleMage
+    fusionNodes:
+    - nodeId: PaladinSkill
+      nodeName: PaladinSkill
+      nodeDescription: 
+      nodeType: 1
+      skillData: {fileID: 11400000, guid: 61dbb7f3df46ed446b4cd950dd7e9dbf, type: 2}
+      statGains: []
+      classGrantType: 2
+      classGrantName: Paladin
+      unlockCost: 0
+      requiredLevel: 0
+      prerequisiteNodeIds: []
+      uiPosition: {x: 0, y: 0}
+  - classA: Vanguard
+    classB: BloodReaver
+    fusionNodes:
+    - nodeId: JuggernautSkill
+      nodeName: JuggernautSkill
+      nodeDescription: 
+      nodeType: 1
+      skillData: {fileID: 11400000, guid: 43278766be2d11244a802546c63c3849, type: 2}
+      statGains: []
+      classGrantType: 2
+      classGrantName: Juggernaut
+      unlockCost: 0
+      requiredLevel: 0
+      prerequisiteNodeIds: []
+      uiPosition: {x: 0, y: 0}
+  - classA: Warrior
+    classB: BattleMage
+    fusionNodes:
+    - nodeId: DarkInquisitorSkill
+      nodeName: DarkInquisitorSkill
+      nodeDescription: 
+      nodeType: 1
+      skillData: {fileID: 11400000, guid: be51dc9c80501d94c824e39afa2d43a3, type: 2}
+      statGains: []
+      classGrantType: 2
+      classGrantName: DarkInquisitor
+      unlockCost: 0
+      requiredLevel: 0
+      prerequisiteNodeIds: []
+      uiPosition: {x: 0, y: 0}
+  - classA: Warrior
+    classB: BloodReaver
+    fusionNodes:
+    - nodeId: RavagerSkill
+      nodeName: RavagerSkill
+      nodeDescription: 
+      nodeType: 1
+      skillData: {fileID: 11400000, guid: 1ca67ea47f96d094c8c4ebc69672218d, type: 2}
+      statGains: []
+      classGrantType: 2
+      classGrantName: Ravager
+      unlockCost: 0
+      requiredLevel: 0
+      prerequisiteNodeIds: []
+      uiPosition: {x: 0, y: 0}
+  - classA: BattleMage
+    classB: BloodReaver
+    fusionNodes:
+    - nodeId: WarlockSkill
+      nodeName: WarlockSkill
+      nodeDescription: 
+      nodeType: 1
+      skillData: {fileID: 11400000, guid: dd58a92b0d884de46926e1363d05cba4, type: 2}
+      statGains: []
+      classGrantType: 2
+      classGrantName: Warlock
+      unlockCost: 0
+      requiredLevel: 0
+      prerequisiteNodeIds: []
+      uiPosition: {x: 0, y: 0}

@@ -384,12 +384,14 @@ public class SkillTreeRuntime : MonoBehaviour
                 ApplyStatGains(node);
                 break;
             case SkillNodeType.Skill:
-                // Tự động trang bị ngay khi unlock
                 if (node.skillData != null)
                     AutoEquipNode(node);
                 break;
             case SkillNodeType.CoreMechanic:
-                Debug.Log($"[SkillTreeRuntime] Core Mechanic '{node.nodeName}' đã mở khoá — cần implement logic thủ công.");
+                ApplyCoreMechanicNode(node);
+                break;
+            case SkillNodeType.UpgradeSkill:
+                ApplyUpgradeSkillNode(node);
                 break;
         }
 
@@ -435,6 +437,84 @@ public class SkillTreeRuntime : MonoBehaviour
 
         Debug.Log($"[SkillTreeRuntime] Gán thành công kỹ năng thực tế: '{skill.skillName}'");
         OnSkillTreeChanged?.Invoke();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  CORE MECHANIC
+    // ─────────────────────────────────────────────────────────────
+
+    private void ApplyCoreMechanicNode(SkillNodeData node)
+    {
+        var (handler, idx) = GetCoreMechanicHandlerAndIndex(node);
+        if (handler != null && idx > 0) handler.Apply(idx);
+        else Debug.Log($"[SkillTreeRuntime] CoreMechanic '{node.nodeName}': handler chưa gắn hoặc không xác định được index.");
+    }
+
+    private void RevertCoreMechanicNode(SkillNodeData node)
+    {
+        var (handler, idx) = GetCoreMechanicHandlerAndIndex(node);
+        if (handler != null && idx > 0) handler.Revert(idx);
+    }
+
+    private (ClassCoreMechanicBase handler, int cmIndex) GetCoreMechanicHandlerAndIndex(SkillNodeData node)
+    {
+        if (!GetNodeInfo(node, out int classIdx, out int nodeIdx, out int tier) || tier != 4)
+            return (null, -1);
+
+        int t4Idx = nodeIdx - 10;
+        if (t4Idx < 0 || t4Idx >= 15 || t4Idx % 5 != 0) return (null, -1);
+        int cmIndex = t4Idx / 5 + 1; // 1, 2 or 3
+
+        string className = CurrentDatabase?.allClassTrees[classIdx]?.className;
+        return (FindCoreMechanicHandler(className), cmIndex);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  UPGRADE SKILL
+    // ─────────────────────────────────────────────────────────────
+
+    private void ApplyUpgradeSkillNode(SkillNodeData node)
+    {
+        var (handler, idx) = GetUpgradeHandlerAndIndex(node);
+        if (handler != null && idx > 0) handler.ApplyUpgrade(idx);
+        else if (idx == 2) ApplyUniversalCooldownReduction(+1f); // N9 fallback
+    }
+
+    private void RevertUpgradeSkillNode(SkillNodeData node)
+    {
+        var (handler, idx) = GetUpgradeHandlerAndIndex(node);
+        if (handler != null && idx > 0) handler.RevertUpgrade(idx);
+        else if (idx == 2) ApplyUniversalCooldownReduction(-1f); // N9 fallback
+    }
+
+    private (ClassCoreMechanicBase handler, int upgradeIndex) GetUpgradeHandlerAndIndex(SkillNodeData node)
+    {
+        if (!GetNodeInfo(node, out int classIdx, out int nodeIdx, out int tier) || tier != 4)
+            return (null, -1);
+
+        int t4Idx = nodeIdx - 10;
+        if (t4Idx < 0 || t4Idx >= 15 || t4Idx % 5 != 3) return (null, -1);
+        int upgradeIndex = t4Idx / 5 + 1; // 1, 2 or 3
+
+        string className = CurrentDatabase?.allClassTrees[classIdx]?.className;
+        return (FindCoreMechanicHandler(className), upgradeIndex);
+    }
+
+    /// <summary>N9: −1s cooldown, chung cho mọi class (fallback nếu handler chưa gắn).</summary>
+    private void ApplyUniversalCooldownReduction(float delta)
+    {
+        if (_allyStats != null)
+            _allyStats.flatSkillCooldownReduction = Mathf.Max(0f, _allyStats.flatSkillCooldownReduction + delta);
+    }
+
+    private ClassCoreMechanicBase FindCoreMechanicHandler(string className)
+    {
+        if (string.IsNullOrEmpty(className)) return null;
+        var handlers = GetComponents<ClassCoreMechanicBase>();
+        foreach (var h in handlers)
+            if (string.Equals(h.ClassName, className, System.StringComparison.OrdinalIgnoreCase))
+                return h;
+        return null;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -592,28 +672,49 @@ public class SkillTreeRuntime : MonoBehaviour
     {
         if (_playerStats == null || database == null) return;
 
+        var allNodes = CollectAllNodes(database);
         int totalRefund = 0;
-        foreach (var tree in database.allClassTrees)
+
+        // Revert từng effect theo thứ tự ngược (CoreMechanic → Skill → Stat)
+        foreach (var node in allNodes)
         {
-            foreach (var node in tree.skillNodes)
+            if (string.IsNullOrEmpty(node.nodeId) || !IsUnlocked(node.nodeId)) continue;
+            totalRefund += node.unlockCost;
+
+            switch (node.nodeType)
             {
-                if (!string.IsNullOrEmpty(node.nodeId) && IsUnlocked(node.nodeId))
-                    totalRefund += node.unlockCost;
-        }
+                case SkillNodeType.Stat:
+                    foreach (var gain in node.statGains)
+                        ApplySingleStat(gain.statType, -gain.value);
+                    break;
+                case SkillNodeType.CoreMechanic:
+                    RevertCoreMechanicNode(node);
+                    break;
+                case SkillNodeType.UpgradeSkill:
+                    RevertUpgradeSkillNode(node);
+                    break;
+            }
         }
 
+        _allyStats?.RecalculateStats();
+
+        _skillManager?.UnequipDefaultPassive();
+        _skillManager?.UnequipPassive1();
+        _skillManager?.UnequipPassive2();
         if (_equippedSkill    != null) { _skillManager?.UnequipSkillSlot();      _equippedSkill    = null; }
         if (_equippedSignature != null) { _skillManager?.UnequipSignatureSlot(); _equippedSignature = null; }
+
+        // Reset class list (class grant nodes đã được refund)
+        if (_allyStats != null) _allyStats.classes.Clear();
 
         _unlockedNodes.Clear();
         _playerStats.skillPointRemain += totalRefund;
 
-        // Xóa save node list, lưu SP mới (đã hoàn trả)
         ClearSavedNodes();
         PlayerPrefs.SetInt(SPKey, _playerStats.skillPointRemain);
         PlayerPrefs.Save();
 
-        Debug.Log($"[SkillTreeRuntime] REFUND: Trả lại {totalRefund} SP (Total: {_playerStats.skillPointRemain})");
+        Debug.Log($"[SkillTreeRuntime] REFUND ALL: Trả lại {totalRefund} SP. Tổng còn: {_playerStats.skillPointRemain}");
         OnSkillTreeChanged?.Invoke();
     }
 
@@ -667,12 +768,17 @@ public class SkillTreeRuntime : MonoBehaviour
                     case SkillNodeType.Skill:
                         if (node.skillData != null)
                         {
-                            // SỬA ĐỔI: Khi load game, phải nội suy Skill kết hợp thay vì lấy data gốc trong Node ScriptableObject
                             SkillData actual = GetActualSkillToEquip(node);
                             _skillManager.EquipSkill(actual);
                             if (actual.skillType == SkillData.SkillType.Skill) _equippedSkill = actual;
                             else if (actual.skillType == SkillData.SkillType.Signature) _equippedSignature = actual;
                         }
+                        break;
+                    case SkillNodeType.CoreMechanic:
+                        ApplyCoreMechanicNode(node);
+                        break;
+                    case SkillNodeType.UpgradeSkill:
+                        ApplyUpgradeSkillNode(node);
                         break;
                 }
                 ApplyClassGrant(node);

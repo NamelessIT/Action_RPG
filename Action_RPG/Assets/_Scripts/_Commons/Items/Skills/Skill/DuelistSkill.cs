@@ -98,26 +98,7 @@ public class DuelistSkill : SkillBehavior
     private void ApplyDamageAndMark(Stats enemyStats)
     {
         stats.EnterCombat();
-        WeaponData currentWpn = equipmentManager.currentWeapon;
-        float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
-        bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
-        float t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
-
-        // Gây sát thương cơ bản
-        var dmgTuple = CombatMath.CalculateFullDamage(
-            stats, enemyStats, t, isCrit, data, currentWpn, data.skillPhysicalMultiplier
-        );
-
-        DamageInfo info = new DamageInfo();
-        info.sourcePosition = transform.position;
-        info.isCrit = isCrit;
-        info.physDamage = dmgTuple.phys;
-        info.magicDamage = dmgTuple.magic;
-        info.trueDamage = dmgTuple.trueDmg;
-        info.isKnockback = true;
-        info.knockbackForce = 0.5f; // Đẩy rất nhẹ
-
-        enemyStats.TakeDamage(info);
+        DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillPhysicalMultiplier, data, equipmentManager.currentWeapon, 0);
 
         // [QUAN TRỌNG] Gắn ấn Thách Đấu
         enemyStats.ApplyChallengeMark(challengeDuration);

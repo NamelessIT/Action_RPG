@@ -174,37 +174,15 @@ public class RogueSkill : SkillBehavior
         float totalCritChance = stats.critChance + (currentWpn != null ? currentWpn.bonusCritChance : 0);
         bool isCrit = CombatMath.CheckIsCrit(totalCritChance);
 
-        // [QUAN TRỌNG] Tính hệ số hướng t
-        float t = 0f;
-        if (forceBackstab)
-        {
-            t = 1.0f; // Ép buộc là sau lưng (Backstab chuẩn 100%)
-            Debug.Log($"<color=red>Rogue!</color> {enemyStats.name}");
-        }
-        else
-        {
-            // Tính toán bình thường cho kẻ địch khác xung quanh
-            t = CombatMath.CalculateDirectionFactor(transform, enemyStats);
-        }
+        // Tính t để truyền cho Notify (forceBackstab ép t=1; các địch khác tính tự nhiên)
+        float t = forceBackstab ? 1.0f : CombatMath.CalculateDirectionFactor(transform, enemyStats);
+        if (forceBackstab) Debug.Log($"<color=red>Rogue!</color> {enemyStats.name}");
 
-        var dmgTuple = CombatMath.CalculateFullDamage(
-            stats, enemyStats, t, isCrit, data, currentWpn, 1f
-        );
-
-        DamageInfo info = new DamageInfo();
-        info.sourcePosition = transform.position;
-        info.isCrit = isCrit;
-        info.isKnockback = false;
-        info.physDamage = dmgTuple.phys;
-        info.magicDamage = dmgTuple.magic;
-        info.trueDamage = dmgTuple.trueDmg;
-        info.attacker = stats;
-
-        enemyStats.TakeDamage(info);
+        DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, 1f, data, currentWpn, 0, false, 0f, isCrit);
 
         if (wasAlive && enemyStats.currentHp <= 0)
         {
-            // Nếu forceBackstab thì gửi t=1 để kích hoạt AssassinPassive hồi Dash
+            // Nếu forceBackstab thì t=1 kích hoạt AssassinPassive hồi Dash
             if (stats != null) stats.NotifyKillEnemy(enemyStats, (t >= 0.85f));
         }
         if (stats != null) stats.NotifyOnHitEnemy(enemyStats, t, isCrit);
