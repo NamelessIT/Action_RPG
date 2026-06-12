@@ -33,8 +33,13 @@ public class CompanionAI : MonoBehaviour
     [Header("--- Combat Settings ---")]
     public float attackRange = 2.0f;
     //public float attackCooldown = 1.5f;
-    private float lastAttackTime = 0f; 
+    private float lastAttackTime = 0f;
     private bool isAttacking = false;
+
+    // [COMPANION EQUIPMENT] Hệ trang bị riêng (optional). Nếu có Attack Module thì behavior
+    // theo role sẽ quyết định range/targeting/kite; không có thì dùng logic fallback cũ.
+    private CompanionEquipmentManager _equipment;
+    private CompanionAttackBehavior Behavior => _equipment != null ? _equipment.CurrentBehavior : null;
 
     [Header("--- Target Memory ---")]
     private HashSet<Transform> markedTargets = new HashSet<Transform>();
@@ -57,6 +62,7 @@ public class CompanionAI : MonoBehaviour
         stats = GetComponent<AllyStats>();
         animator = GetComponentInChildren<Animator>();
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        _equipment = GetComponent<CompanionEquipmentManager>(); // optional
 
         agent.updateRotation = false;
         agent.updateUpAxis = false;
@@ -324,33 +330,70 @@ public class CompanionAI : MonoBehaviour
     void UpdateCurrentTarget()
     {
         if (currentTarget != null) return;
+        if (markedTargets.Count == 0) { currentTarget = null; return; }
+
+        // [COMPANION EQUIPMENT] Nếu có Attack Module → chọn mục tiêu theo role
+        // (Sniper: máu thấp/xa, Control: cụm đông, Vanguard: enemy to...). Không có → gần nhất (fallback).
+        var behavior = Behavior;
+        if (behavior != null)
+        {
+            _targetBuffer.Clear();
+            foreach (Transform t in markedTargets) if (t != null) _targetBuffer.Add(t);
+            currentTarget = behavior.PickTarget(transform.position, _targetBuffer);
+            return;
+        }
 
         float minDistance = Mathf.Infinity;
         Transform bestTarget = null;
-
         foreach (Transform target in markedTargets)
         {
+            if (target == null) continue;
             float dist = Vector3.Distance(transform.position, target.position);
-            if (dist < minDistance)
-            {
-                minDistance = dist;
-                bestTarget = target;
-            }
+            if (dist < minDistance) { minDistance = dist; bestTarget = target; }
         }
-
         currentTarget = bestTarget;
     }
+
+    // Buffer tái sử dụng cho PickTarget (tránh alloc mỗi frame)
+    private readonly List<Transform> _targetBuffer = new List<Transform>();
 
     void HandleCombat()
     {
         float distToTarget = Vector3.Distance(transform.position, currentTarget.position);
 
-        if (distToTarget <= attackRange)
+        // [COMPANION EQUIPMENT] Behavior theo role có thể yêu cầu KITE (lùi ra) khi địch quá gần.
+        var behavior = Behavior;
+        if (behavior != null)
+        {
+            float hpPercent = stats.maxHp > 0 ? stats.currentHp / stats.maxHp : 1f;
+            if (behavior.ShouldFlee(distToTarget, hpPercent))
+            {
+                // Lùi ra xa mục tiêu để giữ DesiredRange (Sniper/Control)
+                agent.isStopped = false;
+                agent.stoppingDistance = 0f;
+                Vector3 away = (transform.position - currentTarget.position).normalized;
+                away.y = 0;
+                Vector3 dest = transform.position + away * behavior.DesiredRange;
+                if (NavMesh.SamplePosition(dest, out NavMeshHit kh, 3f, NavMesh.AllAreas))
+                    agent.SetDestination(kh.position);
+                currentVisualDir = (currentTarget.position - transform.position).normalized; // vẫn nhìn địch
+                return;
+            }
+        }
+
+        // Tầm đánh hiệu lực: ưu tiên attackRange của Attack Module nếu có.
+        float effRange = (behavior != null && _equipment.AttackModule != null)
+                         ? _equipment.AttackModule.attackRange : attackRange;
+
+        if (distToTarget <= effRange)
         {
             agent.isStopped = true;
-            // [MỚI] Tính toán Cooldown dựa trên attackSpeed
+            // Cooldown: Attack Module có attackCooldown > 0 thì DÙNG nó (Sniper bắn chậm),
+            // ngược lại theo attackSpeed (fallback).
             float speed = stats.attackSpeed > 0 ? stats.attackSpeed : 1.0f;
-            float currentAttackCooldown = 1.0f / speed;
+            var atkModule = _equipment != null ? _equipment.AttackModule : null;
+            float currentAttackCooldown = (atkModule != null && atkModule.attackCooldown > 0f)
+                                          ? atkModule.attackCooldown : (1.0f / speed);
             if (Time.time >= lastAttackTime + currentAttackCooldown)
             {
                 StartCoroutine(AttackRoutine(speed));
@@ -364,7 +407,7 @@ public class CompanionAI : MonoBehaviour
         {
             agent.isStopped = false;
             // Dừng ở mép viền tầm đánh, không cần rúc hẳn vào bụng quái
-            agent.stoppingDistance = attackRange * 0.8f;
+            agent.stoppingDistance = effRange * 0.8f;
 
             if (!agent.hasPath || Vector3.Distance(agent.destination, currentTarget.position) > 1f)
             {
@@ -400,13 +443,17 @@ public class CompanionAI : MonoBehaviour
             Stats targetStats = currentTarget.GetComponent<Stats>();
             if (targetStats != null && !targetStats.isDead)
             {
+                // Damage: nhân thêm damageMultiplier của Attack Module (Sniper đau, ...).
+                var atkModule = _equipment != null ? _equipment.AttackModule : null;
+                float dmgMult = atkModule != null ? atkModule.damageMultiplier : 1f;
+
                 DamageInfo info = new DamageInfo();
                 info.sourcePosition = transform.position;
                 info.attacker = stats;
-                info.physDamage = stats.physicalAtk;
+                info.physDamage = stats.physicalAtk * dmgMult;
 
                 targetStats.TakeDamage(info);
-                Debug.Log($"[Companion] Đã cắn {currentTarget.name}!");
+                Debug.Log($"[Companion] Đã cắn {currentTarget.name}! (dmg x{dmgMult:F2})");
             }
         }
 

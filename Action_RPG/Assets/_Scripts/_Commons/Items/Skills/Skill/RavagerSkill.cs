@@ -11,15 +11,15 @@ public class RavagerSkill : SkillBehavior
 
     [Header("Buffs")]
     public float shieldPercent = 0.5f;
-    public float atkSpeedBonus = 2.0f;     // Warrior U3 scales this
-    public float physAtkPercent = 2.0f;    // BloodReaver U3 scales this
+    public float atkSpeedBonus = 2.0f;
+    public float physAtkPercent = 2.0f;
     public float critMultBonus = 0.2f;
-    public float moveSpeedBonus = 0.2f;    // BloodReaver U1 scales this
+    public float moveSpeedBonus = 0.2f;
 
     [Header("Finisher")]
     public float healOnEndPercent = 0.3f;
     public float stunRadius = 2.0f;
-    public float stunDuration = 1.5f;      // Warrior U1 scales this
+    public float stunDuration = 1.5f;
 
     [Header("VFX")]
     public GameObject berserkerVfxPrefab;
@@ -30,11 +30,14 @@ public class RavagerSkill : SkillBehavior
     private float originalHpCost = 0f;
     private AllyStats allyStats;
 
-    // Cached effective buff values — needed so RemoveBuffs exactly undoes what ApplyBuffs added
     private float _appliedPhysAtkPercent;
     private float _appliedAtkSpeedBonus;
     private float _appliedMoveSpeedBonus;
     private float _appliedStunDur;
+
+    private Coroutine berserkCoroutine;
+    private bool _berserkActive = false;
+    private bool _healingBlockPushed = false;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
@@ -45,37 +48,50 @@ public class RavagerSkill : SkillBehavior
     }
 
     protected override void OnEquip() { }
+
     protected override void OnUnequip()
     {
-        if (player.isBerserk)
+        if (berserkCoroutine != null)
         {
-            EndBerserk(false);
+            StopCoroutine(berserkCoroutine);
+            berserkCoroutine = null;
         }
+
+        EndBerserk(false);
     }
 
     public override bool Use()
     {
         if (!base.Use()) return false;
-        StartCoroutine(BerserkRoutine());
+
+        if (berserkCoroutine != null)
+        {
+            StopCoroutine(berserkCoroutine);
+            berserkCoroutine = null;
+        }
+
+        if (_berserkActive) EndBerserk(false);
+
+        berserkCoroutine = StartCoroutine(BerserkRoutine());
         return true;
     }
 
     private IEnumerator BerserkRoutine()
     {
-        // Warrior U1:     +20% stun duration              | Warrior U3:     +20% physAtkPercent (damage)
-        // BloodReaver U1: +20% moveSpeedBonus              | BloodReaver U3: +20% physAtkPercent (damage, cộng dồn Warrior U3)
-        float wU1  = allyStats != null ? allyStats.warriorSkillU1    : 0f;
-        float wU3  = allyStats != null ? allyStats.warriorSkillU3    : 0f;
+        float wU1 = allyStats != null ? allyStats.warriorSkillU1 : 0f;
+        float wU3 = allyStats != null ? allyStats.warriorSkillU3 : 0f;
         float brU1 = allyStats != null ? allyStats.bloodReaverSkillU1 : 0f;
         float brU3 = allyStats != null ? allyStats.bloodReaverSkillU3 : 0f;
 
-        _appliedStunDur        = stunDuration    * (1f + wU1);
-        _appliedPhysAtkPercent = physAtkPercent  * (1f + wU3 + brU3); // brU3 scale vào damage, không vào atkSpeed
-        _appliedMoveSpeedBonus = moveSpeedBonus  * (1f + brU1);
-        _appliedAtkSpeedBonus  = atkSpeedBonus;
+        _appliedStunDur = stunDuration * (1f + wU1);
+        _appliedPhysAtkPercent = physAtkPercent * (1f + wU3 + brU3);
+        _appliedMoveSpeedBonus = moveSpeedBonus * (1f + brU1);
+        _appliedAtkSpeedBonus = atkSpeedBonus;
 
+        _berserkActive = true;
         player.isBerserk = true;
-        stats.isHealingBlocked = true;
+        stats.PushHealingBlock();
+        _healingBlockPushed = true;
 
         float shieldAmount = stats.maxHp * shieldPercent;
         stats.AddShield(shieldAmount, duration);
@@ -114,13 +130,23 @@ public class RavagerSkill : SkillBehavior
             yield return null;
         }
 
+        berserkCoroutine = null;
         EndBerserk(true);
     }
 
     private void EndBerserk(bool triggerFinisher)
     {
+        if (!_berserkActive) return;
+        _berserkActive = false;
+
         player.isBerserk = false;
-        stats.isHealingBlocked = false;
+
+        if (_healingBlockPushed)
+        {
+            stats.PopHealingBlock();
+            _healingBlockPushed = false;
+        }
+
         stats.currentShield = 0f;
 
         RemoveBuffs();
@@ -142,7 +168,7 @@ public class RavagerSkill : SkillBehavior
                 {
                     DamageInfo info = new DamageInfo();
                     info.isStun = true;
-                    info.stunDuration = _appliedStunDur; // Warrior U1
+                    info.stunDuration = _appliedStunDur;
                     info.physDamage = 0;
                     info.attacker = stats;
                     enemy.TakeDamage(info);
@@ -153,10 +179,10 @@ public class RavagerSkill : SkillBehavior
 
     private void ApplyBuffs()
     {
-        stats.bonusPhysicalAtk  += _appliedPhysAtkPercent;  // Warrior U3
-        stats.bonusAttackSpeed  += _appliedAtkSpeedBonus;   // BloodReaver U3
+        stats.bonusPhysicalAtk += _appliedPhysAtkPercent;
+        stats.bonusAttackSpeed += _appliedAtkSpeedBonus;
         stats.bonusCritMultiplier += critMultBonus;
-        stats.bonusMoveSpeed    += _appliedMoveSpeedBonus;  // BloodReaver U1
+        stats.bonusMoveSpeed += _appliedMoveSpeedBonus;
 
         stats.CalculateCombatStatsOnly();
         stats.CalculateMoveSpeedOnly();
@@ -164,10 +190,10 @@ public class RavagerSkill : SkillBehavior
 
     private void RemoveBuffs()
     {
-        stats.bonusPhysicalAtk    -= _appliedPhysAtkPercent;
-        stats.bonusAttackSpeed    -= _appliedAtkSpeedBonus;
+        stats.bonusPhysicalAtk -= _appliedPhysAtkPercent;
+        stats.bonusAttackSpeed -= _appliedAtkSpeedBonus;
         stats.bonusCritMultiplier -= critMultBonus;
-        stats.bonusMoveSpeed      -= _appliedMoveSpeedBonus;
+        stats.bonusMoveSpeed -= _appliedMoveSpeedBonus;
 
         stats.CalculateCombatStatsOnly();
         stats.CalculateMoveSpeedOnly();
@@ -185,9 +211,14 @@ public class RavagerSkill : SkillBehavior
             if (s != null && s.currentHp > 0)
             {
                 float d = Vector3.Distance(transform.position, hit.transform.position);
-                if (d < minDist) { minDist = d; nearest = s; }
+                if (d < minDist)
+                {
+                    minDist = d;
+                    nearest = s;
+                }
             }
         }
+
         return nearest;
     }
 }

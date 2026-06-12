@@ -42,22 +42,25 @@ public class SkillManager : MonoBehaviour
         }
     }
     // --- HÀM TRANG BỊ SKILL (Dùng chung) ---
-    public void EquipSkill(SkillData newSkill)
+    /// <returns>true nếu skill thật sự nằm trong slot sau khi equip (gắn được script);
+    /// false nếu thất bại (null / effect code thiếu → slot bị rollback về null).</returns>
+    public bool EquipSkill(SkillData newSkill)
     {
-        Debug.Log(newSkill.name);
         if (newSkill == null)
         {
             Debug.LogWarning("Skill không hợp lệ (null)");
-            return;
+            return false;
         }
+        Debug.Log(newSkill.name);
 
         if (isPlayer)
         {
-            EquipPlayerSkill(newSkill);
+            return EquipPlayerSkill(newSkill);
         }
         else
         {
             EquipEnemySkill(newSkill);
+            return true; // Enemy path không có rollback effect-code
         }
     }
 
@@ -79,11 +82,12 @@ public class SkillManager : MonoBehaviour
     // =========================================================
     // LOGIC CHO PLAYER (3 SLOTS CỐ ĐỊNH)
     // =========================================================
-    private void EquipPlayerSkill(SkillData newSkill)
+    /// <returns>true nếu skill nằm trong slot sau equip; false nếu rollback (Skill/Signature thiếu effect code).</returns>
+    private bool EquipPlayerSkill(SkillData newSkill)
     {
         // Kiểm tra loại skill để gắn vào đúng slot
         switch (newSkill.skillType)
-        {     
+        {
             // --- 1. DEFAULT PASSIVE (Chỉ có 1 slot) ---
             case SkillData.SkillType.DefaultPassive:
                 // Tháo cái cũ ra trước (nếu có)
@@ -95,7 +99,7 @@ public class SkillManager : MonoBehaviour
                 currentDefaultPassive = newSkill;
                 // [QUAN TRỌNG] Kích hoạt hiệu ứng (Gắn script ChrisPassive vào)
                 ApplyPassiveEffect(newSkill);
-                break;
+                return true;
 
             // --- 2. CLASS PASSIVE (Có 2 slot) ---
             case SkillData.SkillType.Passive:
@@ -103,7 +107,7 @@ public class SkillManager : MonoBehaviour
                 if (currentPassive1 == newSkill || currentPassive2 == newSkill)
                 {
                     Debug.Log("Đã trang bị Passive này rồi!");
-                    return;
+                    return true; // đã nằm trong slot = thành công
                 }
                 // Bước 2: Tìm slot trống
                 if (currentPassive1 == null)
@@ -122,9 +126,9 @@ public class SkillManager : MonoBehaviour
                 {
                     // Bước 3: Cả 2 slot đều đầy -> Báo lỗi
                     Debug.Log("Đã có đủ 2 passive");
-                    break;
+                    return false;
                 }
-                break;
+                return true;
 
             case SkillData.SkillType.Skill:
                 if (currentSkill != newSkill)
@@ -140,7 +144,7 @@ public class SkillManager : MonoBehaviour
                     // Chỉ giữ data ở slot nếu gắn được script
                     if (!ApplySkillEffect(newSkill)) currentSkill = null;
                 }
-                break;
+                return currentSkill == newSkill; // true nếu vẫn nằm trong slot (gắn script OK)
 
             case SkillData.SkillType.Signature:
                 if (currentSignature != newSkill)
@@ -156,12 +160,13 @@ public class SkillManager : MonoBehaviour
                     // Chỉ giữ data ở slot nếu gắn được script
                     if (!ApplySignatureEffect(newSkill)) currentSignature = null;
                 }
-                break;
+                return currentSignature == newSkill;
 
             case SkillData.SkillType.Enemy:
                 Debug.LogWarning("Player không thể học skill của Enemy!");
-                break;
+                return false;
         }
+        return false;
     }
 
     // =========================================================
@@ -499,6 +504,10 @@ public class SkillManager : MonoBehaviour
                     // Gọi vũ khí nhận biết là vừa dùng skill
                     WeaponEffectManager wpnEffectManager = GetComponentInChildren<WeaponEffectManager>();
                     if (wpnEffectManager != null) wpnEffectManager.TriggerWeaponSkillEffects(skillData.skillType);
+
+                    // [ACCESSORY] Báo cho AccessoryEffectManager biết vừa dùng skill (cùng pattern CoreShield/Weapon)
+                    AccessoryEffectManager accEffectManager = GetComponentInChildren<AccessoryEffectManager>();
+                    if (accEffectManager != null) accEffectManager.TriggerSkillCastEffects(skillData.skillType);
                 }
             }
         }
@@ -510,6 +519,14 @@ public class SkillManager : MonoBehaviour
     // =========================================================
     // TIỆN ÍCH (HELPER)
     // =========================================================
+
+    // [ACCESSORY] Giảm hồi chiêu cho MỘT skill cụ thể (vd Relic giảm CD riêng Kỹ năng E)
+    public void ReduceSkillCooldown(SkillData skill, float amount)
+    {
+        if (!isPlayer || skill == null) return;
+        if (activeSkills.TryGetValue(skill, out SkillBehavior behavior) && behavior != null)
+            behavior.ReduceCooldown(amount);
+    }
 
     // [MỚI] Giảm thời gian hồi chiêu cho toàn bộ kỹ năng đang trang bị
     public void ReduceAllCooldowns(float amount)

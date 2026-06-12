@@ -42,6 +42,14 @@ public class EnemyCombat : MonoBehaviour
              "Để TRỐNG nếu dùng Trigger.")]
     public string telegraphAnimBool = "";
 
+    [Header("Attack Timing — chỉnh cảm giác đòn đánh")]
+    [Tooltip("Độ dài animation đánh gốc (giây) trước khi chia cho attackSpeed.")]
+    public float baseAttackAnimDuration = 0.5f;
+    [Tooltip("Mốc BẮT ĐẦU cửa sổ gây damage (0-1 theo độ dài anim). VD 0.5 = nửa sau.")]
+    [Range(0f, 1f)] public float damageWindowStartNormalized = 0.50f;
+    [Tooltip("Mốc KẾT THÚC cửa sổ gây damage (0-1). Phải > start.")]
+    [Range(0f, 1f)] public float damageWindowEndNormalized = 0.75f;
+
     // Trạng thái telegraph — EnemyAI đọc để block movement
     [HideInInspector] public bool isTelegraphing = false;
 
@@ -114,24 +122,21 @@ protected IEnumerator EnemyAttackRoutine()
 
             if (animator != null)
             {
-                // [CHƯA CÓ CLIP] Telegraph animation: tạm comment animator.Set, chỉ log.
+                // Set THẬT nếu Animator có parameter tương ứng (safe-set, không crash nếu thiếu).
                 // Ưu tiên Bool (animation blend dài), nếu không thì dùng Trigger.
-                if (!string.IsNullOrEmpty(telegraphAnimBool))
-                    // animator.SetBool(telegraphAnimBool, true);
-                    Debug.Log($"[EnemyCombat] {gameObject.name} telegraph START → (comment) animator.SetBool(\"{telegraphAnimBool}\", true)");
-                else if (!string.IsNullOrEmpty(telegraphAnimTrigger))
-                    // animator.SetTrigger(telegraphAnimTrigger);
-                    Debug.Log($"[EnemyCombat] {gameObject.name} telegraph → (comment) animator.SetTrigger(\"{telegraphAnimTrigger}\")");
+                if (!string.IsNullOrEmpty(telegraphAnimBool) && HasParameter(animator, telegraphAnimBool))
+                    animator.SetBool(telegraphAnimBool, true);
+                else if (!string.IsNullOrEmpty(telegraphAnimTrigger) && HasParameter(animator, telegraphAnimTrigger))
+                    animator.SetTrigger(telegraphAnimTrigger);
             }
 
             yield return new WaitForSeconds(telegraphDuration);
 
             isTelegraphing = false;
 
-            // Tắt Bool nếu đã bật [CHƯA CÓ CLIP] — comment animator.Set, chỉ log
-            if (animator != null && !string.IsNullOrEmpty(telegraphAnimBool))
-                // animator.SetBool(telegraphAnimBool, false);
-                Debug.Log($"[EnemyCombat] {gameObject.name} telegraph END → (comment) animator.SetBool(\"{telegraphAnimBool}\", false)");
+            // Tắt Bool nếu đã bật (safe-set)
+            if (animator != null && !string.IsNullOrEmpty(telegraphAnimBool) && HasParameter(animator, telegraphAnimBool))
+                animator.SetBool(telegraphAnimBool, false);
         }
         // ─────────────────────────────────────────────────────────────────────
 
@@ -142,14 +147,16 @@ protected IEnumerator EnemyAttackRoutine()
             animator.SetTrigger("Attack");
         }
 
-        float baseAnimDuration = 0.5f;
-        float realAnimDuration = baseAnimDuration / Mathf.Max(stats.baseAttackSpeed, 0.1f);
+        float realAnimDuration = baseAttackAnimDuration / Mathf.Max(stats.baseAttackSpeed, 0.1f);
 
-        // Wind-up 50%: player có đủ thời gian nhìn thấy animation và bấm dash thoát
-        // Active 50%-75%: hitbox quét trong cửa sổ hẹp, đòn đánh phải đúng timing
-        // Recovery 75%-100%: enemy bị hở sườn, player có thể phản công
-        float startDamageTime = realAnimDuration * 0.50f;
-        float endDamageTime   = realAnimDuration * 0.75f;
+        // Cửa sổ gây damage (chỉnh qua Inspector). Clamp hợp lệ: 0 <= start < end <= 1.
+        float startN = Mathf.Clamp01(damageWindowStartNormalized);
+        float endN   = Mathf.Clamp01(damageWindowEndNormalized);
+        if (endN <= startN) endN = Mathf.Min(1f, startN + 0.05f); // đảm bảo end > start
+
+        // Wind-up [0..start]: player nhìn thấy & né. Active [start..end]: hitbox quét. Recovery [end..1]: hở sườn.
+        float startDamageTime = realAnimDuration * startN;
+        float endDamageTime   = realAnimDuration * endN;
         float swingDuration   = endDamageTime - startDamageTime;
 
         // 3. Wind-up — player nhìn thấy animation và bấm dash trong giai đoạn này
@@ -192,20 +199,27 @@ protected IEnumerator EnemyAttackRoutine()
 
         isAttacking = false;
 
-        // Đang trong pha telegraph thì StopCoroutine không tự dọn — reset thủ công
+        // Đang trong pha telegraph thì StopCoroutine không tự dọn — reset thủ công (safe-set)
         if (isTelegraphing)
         {
             isTelegraphing = false;
-            // [CHƯA CÓ CLIP] — comment animator.Set, chỉ log
-            if (animator != null && !string.IsNullOrEmpty(telegraphAnimBool))
-                // animator.SetBool(telegraphAnimBool, false);
-                Debug.Log($"[EnemyCombat] {gameObject.name} CancelAttack telegraph reset → (comment) animator.SetBool(\"{telegraphAnimBool}\", false)");
+            if (animator != null && !string.IsNullOrEmpty(telegraphAnimBool) && HasParameter(animator, telegraphAnimBool))
+                animator.SetBool(telegraphAnimBool, false);
         }
 
         // Reset Animation trigger nếu cần
         if (animator != null) animator.ResetTrigger("Attack");
 
         Debug.Log($"{gameObject.name} đã HỦY đòn đánh!");
+    }
+
+    /// <summary>True nếu Animator có parameter tên paramName (an toàn — set vào param không tồn tại sẽ spam warning).</summary>
+    protected static bool HasParameter(Animator anim, string paramName)
+    {
+        if (anim == null || string.IsNullOrEmpty(paramName)) return false;
+        foreach (var p in anim.parameters)
+            if (p.name == paramName) return true;
+        return false;
     }
 
     // Hàm kiểm tra va chạm và gây damage
@@ -332,6 +346,18 @@ protected IEnumerator EnemyAttackRoutine()
 
             // --- BƯỚC 4: GỬI ---
             victimStats.TakeDamage(info);
+
+            // [COMBAT FEEL] Enemy đánh trúng Player/Ally → feedback 2 chiều.
+            // Chỉ kích khi victim là Player/Ally (không rung khi đánh quái khác).
+            if (victim.CompareTag("Player") || victim.CompareTag("Ally"))
+            {
+                CombatFeel.HitStrength strength =
+                    isCrit ? CombatFeel.HitStrength.Crit :
+                    (info.isKnockback || info.isStun || stats.monsterRank >= 1) ? CombatFeel.HitStrength.Heavy :
+                    CombatFeel.HitStrength.Normal;
+                CombatFeel.OnHit(strength, victim.name);
+                // Hit flash do HitFlash tự lắng nghe OnDamageReceived (1 nguồn) — không gọi Flash() ở đây.
+            }
         }
     }
 

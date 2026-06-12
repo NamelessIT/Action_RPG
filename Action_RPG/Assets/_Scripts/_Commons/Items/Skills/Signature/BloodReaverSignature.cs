@@ -22,6 +22,10 @@ public class BloodReaverSignature : SkillBehavior
     private Coroutine frenzyCoroutine;
     private GameObject currentAuraVfx;
 
+    // [LIFECYCLE] để EndFrenzy idempotent + nhả khóa đúng nguồn
+    private bool _frenzyActive = false;
+    private bool _healingBlockPushed = false;
+
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
         base.Initialize(myStats, myData, myPlayer);
@@ -34,18 +38,19 @@ public class BloodReaverSignature : SkillBehavior
     protected override void OnUnequip()
     {
         // Gỡ an toàn nếu tháo skill giữa chừng
-        if (frenzyCoroutine != null)
-        {
-            StopCoroutine(frenzyCoroutine);
-            EndFrenzy(false);
-        }
+        if (frenzyCoroutine != null) { StopCoroutine(frenzyCoroutine); frenzyCoroutine = null; }
+        EndFrenzy(false);
     }
 
     public override bool Use()
     {
         if (!base.Use()) return false;
 
-        if (frenzyCoroutine != null) StopCoroutine(frenzyCoroutine);
+        // Nếu đang frenzy → kết thúc lượt cũ AN TOÀN (revert state) trước khi bắt đầu lượt mới.
+        // Trước đây chỉ StopCoroutine → leak: khóa hồi máu/bất tử/passive nhân đôi không được revert.
+        if (frenzyCoroutine != null) { StopCoroutine(frenzyCoroutine); frenzyCoroutine = null; }
+        if (_frenzyActive) EndFrenzy(false);
+
         frenzyCoroutine = StartCoroutine(SignatureRoutine());
 
         return true;
@@ -54,8 +59,9 @@ public class BloodReaverSignature : SkillBehavior
     private IEnumerator SignatureRoutine()
     {
         // 1. KHÓA SKILL VÀ HỒI MÁU
+        _frenzyActive = true;
         player.isSkillBlocked = true;
-        stats.isHealingBlocked = true;
+        stats.PushHealingBlock(); _healingBlockPushed = true;
 
         // 2. HIẾN TẾ MÁU
         float oldHp = stats.currentHp;
@@ -113,11 +119,16 @@ public class BloodReaverSignature : SkillBehavior
 
     private void EndFrenzy(bool normalEnd)
     {
+        // Idempotent: nếu không còn active thì bỏ qua (tránh revert passive/khóa 2 lần)
+        if (!_frenzyActive) return;
+        _frenzyActive = false;
+
         frenzyCoroutine = null;
 
         // Mở khóa Skill và Hồi máu (Phải mở TRƯỚC khi xử lý logic hồi 50% bên dưới)
         player.isSkillBlocked = false;
-        stats.isHealingBlocked = false;
+        // Nhả khóa hồi máu CHỈ KHI skill này đã push (tránh pop dư của nguồn khác)
+        if (_healingBlockPushed) { stats.PopHealingBlock(); _healingBlockPushed = false; }
 
         // Xóa Bất Tử và Aura
         stats.isInvincible = false;
@@ -140,7 +151,7 @@ public class BloodReaverSignature : SkillBehavior
             // Chỉ hồi nếu máu hiện tại đang thấp hơn 50%
             if (stats.currentHp < targetHp)
             {
-                // Lúc này isHealingBlocked đã = false nên hàm Heal sẽ hoạt động
+                // Khóa hồi máu của signature này đã được Pop ở trên; finisher heal dùng Heal() trực tiếp.
                 float amountToHeal = targetHp - stats.currentHp;
                 stats.Heal(amountToHeal);
                 Debug.Log($"<color=green>Kết thúc Huyết Tế: Đặt lại máu về {targetHp} HP.</color>");

@@ -98,6 +98,9 @@ public class PlayerController : MonoBehaviour
     public event System.Action<Stats, bool> OnKillEnemy;
     // ==================================================================
     public event System.Action OnDashPerformed;
+    // [ACCESSORY] Bắn kèm DamageInfo đầy đủ mỗi lần gây damage lên 1 mục tiêu
+    // (để effect biết phân tách phys/magic/true, crit... mà OnHitEnemy không chở được)
+    public event System.Action<Stats, DamageInfo> OnDamageDealt;
 
     private DuelistPassive duelistSkill;
     private bool isDuelistCounterActive = false; // Cache trạng thái counter cho cả vòng lặp quét
@@ -963,7 +966,8 @@ public class PlayerController : MonoBehaviour
 
         if (totalHeal > 0)
         {
-            stats.Heal(totalHeal);
+            // isLifesteal=true: hút máu KHÔNG bị healing-block chặn (GDD MS_T5_02)
+            stats.Heal(totalHeal, true, true);
         }
 
         // --- 7 BÁO CHO THÚ CƯNG BIẾT ĐỂ GHI SỔ ĐEN ---
@@ -977,6 +981,11 @@ public class PlayerController : MonoBehaviour
         // Notify
         if (stats != null) stats.NotifyOnHitEnemy(enemyStats, t, isCrit);
         OnHitEnemy?.Invoke(enemyStats, stepIndex, isHeavy, isCrit);
+        OnDamageDealt?.Invoke(enemyStats, info);
+
+        // [COMBAT FEEL] hit-stop/shake theo sức mạnh đòn.
+        // Hit flash do HitFlash tự lắng nghe Stats.OnDamageReceived (autoSubscribe) — KHÔNG
+        // gọi Flash() ở đây để tránh nháy 2 lần (1 nguồn duy nhất).
 
         // Kill Check
         if (wasAlive && enemyStats.currentHp <= 0)
@@ -986,6 +995,16 @@ public class PlayerController : MonoBehaviour
             // [MỚI] RUNG CHUÔNG SỰ KIỆN Ở ĐÂY
             OnKillEnemy?.Invoke(enemyStats, isBackstab);
             Debug.Log(">> KẾT LIỄU ĐỊCH!");
+            CombatFeel.OnHit(CombatFeel.HitStrength.Kill, enemyStats.name);
+        }
+        else
+        {
+            // Ưu tiên: Crit > Heavy > Normal
+            CombatFeel.HitStrength strength =
+                isCrit  ? CombatFeel.HitStrength.Crit  :
+                isHeavy ? CombatFeel.HitStrength.Heavy :
+                          CombatFeel.HitStrength.Normal;
+            CombatFeel.OnHit(strength, enemyStats.name);
         }
     }
 

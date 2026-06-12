@@ -23,14 +23,19 @@ public class SkillTreeRuntime : MonoBehaviour
 
     private void Awake()
     {
-        _playerStats = GetComponent<PlayerStats>();
-        _allyStats   = GetComponent<AllyStats>();
+        // SkillTreeRuntime là player-only, LUÔN nằm cùng Player root với PlayerStats/SkillManager.
+        // KHÔNG dùng FindFirstObjectByType để "cứu" — nếu bị gắn sai chỗ thì báo lỗi để fix hierarchy,
+        // tránh nguy cơ tóm nhầm Player global khi component nằm trên object khác.
+        _playerStats  = GetComponent<PlayerStats>();
+        _allyStats    = GetComponent<AllyStats>();
         _skillManager = GetComponent<SkillManager>();
 
         if (_playerStats == null)
-            Debug.LogError("[SkillTreeRuntime] Không tìm thấy PlayerStats.");
+            Debug.LogError($"[SkillTreeRuntime] Không tìm thấy PlayerStats trên '{gameObject.name}'. " +
+                           "Component này phải nằm cùng Player root.");
         if (_skillManager == null)
-            Debug.LogError("[SkillTreeRuntime] Không tìm thấy SkillManager.");
+            Debug.LogError($"[SkillTreeRuntime] Không tìm thấy SkillManager trên '{gameObject.name}'. " +
+                           "Component này phải nằm cùng Player root.");
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -430,7 +435,14 @@ public class SkillTreeRuntime : MonoBehaviour
         if (skill == null || _skillManager == null) return;
 
         // SỬA ĐỔI: Đồng bộ hóa gọi trực tiếp hàm xử lý của hệ thống Combat gốc, tránh lỗi trạng thái trống
-        _skillManager.EquipSkill(skill);
+        // CHỈ ghi nhận equipped khi SkillManager equip THẬT SỰ thành công (gắn được script).
+        bool ok = _skillManager.EquipSkill(skill);
+        if (!ok)
+        {
+            Debug.LogWarning($"[SkillTreeRuntime] Equip '{skill.skillName}' thất bại (thiếu effect code) — không ghi vào equipped slot.");
+            OnSkillTreeChanged?.Invoke();
+            return;
+        }
 
         if (skill.skillType == SkillData.SkillType.Skill) _equippedSkill = skill;
         else if (skill.skillType == SkillData.SkillType.Signature) _equippedSignature = skill;
@@ -629,7 +641,13 @@ public class SkillTreeRuntime : MonoBehaviour
 
         if (_skillManager != null)
         {
-            _skillManager.EquipSkill(skill);
+            bool ok = _skillManager.EquipSkill(skill);
+            if (!ok)
+            {
+                Debug.LogWarning($"[SkillTreeRuntime] Equip '{skill.skillName}' thất bại (thiếu effect code) — không ghi equipped.");
+                OnSkillTreeChanged?.Invoke();
+                return false;
+            }
 
             if (skill.skillType == SkillData.SkillType.Skill)          _equippedSkill = skill;
             else if (skill.skillType == SkillData.SkillType.Signature) _equippedSignature = skill;
@@ -769,9 +787,15 @@ public class SkillTreeRuntime : MonoBehaviour
                         if (node.skillData != null)
                         {
                             SkillData actual = GetActualSkillToEquip(node);
-                            _skillManager.EquipSkill(actual);
-                            if (actual.skillType == SkillData.SkillType.Skill) _equippedSkill = actual;
-                            else if (actual.skillType == SkillData.SkillType.Signature) _equippedSignature = actual;
+                            if (_skillManager.EquipSkill(actual))
+                            {
+                                if (actual.skillType == SkillData.SkillType.Skill) _equippedSkill = actual;
+                                else if (actual.skillType == SkillData.SkillType.Signature) _equippedSignature = actual;
+                            }
+                            else
+                            {
+                                Debug.LogWarning($"[SkillTreeRuntime] LoadAndReapply: equip '{actual.skillName}' thất bại (thiếu effect code).");
+                            }
                         }
                         break;
                     case SkillNodeType.CoreMechanic:

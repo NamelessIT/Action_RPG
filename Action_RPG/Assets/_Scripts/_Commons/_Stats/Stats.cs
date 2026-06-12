@@ -126,7 +126,19 @@ public class Stats : MonoBehaviour
 
     [Header("--- Shield & State ---")]
     public float currentShield = 0f; // Lớp giáp ảo
-    public bool isHealingBlocked = false; // Cờ chặn hồi máu của Ravager
+    // [HEALING BLOCK] Nhiều nguồn có thể cùng khóa hồi máu (Ravager, BloodReaver, Accessory MS_T4_01...).
+    // Dùng COUNTER dùng chung: mỗi nguồn Push khi bắt đầu khóa, Pop khi hết. Hồi máu chỉ được phép
+    // khi count == 0. Tránh việc nguồn này nhả cờ làm mất khóa của nguồn khác.
+    private int _healingBlockCount = 0;
+    /// <summary>True nếu có ÍT NHẤT 1 nguồn đang khóa hồi máu.</summary>
+    public bool isHealingBlocked => _healingBlockCount > 0;
+    /// <summary>Đăng ký 1 khóa hồi máu (gọi cặp với PopHealingBlock).</summary>
+    public void PushHealingBlock() => _healingBlockCount++;
+    /// <summary>Nhả 1 khóa hồi máu. Chỉ thật sự cho hồi lại khi mọi nguồn đã nhả (count==0).</summary>
+    public void PopHealingBlock()
+    {
+        if (_healingBlockCount > 0) _healingBlockCount--;
+    }
 
     // [MỚI] Event báo hiệu bị đánh (Dùng cho JuggernautSkill)
     // Tham số: (Lượng damage thực nhận, Bản thân Stats bị đánh)
@@ -190,6 +202,12 @@ public class Stats : MonoBehaviour
 
     public Action<DamageInfo> OnBeforeTakeDamage;
     public event Action<float, float> OnHealReceived; // <lượng hồi, lượng dư>
+
+    // [ACCESSORY] Bắn KHI VÀ CHỈ KHI sát thương chạm máu thật (Global Rule 3) — kèm DamageInfo
+    // để effect biết hướng đánh (info.attacker/sourcePosition) và loại damage (phys/magic/true).
+    public event Action<DamageInfo, float> OnDamageTakenHp; // <info, lượng máu thật bị trừ>
+    // [ACCESSORY] Bắn khi lớp giáp ảo (Shield) vừa bị đòn đánh phá vỡ về 0.
+    public event Action OnShieldBroken;
 
     private NavMeshAgent agent;
     private Rigidbody rb;
@@ -447,6 +465,10 @@ public class Stats : MonoBehaviour
             damageToTake -= damageBlocked;
 
             Debug.Log($"<color=yellow>Shield blocked: {damageBlocked}. Remaining Shield: {currentShield}");
+
+            // [ACCESSORY] Shield vừa vỡ do đòn này (về 0 sau khi chặn) → rung chuông
+            if (currentShield <= 0f && damageBlocked > 0f)
+                OnShieldBroken?.Invoke();
         }
 
         // 2. TRỪ MÁU (Nếu damage vẫn còn sau khi phá shield)
@@ -455,6 +477,9 @@ public class Stats : MonoBehaviour
             currentHp -= damageToTake;
             Debug.Log($"{gameObject.name} nhận {damageToTake}");
             OnDamageReceived?.Invoke(damageToTake, this);
+            // [ACCESSORY] Global Rule 3: event này CHỈ bắn khi sát thương chạm máu thật
+            // (shield gánh hết thì không bắn). Kèm DamageInfo để biết hướng đánh/loại damage.
+            OnDamageTakenHp?.Invoke(info, damageToTake);
         }
 
         // Hiển thị số sát thương nổi lên màn hình (cả bị chặn lẫn xuyên qua Shield)
@@ -485,9 +510,14 @@ public class Stats : MonoBehaviour
     }
     // Sửa hàm hồi máu (nếu bạn có hàm Heal riêng, hoặc sửa trực tiếp chỗ nào cộng máu)
     // showPopup=false dùng cho heal tự nhiên (HpGain regen) để tránh spam số
-    public virtual void Heal(float amount, bool showPopup = true)
+    // isLifesteal=true: hồi máu từ HÚT MÁU (PhysicalLifeSteal/MagicLifeSteal) — KHÔNG bị
+    //   healing-block chặn (GDD: MS_T5_02 "không nhận hồi máu từ skill/potion, CHỈ hút máu";
+    //   MS_T4_01 "vô hiệu mọi hồi máu" áp cho heal thường). Các nguồn skill/potion để mặc định false.
+    public virtual void Heal(float amount, bool showPopup = true, bool isLifesteal = false)
     {
         if (isDead) return;
+        // Healing-block: chặn mọi hồi máu TRỪ hút máu.
+        if (isHealingBlocked && !isLifesteal) return;
 
         float excess = (currentHp + amount) - maxHp;
         if (excess < 0) excess = 0;

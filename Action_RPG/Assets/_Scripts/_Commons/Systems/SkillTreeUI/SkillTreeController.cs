@@ -32,6 +32,8 @@ public class SkillTreeController : MonoBehaviour
     [Header("UI — Panel")]
     [SerializeField] private GameObject _skillTreePanel;
     [SerializeField] private RectTransform _nodeContainer;
+    [Tooltip("ScrollRect bao NodeContainer. Khi mở panel sẽ tự cuộn lên vùng 5 node T1 (top).")]
+    [SerializeField] private UnityEngine.UI.ScrollRect _scrollRect;
     [SerializeField] private SkillNodeUI _skillNodePrefab;
     [SerializeField] private float _nodeScale = 0.2f;
     [Tooltip("Kích thước gốc mỗi node (px) trước khi nhân Node Scale. Tránh để node anchor-stretch phình to che node khác.")]
@@ -63,24 +65,29 @@ public class SkillTreeController : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
 
     [Header("Layout — Vertical Y positions (canvas units)")]
-    [Tooltip("Y của node T1 đầu tiên (trên cùng)")]
+    [Tooltip("Y của node T1 cơ bản đầu tiên (trên cùng). 5 node T1 xếp dọc xuống từ đây.")]
     [SerializeField] private float _t1TopY = 500f;
-    [Tooltip("Y của T2 node đầu tiên")]
-    [SerializeField] private float _t2TopY = 60f;
-    [Tooltip("Y của T3 node đầu tiên")]
-    [SerializeField] private float _t3TopY = -370f;
-    [Tooltip("Y của hàng đầu tiên trong T4 grid")]
-    [SerializeField] private float _t4TopY = -800f;
-    [Tooltip("Y của T5 node đầu tiên")]
-    [SerializeField] private float _t5TopY = -1240f;
-    [Tooltip("Khoảng cách Y giữa các node trong cùng cột")]
+    [Tooltip("Khoảng trống (px) giữa node T1 CUỐI và tier đầu (T2) của 4 class. " +
+             "Vị trí class được TÍNH TỪ đáy cột T1, không phải toạ độ tuyệt đối.")]
+    [SerializeField] private float _gapAfterCommonNodes = 140f;
+    [Tooltip("Khoảng cách Y giữa các TIER trong 1 class (T2→T3→T4→T5).")]
+    [SerializeField] private float _classTierSpacingY = 420f;
+    [Tooltip("Khoảng trống tối thiểu giữa đáy tier trước và đỉnh tier sau. Code sẽ tự cộng thêm chiều cao 5 node để tránh đè node.")]
+    [SerializeField] private float _gapBetweenClassTiers = 160f;
+    [Tooltip("Khoảng cách Y giữa các node trong cùng cột (cùng tier).")]
     [SerializeField] private float _nodeSpacingY = 80f;
+
+    // Y bắt đầu của tier T2 (class), tính runtime trong BuildAllTrees từ đáy cột T1.
+    private float _classStartY;
 
     [Header("Layout — Horizontal positions")]
     [Tooltip("Khoảng cách X giữa 2 class tree kề nhau")]
     [SerializeField] private float _classColumnSpacingX = 220f;
     [Tooltip("Khoảng cách X giữa 3 sub-column trong T4 grid")]
     [SerializeField] private float _t4SubColSpacingX = 65f;
+    [Tooltip("[KHÔNG DÙNG] T1 hiện xếp DỌC (x=0) theo _nodeSpacingY. Giữ field để tương thích, " +
+             "không ảnh hưởng layout.")]
+    [SerializeField] private float _t1SpacingX = 220f;
     [Tooltip("Lề (px) thêm vào quanh cây khi tự tính size cho NodeContainer (để scroll có khoảng thở)")]
     [SerializeField] private Vector2 _contentPadding = new Vector2(200f, 200f);
 
@@ -100,7 +107,27 @@ public class SkillTreeController : MonoBehaviour
 
     private void Awake()
     {
+        MakeDetailPanelNonBlocking();
         SetPanelVisible(false);
+    }
+
+    /// <summary>
+    /// Detail panel KHÔNG được nhận raycast — nếu nó che con trỏ thì node sẽ nhận PointerExit
+    /// ngay khi panel hiện ra → nhấp nháy. Ép CanvasGroup.blocksRaycasts=false + tắt raycastTarget
+    /// mọi Graphic con. Chạy bằng code nên không cần user setup trong Editor.
+    /// </summary>
+    private void MakeDetailPanelNonBlocking()
+    {
+        if (_detailPanel == null) return;
+
+        var cg = _detailPanel.GetComponent<CanvasGroup>();
+        if (cg == null) cg = _detailPanel.AddComponent<CanvasGroup>();
+        cg.blocksRaycasts = false;
+        cg.interactable   = false;
+
+        // Tắt raycastTarget cho toàn bộ Graphic con (Image/Text) để panel "trong suốt" với chuột.
+        foreach (var g in _detailPanel.GetComponentsInChildren<UnityEngine.UI.Graphic>(true))
+            g.raycastTarget = false;
     }
 
     private void Start()
@@ -174,15 +201,29 @@ public class SkillTreeController : MonoBehaviour
         var db = ActiveDatabase;
         if (db == null || _runtime == null) return;
 
-        // ── T1 Common tree — cột giữa, phía trên ────────────────
+        // ── T1 Common tree — CỘT DỌC ở giữa, phía trên (4 nhánh class nằm ngay dưới) ──
         if (db.commonTree != null)
         {
             var nodes = db.commonTree.skillNodes;
+            // Đếm số node hợp lệ để căn giữa hàng ngang T1
+            int t1Count = 0;
+            foreach (var nd in nodes) if (!string.IsNullOrEmpty(nd.nodeId)) t1Count++;
+
+            int t1Idx = 0;
             for (int i = 0; i < nodes.Count; i++)
             {
                 if (string.IsNullOrEmpty(nodes[i].nodeId)) continue;
-                SpawnNode(nodes[i], T1Position(i));
+                SpawnNode(nodes[i], T1Position(t1Idx, t1Count));
+                t1Idx++;
             }
+
+            // Tier đầu của 4 class bắt đầu NGAY DƯỚI node T1 cuối + khoảng trống cấu hình.
+            float t1BottomY = _t1TopY - Mathf.Max(0, t1Count - 1) * _nodeSpacingY;
+            _classStartY = t1BottomY - _gapAfterCommonNodes;
+        }
+        else
+        {
+            _classStartY = _t1TopY - _gapAfterCommonNodes; // fallback nếu không có commonTree
         }
 
         // ── 4 Class trees — 4 cột dọc bên dưới ─────────────────
@@ -279,14 +320,26 @@ public class SkillTreeController : MonoBehaviour
 
         Debug.Log($"[SkillTreeController] NodeContainer fit: size={width:F0}x{height:F0}, " +
                   $"recenter offset={boxCenter}");
+
+        // Sau khi recenter toàn cây, đưa view về TOP để mở panel thấy 5 node T1 trước
+        // (T1 ở trên cùng theo trục Y). Cuộn ngang về giữa.
+        if (_scrollRect != null)
+        {
+            Canvas.ForceUpdateCanvases(); // đảm bảo ScrollRect cập nhật content size mới
+            if (_scrollRect.vertical)   _scrollRect.verticalNormalizedPosition = 1f;   // 1 = top
+            if (_scrollRect.horizontal) _scrollRect.horizontalNormalizedPosition = 0.5f; // giữa
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
     //  POSITION CALCULATORS
     // ─────────────────────────────────────────────────────────────
 
-    /// <summary>Vị trí node T1 (cột giữa, X=0).</summary>
-    private Vector2 T1Position(int nodeIdx)
+    /// <summary>
+    /// Vị trí node T1 — CỘT DỌC ở giữa (x=0), xếp từ trên xuống. 4 nhánh class nằm ngay
+    /// DƯỚI node T1 cuối (_t2TopY phải thấp hơn đáy cột T1). `total` không dùng (giữ cho call-site).
+    /// </summary>
+    private Vector2 T1Position(int nodeIdx, int total)
     {
         return new Vector2(0f, _t1TopY - nodeIdx * _nodeSpacingY);
     }
@@ -299,38 +352,53 @@ public class SkillTreeController : MonoBehaviour
     }
 
     /// <summary>
-    /// Vị trí node trong class tree.
+    /// Vị trí node trong class tree. Mọi tier tính TỪ _classStartY (đáy cột T1 + gap),
+    /// nên 4 nhánh class luôn bắt đầu ngay dưới node T1 cuối dù đổi số node/spacing.
     /// Nodes 0-4   → T2 (single column)
     /// Nodes 5-9   → T3 (single column)
-    /// Nodes 10-24 → T4 (3×5 grid: col = idx%3, row = idx/3)
+    /// Nodes 10-24 → T4 (3×5 grid: col = idx/5, row = idx%5)
     /// Nodes 25-29 → T5 (single column)
     /// </summary>
     private Vector2 ClassNodePosition(int nodeIdx, float colX)
     {
+        float t2TopY = _classStartY;
+        float tierStepY = ClassTierStepY();
+        float t3TopY = t2TopY - tierStepY;
+        float t4TopY = t3TopY - tierStepY;
+        float t5TopY = t4TopY - tierStepY;
+
         if (nodeIdx < 5)
         {
-            // T2 — cột đơn
-            return new Vector2(colX, _t2TopY - nodeIdx * _nodeSpacingY);
+            return new Vector2(colX, t2TopY - nodeIdx * _nodeSpacingY);
         }
         else if (nodeIdx < 10)
         {
-            // T3 — cột đơn
-            return new Vector2(colX, _t3TopY - (nodeIdx - 5) * _nodeSpacingY);
+            return new Vector2(colX, t3TopY - (nodeIdx - 5) * _nodeSpacingY);
         }
         else if (nodeIdx < 25)
         {
             // T4 — grid 3×5
             int t4Idx = nodeIdx - 10;
-            int col   = t4Idx / 5;     
+            int col   = t4Idx / 5;
             int row   = t4Idx % 5;
             float xOff = (col - 1) * _t4SubColSpacingX; // -spacing, 0, +spacing
-            return new Vector2(colX + xOff, _t4TopY - row * _nodeSpacingY);
+            return new Vector2(colX + xOff, t4TopY - row * _nodeSpacingY);
         }
         else
         {
-            // T5 — cột đơn
-            return new Vector2(colX, _t5TopY - (nodeIdx - 25) * _nodeSpacingY);
+            return new Vector2(colX, t5TopY - (nodeIdx - 25) * _nodeSpacingY);
         }
+    }
+
+    /// <summary>
+    /// Một tier T2/T3/T5 có 5 node dọc, T4 có grid 5 hàng. Nếu chỉ dùng khoảng cách
+    /// cố định nhỏ hơn 4 * _nodeSpacingY, tier kế tiếp sẽ đè lên node 3/4/5 của tier trước.
+    /// </summary>
+    private float ClassTierStepY()
+    {
+        float fiveNodeTierHeight = 4f * Mathf.Max(1f, _nodeSpacingY);
+        float safeStep = fiveNodeTierHeight + Mathf.Max(0f, _gapBetweenClassTiers);
+        return Mathf.Max(_classTierSpacingY, safeStep);
     }
 
     // ─────────────────────────────────────────────────────────────

@@ -41,6 +41,21 @@ public class InventoryItemRecord
 
     public bool IsEquippable => _weaponData != null || _shieldData != null || _accessoryData != null;
 
+    /// <summary>
+    /// Bậc rarity 0-4 (Residual→Anomalous) lấy từ data nguồn; -1 nếu không có data rarity.
+    /// 3 enum Rarity (Weapon/CoreShield/Accessory) trùng thứ tự nên ép int an toàn.
+    /// </summary>
+    public int RarityTier
+    {
+        get
+        {
+            if (_weaponData != null)    return (int)_weaponData.rarity;
+            if (_shieldData != null)    return (int)_shieldData.rarity;
+            if (_accessoryData != null) return (int)_accessoryData.rarity;
+            return -1;
+        }
+    }
+
     public bool MatchesTab(InventoryItemType tab)
     {
         return _itemType == tab;

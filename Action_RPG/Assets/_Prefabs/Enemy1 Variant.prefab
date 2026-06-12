@@ -107,6 +107,16 @@ PrefabInstance:
     - {fileID: 1448595461306789732, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
     - {fileID: 1838868255635214925, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
     - {fileID: 8370228006401295778, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+    - {fileID: 7111303580604225622, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+    - {fileID: 4909451960961607803, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+    - {fileID: 8544268744872774020, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+    - {fileID: 4732676055883595198, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+    - {fileID: 2212513554446975970, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+    - {fileID: 4003093049336771990, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+    - {fileID: 2806147746195801186, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+    - {fileID: 7248420701414335383, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+    - {fileID: 349048570544007974, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+    - {fileID: 2108856373971076593, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
@@ -122,6 +132,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7595386532533513913, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6835872847786700743}
+    - targetCorrespondingSourceObject: {fileID: 7595386532533513913, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -7293114896819296086}
+    - targetCorrespondingSourceObject: {fileID: 7595386532533513913, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3063405151663875796}
   m_SourcePrefab: {fileID: 100100000, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
 --- !u!1 &1237412989044576087 stripped
 GameObject:
@@ -143,6 +159,16 @@ MonoBehaviour:
   isAttacking: 0
   basicAttackRange: 0.5
   attackAngle: 90
+  sweepStartAngle: -45
+  sweepEndAngle: 45
+  useTelegraph: 1
+  telegraphDuration: 1
+  telegraphAnimTrigger: WindUp
+  telegraphAnimBool: 
+  baseAttackAnimDuration: 0.5
+  damageWindowStartNormalized: 0.5
+  damageWindowEndNormalized: 0.75
+  isTelegraphing: 0
 --- !u!195 &2886507545294063416
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -253,7 +279,6 @@ MonoBehaviour:
   resistanceEffect: 0
   isDead: 0
   currentShield: 0
-  isHealingBlocked: 0
   isStunned: 0
   isSuperArmor: 0
   superArmorLevel: 0
@@ -262,6 +287,7 @@ MonoBehaviour:
   stealthFactor: 1
   isInvisible: 0
   isBleeding: 0
+  isBurning: 0
   IsMarked: 0
   isParrying: 0
   isPerfectParryWindow: 0
@@ -282,6 +308,7 @@ MonoBehaviour:
   obstacleMask:
     serializedVersion: 2
     m_Bits: 0
+  isAffectedByStealthReduction: 1
   spawnPosition: {x: 0, y: 0, z: 0}
   monsterRank: 0
   expReward: 10
@@ -312,6 +339,11 @@ MonoBehaviour:
   enableRandomTurn: 1
   randomTurnMinTime: 10
   randomTurnMaxTime: 20
+  backOffDistance: 2
+  backOffChance: 0.5
+  circleChance: 0.3
+  bossDodgeCooldown: 4
+  bossDodgeChance: 0.65
   parryChance: 0.8
   projectileDetectionRadius: 8
   projectileLayer:
@@ -320,3 +352,38 @@ MonoBehaviour:
   parryReactionCooldown: 2
   cooldownTimerReceiveDame: 5
   receiveDamageTimer: 0
+--- !u!114 &-7293114896819296086
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1237412989044576087}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f931a8c8b8b40b0b83bad0636da7aa3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HitFlash
+  flashColor: {r: 0.9716981, g: 0.42626378, b: 0.42626378, a: 1}
+  flashDuration: 0.08
+  autoSubscribe: 1
+--- !u!114 &3063405151663875796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1237412989044576087}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7124aff0becfad4497d4ef6d9d95b6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkillManager
+  isPlayer: 0
+  pickUpSkill: {fileID: 0}
+  currentDefaultPassive: {fileID: 0}
+  currentPassive1: {fileID: 0}
+  currentPassive2: {fileID: 0}
+  currentSkill: {fileID: 0}
+  currentSignature: {fileID: 0}
+  enemySkills: []

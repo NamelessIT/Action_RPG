@@ -1,8 +1,10 @@
 using TMPro;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
-public class SkillNodeUI : MonoBehaviour
+public class SkillNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("Visual")]
     [SerializeField] private Image              _iconImage;
@@ -20,16 +22,20 @@ public class SkillNodeUI : MonoBehaviour
     [SerializeField] private Button _unlockButton;
     [SerializeField] private Button _equipButton;
 
-    // ── Default icon cho node stat/core (không có SkillData.icon) ──
+    // ── Default icon cho node stat/core/skill (khi không có SkillData.icon) ──
     [Header("Default Icons")]
     [SerializeField] private Sprite _statNodeIcon;
     [SerializeField] private Sprite _coreNodeIcon;
+    [Tooltip("Icon mặc định cho node SKILL khi skillData.icon trống — KHÔNG mượn icon Stat (thanh kiếm).")]
+    [SerializeField] private Sprite _skillNodeDefaultIcon;
 
     private SkillNodeData       _nodeData;
     private SkillTreeRuntime    _runtime;
     private SkillTreeController _controller;
+    private Coroutine           _hoverRoutine;
 
     public SkillNodeData NodeData => _nodeData;
+    private const float HoverDetailDelaySeconds = 2f;
 
     // ─────────────────────────────────────────────────────────────
     //  BINDING
@@ -70,16 +76,31 @@ public class SkillNodeUI : MonoBehaviour
         // ── Icon ──────────────────────────────────────────────────
         if (_iconImage != null)
         {
-            Sprite icon = null;
-            if (_nodeData.skillData != null)
-                icon = _nodeData.skillData.icon;
-            else if (_nodeData.nodeType == SkillNodeType.CoreMechanic)
-                icon = _coreNodeIcon;
-            else
-                icon = _statNodeIcon;
+            // Chọn icon ĐÚNG theo nodeType (không để Skill mượn icon Stat):
+            //   Stat         → statNodeIcon
+            //   CoreMechanic → coreNodeIcon
+            //   Skill        → skillData.icon nếu có, không thì skillNodeDefaultIcon
+            Sprite icon;
+            switch (_nodeData.nodeType)
+            {
+                case SkillNodeType.CoreMechanic:
+                    icon = _coreNodeIcon;
+                    break;
+                case SkillNodeType.Skill:
+                    icon = (_nodeData.skillData != null && _nodeData.skillData.icon != null)
+                           ? _nodeData.skillData.icon : _skillNodeDefaultIcon;
+                    break;
+                default: // Stat
+                    icon = _statNodeIcon;
+                    break;
+            }
 
-            _iconImage.sprite = icon;
-            _iconImage.color  = isUnlocked ? Color.white : new Color(0.4f, 0.4f, 0.4f, 0.8f);
+            _iconImage.sprite         = icon;
+            _iconImage.preserveAspect = true;
+            // Có sprite → hiện; nếu vẫn null (chưa gán default) → ẩn để tránh ô vuông trắng.
+            _iconImage.enabled = icon != null;
+            // Locked: tint xám nhưng VẪN NHÌN THẤY (không trong suốt hẳn).
+            _iconImage.color   = isUnlocked ? Color.white : new Color(0.45f, 0.45f, 0.45f, 1f);
         }
 
         // ── Name ──────────────────────────────────────────────────
@@ -145,6 +166,50 @@ public class SkillNodeUI : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     //  BUTTON HANDLERS
     // ─────────────────────────────────────────────────────────────
+
+    // ─────────────────────────────────────────────────────────────
+    //  HOVER → hiện detail/description (kể cả khi node CHƯA unlock)
+    // ─────────────────────────────────────────────────────────────
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (_hoverRoutine != null)
+            StopCoroutine(_hoverRoutine);
+
+        if (_controller != null && _nodeData != null)
+            _hoverRoutine = StartCoroutine(ShowDetailAfterDelay());
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        if (_hoverRoutine != null)
+        {
+            StopCoroutine(_hoverRoutine);
+            _hoverRoutine = null;
+        }
+
+        if (_controller != null)
+            _controller.HideSkillDetail();
+    }
+
+    private IEnumerator ShowDetailAfterDelay()
+    {
+        // SkillTree đang pause timeScale, nên phải dùng realtime.
+        yield return new WaitForSecondsRealtime(HoverDetailDelaySeconds);
+        _hoverRoutine = null;
+
+        if (_controller != null && _nodeData != null && isActiveAndEnabled)
+            _controller.ShowNodeDetail(_nodeData);
+    }
+
+    private void OnDisable()
+    {
+        if (_hoverRoutine != null)
+        {
+            StopCoroutine(_hoverRoutine);
+            _hoverRoutine = null;
+        }
+    }
 
     private void OnUnlockClicked()
     {

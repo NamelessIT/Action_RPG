@@ -22,6 +22,7 @@ public class InventorySlotView : MonoBehaviour,
     [SerializeField] private TextMeshProUGUI  _nameText;
     [SerializeField] private TextMeshProUGUI  _quantityText;
     [SerializeField] private Image            _emptyBackground;   // ô xám khi trống (tùy chọn)
+    [SerializeField] private Image            _rarityBorder;      // viền màu theo rarity (tùy chọn)
     [SerializeField] private CanvasGroup      _canvasGroup;
 
     // Runtime binding (gán bởi InventoryController)
@@ -79,6 +80,21 @@ public class InventorySlotView : MonoBehaviour,
         // Nền ô rỗng
         if (_emptyBackground != null)
             _emptyBackground.enabled = !hasItem;
+
+        // Viền màu theo rarity (tùy chọn — chỉ chạy nếu gán _rarityBorder trong Editor)
+        if (_rarityBorder != null)
+        {
+            int tier = hasItem ? slot.Item.RarityTier : -1;
+            if (tier >= 0)
+            {
+                _rarityBorder.enabled = true;
+                _rarityBorder.color   = RarityColors.Get(tier);
+            }
+            else
+            {
+                _rarityBorder.enabled = false;
+            }
+        }
 
         gameObject.name = hasItem ? $"Slot{_slotIndex}_{slot.Item.DisplayName}" : $"Slot{_slotIndex}_Empty";
     }

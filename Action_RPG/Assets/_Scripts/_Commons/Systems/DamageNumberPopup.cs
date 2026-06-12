@@ -141,7 +141,8 @@ public class DamageNumberPopup : MonoBehaviour
         line.gameObject.SetActive(true);
 
         line.alpha    = 1f;
-        line.color    = color;
+        // Crit: tăng sáng màu gốc để nổi bật (lerp về trắng 35%) + scale to hơn
+        line.color    = isCrit ? Color.Lerp(color, Color.white, 0.35f) : color;
         line.fontSize = isCrit ? _critSize : _normalSize;
 
         // Text content
@@ -152,7 +153,8 @@ public class DamageNumberPopup : MonoBehaviour
         else
         {
             string num = Mathf.RoundToInt(damage).ToString();
-            line.text = isCrit ? $"<b>⚡{num}</b>" : num;
+            // Dùng "!" thay ký tự ⚡ để tránh warning missing-glyph của LiberationSans.
+            line.text = isCrit ? $"<b>{num}!</b>" : num;
         }
 
         // Xếp dọc: dòng đầu cao nhất, dòng sau thấp hơn
