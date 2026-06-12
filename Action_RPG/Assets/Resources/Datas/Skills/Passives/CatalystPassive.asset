@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: CatalystPassive
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: CatalystPassive
+  skillName: "Nh\u1ECBp \u0110i\u1EC7u C\u1ED9ng Sinh"
+  icon: {fileID: 0}
+  skilDesc: "\u2022 \u0110\xF2n \u0111\xE1nh c\u1EE7a Leonard g\xE2y hi\u1EC7u \u1EE9ng
+    \"C\u1ED9ng h\u01B0\u1EDFng\" l\xEAn k\u1EBB \u0111\u1ECBch trong 5s.\n\n\u2022
+    Companion g\xE2y th\xEAm 30% S\xE1t th\u01B0\u01A1ng l\xEAn nh\u1EEFng k\u1EBB
+    b\u1ECB C\u1ED9ng h\u01B0\u1EDFng."
+  skillType: 1
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 0
+  sinChargeReq: 0
+  passiveEffectCode: 10
+  skillEffectCode: 0
+  signatureEffectCode: 0
+  passiveStats: []

@@ -49,8 +49,9 @@ public static class CombatMath
     /// <param name="skill">Skill sử dụng (null nếu là đánh thường)</param>
     /// <param name="weapon">Vũ khí đang cầm (để check type khi đánh thường)</param>
     /// <param name="externalMult">Hệ số phụ (Combo, Charge... mặc định là 1)</param>
+    /// Hàm tính damage chính thức (Đã thêm ignoreReduction)
     /// </summary>
-    public static float CalculateFullDamage(Stats attacker, Stats target, float t, bool isCrit, SkillData skill, WeaponData weapon, float externalMult = 1.0f)
+    public static (float phys, float magic, float trueDmg) CalculateFullDamage(Stats attacker, Stats target, float t, bool isCrit, SkillData skill, WeaponData weapon, float externalMult = 1.0f, bool ignoreReduction = false)
     {
         // --- 1. Tính Raw Damage ---
         float critMult = isCrit ? attacker.baseCritMultiplier : 1.0f; //Sửa lại thành critMultiplier 
@@ -63,47 +64,69 @@ public static class CombatMath
             // A. Dùng Skill: Lấy hệ số từ Skill
             physMult = skill.skillPhysicalMultiplier;
             magicMult = skill.skillMagicMultiplier;
+
+            // Signature damage bonus từ Skill Tree
+            if (skill.skillType == SkillData.SkillType.Signature && attacker is AllyStats allyAtk)
+            {
+                float sigBonus = 1f + allyAtk.signatureDamageBonus;
+                physMult  *= sigBonus;
+                magicMult *= sigBonus;
+            }
         }
         else
         {
             // B. Đánh thường: Dựa vào loại vũ khí
             // Nếu weapon null (tay không) -> mặc định là Physical
-            bool isMagicWeapon = weapon != null && weapon.weaponAtkType == WeaponData.WeaponAtkType.Magic;
+            WeaponData.WeaponAtkType atkType = weapon != null
+                ? weapon.weaponAtkType
+                : WeaponData.WeaponAtkType.Physical;
 
-            if (isMagicWeapon)
+            switch (atkType)
             {
-                physMult = 0f;
-                magicMult = 1.0f; // Đánh thường hệ số cơ bản là 100%
-            }
-            else // Physical (Hand, Sword, Spear...)
-            {
-                physMult = 1.0f; // Đánh thường hệ số cơ bản là 100%
-                magicMult = 0f;
+                case WeaponData.WeaponAtkType.Magic:
+                    physMult  = 0f;
+                    magicMult = 1.0f;
+                    break;
+                case WeaponData.WeaponAtkType.Both:
+                    // Chia đều 50/50 — hiện cả màu cam lẫn tím
+                    physMult  = 0.5f;
+                    magicMult = 0.5f;
+                    break;
+                default: // Physical (Hand, Sword, Spear, Bow...)
+                    physMult  = 1.0f;
+                    magicMult = 0f;
+                    break;
             }
         }
         // Nhân thêm hệ số phụ (Combo step / Charge attack)
         physMult *= externalMult;
         magicMult *= externalMult;
-        // [Source: 67] Raw Phys
-        float rawPhysical = attacker.physicalAtk * physMult * critMult;
-
-        // [Source: 68] Raw Magic
-        float rawMagic = attacker.magicAtk * magicMult * critMult;
+        // Raw Phys + Raw Magic
+        float rawPhysical = attacker.physicalAtk * physMult * critMult * attacker.damageOutputMultiplier; //buff hay debuff giảm damage apply vào đây
+        float rawMagic = attacker.magicAtk * magicMult * critMult * attacker.damageOutputMultiplier;
 
 
-        // --- 2. Tính Armor/Resist thực tế theo hướng đánh (Armor Direction) ---
-        // [Source: 69] armorDir
+        // XỬ LÝ SÁT THƯƠNG CHUẨN (Bỏ qua Giáp)
+        if (ignoreReduction)
+        {
+            float trueDamage = rawPhysical + rawMagic;
+            float bonus = 1.0f + (0.25f * t);
+
+            // Trả toàn bộ thành True Damage
+            return (0f, 0f, trueDamage * bonus);
+        }
+
+
+        // --- 2. Tính Armor/MagicResist thực tế theo hướng đánh (Armor Direction) ---
         float armorDir = target.armor * (1 - (attacker.armorBackstabReduce * t));
-
-        // [Source: 70] magicResistDir
         float magicResistDir = target.magicResist * (1 - (attacker.magicResistBackstabReduce * t));
 
 
         // --- 3. Tính % Giảm Sát Thương (Damage Reduction) ---
-        // [Source: 71] DR Vật lý = 25% * (armor / (armor + C))
+        // DR Vật lý = 25% * (armor / (armor + C))
         float physDR = 0.25f * (armorDir / (armorDir + C_CONST));
 
-        // [Source: 72] DR Phép
+        // DR Phép
         float magicDR = 0.25f * (magicResistDir / (magicResistDir + C_CONST));
 
 
@@ -114,8 +137,11 @@ public static class CombatMath
         // Kiểm tra góc Block (blockThreshold nằm ở Stats cha nên gọi trực tiếp được)
         if (t <= target.blockThreshold)
         {
-            // A. Auto Block bằng chỉ số Defense của vũ khí
-            defenseValMult = 1f / (1f + target.defenseValue * K_CONST);
+            // A. Auto Block — áp dụng defenseValueIgnore từ attacker
+            float effectiveDefenseValue = target.defenseValue;
+            if (attacker is AllyStats allyIgnore && allyIgnore.defenseValueIgnore > 0f)
+                effectiveDefenseValue *= (1f - Mathf.Clamp01(allyIgnore.defenseValueIgnore));
+            defenseValMult = 1f / (1f + effectiveDefenseValue * K_CONST);
 
             // B. Manual Guard (Phải ép kiểu sang AllyStats mới check được)
             if (target is AllyStats allyTarget)
@@ -144,33 +170,27 @@ public static class CombatMath
         }
 
         // --- 5. Tính Direction Bonus Multiplier (Thưởng sát thương theo hướng) ---
-        // [Source: 75-80] Từ 1.0 (t=0) đến 1.25 (t=1). Công thức tuyến tính: 1 + 0.25 * t
+        // Từ 1.0 (t=0) đến 1.25 (t=1). Công thức tuyến tính: 1 + 0.25 * t
         float dirBonusMult = 1.0f + (0.25f * t);
 
 
         // --- 6. TÍNH FINAL DAMAGE ---
-        // [Source: 81] Final Phys
         float finalPhys = rawPhysical * (1 - physDR) * defenseValMult * dirBonusMult * skillReductionMult;
-
-        // [Source: 82] Final Magic
         float finalMagic = rawMagic * (1 - magicDR) * defenseValMult * dirBonusMult * skillReductionMult;
 
-        // [Source: 83] Tổng
         float totalDamage = finalPhys + finalMagic;
         // Debug kiểm tra xem skillReductionMult có hoạt động không
         if (skillReductionMult < 1.0f)
         {
             Debug.Log($"<color=green>SHIELD BLOCK!</color> Giảm {(1 - skillReductionMult) * 100}% sát thương. Damage còn: {totalDamage}");
         }
-        // Debug chi tiết (có thể comment lại nếu spam console)
-
-        Debug.Log($"LOG DAMGE >> RawPhys: {rawPhysical} | RawMagic: {rawMagic} \n" +
-                  $"ArmorDir: {armorDir} (Gốc {target.armor}) | T: {t} \n" +
-                  $"DefenseMult: {defenseValMult} | DirBonus: {dirBonusMult} \n" +
-                  $"Final Type Damage >> FinalPhys: {finalPhys} | FinalMagic: {finalMagic} \n" +
-                  $"FINAL: {totalDamage} (Phys: {finalPhys} + Magic: {finalMagic})");
+        // Debug chi tiết — bỏ comment khi cần tuning damage, tắt khi ship
+        // Debug.Log($"LOG DAMAGE >> RawPhys:{rawPhysical:F1} RawMagic:{rawMagic:F1} | " +
+        //           $"Armor:{armorDir:F1} DR:{physDR:P0} | T:{t} DirBonus:{dirBonusMult:F2} | " +
+        //           $"Final Phys:{finalPhys:F1} Magic:{finalMagic:F1} Total:{totalDamage:F1}");
 
 
-        return totalDamage;
+        // Tổng Damage: Trả về 3 cục riêng biệt (True = 0 ở đòn đánh thường)
+        return (finalPhys, finalMagic, 0f);
     }
 }

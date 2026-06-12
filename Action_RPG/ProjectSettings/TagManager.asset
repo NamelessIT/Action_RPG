@@ -5,18 +5,20 @@ TagManager:
   serializedVersion: 3
   tags:
   - Enemy
+  - Ally
+  - Obstacle
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Ground
   - Water
   - UI
   - Enemy
   - Obstacle
-  - 
-  - 
-  - 
+  - Projectile
+  - Player
+  - Item
   - 
   - 
   - 

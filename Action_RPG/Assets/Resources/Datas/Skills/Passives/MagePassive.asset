@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: MagePassive
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: MagePassive
+  skillName: Mage Passive
+  icon: {fileID: 0}
+  skilDesc: "\u2022 Cho ph\xE9p s\u1EED d\u1EE5ng v\u0169 kh\xED c\xF9ng c\u1EA5p
+    m\xE0 kh\xF4ng c\u1EA7n ki\u1EC3m tra c\xE1c ch\u1EC9 s\u1ED1 c\u01A1 b\u1EA3n
+    theo c\xE1c m\u1ED1c 16-26-41-51, t\u0103ng kinh nghi\u1EC7m nh\u1EADn \u0111\u01B0\u1EE3c.
+    \n\u2022 (Grimoire equiped): \u0110\xE1nh theo h\u01B0\u1EDBng (N-L\u1EEDa ,
+    S-B\u0103ng, W-\u0110\u1EA5t, E-Gi\xF3) \n\u2022 (Grimoire equiped): +5% bonusMoveSpeed"
+  skillType: 1
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 0
+  sinChargeReq: 0
+  passiveEffectCode: 9
+  skillEffectCode: 0
+  signatureEffectCode: 0
+  passiveStats: []

@@ -29,6 +29,7 @@ public class PlayerStateManager
         Debug.Log($"[PlayerStateManager] ✅ Tải base player: {player.name} | STR={player.STR}, VIT={player.VIT}");
 
         // Gán base stats...
+        runtime.playerName = player.name;
         runtime.baseSTR = player.STR;
         runtime.baseDEX = player.DEX;
         runtime.baseINT = player.INT;
@@ -39,16 +40,43 @@ public class PlayerStateManager
         runtime.dashCost = player.dash_cost;
         runtime.armorBackstabReduce = player.armor_backstab_reduce;
         runtime.playerId = playerId;
+        runtime.level = 1;
 
         // 2. Load saved state
         var saveData = dao.LoadSaveData(playerId);
-        if (saveData.currentHp > 0)
+        bool hasSaveData = saveData != null && saveData.currentHp > 0f;
+        if (hasSaveData)
         {
-            runtime.currentHp = saveData.currentHp;
-            runtime.currentEnergy = saveData.currentEnergy;
-            runtime.checkpointId = saveData.checkpointId;
-            runtime.position = new Vector2(saveData.positionX, saveData.positionY);
-            runtime.equippedAccessoryIds = new List<int>(saveData.accessoryIds);
+            // Lưu base stats từ DB trước khi LoadFromSave ghi đè
+            float dbSTR = runtime.baseSTR;
+            float dbDEX = runtime.baseDEX;
+            float dbINT = runtime.baseINT;
+            float dbVIT = runtime.baseVIT;
+            float dbAGI = runtime.baseAGI;
+
+            runtime.LoadFromSave(saveData);
+
+            // Nếu save file chưa có base stats (legacy save) → dùng lại giá trị DB
+            runtime.baseSTR = saveData.baseSTR > 0f ? saveData.baseSTR : dbSTR;
+            runtime.baseDEX = saveData.baseDEX > 0f ? saveData.baseDEX : dbDEX;
+            runtime.baseINT = saveData.baseINT > 0f ? saveData.baseINT : dbINT;
+            runtime.baseVIT = saveData.baseVIT > 0f ? saveData.baseVIT : dbVIT;
+            runtime.baseAGI = saveData.baseAGI > 0f ? saveData.baseAGI : dbAGI;
+
+            if (saveData.level <= 0)
+            {
+                runtime.level = 1;
+                runtime.attributePointRemain = runtime.level * 5;
+                runtime.skillPointRemain = runtime.level;
+            }
+
+            if (saveData.nextLevelExp <= 0f || saveData.maxExpForCurrentLevel <= 0f)
+            {
+                float requiredExp = Mathf.Floor(100f * Mathf.Pow(runtime.level, 1.1f));
+                runtime.nextLevelExp = requiredExp;
+                runtime.maxExpForCurrentLevel = requiredExp;
+            }
+
             Debug.Log($"[PlayerStateManager] ✅ Tải save game: HP={saveData.currentHp}, Energy={saveData.currentEnergy}, Checkpoint={saveData.checkpointId}");
         }
         else
@@ -62,13 +90,25 @@ public class PlayerStateManager
                 Debug.Log($"[PlayerStateManager] ✅ Dùng checkpoint mặc định: ({defaultCheckpoint.positionX}, {defaultCheckpoint.positionY})");
             }
             runtime.currentEnergy = 100;
+            runtime.currentStamina = runtime.maxStamina;
+            runtime.attributePointRemain = runtime.level * 5;
+            runtime.skillPointRemain = runtime.level;
         }
 
         // 3. Load weapon
-        if (player.weapon_holding.HasValue)
+        string effectiveWeaponDbId = null;
+        if (runtime.weaponId > 0)
         {
-            string weaponIdStr = player.weapon_holding.Value.ToString();
-            var weapon = dao.LoadWeaponFromDB(weaponIdStr); 
+            effectiveWeaponDbId = runtime.weaponId.ToString();
+        }
+        else if (player.weapon_holding.HasValue)
+        {
+            effectiveWeaponDbId = player.weapon_holding.Value.ToString();
+        }
+
+        if (!string.IsNullOrEmpty(effectiveWeaponDbId))
+        {
+            var weapon = dao.LoadWeaponFromDB(effectiveWeaponDbId); 
 
             if (weapon != null)
             {
@@ -100,7 +140,7 @@ public class PlayerStateManager
             }
             else
             {
-                Debug.LogWarning($"[PlayerStateManager] ⚠ Vũ khí được chỉ định (ID={weaponIdStr}) không tồn tại!");
+                Debug.LogWarning($"[PlayerStateManager] ⚠ Vũ khí được chỉ định (ID={effectiveWeaponDbId}) không tồn tại!");
             }
         }
         else
@@ -109,10 +149,13 @@ public class PlayerStateManager
         }
 
         // 4. Load accessories
-        var equippedAccessories = dao.LoadPlayerAccessories(playerId);
+        var equippedAccessories = runtime.equippedAccessoryIds.Count > 0
+            ? new List<int>(runtime.equippedAccessoryIds)
+            : dao.LoadPlayerAccessories(playerId);
+
+        runtime.equippedAccessoryIds = new List<int>(equippedAccessories);
         foreach (var accId in equippedAccessories)
         {
-            runtime.equippedAccessoryIds.Add(accId);
             var stats = dao.LoadAccessoryStats(accId);
             foreach (var stat in stats)
                 runtime.AddFlatStat(stat.statName, stat.value);
@@ -133,6 +176,11 @@ public class PlayerStateManager
             Debug.Log($"[PlayerStateManager] 💖 Đặt HP đầy: {runtime.MaxHp:0.0}");
         }
 
+        if (runtime.currentStamina <= 0f)
+        {
+            runtime.currentStamina = runtime.maxStamina;
+        }
+
         // Log tổng kết
         Debug.Log($"[PlayerStateManager] 🎮 Player runtime state hoàn tất!");
         Debug.Log($"  - HP: {runtime.currentHp:0.0} / {runtime.MaxHp:0.0}");
@@ -145,19 +193,6 @@ public class PlayerStateManager
 
     public void SaveGameState(PlayerRuntimeState runtime)
     {
-        var saveData = runtime.GetSaveData();
-        var dbSaveData = new PlayerStateSaveData
-        {
-            currentHp = saveData.currentHp,
-            currentEnergy = saveData.currentEnergy,
-            checkpointId = saveData.checkpointId,
-            positionX = saveData.positionX,
-            positionY = saveData.positionY,
-            currentClassId = saveData.currentClassId,
-            weaponId = saveData.weaponId,
-            coreShieldId = saveData.coreShieldId,
-            accessoryIds = new List<int>(saveData.accessoryIds)
-        };
-        dao.SaveGameState(runtime.playerId, dbSaveData);
+        dao.SaveGameState(runtime.playerId, runtime.GetSaveData());
     }
 }

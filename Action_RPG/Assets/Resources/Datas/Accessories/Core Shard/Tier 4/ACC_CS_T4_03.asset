@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6cbf2f21cbaafa4c8dacb28b94abfb2, type: 3}
+  m_Name: ACC_CS_T4_03
+  m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
+  id: ACC_CS_T4_03
+  accessoryType: 0
+  AccessoryName: Titan's Knuckle
+  lore: 
+  description: A fossilized bone fragment of a primordial giant imbuing the wearer
+    with immense physical resilience.
+  icon: {fileID: 21300000, guid: d4ed53d7565889940abe5565b80b61e1, type: 3}
+  rarity: 3
+  setId: 0
+  substats:
+  - stat: 0
+    val: 40
+    powerMod: 1
+  - stat: 5
+    val: 0.1
+    powerMod: 1
+  - stat: 19
+    val: 20
+    powerMod: 1
+  - stat: 20
+    val: 20
+    powerMod: 1
+  isUnique: 0
+  playerOnly: 0

@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: WardenSkill
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: WardenSkill
+  skillName: Seismic Slam
+  icon: {fileID: 0}
+  skilDesc: "\"\u2022 H\xE0nh \u0111\u1ED9ng: Nh\u1EA3y l\xEAn cao (Invincible) v\xE0
+    c\u1EAFm m\u1EA1nh v\u0169 kh\xED xu\u1ED1ng \u0111\u1EA5t, sau \u0111\xF3 l\u01B0\u1EDBt
+    theo \u0111\u1EC3 ch\xE9m th\xEAm 2 \u0111\xF2n.\n\n\u2022 Hi\u1EC7u \u1EE9ng:
+    H\xFAc v\xE0 \u0111\u1EA9y k\u1EBB \u0111\u1ECBch v\u1EC1 ph\xEDa tr\u01B0\u1EDBc
+    (kh\xF4ng th\u1EC3 ng\u0103n c\u1EA3n v\xE0 kh\xF4ng th\u1EC3 cancel), sau \u0111\xF3
+    tung 1 \u0111\xF2n ch\xE9m scale Armor, MS \u0111\xF2n th\u1EE9 2 g\xE2y s\xE1t
+    th\u01B0\u01A1ng chu\u1EA9n theo ph\u1EA7n tr\u0103m m\xE1u v\xE0 cho\xE1ng.\nNh\u1EADn
+    150 Defense Value trong 3 gi\xE2y sau khi d\xF9ng k\u0129 n\u0103ng.\n\n\u2022
+    Design: K\u1EBFt h\u1EE3p ki\u1EC3m so\xE1t \u0111\xE1m \u0111\xF4ng v\xE0 s\xE1t
+    th\u01B0\u01A1ng b\xF9ng n\u1ED5.\""
+  skillType: 2
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 10
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 11
+  signatureEffectCode: 0
+  passiveStats: []

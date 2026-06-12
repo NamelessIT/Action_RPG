@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: RogueLiteSignature
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: RogueLiteSignature
+  skillName: Shadow Strike
+  icon: {fileID: 0}
+  skilDesc: "H\xE0nh \u0111\u1ED9ng: Bi\u1EBFn m\u1EA5t v\xE0 xu\u1EA5t hi\u1EC7n
+    sau l\u01B0ng k\u1EBB \u0111\u1ECBch xa nh\u1EA5t trong t\u1EA7m nh\xECn.\nHi\u1EC7u
+    \u1EE9ng: \u0110\xE2m m\u1ED9t \u0111\xF2n ch\xED m\u1EA1ng g\xE2y ch\u1EA3y
+    m\xE1u. K\u1EBB \u0111\u1ECBch b\u1ECB ch\u1EA3y m\xE1u s\u1EBD m\u1EA5t 2% m\xE1u
+    m\u1ED7i gi\xE2y trong 10 gi\xE2y."
+  skillType: 3
+  skillPhysicalMultiplier: 2
+  skillMagicMultiplier: 0
+  cooldown: 12
+  sinChargeReq: 40
+  passiveEffectCode: 0
+  skillEffectCode: 0
+  signatureEffectCode: 7
+  passiveStats: []

@@ -3,6 +3,7 @@
 public class BattleMagePassive : SkillBehavior
 {
     [Header("Settings")]
+    public float physicalLifeStealBonus = 0.1f; // 10% hút máu vật lý
     public float magicLifeStealBonus = 0.1f; // 10% Hút máu phép
 
     [Tooltip("Tỷ lệ chuyển đổi: 10% Speed (0.1) * 200 = 20 Armor")]
@@ -29,14 +30,16 @@ public class BattleMagePassive : SkillBehavior
 
     protected override void OnEquip()
     {
-        // 1. Cộng Magic Life Steal
-        stats.magicLifeSteal += 0.1f;
-        Debug.Log($"[BattleMage] +{magicLifeStealBonus * 100}% Magic Life Steal");
+        // 1. Cộng Life Steal
+        stats.physicalLifeSteal += physicalLifeStealBonus;
+        stats.magicLifeSteal += magicLifeStealBonus;
+        //Debug.Log($"[BattleMage] +{magicLifeStealBonus * 100}% Magic Life Steal");
     }
 
     protected override void OnUnequip()
     {
-        // 1. Trừ Magic Life Steal
+        // 1. Trừ Life Steal
+        stats.physicalLifeSteal -= physicalLifeStealBonus;
         stats.magicLifeSteal -= magicLifeStealBonus;
 
         // 2. Dọn dẹp chỉ số ảo

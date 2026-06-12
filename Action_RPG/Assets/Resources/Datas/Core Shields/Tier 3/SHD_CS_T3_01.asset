@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9faf1b028513f2c4fbbbe9d8708c6d1b, type: 3}
+  m_Name: SHD_CS_T3_01
+  m_EditorClassIdentifier: Assembly-CSharp::CoreShieldData
+  id: SHD_CS_T3_01
+  coreShieldName: Aegis of the Vanguard
+  icon: {fileID: 21300000, guid: 0f093f7c0950cdc4da33821a8725995c, type: 3}
+  lore: 
+  description: A reinforced steel frame shaped like petals embracing the chest center.
+    Its glowing orange energy channels absorb frontal impacts.
+  rarity: 2
+  setId: 0
+  armor: 50
+  magicResist: 50
+  substats:
+  - stat: 3
+    val: 20
+    powerMod: 1
+  - stat: 27
+    val: 0.1
+    powerMod: 1
+  playerOnly: 0

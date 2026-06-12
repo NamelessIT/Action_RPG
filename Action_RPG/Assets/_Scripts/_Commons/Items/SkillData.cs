@@ -11,17 +11,65 @@ public class SkillData : ScriptableObject
     // Định danh logic đặc biệt (Để SkillManager biết phải code gì cho skill này)
     public enum PassiveEffectCode
     {
-        None, //Các skill khác
-        Chris, // Cơ bản ChrisDon
-        Leo, // Cơ bản Leo
-        Vanguard,  // Vanguard
-        Warrior,  // Warrior
-        BattleMage,  // Battle-Mage
-        BloodReaver,  // Blood Reaver
-        Rouge,
+        None, //Skill hoặc signature
+        Chris, 
+        Leo, 
+        Vanguard,  
+        Warrior,  
+        BattleMage,  
+        BloodReaver, 
+        Rogue,
         Duelist,
         Mage,
-        Hermit
+        Catalyst,
+    }
+    public enum SkillEffectCode
+    {
+        None, //Passive hoặc Signature
+        ChrisSkill,
+        LeoSkill,
+        VanguardSkill,
+        WarriorSkill,
+        BattleMageSkill,
+        BloodReaverSkill,
+        RogueSkill,
+        DuelistSkill,
+        MageSkill,
+        CatalystSkill,
+        WardenSkill,
+        PaladinSkill,
+        JuggernautSkill,
+        DarkInquisitorSkill,
+        RavagerSkill,
+        WarlockSkill,
+        SwordMasterSkill,
+        TricksterSkill,
+        InfiltratorSkill,
+        SpellbladeSkill,
+        TacticianSkill,
+        SpellbinderSkill,
+    }
+    public enum SignatureEffectCode
+    {
+        None, //Passive hoặc Skill
+        ChrisSignature,
+        LeoSignature,
+        VanguardLiteSignature,
+        WarriorLiteSignature,
+        BattleMageLiteSignature,
+        BloodReaverLiteSignature,
+        RogueLiteSignature,
+        DuelistLiteSignature,
+        MageLiteSignature,
+        CatalystLiteSignature,
+        VanguardSignature,
+        WarriorSignature,
+        BattleMageSignature,
+        BloodReaverSignature,
+        RogueSignature,
+        DuelistSignature,
+        MageSignature,
+        CatalystSignature,
     }
     public string id;
     public string skillName;
@@ -33,7 +81,10 @@ public class SkillData : ScriptableObject
     public float cooldown;
     public float sinChargeReq;
     [Header("Special Logic ID")]
-    public PassiveEffectCode effectCode; // <-- Quan trọng: Chọn logic ở đây
+    public PassiveEffectCode passiveEffectCode; // <-- Quan trọng: Chọn logic ở đây
+    public SkillEffectCode skillEffectCode;
+    public SignatureEffectCode signatureEffectCode;
+
     [Header("Passive Stat Modifiers")]
     // Dùng để cộng chỉ số tĩnh (VD: +10% HP, +Crit) mà không cần viết code
     public List<StatModifier> passiveStats = new List<StatModifier>();

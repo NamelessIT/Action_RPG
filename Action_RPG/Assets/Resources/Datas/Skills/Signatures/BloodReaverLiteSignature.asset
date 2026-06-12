@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: BloodReaverLiteSignature
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: BloodReaverLiteSignature
+  skillName: Blood Frenzy
+  icon: {fileID: 0}
+  skilDesc: "\"H\xE0nh \u0111\u1ED9ng: K\xEDch ho\u1EA1t tr\u1EA1ng th\xE1i cu\u1ED3ng
+    n\u1ED9 trong 10s.\n\nHi\u1EC7u \u1EE9ng: T\u0103ng 30% T\u1ED1c \u0111\u1ED9
+    \u0111\xE1nh v\xE0 Di chuy\u1EC3n, nh\u01B0ng t\u1EF1 m\u1EA5t 2% m\xE1u m\u1ED7i
+    gi\xE2y.\""
+  skillType: 3
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 12
+  sinChargeReq: 60
+  passiveEffectCode: 0
+  skillEffectCode: 0
+  signatureEffectCode: 6
+  passiveStats: []

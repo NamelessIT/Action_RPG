@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: DuelistPassive
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: DuelistPassive
+  skillName: "N\u1ED9i t\u1EA1i c\u1EE7a Duelist"
+  icon: {fileID: 0}
+  skilDesc: "\u2022 M\u1EDF ra kh\u1EA3 n\u0103ng Parry qu\xE1i, c\xF3 th\u1EC3 Parry
+    qu\xE1i n\u1EBFu \u0111\xE1nh n\xF3 tr\u01B0\u1EDBc khi n\xF3 tung \u0111\xF2n
+    0,3s\r\n\u2022 Parry th\xE0nh c\xF4ng th\xEC gi\u1EA3m 80% damage, Perfect Parry
+    th\xEC 100% + stun qu\xE1i 0,5s\r\n\u2022 N\u1EBFu Perfect Parry chu\u1EA9n,
+    \u0111\xF2n \u0111\xE1nh ti\u1EBFp theo trong v\xF2ng 2s ch\u1EAFc ch\u1EAFn
+    Ch\xED M\u1EA1ng v\xE0 b\u1ECF qua Damage Reduction"
+  skillType: 1
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 0
+  sinChargeReq: 0
+  passiveEffectCode: 8
+  skillEffectCode: 0
+  passiveStats: []

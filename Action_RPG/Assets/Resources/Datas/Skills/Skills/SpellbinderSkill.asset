@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: SpellbinderSkill
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: SpellbinderSkill
+  skillName: Arcane Conduit
+  icon: {fileID: 0}
+  skilDesc: "\"\u2022 H\xE0nh \u0111\u1ED9ng: Leonard b\u1EAFn lu\u1ED3ng n\u0103ng
+    l\u01B0\u1EE3ng qu\xE1 t\u1EA3i v\xE0o Companion.\n\n\u2022 Hi\u1EC7u \u1EE9ng:
+    Companion nh\u1EADn gi\xE1p \u1EA3o trong 4 gi\xE2y, khi\xEAu kh\xEDch \u0111\u1ECBch,
+    t\u1EF1 ch\u1EA1y v\xE0o n\u01A1i \u0111\xF4ng k\u1EBB \u0111\u1ECBch nh\u1EA5t.
+    Khi \u0111\xE3 v\xE0o n\u01A1i \u0111\xF4ng nh\u1EA5t ho\u1EB7c sau 4 gi\xE2y,
+    gi\xE1p \u1EA3o ph\xE1t n\u1ED5, g\xE2y s\xE1t th\u01B0\u01A1ng v\xE0 l\xE0m
+    cho\xE1ng AOE.\n\n\u2022 Design: Bi\u1EBFn Companion th\xE0nh \"\"tr\u1EE5 ph\xE9p
+    di \u0111\u1ED9ng\"\" \u0111\u1EC3 d\u1ECDn l\xEDnh.\""
+  skillType: 2
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 3
+  cooldown: 10
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 22
+  signatureEffectCode: 0
+  passiveStats: []

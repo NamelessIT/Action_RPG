@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: DuelistLiteSignature
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: DuelistLiteSignature
+  skillName: Blade Dance
+  icon: {fileID: 0}
+  skilDesc: "\"H\xE0nh \u0111\u1ED9ng: V\xE0o tr\u1EA1ng th\xE1i c\u01B0\u1EDDng
+    h\xF3a trong 5 gi\xE2y\n\nHi\u1EC7u \u1EE9ng: Nh\u1EADn 100% CritChance, 20%
+    bonusMoveSpeed, 20% bonusAttackSpeed v\xE0 \u0111\xF2n \u0111\xE1nh l\xE0m gi\u1EA3m
+    gi\xE1p c\u1EE7a k\u1EBB \u0111\u1ECBch \u0111i 5% trong 3 gi\xE2y (c\xF3 c\u1ED9ng
+    d\u1ED3n, t\u1ED1i \u0111a 50%)\""
+  skillType: 3
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 12
+  sinChargeReq: 60
+  passiveEffectCode: 0
+  skillEffectCode: 0
+  signatureEffectCode: 8
+  passiveStats: []

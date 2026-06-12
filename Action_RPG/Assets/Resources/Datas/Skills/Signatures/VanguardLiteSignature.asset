@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: VanguardLiteSignature
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: VanguardLiteSignature
+  skillName: Rainbow Shiel
+  icon: {fileID: 0}
+  skilDesc: "H\xE0nh \u0111\u1ED9ng: C\u1EA7m khi\xEAn l\xEAn v\xE0 xoay li\xEAn
+    t\u1EE5c trong 4 gi\xE2y, gi\u1EA3m 50% t\u1ED1c \u0111\u1ED9 di chuy\u1EC3n.
+    Damage scale VIT, Armor, MS.\n\nHi\u1EC7u \u1EE9ng: L\xE0m cho\xE1ng c\xE1c k\u1EBB
+    \u0111\u1ECBch tr\xFAng \u0111\xF2n c\u1EE7a hi\u1EC7u \u1EE9ng \u0111\xF2n \u0111\xE1nh
+    th\u1EE9 3 v\xE0 g\xE2y s\xE1t th\u01B0\u01A1ng. K\u1EBB \u0111\u1ECBch ch\u1ECBu
+    c\xE0ng nhi\u1EC1u hit th\xEC c\xE0ng nhi\u1EC1u s\xE1t th\u01B0\u01A1ng h\u01A1n."
+  skillType: 3
+  skillPhysicalMultiplier: 0.1
+  skillMagicMultiplier: 0
+  cooldown: 16
+  sinChargeReq: 60
+  passiveEffectCode: 0
+  skillEffectCode: 0
+  signatureEffectCode: 3
+  passiveStats: []

@@ -24,6 +24,7 @@ public class StatModifier
         BonusMagicAtk,
         CritChance, 
         CritMultiplier,
+        BonusAttackSpeed,
         Armor,
         MagicResist,
         BonusMoveSpeed,
@@ -33,6 +34,8 @@ public class StatModifier
         MagicLifeSteal,
         KnockBackRes,
         EffectRes,
+        FlatSinGain,
+        FlatHpGain,
 
         // ... Thêm các stat khác tùy nhu cầu
     }

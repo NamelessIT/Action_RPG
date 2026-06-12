@@ -2,6 +2,17 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+/// <summary>
+/// [DAO Layer - Database Tier 1] Player base statistics configuration.
+/// This is a ScriptableObject asset containing player templates.
+/// 
+/// ARCHITECTURE: 
+/// - Called ONLY by InAppPlayerStateDAO.LoadPlayerFromDB()
+/// - Part of the read-only database layer (no modifications here)
+/// - Uses lazy-loaded Dictionary cache for O(1) lookups
+/// 
+/// Usage: Create in Editor via Assets/Create/Database/Player Database
+/// </summary>
 [CreateAssetMenu(fileName = "PlayerDatabase", menuName = "Database/Player Database")]
 public class PlayerDatabase : ScriptableObject
 {

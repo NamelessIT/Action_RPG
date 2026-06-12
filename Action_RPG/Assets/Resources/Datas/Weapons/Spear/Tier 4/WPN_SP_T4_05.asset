@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9b495199aa16a44489d2944cd3f302f, type: 3}
+  m_Name: WPN_SP_T4_05
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponData
+  id: WPN_SP_T4_05
+  weaponType: 4
+  weaponAtkType: 0
+  weaponName: Mirage Lance
+  lore: 
+  description: A spear whose tip seems to blur and multiply. It leaves dangerous
+    afterimages in its wake.
+  icon: {fileID: 21300000, guid: e6201c0c3045e6240b2e43bf21aaece0, type: 3}
+  rarity: 3
+  baseAtk: 148
+  baseAttackSpeed: 1.05
+  moveFlexibility: 0.75
+  defenseValue: 20
+  bonusCritChance: 0.15
+  attackRange: 3.5
+  isRanged: 0
+  projectilePrefab: {fileID: 0}
+  attackMode: 1
+  heavyChargeTime: 1
+  heavyAttackType: 6
+  heavyDamageMultiplier: 2
+  heavyProjectilePrefab: {fileID: 0}
+  substats:
+  - stat: 1
+    val: 40
+    powerMod: 1
+  - stat: 2
+    val: 20
+    powerMod: 1
+  - stat: 17
+    val: 0.1
+    powerMod: 1
+  - stat: 18
+    val: 0.1
+    powerMod: 1
+  reqStr: 0
+  reqDex: 0
+  reqInt: 0
+  reqVit: 0
+  reqAgi: 0
+  playerOnly: 0
+  triggerVfxPrefab: {fileID: 0}
+  auraVfxPrefab: {fileID: 0}
+  comboEffects: []

@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9b495199aa16a44489d2944cd3f302f, type: 3}
+  m_Name: WPN_ST_T3_01
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponData
+  id: WPN_ST_T3_01
+  weaponType: 5
+  weaponAtkType: 1
+  weaponName: Arcane Conduit Staff
+  lore: 
+  description: a refined staff designed to channel magical energy efficiently, its
+    core-aligned structure stabilizes spell output and enhances casting control
+  icon: {fileID: 21300000, guid: 22818cc8885ef354f838731af2c78115, type: 3}
+  rarity: 2
+  baseAtk: 80
+  baseAttackSpeed: 0.8
+  moveFlexibility: 0.7
+  defenseValue: 15
+  bonusCritChance: 0
+  attackRange: 3
+  isRanged: 1
+  projectilePrefab: {fileID: 5323527255875736035, guid: 322996f6bc69fd34d89e0fbe2d6ba4f7, type: 3}
+  attackMode: 3
+  heavyChargeTime: 0.5
+  heavyAttackType: 5
+  heavyDamageMultiplier: 2
+  heavyProjectilePrefab: {fileID: 0}
+  substats:
+  - stat: 2
+    val: 20
+    powerMod: 1
+  - stat: 22
+    val: 0.05
+    powerMod: 1
+  reqStr: 0
+  reqDex: 0
+  reqInt: 0
+  reqVit: 0
+  reqAgi: 0
+  playerOnly: 0
+  triggerVfxPrefab: {fileID: 0}
+  auraVfxPrefab: {fileID: 0}
+  comboEffects: []

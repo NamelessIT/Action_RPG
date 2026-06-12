@@ -2,6 +2,30 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// [DAO Layer - Data Access Object]
+/// 
+/// SINGLETON RESPONSIBILITY: Single point of access to all database and save/load operations.
+/// This class bridges between read-only Databases (Tier 1) and PlayerStateManager (Tier 3).
+/// 
+/// ARCHITECTURE LAYERS:
+/// └─ Tier 1: Database access (PlayerDatabase, WeaponDatabase, etc.)
+///    └─ Tier 2: DAO wrapper (InAppPlayerStateDAO) ← YOU ARE HERE
+///       └─ Tier 3: State Manager (PlayerStateManager)
+///          └─ Tier 4: Game System (GameManager)
+/// 
+/// METHODS:
+/// - LoadPlayerFromDB(id) → PlayerDB (base stats)
+/// - LoadWeaponFromDB(id) → WeaponDB (equipped weapon)
+/// - LoadCheckpoint(id) → CheckpointDB (spawn point)
+/// - LoadPlayerAccessories(id) → List<int> (equipped accessory IDs)
+/// - LoadAccessoryStats(id) → List<StatDB> (stat mods from accessory)
+/// - LoadWeaponStats(id) → List<StatDB> (stat mods from weapon)
+/// - SaveGameState() → JSON file (persistence)
+/// - LoadSaveData() → Memory/File (load runtime data)
+/// 
+/// CONSTRAINT: Direct database access ONLY occurs here. No other class may call Database.GetXXX()
+/// </summary>
 public class InAppPlayerStateDAO
 {
     private PlayerDatabase playerDB;
@@ -11,6 +35,17 @@ public class InAppPlayerStateDAO
 
     // Save data sẽ được lưu ở đây (hoặc ra file)
     private static Dictionary<int, PlayerStateSaveData> savedStates = new();
+
+    /// <summary>
+    /// Xóa toàn bộ save data khỏi bộ nhớ (static cache).
+    /// GỌI TRƯỚC SceneManager.LoadScene() khi muốn reset game hoàn toàn,
+    /// vì static field tồn tại xuyên qua scene reload.
+    /// </summary>
+    public static void ClearMemoryCache()
+    {
+        savedStates.Clear();
+        Debug.Log("[InAppPlayerStateDAO] 🗑️ Đã xóa save cache khỏi memory.");
+    }
 
     public InAppPlayerStateDAO(
         PlayerDatabase playerDB,
@@ -35,6 +70,13 @@ public class InAppPlayerStateDAO
     // === Save/Load State (dùng file JSON) ===
     private string GetSavePath(int playerId)
     {
+        // Dùng characterId (Chris / Leo) để tạo save file riêng biệt cho từng nhân vật.
+        // PlayerPrefs "SelectedCharacter" được ghi từ CharacterSelectScene trước khi load scene chính.
+        string charId = PlayerPrefs.GetString("SelectedCharacter", "");
+        if (!string.IsNullOrEmpty(charId))
+            return System.IO.Path.Combine(Application.persistentDataPath, $"save_{charId}.json");
+
+        // Fallback: nếu chưa chọn nhân vật, dùng playerId như cũ
         return System.IO.Path.Combine(Application.persistentDataPath, $"save_player_{playerId}.json");
     }
 
@@ -43,6 +85,7 @@ public class InAppPlayerStateDAO
     {
         string json = JsonUtility.ToJson(data, prettyPrint: true);
         string path = GetSavePath(playerId);
+        savedStates[playerId] = data;
         System.IO.File.WriteAllText(path, json);
         Debug.Log($"[InAppPlayerStateDAO] 💾 Đã lưu save game player {playerId} vào: {path}");
     }
@@ -54,8 +97,8 @@ public class InAppPlayerStateDAO
         if (savedStates.TryGetValue(playerId, out var memData))
             return memData;
 
-        // Thử load từ file
-        string path = Application.persistentDataPath + $"/save_player_{playerId}.json";
+        // Thử load từ file (dùng GetSavePath để đảm bảo đúng file per-character)
+        string path = GetSavePath(playerId);
         if (System.IO.File.Exists(path))
         {
             string json = System.IO.File.ReadAllText(path);

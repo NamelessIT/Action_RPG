@@ -33,3 +33,14 @@ mono_crash.*
 *.app
 *.exe
 *.unitypackage
+
+# Unity recovery scenes (backup tự động, không push)
+Action_RPG/Assets/_Recovery/
+
+.github
+.gitnexus
+AGENTS.md
+CLAUDE.md
+agent_workspace.md
+*.md
+/Action_RPG/Assets/_Sprites

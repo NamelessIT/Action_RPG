@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6cbf2f21cbaafa4c8dacb28b94abfb2, type: 3}
+  m_Name: ACC_PA_T5_04
+  m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
+  id: ACC_PA_T5_04
+  accessoryType: 3
+  AccessoryName: Heart Devourer
+  lore: 
+  description: A parasitic heart that completely replaces the host's. It pumps thick,
+    black blood that makes the body nigh-indestructible but painfully sluggish.
+  icon: {fileID: 21300000, guid: 41be4a09447337e4191d58e7881c08dc, type: 3}
+  rarity: 4
+  setId: 0
+  substats:
+  - stat: 3
+    val: 100
+    powerMod: 1
+  - stat: 11
+    val: 0.5
+    powerMod: 1
+  - stat: 21
+    val: -0.3
+    powerMod: 1
+  - stat: 18
+    val: -0.3
+    powerMod: 1
+  - stat: 22
+    val: -0.1
+    powerMod: 1
+  isUnique: 0
+  playerOnly: 0

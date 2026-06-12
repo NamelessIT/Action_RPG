@@ -11,6 +11,12 @@ public class StatDatabase : ScriptableObject
 
     private Dictionary<string, StatDB> cache;
 
+    /// <summary>
+    /// [OBSOLETE - Not currently used in DAO layer]
+    /// Reserved for future expansion when stat lookups by name are needed.
+    /// Currently all stat definitions are handled via PlayerDatabase, WeaponDatabase, AccessoryDatabase.
+    /// </summary>
+    [System.Obsolete("Not used in current architecture. Reserved for future use.", false)]
     public StatDB GetStat(string statName)
     {
         if (cache == null)

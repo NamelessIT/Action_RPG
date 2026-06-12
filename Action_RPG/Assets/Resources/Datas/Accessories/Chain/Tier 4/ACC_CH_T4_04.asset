@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6cbf2f21cbaafa4c8dacb28b94abfb2, type: 3}
+  m_Name: ACC_CH_T4_04
+  m_EditorClassIdentifier: Assembly-CSharp::AccessoryData
+  id: ACC_CH_T4_04
+  accessoryType: 4
+  AccessoryName: Assassin's Wire
+  lore: 
+  description: An almost invisible garrote wire wrapped around the wrists ensuring
+    movements are flawlessly efficient.
+  icon: {fileID: 21300000, guid: 750046e2114ffe54292f12308d703294, type: 3}
+  rarity: 3
+  setId: 0
+  substats:
+  - stat: 4
+    val: 40
+    powerMod: 1
+  - stat: 1
+    val: 20
+    powerMod: 1
+  - stat: 21
+    val: 0.2
+    powerMod: 1
+  isUnique: 0
+  playerOnly: 0

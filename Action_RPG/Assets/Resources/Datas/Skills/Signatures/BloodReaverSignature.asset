@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: BloodReaverSignature
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: BloodReaverSignature
+  skillName: "Hi\u1EC7n Th\xE2n T\xE0n S\xE1t"
+  icon: {fileID: 0}
+  skilDesc: "\"H\xE0nh \u0111\u1ED9ng: N\u1ED5 tung to\xE0n b\u1ED9 s\u1ED1 m\xE1u
+    hi\u1EC7n c\xF3 (ch\u1EEBa l\u1EA1i 1 HP) g\xE2y s\xE1t th\u01B0\u01A1ng AoE
+    c\u1EF1c l\u1EDBn xung quanh d\u1EF1a tr\xEAn s\u1ED1 m\xE1u hi\u1EC7n t\u1EA1i\n\nHi\u1EC7u
+    \u1EE9ng: Trong 5s ti\u1EBFp theo, Chris Don nh\u1EADn hi\u1EC7u \u1EE9ng B\u1EA5t
+    T\u1EED (Invulnerable) v\xE0 t\u0103ng g\u1EA5p \u0111\xF4i hi\u1EC7u \u1EE9ng
+    t\u1EEB Passive.\nKh\xED k\u1EBFt th\xFAc hi\u1EC7u \u1EE9ng, n\u1EBFu kh\xF4ng
+    s\u1EED d\u1EE5ng skill trong kho\u1EA3ng th\u1EDDi gian n\xE0y, \u0111\u1EB7t
+    m\xE1u c\u1EE7a Chris Don v\u1EC1 50% m\xE1u t\u1ED1i \u0111a.\""
+  skillType: 3
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 15
+  sinChargeReq: 120
+  passiveEffectCode: 0
+  skillEffectCode: 0
+  signatureEffectCode: 14
+  passiveStats: []

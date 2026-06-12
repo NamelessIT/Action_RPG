@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: WarlockSkill
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: WarlockSkill
+  skillName: "Huy\u1EBFt Kh\u1EBF Tr\xF3i Bu\u1ED9c"
+  icon: {fileID: 0}
+  skilDesc: "\"\u2022 H\xE0nh \u0111\u1ED9ng: G\u1EAFn d\u1EA5u \u1EA5n \"\"M\xE1u
+    t\u01B0\u01A1i\"\" l\xEAn t\u1EA5t c\u1EA3 k\u1EBB \u0111\u1ECBch trong ph\u1EA1m
+    vi xung quanh, t\u1ED3n t\u1EA1i 10 gi\xE2y?. M\u1ED7i d\u1EA5u \u1EA5n \"\"M\xE1u
+    t\u01B0\u01A1i\"\" g\u1ED3m 5 stack.\n\n\u2022 Hi\u1EC7u \u1EE9ng: Khi t\u1EA5n
+    c\xF4ng l\xEAn k\u1EBB \u0111\u1ECBch c\xF3 d\u1EA5u \u1EA5n, s\u1EBD ti\xEAu
+    hao 1 stack c\u1EE7a d\u1EA5u \u1EA5n \u0111\u1EC3 g\xE2y th\xEAm s\xE1t th\u01B0\u01A1ng
+    ph\xE9p d\u1EF1a tr\xEAn l\u01B0\u1EE3ng m\xE1u \u0111\xE3 m\u1EA5t c\u1EE7a
+    m\u1EE5c ti\xEAu. \nNgo\xE0i ra, m\u1ED7i khi ti\xEAu hao 1 stack, t\u0103ng
+    20% t\u1ED1c \u0111\u1ED9 di chuy\u1EC3n (kh\xF4ng c\u1ED9ng d\u1ED3n) trong
+    3 gi\xE2y, \u0111\u1ED3ng th\u1EDDi h\u1ED3i l\u1EA1i 3% M\xE1u t\u1ED1i \u0111a.\n\n\u2022
+    Design: C\xF4ng c\u1EE5 \u0111\u1EC3 t\u0103ng kh\u1EA3 n\u0103ng th\u1EA3 di\u1EC1u
+    v\xE0 h\u1ED3i l\u1EA1i m\xE1u cho Blood Reaver\""
+  skillType: 2
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 0
+  cooldown: 15
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 16
+  signatureEffectCode: 0
+  passiveStats: []

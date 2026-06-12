@@ -1,0 +1,477 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81f2eb5fa3b7a7b4e9c17c99f73d64a9, type: 3}
+  m_Name: VanguardSkillTree
+  m_EditorClassIdentifier: Assembly-CSharp::ClassSkillTreeData
+  className: Vanguard
+  classIcon: {fileID: 0}
+  skillNodes:
+  - nodeId: Vanguard_T2_N1
+    nodeName: '  +2 STR'
+    nodeDescription: '  +2 baseSTR'
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 3
+      value: 2
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Chris_T1_N5
+    uiPosition: {x: -100, y: 75}
+  - nodeId: Vanguard_T2_N2
+    nodeName: '  +4 VIT'
+    nodeDescription: '  +4 baseVIT'
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 2
+      value: 4
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Vanguard_T2_N1
+    uiPosition: {x: 0, y: -150}
+  - nodeId: Vanguard_T2_N3
+    nodeName: '  +4 STR'
+    nodeDescription: '  +4 baseSTR'
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 3
+      value: 4
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Vanguard_T2_N2
+    uiPosition: {x: 0, y: -300}
+  - nodeId: Vanguard_T2_N4
+    nodeName: '  +6 VIT'
+    nodeDescription: '  +6 baseVIT'
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 2
+      value: 6
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Vanguard_T2_N3
+    uiPosition: {x: 0, y: -450}
+  - nodeId: Vanguard_T2_N5
+    nodeName: VanguardLiteSignature
+    nodeDescription: "H\u1ECDc VanguardLiteSignature Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: ac1d4d1aaf43d2b499badc8ad2ca97b1, type: 2}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Vanguard_T2_N4
+    uiPosition: {x: 0, y: -600}
+  - nodeId: Vanguard_T3_N1
+    nodeName: VanguardPassive
+    nodeDescription: "H\u1ECDc VanguardPassive Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: dfb5f08f953dd724e9fb7917496b7773, type: 2}
+    statGains: []
+    classGrantType: 1
+    classGrantName: Vanguard
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Vanguard_T2_N5
+    uiPosition: {x: 0, y: -750}
+  - nodeId: Vanguard_T3_N2
+    nodeName: +4 STR / +8 Armor / +4 MR
+    nodeDescription: +4 baseSTR, +8 Armor, +4 MagicResist
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 3
+      value: 4
+    - statType: 9
+      value: 8
+    - statType: 10
+      value: 4
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Vanguard_T3_N1
+    uiPosition: {x: 0, y: -900}
+  - nodeId: Vanguard_T3_N3
+    nodeName: VanguardSkill
+    nodeDescription: "H\u1ECDc VanguardSkill Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: 057d0e528aab27e47a53cdbda38b0c4a, type: 2}
+    statGains: []
+    classGrantType: 2
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Vanguard_T3_N2
+    uiPosition: {x: 0, y: -1050}
+  - nodeId: Vanguard_T3_N4
+    nodeName: +4 DefenseValue
+    nodeDescription: +4 DefenseValue
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 11
+      value: 4
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Vanguard_T3_N3
+    uiPosition: {x: 0, y: -1200}
+  - nodeId: Vanguard_T3_N5
+    nodeName: +10 VIT / +3% Resistance / +2% HpGain
+    nodeDescription: +10 baseVIT, +3% resistanceEffect, +2% bonusHpGain
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 2
+      value: 10
+    - statType: 12
+      value: 0.03
+    - statType: 13
+      value: 0.02
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Vanguard_T3_N4
+    uiPosition: {x: 0, y: -1350}
+  - nodeId: Vanguard_T4_N1
+    nodeName: 'Block: -10% Stamina'
+    nodeDescription: "Core: Gi\u1EA3m 10% stamina ti\xEAu hao khi Block"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T3_N5
+    uiPosition: {x: 0, y: -1500}
+  - nodeId: Vanguard_T4_N2
+    nodeName: +6 VIT / +3 STR
+    nodeDescription: +6 baseVIT, +3 baseSTR
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 2
+      value: 6
+    - statType: 3
+      value: 3
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T4_N1
+    uiPosition: {x: 0, y: -1650}
+  - nodeId: Vanguard_T4_N3
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T4_N2
+    uiPosition: {x: 0, y: -1800}
+  - nodeId: Vanguard_T4_N4
+    nodeName: DefValue Buff +20%
+    nodeDescription: "Core: K\u1EF9 n\u0103ng t\u0103ng 20% DefenseValue khi k\xEDch
+      ho\u1EA1t"
+    nodeType: 3
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T4_N3
+    uiPosition: {x: 0, y: -1950}
+  - nodeId: Vanguard_T4_N5
+    nodeName: +12 Armor / +6 MR
+    nodeDescription: +12 Armor, +6 MagicResist
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 9
+      value: 12
+    - statType: 10
+      value: 6
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T4_N4
+    uiPosition: {x: 0, y: -2100}
+  - nodeId: Vanguard_T4_N6
+    nodeName: Block Speed +20%
+    nodeDescription: "Core: T\u0103ng 20% t\u1ED1c \u0111\u1ED9 gi\u01A1 khi\xEAn/Block"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T4_N5
+    uiPosition: {x: 0, y: -2250}
+  - nodeId: Vanguard_T4_N7
+    nodeName: +6 VIT / +3 STR
+    nodeDescription: +6 baseVIT, +3 baseSTR
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 2
+      value: 6
+    - statType: 3
+      value: 3
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T4_N6
+    uiPosition: {x: 0, y: -2400}
+  - nodeId: Vanguard_T4_N8
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T4_N7
+    uiPosition: {x: 0, y: -2550}
+  - nodeId: Vanguard_T4_N9
+    nodeName: Cooldown -1s
+    nodeDescription: "Core: Gi\u1EA3m 1 gi\xE2y cooldown k\u1EF9 n\u0103ng"
+    nodeType: 3
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T4_N8
+    uiPosition: {x: 0, y: -2700}
+  - nodeId: Vanguard_T4_N10
+    nodeName: +6 DefenseValue
+    nodeDescription: +6 DefenseValue
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 11
+      value: 6
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T4_N9
+    uiPosition: {x: 0, y: -2850}
+  - nodeId: Vanguard_T4_N11
+    nodeName: 'Block: No MS Penalty'
+    nodeDescription: "Core: Kh\xF4ng b\u1ECB gi\u1EA3m 50% t\u1ED1c \u0111\u1ED9
+      di chuy\u1EC3n khi Block"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T4_N10
+    uiPosition: {x: 0, y: -3000}
+  - nodeId: Vanguard_T4_N12
+    nodeName: +8 VIT / +4 STR
+    nodeDescription: +8 baseVIT, +4 baseSTR
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 2
+      value: 8
+    - statType: 3
+      value: 4
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T4_N11
+    uiPosition: {x: 0, y: -3150}
+  - nodeId: Vanguard_T4_N13
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T4_N12
+    uiPosition: {x: 0, y: -3300}
+  - nodeId: Vanguard_T4_N14
+    nodeName: Armor/MR Scale +20%
+    nodeDescription: "Core: K\u1EF9 n\u0103ng scale th\xEAm 20% Armor v\xE0 MagicResist"
+    nodeType: 3
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T4_N13
+    uiPosition: {x: 0, y: -3450}
+  - nodeId: Vanguard_T4_N15
+    nodeName: +4.5% Resistance / +3% HpGain
+    nodeDescription: +4.5% resistanceEffect, +3% bonusHpGain
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 12
+      value: 0.045
+    - statType: 13
+      value: 0.03
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Vanguard_T4_N14
+    uiPosition: {x: 0, y: -3600}
+  - nodeId: Vanguard_T5_N1
+    nodeName: VanguardSignature
+    nodeDescription: "H\u1ECDc VanguardSignature Skill"
+    nodeType: 1
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Vanguard_T4_N15
+    uiPosition: {x: 0, y: -3750}
+  - nodeId: Vanguard_T5_N2
+    nodeName: +20 VIT / +10 STR
+    nodeDescription: +20 baseVIT, +10 baseSTR
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 2
+      value: 20
+    - statType: 3
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Vanguard_T5_N1
+    uiPosition: {x: 0, y: -3900}
+  - nodeId: Vanguard_T5_N3
+    nodeName: +20 Armor / +10 MR / +10 DefVal
+    nodeDescription: +20 Armor, +10 MagicResist, +10 DefenseValue
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 9
+      value: 20
+    - statType: 10
+      value: 10
+    - statType: 11
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Vanguard_T5_N2
+    uiPosition: {x: 0, y: -4050}
+  - nodeId: Vanguard_T5_N4
+    nodeName: +20 VIT / +10 STR
+    nodeDescription: +20 baseVIT, +10 baseSTR
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 2
+      value: 20
+    - statType: 3
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Vanguard_T5_N3
+    uiPosition: {x: 0, y: -4200}
+  - nodeId: Vanguard_T5_N5
+    nodeName: +7.5% Resistance / +5% HpGain
+    nodeDescription: +7.5% resistanceEffect, +5% bonusHpGain
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 12
+      value: 0.075
+    - statType: 13
+      value: 0.05
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Vanguard_T5_N4
+    uiPosition: {x: 0, y: -4350}

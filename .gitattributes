@@ -1,0 +1,17 @@
+# Unity YAML assets — do tool tự sinh, thường có trailing whitespace.
+# Tắt cảnh báo whitespace của `git diff --check` để không chặn commit/push.
+# KHÔNG sửa nội dung các file này bằng tay (dễ hỏng prefab/scene).
+*.unity      -whitespace
+*.prefab     -whitespace
+*.asset      -whitespace
+*.mat        -whitespace
+*.anim       -whitespace
+*.controller -whitespace
+*.meta       -whitespace
+*.physicMaterial -whitespace
+*.unity      text eol=lf
+*.prefab     text eol=lf
+*.asset      text eol=lf
+
+# Unity LFS-friendly binary types (nếu sau này dùng Git LFS)
+# *.psd filter=lfs diff=lfs merge=lfs -text

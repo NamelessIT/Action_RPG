@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9b495199aa16a44489d2944cd3f302f, type: 3}
+  m_Name: WPN_ST_T4_05
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponData
+  id: WPN_ST_T4_05
+  weaponType: 5
+  weaponAtkType: 2
+  weaponName: Ividi Kidivri
+  lore: 
+  description: "A long, dark wand carved from elder wood, adorned with distinct bone-like
+    knots running along its slender shaft, and crowned with a smooth, bulbous grip
+    that fits naturally in the hand of its true master. Rumored to be unbeatable
+    in magical combat, this wand channels raw, unrelenting power \u2014 amplifying
+    every spell cast with terrifying precision and force. Once belonging to Death
+    himself, it chooses only the bold and the worthy, turning the tide of any duel
+    in an instant."
+  icon: {fileID: 21300000, guid: 5521cc14aa919564d91c26633aa75207, type: 3}
+  rarity: 3
+  baseAtk: 232
+  baseAttackSpeed: 0.8
+  moveFlexibility: 0.7
+  defenseValue: 20
+  bonusCritChance: 0.1
+  attackRange: 3
+  isRanged: 1
+  projectilePrefab: {fileID: 5323527255875736035, guid: 322996f6bc69fd34d89e0fbe2d6ba4f7, type: 3}
+  attackMode: 3
+  heavyChargeTime: 0.5
+  heavyAttackType: 5
+  heavyDamageMultiplier: 2
+  heavyProjectilePrefab: {fileID: 0}
+  substats:
+  - stat: 2
+    val: 30
+    powerMod: 1
+  - stat: 0
+    val: 25
+    powerMod: 1
+  - stat: 17
+    val: 0.2
+    powerMod: 1
+  reqStr: 0
+  reqDex: 0
+  reqInt: 0
+  reqVit: 0
+  reqAgi: 0
+  playerOnly: 0
+  triggerVfxPrefab: {fileID: 0}
+  auraVfxPrefab: {fileID: 0}
+  comboEffects: []

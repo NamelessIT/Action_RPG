@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: LeoSkill
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: LeoSkill
+  skillName: Phase Slash
+  icon: {fileID: 0}
+  skilDesc: "H\xE0nh \u0111\u1ED9ng: L\u01B0\u1EDBt (Dash) v\u1EC1 ph\xEDa tr\u01B0\u1EDBc
+    k\xE8m m\u1ED9t nh\xE1t ch\xE9m ngang.\n\nHi\u1EC7u \u1EE9ng: G\xE2y s\xE1t th\u01B0\u01A1ng
+    trung b\xECnh. Trong l\xFAc l\u01B0\u1EDBt c\xF3 i-frame ng\u1EAFn."
+  skillType: 2
+  skillPhysicalMultiplier: 1.5
+  skillMagicMultiplier: 0
+  cooldown: 5
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 2
+  signatureEffectCode: 0
+  passiveStats: []

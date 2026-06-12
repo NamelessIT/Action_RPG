@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: WarriorSignature
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: WarriorSignature
+  skillName: "C\u1EAFm c\xE2y ki\u1EBFm kh\u1ED5ng l\u1ED3"
+  icon: {fileID: 0}
+  skilDesc: "\"H\xE0nh \u0111\u1ED9ng: Nh\u1EA3y l\xEAn c\u1EF1c cao (kh\xF4ng th\u1EC3
+    b\u1ECB c\u1EA3n), ki\u1EBFm h\xF3a kh\u1ED5ng l\u1ED3 v\xE0 b\u1ED5 xu\u1ED1ng.\n\nHi\u1EC7u
+    \u1EE9ng: G\xE2y s\xE1t th\u01B0\u01A1ng di\u1EC7n r\u1ED9ng c\u1EF1c l\u1EDBn.
+    N\u1EBFu m\u1EE5c ti\xEAu d\u01B0\u1EDBi 20% m\xE1u -> Gi\u1EBFt m\u1EE5c ti\xEAu
+    ngay l\u1EADp t\u1EE9c (Execute).\""
+  skillType: 3
+  skillPhysicalMultiplier: 3.6
+  skillMagicMultiplier: 0
+  cooldown: 18
+  sinChargeReq: 120
+  passiveEffectCode: 0
+  skillEffectCode: 0
+  signatureEffectCode: 12
+  passiveStats: []

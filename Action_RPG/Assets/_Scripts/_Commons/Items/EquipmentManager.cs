@@ -33,6 +33,8 @@ public class EquipmentManager : MonoBehaviour
     //public AccessoryData pickUpChain;
     public AccessoryData currentChain;
 
+    public event System.Action OnEquipmentChanged;
+
     void Start()
     {
         allyStats = GetComponent<AllyStats>();
@@ -46,7 +48,7 @@ public class EquipmentManager : MonoBehaviour
         // Đường dẫn file trong thư mục Resources (bỏ đuôi .asset)
         // Ví dụ: Assets/Resources/Weapons/WPN_H_T1_01.asset -> Load "Weapons/WPN_H_T1_01"
         // Bạn hãy điều chỉnh pathString cho đúng với project của bạn
-        string path = "Datas/Weapons/WPN_H_T1_01";
+        string path = "Datas/Weapons/Hand/Tier 1/WPN_H_T1_01";
 
         baseWeapon = Resources.Load<WeaponData>(path);
 
@@ -87,7 +89,18 @@ public class EquipmentManager : MonoBehaviour
         // Đeo vũ khí mới vào
         
         EquipInternal(newWeapon);
+        OnEquipmentChanged?.Invoke();
     }
+
+            public void UnequipWeapon()
+            {
+                ResetToBaseWeapon();
+            }
+
+            public WeaponData GetVisibleEquippedWeapon()
+            {
+                return currentWeapon != null && currentWeapon != baseWeapon ? currentWeapon : null;
+            }
 
     // 3. Reset về tay không (Gọi khi muốn "Cởi đồ")
     public void ResetToBaseWeapon()
@@ -102,6 +115,7 @@ public class EquipmentManager : MonoBehaviour
         {
             EquipInternal(baseWeapon);
         }
+        OnEquipmentChanged?.Invoke();
     }
 
     // --- CÁC HÀM NỘI BỘ (Private) ĐỂ XỬ LÝ CHỈ SỐ ---
@@ -134,8 +148,16 @@ public class EquipmentManager : MonoBehaviour
         allyStats.bonusCritChance -= weaponToRemove.bonusCritChance;
 
         // Reset các biến dạng override (Gán đè)
-        // Lưu ý: Các biến này sẽ được set lại khi EquipInternal(baseWeapon) chạy ngay sau đó
         allyStats.moveFlexibility = 0;
+
+        // --- [MỚI] TRẢ TẦM ĐÁNH VỀ MẶC ĐỊNH (TAY KHÔNG) ---
+        PlayerController pc = GetComponent<PlayerController>();
+        if (pc != null)
+        {
+            pc.attackRange = 1.0f; // Trả về tầm đánh mặc định của tay không
+            pc.isRangedAttack = false; // Tắt cờ đánh xa
+            pc.projectilePrefab = null;
+        }
 
         // Xóa tham chiếu
         currentWeapon = null;
@@ -169,8 +191,24 @@ public class EquipmentManager : MonoBehaviour
 
         allyStats.baseAttackSpeed = newWeapon.baseAttackSpeed;
         allyStats.moveFlexibility = newWeapon.moveFlexibility;
-        allyStats.defenseValue += newWeapon.defenseValue; // Sửa lỗi cú pháp: dùng baseDefenseValue
+        allyStats.defenseValue += newWeapon.defenseValue;
         allyStats.bonusCritChance += newWeapon.bonusCritChance;
+
+        // ── Sync combat data từ WeaponData → PlayerController ────────────
+        PlayerController pc = GetComponent<PlayerController>();
+        if (pc != null)
+        {
+            pc.attackRange      = newWeapon.attackRange > 0 ? newWeapon.attackRange : 1.0f;
+            pc.isRangedAttack   = newWeapon.isRanged;
+            pc.projectilePrefab = newWeapon.projectilePrefab;
+
+            // Sync heavy charge time (per-weapon override)
+            if (allyStats != null && newWeapon.heavyChargeTime > 0f)
+                allyStats.heavyAttackChargeTime = newWeapon.heavyChargeTime;
+
+            // Notify dispatcher về vũ khí mới
+            pc.attackDispatcher?.OnWeaponChanged(newWeapon);
+        }
 
         allyStats.RecalculateStats();
     }
@@ -199,8 +237,9 @@ public class EquipmentManager : MonoBehaviour
 
         // Đeo khiên mới vào
         EquipCoreShieldInternal(newShield);
+        OnEquipmentChanged?.Invoke();
     }
-
+    
     // 2. Tháo Core Shield (Về trạng thái trống)
     public void UnequipCoreShield()
     {
@@ -208,6 +247,7 @@ public class EquipmentManager : MonoBehaviour
         {
             UnequipCoreShieldInternal(currentCoreShield);
             // KHÁC BIỆT: Không gọi EquipInternal(baseShield) vì Shield tháo ra là hết
+            OnEquipmentChanged?.Invoke();
         }
         else
         {
@@ -232,7 +272,10 @@ public class EquipmentManager : MonoBehaviour
         allyStats.armor += newShield.armor;
         allyStats.magicResist += newShield.magicResist;
 
-        // 3. Tính lại chỉ số tổng
+        // [MỚI] 3. Cộng Unique Effect Stats (Nội tại đặc biệt của khiên)
+        ApplyCoreShieldEffectStats(newShield);
+
+        // 4. Tính lại chỉ số tổng
         allyStats.RecalculateStats();
     }
 
@@ -253,11 +296,48 @@ public class EquipmentManager : MonoBehaviour
         allyStats.armor -= shieldToRemove.armor;
         allyStats.magicResist -= shieldToRemove.magicResist;
 
-        // 3. Reset biến và tính lại
+        // [MỚI] 3. Trừ Unique Effect Stats
+        RemoveCoreShieldEffectStats(shieldToRemove);
+
+        // 4. Reset biến và tính lại
         currentCoreShield = null; // Quan trọng: Đưa về null để biểu thị không đeo gì
         allyStats.RecalculateStats();
     }
 
+    // [MỚI] HÀM QUẢN LÝ NỘI TẠI KHIÊN (PASSIVE EFFECTS)
+    private void ApplyCoreShieldEffectStats(CoreShieldData shield)
+    {
+        if (shield == null) return;
+        string id = shield.id.Trim();
+
+        // SHD_CS_T3_01: Tăng 10% HP gốc
+        if (id == "SHD_CS_T3_01") allyStats.bonusHp += 0.10f;
+
+        // SHD_CS_T3_02: Tăng 15% Sin Gain
+        if (id == "SHD_CS_T3_02") allyStats.bonusSinGain += 0.15f;
+
+        // SHD_CS_T3_04: Tăng 10% Tốc chạy gốc
+        if (id == "SHD_CS_T3_04") allyStats.bonusMoveSpeed += 0.10f;
+
+        // SHD_CS_T5_02: Tăng tốc độ hồi máu tự nhiên lên gấp 5 lần (+400%)
+        if (id == "SHD_CS_T5_02") allyStats.bonusHpGain += 4.0f;
+
+        // SHD_CS_T5_04: Tăng tốc độ hồi SinCharge lên 100%
+        if (id == "SHD_CS_T5_04") allyStats.bonusSinGain += 1.0f;
+    }
+
+    private void RemoveCoreShieldEffectStats(CoreShieldData shield)
+    {
+        if (shield == null) return;
+        string id = shield.id.Trim();
+
+        // Trả lại đúng những gì đã cộng khi tháo ra
+        if (id == "SHD_CS_T3_01") allyStats.bonusHp -= 0.10f;
+        if (id == "SHD_CS_T3_02") allyStats.bonusSinGain -= 0.15f;
+        if (id == "SHD_CS_T3_04") allyStats.bonusMoveSpeed -= 0.10f;
+        if (id == "SHD_CS_T5_02") allyStats.bonusHpGain -= 4.0f;
+        if (id == "SHD_CS_T5_04") allyStats.bonusSinGain -= 1.0f;
+    }
     // --------------- ACCESSORY (5 SLOTS) ---------------
     // 1. Trang bị Accessory (Tự động nhận diện slot dựa trên Type)
     public void EquipAccessory(AccessoryData newAccessory)
@@ -285,6 +365,7 @@ public class EquipmentManager : MonoBehaviour
 
         // Đeo đồ mới vào
         EquipAccessoryInternal(newAccessory);
+        OnEquipmentChanged?.Invoke();
     }
 
     // 2. Tháo một Accessory cụ thể
@@ -298,6 +379,7 @@ public class EquipmentManager : MonoBehaviour
         if (currentInSlot == accToRemove)
         {
             UnequipAccessoryInternal(accToRemove);
+            OnEquipmentChanged?.Invoke();
         }
         else
         {
@@ -318,6 +400,25 @@ public class EquipmentManager : MonoBehaviour
             case AccessoryData.AccessoryType.Parasite: return currentParasite;
             case AccessoryData.AccessoryType.Chain: return currentChain;
             default: return null;
+        }
+    }
+
+    public AccessoryData GetAccessoryInSlot(InventoryItemRecord.EquipmentSlotKind slotKind)
+    {
+        switch (slotKind)
+        {
+            case InventoryItemRecord.EquipmentSlotKind.CoreShard:
+                return currentCoreShard;
+            case InventoryItemRecord.EquipmentSlotKind.MarkOfSin:
+                return currentMarkOfSin;
+            case InventoryItemRecord.EquipmentSlotKind.RelicOfMemory:
+                return currentRelicOfMemory;
+            case InventoryItemRecord.EquipmentSlotKind.Parasite:
+                return currentParasite;
+            case InventoryItemRecord.EquipmentSlotKind.Chain:
+                return currentChain;
+            default:
+                return null;
         }
     }
 
@@ -386,35 +487,43 @@ public class EquipmentManager : MonoBehaviour
 
         switch (mod.stat)
         {
-            case StatModifier.StatType.STR: allyStats.STR += value; break;
-            case StatModifier.StatType.DEX: allyStats.DEX += value; break;
-            case StatModifier.StatType.INT: allyStats.INT += value; break;
-            case StatModifier.StatType.VIT: allyStats.VIT += value; break;
-            case StatModifier.StatType.AGI: allyStats.AGI += value; break;
-            case StatModifier.StatType.BonusSTR: allyStats.STR += value; break;
-            case StatModifier.StatType.BonusDEX: allyStats.DEX += value; break;
-            case StatModifier.StatType.BonusINT: allyStats.INT += value; break;
-            case StatModifier.StatType.BonusVIT: allyStats.VIT += value; break;
-            case StatModifier.StatType.BonusAGI: allyStats.AGI += value; break;
+            case StatModifier.StatType.STR: allyStats.flatSTR += value; break;
+            case StatModifier.StatType.DEX: allyStats.flatDEX += value; break;
+            case StatModifier.StatType.INT: allyStats.flatINT += value; break;
+            case StatModifier.StatType.VIT: allyStats.flatVIT += value; break;
+            case StatModifier.StatType.AGI: allyStats.flatAGI += value; break;
+            case StatModifier.StatType.BonusSTR: allyStats.bonusSTR += value; break;
+            case StatModifier.StatType.BonusDEX: allyStats.bonusDEX += value; break;
+            case StatModifier.StatType.BonusINT: allyStats.bonusINT += value; break;
+            case StatModifier.StatType.BonusVIT: allyStats.bonusVIT += value; break;
+            case StatModifier.StatType.BonusAGI: allyStats.bonusAGI += value; break;
 
             case StatModifier.StatType.FlatHP: allyStats.flatHp += value; break;
-            case StatModifier.StatType.BonusHP: allyStats.bonusHp += value; break; 
+            case StatModifier.StatType.BonusHP: allyStats.bonusHp += value; break;
+            case StatModifier.StatType.Armor: allyStats.armor += value; break;
+            case StatModifier.StatType.MagicResist: allyStats.magicResist += value; break;
+            case StatModifier.StatType.DefenseValue: allyStats.defenseValue += value; break;
 
             case StatModifier.StatType.FlatPhysicalAtk: allyStats.flatPhysicalAtk += value; break;
             case StatModifier.StatType.FlatMagicAtk: allyStats.flatMagicAtk += value; break;
             case StatModifier.StatType.BonusPhysicalAtk: allyStats.bonusPhysicalAtk += value; break;
             case StatModifier.StatType.BonusMagicAtk: allyStats.bonusMagicAtk += value; break;
+
             case StatModifier.StatType.CritChance: allyStats.bonusCritChance += value; break;
             case StatModifier.StatType.CritMultiplier: allyStats.bonusCritMultiplier += value; break;
-            case StatModifier.StatType.Armor: allyStats.armor += value; break;
-            case StatModifier.StatType.MagicResist: allyStats.magicResist += value; break;
+
+            case StatModifier.StatType.BonusAttackSpeed: allyStats.bonusAttackSpeed += value; break;
             case StatModifier.StatType.BonusMoveSpeed: allyStats.bonusMoveSpeed += value; break;
             case StatModifier.StatType.BonusCDR: allyStats.bonusCdr += value; break;
-            case StatModifier.StatType.DefenseValue: allyStats.defenseValue += value; break;
+
             case StatModifier.StatType.PhysicalLifeSteal: allyStats.physicalLifeSteal += value; break;
             case StatModifier.StatType.MagicLifeSteal: allyStats.magicLifeSteal += value; break;
+
             case StatModifier.StatType.KnockBackRes: allyStats.resistanceKnockBack += value; break;
             case StatModifier.StatType.EffectRes: allyStats.resistanceEffect += value; break;
+
+            case StatModifier.StatType.FlatHpGain: allyStats.flatHpGain += value; break;
+            case StatModifier.StatType.FlatSinGain: allyStats.flatSinGain += value; break;
 
                 // ... Thêm các case cho các chỉ số khác
         }

@@ -1,0 +1,463 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81f2eb5fa3b7a7b4e9c17c99f73d64a9, type: 3}
+  m_Name: WarriorSkillTree
+  m_EditorClassIdentifier: Assembly-CSharp::ClassSkillTreeData
+  className: Warrior
+  classIcon: {fileID: 0}
+  skillNodes:
+  - nodeId: Warrior_T2_N1
+    nodeName: +2 VIT
+    nodeDescription: +2 baseVIT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 2
+      value: 2
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Chris_T1_N5
+    uiPosition: {x: 0, y: 0}
+  - nodeId: Warrior_T2_N2
+    nodeName: +4 STR
+    nodeDescription: +4 baseSTR
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 3
+      value: 4
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Warrior_T2_N1
+    uiPosition: {x: 0, y: -150}
+  - nodeId: Warrior_T2_N3
+    nodeName: +4 VIT
+    nodeDescription: +4 baseVIT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 2
+      value: 4
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Warrior_T2_N2
+    uiPosition: {x: 0, y: -300}
+  - nodeId: Warrior_T2_N4
+    nodeName: +6 STR
+    nodeDescription: +6 baseSTR
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 3
+      value: 6
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Warrior_T2_N3
+    uiPosition: {x: 0, y: -450}
+  - nodeId: Warrior_T2_N5
+    nodeName: WarriorLiteSignature
+    nodeDescription: "H\u1ECDc WarriorLiteSignature Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: 4bc3cbe1ff1ac954b8de191b36e6844c, type: 2}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Warrior_T2_N4
+    uiPosition: {x: 0, y: -600}
+  - nodeId: Warrior_T3_N1
+    nodeName: WarriorPassive
+    nodeDescription: "H\u1ECDc WarriorPassive Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: a949725622f168f49897394959baa51e, type: 2}
+    statGains: []
+    classGrantType: 1
+    classGrantName: Warrior
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Warrior_T2_N5
+    uiPosition: {x: 0, y: -750}
+  - nodeId: Warrior_T3_N2
+    nodeName: +4 VIT / +4% StaminaRed
+    nodeDescription: +4 baseVIT, +4% StaminaReduction
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 2
+      value: 4
+    - statType: 16
+      value: 0.04
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Warrior_T3_N1
+    uiPosition: {x: 0, y: -900}
+  - nodeId: Warrior_T3_N3
+    nodeName: WarriorSkill
+    nodeDescription: "H\u1ECDc WarriorSkill Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: e5df8eb93d4bfbd46a79fb6a223357f9, type: 2}
+    statGains: []
+    classGrantType: 2
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Warrior_T3_N2
+    uiPosition: {x: 0, y: -1050}
+  - nodeId: Warrior_T3_N4
+    nodeName: +4% CritChance
+    nodeDescription: +4% bonusCritChance
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 7
+      value: 0.04
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Warrior_T3_N3
+    uiPosition: {x: 0, y: -1200}
+  - nodeId: Warrior_T3_N5
+    nodeName: +10 STR / +4% DefValIgnore
+    nodeDescription: +10 baseSTR, +4% defenseValueIgnore
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 3
+      value: 10
+    - statType: 17
+      value: 0.04
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Warrior_T3_N4
+    uiPosition: {x: 0, y: -1350}
+  - nodeId: Warrior_T4_N1
+    nodeName: Heavy Attack -20% Time
+    nodeDescription: "Core: Gi\u1EA3m 20% th\u1EDDi gian \u0111\xE1nh n\u1EB7ng"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T3_N5
+    uiPosition: {x: 0, y: -1500}
+  - nodeId: Warrior_T4_N2
+    nodeName: +6 STR / +3 VIT
+    nodeDescription: +6 baseSTR, +3 baseVIT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 3
+      value: 6
+    - statType: 2
+      value: 3
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T4_N1
+    uiPosition: {x: 0, y: -1650}
+  - nodeId: Warrior_T4_N3
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T4_N2
+    uiPosition: {x: 0, y: -1800}
+  - nodeId: Warrior_T4_N4
+    nodeName: Stun +20% Duration
+    nodeDescription: "Core: K\u1EF9 n\u0103ng t\u0103ng 20% th\u1EDDi gian cho\xE1ng"
+    nodeType: 3
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T4_N3
+    uiPosition: {x: 0, y: -1950}
+  - nodeId: Warrior_T4_N5
+    nodeName: +6% StaminaReduction
+    nodeDescription: +6% StaminaReduction
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 16
+      value: 0.06
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T4_N4
+    uiPosition: {x: 0, y: -2100}
+  - nodeId: Warrior_T4_N6
+    nodeName: Heavy Attack Harder Interrupt
+    nodeDescription: "Core: \u0110\xE1nh n\u1EB7ng kh\xF3 b\u1ECB ng\u1EAFt h\u01A1n"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T4_N5
+    uiPosition: {x: 0, y: -2250}
+  - nodeId: Warrior_T4_N7
+    nodeName: +6 STR / +3 VIT
+    nodeDescription: +6 baseSTR, +3 baseVIT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 3
+      value: 6
+    - statType: 2
+      value: 3
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T4_N6
+    uiPosition: {x: 0, y: -2400}
+  - nodeId: Warrior_T4_N8
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T4_N7
+    uiPosition: {x: 0, y: -2550}
+  - nodeId: Warrior_T4_N9
+    nodeName: Cooldown -1s
+    nodeDescription: "Core: Gi\u1EA3m 1 gi\xE2y cooldown k\u1EF9 n\u0103ng"
+    nodeType: 3
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T4_N8
+    uiPosition: {x: 0, y: -2700}
+  - nodeId: Warrior_T4_N10
+    nodeName: +6% CritChance
+    nodeDescription: +6% bonusCritChance
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 7
+      value: 0.06
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T4_N9
+    uiPosition: {x: 0, y: -2850}
+  - nodeId: Warrior_T4_N11
+    nodeName: Heavy Attack +20% Damage
+    nodeDescription: "Core: \u0110\xE1nh n\u1EB7ng t\u0103ng 20% s\xE1t th\u01B0\u01A1ng"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T4_N10
+    uiPosition: {x: 0, y: -3000}
+  - nodeId: Warrior_T4_N12
+    nodeName: +8 STR / +4 VIT
+    nodeDescription: +8 baseSTR, +4 baseVIT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 3
+      value: 8
+    - statType: 2
+      value: 4
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T4_N11
+    uiPosition: {x: 0, y: -3150}
+  - nodeId: Warrior_T4_N13
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T4_N12
+    uiPosition: {x: 0, y: -3300}
+  - nodeId: Warrior_T4_N14
+    nodeName: Damage Scale +20%
+    nodeDescription: "Core: K\u1EF9 n\u0103ng scale th\xEAm 20% s\xE1t th\u01B0\u01A1ng"
+    nodeType: 3
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T4_N13
+    uiPosition: {x: 0, y: -3450}
+  - nodeId: Warrior_T4_N15
+    nodeName: +6% DefValueIgnore
+    nodeDescription: +6% defenseValueIgnore
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 17
+      value: 0.06
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Warrior_T4_N14
+    uiPosition: {x: 0, y: -3600}
+  - nodeId: Warrior_T5_N1
+    nodeName: WarriorSignature
+    nodeDescription: "H\u1ECDc WarriorSignature Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: f26c78c9fbfd44e418db9b71b35d7c87, type: 2}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Warrior_T4_N15
+    uiPosition: {x: 0, y: -3750}
+  - nodeId: Warrior_T5_N2
+    nodeName: +20 STR / +10 VIT
+    nodeDescription: +20 baseSTR, +10 baseVIT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 3
+      value: 20
+    - statType: 2
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Warrior_T5_N1
+    uiPosition: {x: 0, y: -3900}
+  - nodeId: Warrior_T5_N3
+    nodeName: +10% StaminaRed / +10% CritChance
+    nodeDescription: +10% StaminaReduction, +10% bonusCritChance
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 16
+      value: 0.1
+    - statType: 7
+      value: 0.1
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Warrior_T5_N2
+    uiPosition: {x: 0, y: -4050}
+  - nodeId: Warrior_T5_N4
+    nodeName: +20 STR / +10 VIT
+    nodeDescription: +20 baseSTR, +10 baseVIT
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 3
+      value: 20
+    - statType: 2
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Warrior_T5_N3
+    uiPosition: {x: 0, y: -4200}
+  - nodeId: Warrior_T5_N5
+    nodeName: +10% DefValueIgnore
+    nodeDescription: +10% defenseValueIgnore
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 17
+      value: 0.1
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Warrior_T5_N4
+    uiPosition: {x: 0, y: -4350}

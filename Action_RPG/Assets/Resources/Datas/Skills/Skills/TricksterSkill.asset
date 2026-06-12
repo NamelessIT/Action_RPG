@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 698347789404d504c9ee9ac661588692, type: 3}
+  m_Name: TricksterSkill
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  id: TricksterSkill
+  skillName: 'Blink Trap '
+  icon: {fileID: 0}
+  skilDesc: "\"\u2022 H\xE0nh \u0111\u1ED9ng: D\u1ECBch chuy\u1EC3n t\u1EE9c th\u1EDDi
+    v\xE0 t\xE0ng h\xECnh trong 4 gi\xE2y, \u0111\u1EC3 l\u1EA1i t\xE0n \u1EA3nh
+    v\u1ECB tr\xED c\u0169, khi\xEAu kh\xEDch k\u1EBB \u0111\u1ECBch nh\xECn v\xE0o
+    n\xF3 trong 4 gi\xE2y.\n\n\u2022 Hi\u1EC7u \u1EE9ng: T\u1EA1i t\xE0n \u1EA3nh
+    xu\u1EA5t hi\u1EC7n qu\u1EA3 c\u1EA7u ph\xE9p. Sau 1s qu\u1EA3 c\u1EA7u n\u1ED5
+    g\xE2y s\xE1t th\u01B0\u01A1ng v\xE0 cho\xE1ng, c\u01B0\u1EDDng h\xF3a 3 \u0111\xF2n
+    \u0111\xE1nh th\u01B0\u1EDDng ti\u1EBFp theo, g\xE2y th\xEAm s\xE1t th\u01B0\u01A1ng
+    ph\xE9p\n\n\u2022 Design: C\xF4ng c\u1EE5 th\u1EA3 di\u1EC1u (Kite) v\xE0 \u0111\xE1nh
+    l\u1EEBa AI qu\xE1i ho\xE0n h\u1EA3o.\""
+  skillType: 2
+  skillPhysicalMultiplier: 0
+  skillMagicMultiplier: 1
+  cooldown: 12
+  sinChargeReq: 0
+  passiveEffectCode: 0
+  skillEffectCode: 18
+  signatureEffectCode: 0
+  passiveStats: []

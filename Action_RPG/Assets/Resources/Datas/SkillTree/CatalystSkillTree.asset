@@ -1,0 +1,482 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81f2eb5fa3b7a7b4e9c17c99f73d64a9, type: 3}
+  m_Name: CatalystSkillTree
+  m_EditorClassIdentifier: Assembly-CSharp::ClassSkillTreeData
+  className: Catalyst
+  classIcon: {fileID: 0}
+  skillNodes:
+  - nodeId: Catalyst_T2_N1
+    nodeName: +3 AGI
+    nodeDescription: +3 baseAGI
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 6
+      value: 3
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Leo_T1_N5
+    uiPosition: {x: 0, y: 0}
+  - nodeId: Catalyst_T2_N2
+    nodeName: +1.5 INT / +1.5 STR
+    nodeDescription: +1.5 baseINT, +1.5 baseSTR
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 1.5
+    - statType: 3
+      value: 1.5
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Catalyst_T2_N1
+    uiPosition: {x: 0, y: -150}
+  - nodeId: Catalyst_T2_N3
+    nodeName: +5 AGI
+    nodeDescription: +5 baseAGI
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 6
+      value: 5
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Catalyst_T2_N2
+    uiPosition: {x: 0, y: -300}
+  - nodeId: Catalyst_T2_N4
+    nodeName: +2.5 INT / +2.5 STR
+    nodeDescription: +2.5 baseINT, +2.5 baseSTR
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 2.5
+    - statType: 3
+      value: 2.5
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Catalyst_T2_N3
+    uiPosition: {x: 0, y: -450}
+  - nodeId: Catalyst_T2_N5
+    nodeName: CatalystLiteSignature
+    nodeDescription: "H\u1ECDc CatalystLiteSignature Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: c5a5786d3047f9b449eaf550c05447e1, type: 2}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 6
+    prerequisiteNodeIds:
+    - Catalyst_T2_N4
+    uiPosition: {x: 0, y: -600}
+  - nodeId: Catalyst_T3_N1
+    nodeName: CatalystPassive
+    nodeDescription: "H\u1ECDc CatalystPassive Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: f17211567c517cc48bda9ba2527094dc, type: 2}
+    statGains: []
+    classGrantType: 1
+    classGrantName: Catalyst
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Catalyst_T2_N5
+    uiPosition: {x: 0, y: -750}
+  - nodeId: Catalyst_T3_N2
+    nodeName: +7 AGI / +6% CompanionDmgMult
+    nodeDescription: +7 baseAGI, +6% companionDamageOutputMult
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 6
+      value: 7
+    - statType: 29
+      value: 0.06
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Catalyst_T3_N1
+    uiPosition: {x: 0, y: -900}
+  - nodeId: Catalyst_T3_N3
+    nodeName: CatalystSkill
+    nodeDescription: "H\u1ECDc CatalystSkill Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: 5cf490f384f8d5242a41f7d8eda60643, type: 2}
+    statGains: []
+    classGrantType: 2
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Catalyst_T3_N2
+    uiPosition: {x: 0, y: -1050}
+  - nodeId: Catalyst_T3_N4
+    nodeName: +6% CompanionBonusHp
+    nodeDescription: +6% companionBonusHp
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 30
+      value: 0.06
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Catalyst_T3_N3
+    uiPosition: {x: 0, y: -1200}
+  - nodeId: Catalyst_T3_N5
+    nodeName: +3.5 INT / +3.5 STR / +4% CompanionCdr
+    nodeDescription: +3.5 baseINT, +3.5 baseSTR, +4% companionBonusCdr
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 3.5
+    - statType: 3
+      value: 3.5
+    - statType: 31
+      value: 0.04
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 16
+    prerequisiteNodeIds:
+    - Catalyst_T3_N4
+    uiPosition: {x: 0, y: -1350}
+  - nodeId: Catalyst_T4_N1
+    nodeName: Co-Kill MoveSpeed Buff
+    nodeDescription: "Core: Khi h\u1EA1 k\u1EBB \u0111\u1ECBch c\xF9ng Companion,
+      nh\u1EADn buff MoveSpeed"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T3_N5
+    uiPosition: {x: 0, y: -1500}
+  - nodeId: Catalyst_T4_N2
+    nodeName: +2.5 INT / +2.5 STR / +5 AGI
+    nodeDescription: +2.5 baseINT, +2.5 baseSTR, +5 baseAGI
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 2.5
+    - statType: 3
+      value: 2.5
+    - statType: 6
+      value: 5
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T4_N1
+    uiPosition: {x: 0, y: -1650}
+  - nodeId: Catalyst_T4_N3
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T4_N2
+    uiPosition: {x: 0, y: -1800}
+  - nodeId: Catalyst_T4_N4
+    nodeName: Debuff Duration +20%
+    nodeDescription: "Core: K\u1EF9 n\u0103ng t\u0103ng 20% th\u1EDDi gian debuff"
+    nodeType: 3
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T4_N3
+    uiPosition: {x: 0, y: -1950}
+  - nodeId: Catalyst_T4_N5
+    nodeName: +9% CompanionDmgMult
+    nodeDescription: +9% companionDamageOutputMult
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 29
+      value: 0.09
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T4_N4
+    uiPosition: {x: 0, y: -2100}
+  - nodeId: Catalyst_T4_N6
+    nodeName: Marked Enemy +50% Companion Dmg
+    nodeDescription: "Core: K\u1EBB \u0111\u1ECBch b\u1ECB \u0111\xE1nh d\u1EA5u
+      nh\u1EADn th\xEAm 50% s\xE1t th\u01B0\u01A1ng t\u1EEB Companion"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T4_N5
+    uiPosition: {x: 0, y: -2250}
+  - nodeId: Catalyst_T4_N7
+    nodeName: +2.5 INT / +2.5 STR / +5 AGI
+    nodeDescription: +2.5 baseINT, +2.5 baseSTR, +5 baseAGI
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 2.5
+    - statType: 3
+      value: 2.5
+    - statType: 6
+      value: 5
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T4_N6
+    uiPosition: {x: 0, y: -2400}
+  - nodeId: Catalyst_T4_N8
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T4_N7
+    uiPosition: {x: 0, y: -2550}
+  - nodeId: Catalyst_T4_N9
+    nodeName: Cooldown -1s
+    nodeDescription: "Core: Gi\u1EA3m 1 gi\xE2y cooldown k\u1EF9 n\u0103ng"
+    nodeType: 3
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T4_N8
+    uiPosition: {x: 0, y: -2700}
+  - nodeId: Catalyst_T4_N10
+    nodeName: +9% CompanionBonusHp
+    nodeDescription: +9% companionBonusHp
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 30
+      value: 0.09
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T4_N9
+    uiPosition: {x: 0, y: -2850}
+  - nodeId: Catalyst_T4_N11
+    nodeName: Healing Applies to Companion
+    nodeDescription: "Core: H\u1ED3i m\xE1u b\u1EA3n th\xE2n c\u0169ng h\u1ED3i cho
+      Companion"
+    nodeType: 2
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T4_N10
+    uiPosition: {x: 0, y: -3000}
+  - nodeId: Catalyst_T4_N12
+    nodeName: +2.5 INT / +2.5 STR / +5 AGI
+    nodeDescription: +2.5 baseINT, +2.5 baseSTR, +5 baseAGI
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 2.5
+    - statType: 3
+      value: 2.5
+    - statType: 6
+      value: 5
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T4_N11
+    uiPosition: {x: 0, y: -3150}
+  - nodeId: Catalyst_T4_N13
+    nodeName: +10 Attribute Points
+    nodeDescription: "+10 \u0111i\u1EC3m thu\u1ED9c t\xEDnh t\u1EF1 ch\u1ECDn"
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 25
+      value: 10
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T4_N12
+    uiPosition: {x: 0, y: -3300}
+  - nodeId: Catalyst_T4_N14
+    nodeName: Damage Scale +20%
+    nodeDescription: "Core: K\u1EF9 n\u0103ng scale th\xEAm 20% s\xE1t th\u01B0\u01A1ng"
+    nodeType: 3
+    skillData: {fileID: 0}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T4_N13
+    uiPosition: {x: 0, y: -3450}
+  - nodeId: Catalyst_T4_N15
+    nodeName: +6% CompanionBonusCdr
+    nodeDescription: +6% companionBonusCdr
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 31
+      value: 0.06
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 26
+    prerequisiteNodeIds:
+    - Catalyst_T4_N14
+    uiPosition: {x: 0, y: -3600}
+  - nodeId: Catalyst_T5_N1
+    nodeName: CatalystSignature
+    nodeDescription: "H\u1ECDc CatalystSignature Skill"
+    nodeType: 1
+    skillData: {fileID: 11400000, guid: b1707c61c95c69e4296337027cf757a4, type: 2}
+    statGains: []
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Catalyst_T4_N15
+    uiPosition: {x: 0, y: -3750}
+  - nodeId: Catalyst_T5_N2
+    nodeName: +7.5 INT / +7.5 STR / +15 AGI
+    nodeDescription: +7.5 baseINT, +7.5 baseSTR, +15 baseAGI
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 7.5
+    - statType: 3
+      value: 7.5
+    - statType: 6
+      value: 15
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Catalyst_T5_N1
+    uiPosition: {x: 0, y: -3900}
+  - nodeId: Catalyst_T5_N3
+    nodeName: +15% CompanionDmgMult / +15% CompanionHp
+    nodeDescription: +15% companionDamageOutputMult, +15% companionBonusHp
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 29
+      value: 0.15
+    - statType: 30
+      value: 0.15
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Catalyst_T5_N2
+    uiPosition: {x: 0, y: -4050}
+  - nodeId: Catalyst_T5_N4
+    nodeName: +7.5 INT / +7.5 STR / +15 AGI
+    nodeDescription: +7.5 baseINT, +7.5 baseSTR, +15 baseAGI
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 4
+      value: 7.5
+    - statType: 3
+      value: 7.5
+    - statType: 6
+      value: 15
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Catalyst_T5_N3
+    uiPosition: {x: 0, y: -4200}
+  - nodeId: Catalyst_T5_N5
+    nodeName: +10% CompanionBonusCdr
+    nodeDescription: +10% companionBonusCdr
+    nodeType: 0
+    skillData: {fileID: 0}
+    statGains:
+    - statType: 31
+      value: 0.1
+    classGrantType: 0
+    classGrantName: 
+    unlockCost: 1
+    requiredLevel: 41
+    prerequisiteNodeIds:
+    - Catalyst_T5_N4
+    uiPosition: {x: 0, y: -4350}
