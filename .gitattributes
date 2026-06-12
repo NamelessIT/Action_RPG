@@ -13,5 +13,8 @@
 *.prefab     text eol=lf
 *.asset      text eol=lf
 
+# Unity TerrainData .asset files are binary-like; do not normalize line endings.
+"Action_RPG/Assets/New Terrain *.asset" -text
+
 # Unity LFS-friendly binary types (nếu sau này dùng Git LFS)
 # *.psd filter=lfs diff=lfs merge=lfs -text
