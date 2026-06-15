@@ -98,7 +98,9 @@ public class TricksterSkill : SkillBehavior, IEmpoweredAttackProvider
     private void CheckGrimoireEquipped(WeaponData weapon)
     {
         if (magePassive != null) isGrimoireEquipped = magePassive.IsGrimoireActive;
-        else isGrimoireEquipped = (weapon != null && weapon.weaponType == WeaponData.WeaponType.Grimoire);
+        // WPN_GR_T4_04: tính như vũ khí khác Grimoire → không kích hoạt TricksterSkill.
+        else isGrimoireEquipped = (weapon != null && weapon.weaponType == WeaponData.WeaponType.Grimoire
+                                   && (weapon.id == null || weapon.id.Trim() != "WPN_GR_T4_04"));
     }
 
     // ==========================================================

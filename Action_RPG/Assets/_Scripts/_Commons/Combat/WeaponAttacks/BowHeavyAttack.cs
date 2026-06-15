@@ -23,6 +23,18 @@ public class BowHeavyAttack : IWeaponAttackHandler
         Vector3 dir      = ctx.FacingDir;
         float   distance = ctx.Player.attackRange;
 
+        // WPN_BW_T5_01: khi HP < 50% → Heavy cũng thành Tia Sáng Mặt Trời (hitscan xuyên map, True Damage).
+        bool sunBeam = ctx.Stats != null && ctx.Stats.bowSunBeam
+                       && ctx.Stats.currentHp < ctx.Stats.maxHp * 0.5f;
+        if (sunBeam)
+        {
+            WeaponEffectManager wfx = ctx.Player.GetComponent<WeaponEffectManager>();
+            if (wfx != null) wfx.FireSunBeam(origin, dir, true, ctx.ComboStep);
+            ctx.OnHitEvent?.Invoke(ctx.ComboStep, true);
+            yield return new WaitForSeconds(ctx.SwingDuration);
+            yield break;
+        }
+
         // ── Spawn visual projectile (visualOnly=true — không gây damage qua Trigger) ──
         UnityEngine.GameObject prefab = ctx.Weapon?.heavyProjectilePrefab ?? ctx.Player.projectilePrefab;
         if (prefab != null)

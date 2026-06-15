@@ -83,7 +83,7 @@ public class CatalystSkill : SkillBehavior
 
             // --- GÂY SÁT THƯƠNG PHÉP ---
             stats.EnterCombat();
-            DamageHelper.ApplyStandardDamage(stats, bestTarget, transform, data.skillMagicMultiplier, data, equipmentManager.currentWeapon, 0, true, 1f);
+            DamageHelper.ApplyStandardDamage(stats, bestTarget, transform, data.skillMagicMultiplier, data, equipmentManager.currentWeapon, 0, true, 1f, sourceType: DamageSourceType.Ranged);
             // ---------------------------
 
             // Hiện VFX trên đầu mục tiêu

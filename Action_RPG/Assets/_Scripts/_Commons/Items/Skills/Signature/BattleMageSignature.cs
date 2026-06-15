@@ -112,7 +112,7 @@ public class BattleMageSignature : SkillBehavior
 
                 // --- A. GÂY SÁT THƯƠNG RÚT MÁU ---
                 float hpBefore = enemyStats.currentHp;
-                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 0);
+                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 0, sourceType: DamageSourceType.DoT);
                 totalDamageDealtThisTick += Mathf.Max(0f, hpBefore - enemyStats.currentHp);
 
                 // --- B. ÁP DỤNG LÀM CHẬM (Nếu kẻ địch mới bước vào) ---

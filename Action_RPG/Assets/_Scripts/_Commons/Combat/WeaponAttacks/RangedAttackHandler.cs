@@ -37,6 +37,18 @@ public class RangedAttackHandler : IWeaponAttackHandler
             if (provider.WillEmpowerAttack(ctx.IsHeavy)) { empowerReplaces = true; break; }
         }
 
+        // WPN_BW_T5_01: khi HP < 50% → đánh thường thành Tia Sáng Mặt Trời (hitscan xuyên map, True Damage).
+        bool sunBeam = ctx.Stats != null && ctx.Stats.bowSunBeam
+                       && ctx.Stats.currentHp < ctx.Stats.maxHp * 0.5f;
+        if (!empowerReplaces && sunBeam)
+        {
+            WeaponEffectManager wfx = ctx.Player.GetComponent<WeaponEffectManager>();
+            if (wfx != null) wfx.FireSunBeam(spawnPos, fireDir, ctx.IsHeavy, ctx.ComboStep);
+            ctx.OnHitEvent?.Invoke(ctx.ComboStep, ctx.IsHeavy);
+            yield return new WaitForSeconds(ctx.SwingDuration);
+            yield break;
+        }
+
         if (!empowerReplaces && ctx.Player.projectilePrefab != null)
         {
             GameObject projObj = Object.Instantiate(ctx.Player.projectilePrefab, spawnPos, Quaternion.identity);
@@ -47,6 +59,12 @@ public class RangedAttackHandler : IWeaponAttackHandler
                 proj.Setup(ctx.Player, fireDir, ctx.Player.attackRange, ctx.IsHeavy, ctx.ComboStep);
                 if (ctx.Stats != null && ctx.Stats.projectileSpeedBonus > 0f)
                     proj.speed *= (1f + ctx.Stats.projectileSpeedBonus);
+
+                // WPN_BW_T5_02: đạn biến thành Chim Ánh Trăng tự bẻ cong đuổi địch.
+                if (ctx.Stats != null && ctx.Stats.bowHoming) proj.EnableHoming(ctx.DangerLayer);
+
+                // WPN_GR_T4_04: đạn Phi Dao — đòn chính tính vật lý + bonus phép.
+                if (ctx.Weapon != null && ctx.Weapon.id.Trim() == "WPN_GR_T4_04") proj.grimoirePhiDao = true;
             }
         }
 

@@ -127,6 +127,10 @@ public class WeaponAttackDispatcher : MonoBehaviour
             WeaponData.HeavyAttackType.StaffChannelSpin => new StaffHeavyAttack(),
             _                                           => new DefaultMeleeAttackHandler(),
         };
+
+        // ── Override đặc biệt theo id (chỉ đổi đánh thường, heavy giữ nguyên) ──
+        // WPN_SP_T5_01: đánh thường thành đường xuyên bẻ góc tối đa 2 lần.
+        if (w.id.Trim() == "WPN_SP_T5_01") _normalHandler = new SpearChainAttackHandler();
     }
 
     // ─────────────────────────────────────────────────────────────

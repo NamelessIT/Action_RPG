@@ -186,7 +186,7 @@ public class DarkInquisitorSkill : SkillBehavior
         {
             float healPercent = Mathf.Min(hitCount * effHealPerHit, maxHealPercent);
             float healAmount = stats.maxHp * healPercent;
-            stats.Heal(healAmount);
+            stats.Heal(healAmount, true, false, HealSource.Skill);
             Debug.Log($"<color=green>Inquisitor Heal:</color> +{healAmount:F0} HP ({hitCount} kẻ địch)");
         }
 

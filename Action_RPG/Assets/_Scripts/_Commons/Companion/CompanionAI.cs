@@ -31,15 +31,23 @@ public class CompanionAI : MonoBehaviour
     private bool isWandering = false;
 
     [Header("--- Combat Settings ---")]
-    public float attackRange = 2.0f;
-    //public float attackCooldown = 1.5f;
+    // Tầm đánh do Protocol (Slot 1) quyết định; FALLBACK dùng khi chưa trang bị Protocol.
+    private const float FALLBACK_RANGE = 2.0f;
     private float lastAttackTime = 0f;
     private bool isAttacking = false;
 
-    // [COMPANION EQUIPMENT] Hệ trang bị riêng (optional). Nếu có Attack Module thì behavior
-    // theo role sẽ quyết định range/targeting/kite; không có thì dùng logic fallback cũ.
+    [Header("--- Matrix Dodge ---")]
+    // [GIỮ LẠI] Chế độ né: hiện CHỈ né bằng DASH (đã ổn). Mở lại nếu muốn thêm chế độ chạy né.
+    // public bool dodgeByDash = true;
+    public float dodgeDistance = 3f;       // quãng đường né
+    public float dashDodgeTime = 0.16f;    // thời lượng dash
+    private bool isDodging = false;
+
+    // [COMPANION EQUIPMENT] Hệ trang bị riêng. Protocol → behavior tấn công; Matrix → dodge/aggro.
     private CompanionEquipmentManager _equipment;
     private CompanionAttackBehavior Behavior => _equipment != null ? _equipment.CurrentBehavior : null;
+    private int _aegisHitCount = 0;     // đếm đòn cho Aegis (đòn thứ 2 hất tung)
+    private LayerMask obstacleMask;     // layer "Obstacle" — chặn đường ngắm/đạn của đòn xa
 
     [Header("--- Target Memory ---")]
     private HashSet<Transform> markedTargets = new HashSet<Transform>();
@@ -64,6 +72,10 @@ public class CompanionAI : MonoBehaviour
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
         _equipment = GetComponent<CompanionEquipmentManager>(); // optional
 
+        // [COMPANION SKILL] Tự gắn bộ điều phối kỹ năng (Passive/Skill/Signature theo nguyên mẫu).
+        if (GetComponent<CompanionSkillController>() == null)
+            gameObject.AddComponent<CompanionSkillController>();
+
         agent.updateRotation = false;
         agent.updateUpAxis = false;
         agent.speed = stats.baseMoveSpeed > 0 ? stats.baseMoveSpeed : 5f;
@@ -73,6 +85,16 @@ public class CompanionAI : MonoBehaviour
             GameObject pObj = GameObject.FindGameObjectWithTag("Player");
             if (pObj != null) player = pObj.transform;
         }
+
+        // Chống bị ĐẨY: NavMeshAgent đã tự lo di chuyển → để Rigidbody Kinematic cho khỏi bị
+        // Player/Enemy húc văng. Đồng thời ưu tiên tránh né cao để agent khác nhường đường.
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) { rb.isKinematic = true; rb.useGravity = false; }
+        agent.avoidancePriority = 30;
+        obstacleMask = LayerMask.GetMask("Obstacle"); // 0 nếu chưa có layer này (không chặn)
+
+        // Matrix dodge: né đòn định hướng của địch (không đụng damageInterceptor để khỏi xung đột skill).
+        stats.OnBeforeTakeDamage += HandleMatrixDodge;
 
         currentVisualDir = Vector3.back;
         
@@ -112,6 +134,9 @@ public class CompanionAI : MonoBehaviour
             }
             return; // Thoát hàm Update, không chạy AI đuổi/đánh nữa
         }
+
+        // [MATRIX DODGE] Đang dash né → để pha né chạy, không chen AI khác.
+        if (isDodging) return;
 
         // [MỚI] XỬ LÝ HẾT HẠN BUFF TỐC ĐÁNH TỪ CATALYST
         if (focusBuffTimer > 0)
@@ -337,6 +362,7 @@ public class CompanionAI : MonoBehaviour
         var behavior = Behavior;
         if (behavior != null)
         {
+            behavior.Player = player; // Aegis cần biết "ai đang đánh player"
             _targetBuffer.Clear();
             foreach (Transform t in markedTargets) if (t != null) _targetBuffer.Add(t);
             currentTarget = behavior.PickTarget(transform.position, _targetBuffer);
@@ -381,20 +407,24 @@ public class CompanionAI : MonoBehaviour
             }
         }
 
-        // Tầm đánh hiệu lực: ưu tiên attackRange của Attack Module nếu có.
-        float effRange = (behavior != null && _equipment.AttackModule != null)
-                         ? _equipment.AttackModule.attackRange : attackRange;
+        // Tầm đánh hiệu lực: theo Protocol behavior nếu có.
+        float effRange = behavior != null ? behavior.AttackRange : FALLBACK_RANGE;
 
-        if (distToTarget <= effRange)
+        // Đòn XA chỉ bắn khi KHÔNG bị tường/vật cản chắn (LoS). Bị chắn → di chuyển để lấy góc.
+        bool hasLoS = true;
+        if (behavior != null && behavior.IsRanged && obstacleMask.value != 0)
+        {
+            Vector3 fromP = transform.position + Vector3.up * 0.3f;
+            Vector3 toP = currentTarget.position; toP.y = fromP.y;
+            if (Physics.Linecast(fromP, toP, obstacleMask)) hasLoS = false;
+        }
+
+        if (distToTarget <= effRange && hasLoS)
         {
             agent.isStopped = true;
-            // Cooldown: Attack Module có attackCooldown > 0 thì DÙNG nó (Sniper bắn chậm),
-            // ngược lại theo attackSpeed (fallback).
+            // Cooldown theo tốc độ đánh (baseAttackSpeed đã được Protocol cộng vào stats).
             float speed = stats.attackSpeed > 0 ? stats.attackSpeed : 1.0f;
-            var atkModule = _equipment != null ? _equipment.AttackModule : null;
-            float currentAttackCooldown = (atkModule != null && atkModule.attackCooldown > 0f)
-                                          ? atkModule.attackCooldown : (1.0f / speed);
-            if (Time.time >= lastAttackTime + currentAttackCooldown)
+            if (Time.time >= lastAttackTime + (1.0f / speed))
             {
                 StartCoroutine(AttackRoutine(speed));
             }
@@ -438,29 +468,126 @@ public class CompanionAI : MonoBehaviour
 
         yield return new WaitForSeconds(timeToHit);
 
-        if (currentTarget != null)
-        {
-            Stats targetStats = currentTarget.GetComponent<Stats>();
-            if (targetStats != null && !targetStats.isDead)
-            {
-                // Damage: nhân thêm damageMultiplier của Attack Module (Sniper đau, ...).
-                var atkModule = _equipment != null ? _equipment.AttackModule : null;
-                float dmgMult = atkModule != null ? atkModule.damageMultiplier : 1f;
-
-                DamageInfo info = new DamageInfo();
-                info.sourcePosition = transform.position;
-                info.attacker = stats;
-                info.physDamage = stats.physicalAtk * dmgMult;
-
-                targetStats.TakeDamage(info);
-                Debug.Log($"[Companion] Đã cắn {currentTarget.name}! (dmg x{dmgMult:F2})");
-            }
-        }
+        ExecuteProtocolAttack();
 
         // Đợi nốt phần animation còn lại thu tay về
         yield return new WaitForSeconds(timeToRecover);
 
         isAttacking = false;
+    }
+
+    // Thực thi đòn đánh theo Protocol (Slot 1): Artillery/Suppression bắn đạn, Carnage/Aegis quét AoE.
+    private void ExecuteProtocolAttack()
+    {
+        if (currentTarget == null) return;
+
+        var behavior = Behavior;
+        var protocol = _equipment != null ? _equipment.Protocol : null;
+        bool isMagic = protocol != null && protocol.atkType == CompanionAtkType.Magic;
+        // Bắn NGANG MẶT ĐẤT (thấp) để trúng cả kẻ địch lùn.
+        Vector3 spawn = transform.position + Vector3.up * 0.3f;
+
+        // ── ĐÁNH XA (Artillery / Suppression) ──
+        if (behavior != null && behavior.IsRanged)
+        {
+            if (behavior.ProtocolType == CompanionProtocolType.Artillery)
+            {
+                Stats tgt = currentTarget.GetComponentInParent<Stats>();
+                if (tgt == null || tgt.isDead) return;
+                var go = new GameObject("Companion_Artillery");
+                go.transform.position = spawn;
+                go.AddComponent<CompanionLockProjectile>()
+                  .Init(stats, tgt, isMagic, 18f, new Color(1f, 0.8f, 0.2f, 1f));
+            }
+            else // Suppression — đạn KHOÁ MỤC TIÊU (homing) nhưng bị địch khác/tường chặn, nổ AoE
+            {
+                Stats tgt = currentTarget.GetComponentInParent<Stats>();
+                if (tgt == null || tgt.isDead) return;
+                var go = new GameObject("Companion_Suppression");
+                go.transform.position = spawn;
+                go.AddComponent<CompanionSeekProjectile>()
+                  .Init(stats, tgt, isMagic, 14f, behavior.DesiredRange + 3f,
+                        behavior.AoeRadius, 0.6f, new Color(0.7f, 0.3f, 1f, 1f));
+            }
+            return;
+        }
+
+        // ── CẬN CHIẾN QUÉT AoE (Carnage / Aegis) — nhận diện địch theo tag ──
+        bool knockup = behavior != null && behavior.DoesKnockup && (++_aegisHitCount % 2 == 0);
+        float radius = behavior != null ? Mathf.Max(behavior.AoeRadius, 1f) : FALLBACK_RANGE;
+
+        Collider[] hits = Physics.OverlapSphere(transform.position, radius);
+        HashSet<Stats> seen = new HashSet<Stats>();
+        foreach (var h in hits)
+        {
+            Stats e = CompanionCombat.GetEnemy(h);
+            if (e == null || !seen.Add(e)) continue;
+            // Aegis đòn thứ 2: gây sát thương + HẤT TUNG 0.5s (Airborne thật).
+            CompanionCombat.DealHit(stats, e, transform, isMagic, knockup ? 1 : 0);
+            if (knockup) e.Airborne(0.5f);
+        }
+        if (knockup) Debug.Log("[Companion-Aegis] Đòn thứ 2 — HẤT TUNG 0.5s!");
+    }
+
+    // Matrix dodge: né đòn ĐỊNH HƯỚNG của kẻ địch (zero damage trong DamageInfo, không đụng interceptor).
+    private void HandleMatrixDodge(DamageInfo info)
+    {
+        if (info == null || stats.isDead) return;
+        if (info.attacker == null || !info.attacker.CompareTag("Enemy")) return; // chỉ né đòn của địch
+        if (isDodging) return; // đang né rồi
+
+        float chance = _equipment != null ? _equipment.DodgeChance : 0.25f;
+        if (chance <= 0f) return; // Deflector: không né
+        if (Random.value > chance) return;
+
+        // Né thành công → vô hiệu đòn này.
+        info.physDamage = 0f; info.magicDamage = 0f; info.trueDamage = 0f;
+        info.isStun = false; info.isKnockback = false;
+
+        // Hướng né: ra xa kẻ tấn công.
+        Vector3 away = transform.position - info.sourcePosition; away.y = 0;
+        if (away.sqrMagnitude < 0.01f) away = -transform.forward;
+        away.Normalize();
+        Vector3 dest = transform.position + away * dodgeDistance;
+        if (NavMesh.SamplePosition(dest, out NavMeshHit nh, 2f, NavMesh.AllAreas)) dest = nh.position;
+
+        StartCoroutine(DashDodgeRoutine(dest)); // luôn né bằng DASH (lerp mượt, không dịch chuyển tức thời)
+        Debug.Log("<color=cyan>[Companion] NÉ ĐÒN!</color>");
+    }
+
+    // DASH né: lerp mượt ra điểm né trong dashDodgeTime (không teleport).
+    private IEnumerator DashDodgeRoutine(Vector3 dest)
+    {
+        isDodging = true;
+        bool agentWas = agent != null && agent.enabled;
+        if (agentWas) { agent.isStopped = true; agent.enabled = false; }
+
+        Vector3 start = transform.position;
+        Vector3 faceDir = (dest - start); faceDir.y = 0;
+        if (faceDir != Vector3.zero) { currentVisualDir = faceDir.normalized; UpdateAnimationDirection(currentVisualDir); }
+
+        float t = 0f;
+        float dur = Mathf.Max(0.05f, dashDodgeTime);
+        while (t < dur)
+        {
+            t += Time.deltaTime;
+            transform.position = Vector3.Lerp(start, dest, Mathf.Clamp01(t / dur));
+            yield return null;
+        }
+        transform.position = dest;
+
+        if (agentWas)
+        {
+            agent.enabled = true;
+            if (agent.isOnNavMesh) agent.Warp(dest);
+            agent.isStopped = false;
+        }
+        isDodging = false;
+    }
+
+    private void OnDestroy()
+    {
+        if (stats != null) stats.OnBeforeTakeDamage -= HandleMatrixDodge;
     }
 
     void HandleVisuals()

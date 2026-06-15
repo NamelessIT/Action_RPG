@@ -169,7 +169,7 @@ public class JuggernautSkill : SkillBehavior
         if (totalDamageDealt > 0f)
         {
             float healAmount = Mathf.Min(totalDamageDealt * healRatio, stats.maxHp * healCapPercent);
-            stats.Heal(healAmount);
+            stats.Heal(healAmount, true, false, HealSource.Skill);
             Debug.Log($"<color=green>Juggernaut hồi: {healAmount:F0} HP</color>");
         }
 

@@ -51,6 +51,7 @@ public class PlayerController : MonoBehaviour
 
     // [MỚI] Biến hỗ trợ Charge Attack
     private bool isCharging = false;
+    [HideInInspector] public bool isSkillChanneling = false; // ACC_CH_T4_03: đang gồng skill (khóa di chuyển/dash/đánh)
     private float chargeTimer = 0f;
     private float currentDamageMultiplier = 1.0f; // Hệ số sát thương của đòn hiện tại
 
@@ -74,6 +75,18 @@ public class PlayerController : MonoBehaviour
 
     private EquipmentManager equipmentManager;
     private SkillManager skillManager;
+    private WeaponEffectManager _weaponFx; // hệ effect vũ khí (hook nhân dmg đòn đánh thường / xuyên giáp)
+    private AccessoryEffectManager _accessoryFx; // hệ effect trang sức (hook chỉnh dmg đòn đánh thường)
+    private CompanionSkillController _companionSkillCtrl; // cache controller skill của Companion (phím R/T)
+
+    /// <summary>Tìm/cache CompanionSkillController của Companion trong scene (companion có thể spawn sau).</summary>
+    private CompanionSkillController ResolveCompanionSkillCtrl()
+    {
+        if (_companionSkillCtrl != null) return _companionSkillCtrl;
+        CompanionAI c = FindFirstObjectByType<CompanionAI>();
+        if (c != null) _companionSkillCtrl = c.GetComponent<CompanionSkillController>();
+        return _companionSkillCtrl;
+    }
 
     // [MỚI] Biến để lưu tiến trình đánh đang chạy
     private Coroutine currentAttackCoroutine;
@@ -94,6 +107,13 @@ public class PlayerController : MonoBehaviour
     public event System.Action<WeaponData> OnWeaponEquipped;      // Gọi khi trang bị vũ khí mới
 #pragma warning restore 0067
     public event System.Action<Stats, int, bool, bool> OnHitEnemy;
+    // [MỚI] Kỹ năng (qua DamageHelper.ApplyStandardDamage) trúng kẻ địch: (target, isMagic, isCrit).
+    // Dùng cho các effect "khi kỹ năng trúng đích" (vd WPN_ST_T4_01, WPN_ST_T4_03).
+    public event System.Action<Stats, bool, bool> OnSkillHitEnemy;
+    public void NotifySkillHitEnemy(Stats target, bool isMagic, bool isCrit) => OnSkillHitEnemy?.Invoke(target, isMagic, isCrit);
+    // [MỚI] Kỹ năng (có SkillData) HẠ GỤC kẻ địch — để attribute kill theo loại skill (ACC_RM_T3_06, ACC_CH_T5_01).
+    public event System.Action<SkillData> OnSkillKillEnemy;
+    public void NotifySkillKill(SkillData skill) => OnSkillKillEnemy?.Invoke(skill);
     // [MỚI] THÊM DÒNG NÀY
     public event System.Action<Stats, bool> OnKillEnemy;
     // ==================================================================
@@ -150,6 +170,8 @@ public class PlayerController : MonoBehaviour
 
         equipmentManager = GetComponent<EquipmentManager>();
         skillManager = GetComponent<SkillManager>();
+        _weaponFx = GetComponent<WeaponEffectManager>(); // hook hệ effect vũ khí (nhân dmg/xuyên giáp)
+        _accessoryFx = GetComponent<AccessoryEffectManager>(); // hook hệ effect trang sức
 
         // ── Dispatcher: GetOrAdd (cũng có thể drag-drop trong Inspector) ──
         attackDispatcher = GetComponent<WeaponAttackDispatcher>();
@@ -216,8 +238,9 @@ public class PlayerController : MonoBehaviour
         {
             float currentSpeed = stats.moveSpeed * (isSprinting ? stats.runSpeedMultiplier : 1f);
 
-            // Bow heavy charge: giảm tốc 50%
-            if (isBowCharging) currentSpeed *= 0.5f;
+            // Bow heavy charge: giảm tốc 50% — trừ khi WPN_BW_T3_01 (gồng bắn không giảm tốc).
+            bool bowNoSlow = (stats as AllyStats)?.bowNoChargeSlow ?? false;
+            if (isBowCharging && !bowNoSlow) currentSpeed *= 0.5f;
 
             // Staff normal attack: giảm tốc 50%
             if (isStaffSpinning) currentSpeed *= 0.5f;
@@ -290,6 +313,10 @@ public class PlayerController : MonoBehaviour
             _pickupManager?.TryPickupNearest();
         }
 
+        // [COMPANION] R = ra lệnh Companion dùng Skill, T = dùng Signature.
+        if (Input.GetKeyDown(KeyCode.R)) { ResolveCompanionSkillCtrl()?.CommandSkill(); }
+        if (Input.GetKeyDown(KeyCode.T)) { ResolveCompanionSkillCtrl()?.CommandSignature(); }
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (Input.GetKeyDown(KeyCode.V))
         {
@@ -361,9 +388,12 @@ public class PlayerController : MonoBehaviour
 
     void HandleSprintInput()
     {
+        // [ACC_PA_T5_04] Cấm chạy nhanh khi đeo trang sức tương ứng.
+        if ((stats as AllyStats)?.accBlockDashSprint == true) { isSprinting = false; return; }
+
         if (Input.GetKey(KeyCode.LeftShift) && movementInput.magnitude > 0.1f)
         {
-            if (stats.TryConsumeStamina(stats.runCost * Time.deltaTime))
+            if (stats.TryConsumeStamina(stats.runCost * Time.deltaTime, false, true))
             {
                 isSprinting = true;
             }
@@ -380,6 +410,9 @@ public class PlayerController : MonoBehaviour
 
     void HandleAttackInput()
     {
+        // [ACC_CH_T4_03] Đang gồng skill (channel) → khóa mọi thao tác đánh.
+        if (isSkillChanneling) return;
+
         // Nếu đang Parry → HỦY LUÔN việc gồng (Ưu tiên đỡ đòn)
         if (stats.isParrying && isCharging)
         {
@@ -416,7 +449,7 @@ public class PlayerController : MonoBehaviour
                 var ctx = attackDispatcher.BuildContext(
                     isHeavy: true, comboCount, swingDur,
                     hitTargets, dangerLayer,
-                    ApplyDamageToTarget, OnAttackPerformed);
+                    (e, h, s) => ApplyDamageToTarget(e, h, s), OnAttackPerformed);
 
                 // Set multiplier cho Staff (1.5f = 150%)
                 currentDamageMultiplier = currentWep?.heavyDamageMultiplier ?? 1.5f;
@@ -493,16 +526,27 @@ public class PlayerController : MonoBehaviour
 
     void PerformDash()
     {
-        if (Time.time < stats.lastDashTime + stats.baseDashRecovery)
+        AllyStats allyDashStats = stats as AllyStats;
+
+        // [ACC_CH_T4_03] Đang gồng skill (channel) → không cho Dash.
+        if (isSkillChanneling) return;
+
+        // [ACC_PA_T5_04] Cấm Dash khi đeo trang sức tương ứng.
+        if (allyDashStats != null && allyDashStats.accBlockDashSprint) return;
+
+        // [SHD_CS_T5_04] Bỏ cooldown Dash nếu cờ được bật.
+        bool noCd = allyDashStats != null && allyDashStats.dashNoCooldown;
+        if (!noCd && Time.time < stats.lastDashTime + stats.baseDashRecovery)
         {
             Debug.Log("Dash Cooldown!");
             return;
         }
 
-        // Dash tiêu tốn một cục thể lực lớn ngay lập tức
-        if (!stats.TryConsumeStamina(stats.dashCost))
+        // Tiêu hao tài nguyên Dash (isDash=true). Stats.TryConsumeStamina tự chuyển sang
+        // Sin (T5_04: 10% maxSin) hoặc HP (T5_02: x5) nếu đang đeo khiên tương ứng.
+        if (!stats.TryConsumeStamina(stats.dashCost, true))
         {
-            Debug.Log("Không đủ Stamina để Dash!");
+            Debug.Log("Không đủ tài nguyên để Dash!");
             return;
         }
 
@@ -636,7 +680,7 @@ public class PlayerController : MonoBehaviour
 
         // Nếu đang đánh thì KHÔNG nhận input di chuyển
         // Ngoại lệ: Bow heavy charge và Staff normal attack cho phép di chuyển chậm
-        bool blockMovement = (isAttacking && !isStaffSpinning) || stats.isParrying || (isCharging && !isBowCharging);
+        bool blockMovement = (isAttacking && !isStaffSpinning) || stats.isParrying || (isCharging && !isBowCharging) || isSkillChanneling;
         if (blockMovement)
         {
             movementInput = Vector3.zero;
@@ -835,7 +879,7 @@ public class PlayerController : MonoBehaviour
             var ctx = attackDispatcher.BuildContext(
                 isHeavy, currentStep, swingDuration,
                 hitTargets, dangerLayer,
-                ApplyDamageToTarget, OnAttackPerformed);
+                (e, h, s) => ApplyDamageToTarget(e, h, s), OnAttackPerformed);
 
             yield return StartCoroutine(attackDispatcher.ExecuteSwing(ctx));
         }
@@ -859,7 +903,7 @@ public class PlayerController : MonoBehaviour
     }
 
     // --- HÀM TÍNH TOÁN DAMAGE (Tách ra từ HandleDamageLogic cũ) ---
-    public void ApplyDamageToTarget(Stats enemyStats, bool isHeavy, int stepIndex)
+    public void ApplyDamageToTarget(Stats enemyStats, bool isHeavy, int stepIndex, bool forceTrueDamage = false, bool grimoirePhiDao = false)
     {
         if (enemyStats == null || enemyStats.currentHp <= 0) return;
 
@@ -876,6 +920,8 @@ public class PlayerController : MonoBehaviour
 
         // 2. CC Effects
         WeaponData currentWpn = equipmentManager.currentWeapon;
+        // Phân loại nguồn: vũ khí đánh xa (Bow/Grimoire) → Ranged; còn lại → Melee.
+        info.sourceType = (currentWpn != null && currentWpn.isRanged) ? DamageSourceType.Ranged : DamageSourceType.Melee;
         if (isHeavy)
         {
             // Handler có thể set suppressNextKnockback=true trước khi gọi ApplyDamage
@@ -933,6 +979,9 @@ public class PlayerController : MonoBehaviour
             info.impactLevel = 1;     // Phá luôn Super Armor
         }
 
+        // [WEAPON EFFECT] Nhân hệ số sát thương đòn vũ khí theo passive (khoảng cách, shield, Sin, stack...).
+        if (_weaponFx != null) attackMultiplier *= _weaponFx.GetBasicAttackDamageMultiplier(enemyStats);
+
         // 4. Crit & Counter Logic (Dùng biến cache isDuelistCounterActive)
         float totalCritChance = stats.critChance;
         if (currentWpn != null) totalCritChance += currentWpn.bonusCritChance;
@@ -943,22 +992,61 @@ public class PlayerController : MonoBehaviour
         bool isCrit = forceCritOrTrueDamage || CombatMath.CheckIsCrit(totalCritChance);
         bool ignoreReduction = forceCritOrTrueDamage;
 
+        // [WEAPON EFFECT] Đòn cường hóa xuyên 100% giáp/kháng phép + chắc chắn crit (vd SP_T4_03).
+        if (_weaponFx != null && _weaponFx.ConsumeArmorPenCritHit()) { ignoreReduction = true; isCrit = true; }
+
+        // [ACCESSORY EFFECT] Chỉnh đòn đánh thường/heavy: nhân dmg, ép crit, +crit mult, xuyên giáp (RM_T3_05/T4_02/T5_03, MS_T5_05).
+        float accArmorPen = 0f;
+        float accCritMultBonus = 0f;
+        if (_accessoryFx != null)
+            _accessoryFx.ModifyBasicAttack(enemyStats, isHeavy, t, ref attackMultiplier, ref isCrit, ref accArmorPen, ref accCritMultBonus);
+
+        // [COMPANION Debuffer Passive] Đánh trúng hướng Điểm Yếu → bỏ qua 50% Armor/MR (+True 3% maxHp xử lý sau khi giáng đòn).
+        bool companionWeakHit = CompanionWeaknessSystem.TryConsume(enemyStats, transform.position);
+        if (companionWeakHit) accArmorPen = Mathf.Max(accArmorPen, 0.5f);
+
         if (isTestCrit) isCrit = true;
         info.isCrit = isCrit;
         if (isCrit) Debug.Log("<color=red>CRITICAL HIT!</color>");
 
-        // 5. Calculate Final Damage
+        // 5. Calculate Final Damage (tạm cộng crit mult bonus từ accessory cho đòn này rồi khôi phục)
+        float _savedBaseCritMult = stats.baseCritMultiplier;
+        if (accCritMultBonus != 0f) stats.baseCritMultiplier += accCritMultBonus;
         var dmgTuple = CombatMath.CalculateFullDamage(
-                stats, enemyStats, t, isCrit, null, currentWpn, attackMultiplier, ignoreReduction
+                stats, enemyStats, t, isCrit, null, currentWpn, attackMultiplier, ignoreReduction, accArmorPen
             );
+        stats.baseCritMultiplier = _savedBaseCritMult;
 
         // Gán vào 3 biến mới thay vì info.damageAmount
-        info.physDamage = dmgTuple.phys;
-        info.magicDamage = dmgTuple.magic;
-        info.trueDamage = dmgTuple.trueDmg;
+        if (forceTrueDamage)
+        {
+            // WPN_BW_T5_01 Tia Sáng Mặt Trời: gộp toàn bộ thành sát thương chuẩn (bỏ qua giáp/MR).
+            info.physDamage = 0f;
+            info.magicDamage = 0f;
+            info.trueDamage = dmgTuple.phys + dmgTuple.magic + dmgTuple.trueDmg;
+        }
+        else if (grimoirePhiDao)
+        {
+            // WPN_GR_T4_04 Phi Dao: đòn chính theo magicAtk nhưng tính VẬT LÝ (chịu giáp) + bonus phép (100% thường / 150% heavy).
+            var conv = CombatMath.CalculateGrimoirePhiDao(stats, enemyStats, t, isCrit, attackMultiplier, isHeavy ? 1.5f : 1.0f);
+            info.physDamage = conv.phys;
+            info.magicDamage = conv.magic;
+            info.trueDamage = 0f;
+        }
+        else
+        {
+            info.physDamage = dmgTuple.phys;
+            info.magicDamage = dmgTuple.magic;
+            info.trueDamage = dmgTuple.trueDmg;
+        }
 
         // --- 6. Send ---
         enemyStats.TakeDamage(info);
+
+        // [COMPANION Debuffer Passive] Kích nổ Điểm Yếu → gây thêm True = 3% maxHp địch.
+        if (companionWeakHit && enemyStats.currentHp > 0)
+            enemyStats.TakeDamage(new DamageInfo { trueDamage = enemyStats.maxHp * 0.03f, attacker = stats, sourcePosition = transform.position });
+
         // --- LOGIC HÚT MÁU ---
         float physHeal = info.physDamage * stats.physicalLifeSteal;
         float magicHeal = info.magicDamage * stats.magicLifeSteal;

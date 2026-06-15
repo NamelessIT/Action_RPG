@@ -322,8 +322,9 @@ public class EquipmentManager : MonoBehaviour
         // SHD_CS_T5_02: Tăng tốc độ hồi máu tự nhiên lên gấp 5 lần (+400%)
         if (id == "SHD_CS_T5_02") allyStats.bonusHpGain += 4.0f;
 
-        // SHD_CS_T5_04: Tăng tốc độ hồi SinCharge lên 100%
-        if (id == "SHD_CS_T5_04") allyStats.bonusSinGain += 1.0f;
+        // SHD_CS_T5_04: Tăng tốc độ hồi SinCharge lên 100% + bỏ cooldown Dash.
+        // (Việc Dash tốn 10% Sin / hành động khác tốn Sin được xử lý trong Stats.TryConsumeStamina.)
+        if (id == "SHD_CS_T5_04") { allyStats.bonusSinGain += 1.0f; allyStats.dashNoCooldown = true; }
     }
 
     private void RemoveCoreShieldEffectStats(CoreShieldData shield)
@@ -336,7 +337,7 @@ public class EquipmentManager : MonoBehaviour
         if (id == "SHD_CS_T3_02") allyStats.bonusSinGain -= 0.15f;
         if (id == "SHD_CS_T3_04") allyStats.bonusMoveSpeed -= 0.10f;
         if (id == "SHD_CS_T5_02") allyStats.bonusHpGain -= 4.0f;
-        if (id == "SHD_CS_T5_04") allyStats.bonusSinGain -= 1.0f;
+        if (id == "SHD_CS_T5_04") { allyStats.bonusSinGain -= 1.0f; allyStats.dashNoCooldown = false; }
     }
     // --------------- ACCESSORY (5 SLOTS) ---------------
     // 1. Trang bị Accessory (Tự động nhận diện slot dựa trên Type)

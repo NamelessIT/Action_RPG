@@ -48,9 +48,6 @@ public class CoreShieldEffectManager : MonoBehaviour
         onBeforeTakeDamageEffects.Add("SHD_CS_T5_03", Effect_SHD_CS_T5_03);
         onBeforeTakeDamageEffects.Add("SHD_CS_T5_05", Effect_SHD_CS_T5_05_MarkAttacker);  // Vì có chứa thông tin attacker.
 
-        // On Damage Received (Kích hoạt khi máu tụt)
-        onDamageReceivedEffects.Add("SHD_CS_T3_05", Effect_SHD_CS_T3_05);
-
         // On Hit Enemy
         onHitEnemyEffects.Add("SHD_CS_T3_05", Effect_SHD_CS_T3_05_LifestealHit);
         onHitEnemyEffects.Add("SHD_CS_T4_04", Effect_SHD_CS_T4_04);
@@ -62,7 +59,7 @@ public class CoreShieldEffectManager : MonoBehaviour
         // On Perfect Dodge/Parry
         onPerfectDodgeEffects.Add("SHD_CS_T3_04", Effect_SHD_CS_T3_04);
         onPerfectDodgeEffects.Add("SHD_CS_T4_05", Effect_SHD_CS_T4_05);
-        onPerfectParryEffects.Add("SHD_CS_T4_06", Effect_SHD_CS_T4_06_TriggerBuff);
+        onPerfectDodgeEffects.Add("SHD_CS_T4_06", Effect_SHD_CS_T4_06_TriggerBuff); // [SỬA] kích hoạt sau Perfect DODGE
 
         // On Skill Cast
         onSkillCastEffects.Add("SHD_CS_T3_02", Effect_SHD_CS_T3_02);
@@ -125,10 +122,6 @@ public class CoreShieldEffectManager : MonoBehaviour
         if (eqManager == null || eqManager.currentCoreShield == null) return;
 
         string safeId = eqManager.currentCoreShield.id.Trim();
-        if (safeId == "SHD_CS_T3_05")
-        {
-            Check_SHD_CS_T3_05_Trigger(); // Quét xem máu có đang dưới 30% không
-        }
         if (safeId == "SHD_CS_T5_08")
         {
             Update_SHD_CS_T5_08_HpPool(true);
@@ -213,21 +206,24 @@ public class CoreShieldEffectManager : MonoBehaviour
 
     private void Effect_SHD_CS_T3_03(DamageInfo info)
     {
+        // Chỉ phản khi bị đánh TRỰC DIỆN (t=0, góc < 45°).
         Vector3 myFacing = stats.facingDirection != Vector3.zero ? stats.facingDirection : transform.forward;
-        Vector3 dirToAttacker = (info.sourcePosition - transform.position);
-        dirToAttacker.y = 0;
+        Vector3 dirToAttacker = (info.sourcePosition - transform.position); dirToAttacker.y = 0;
+        if (Vector3.Angle(myFacing, dirToAttacker.normalized) >= 45f) return;
 
-        float angle = Vector3.Angle(myFacing, dirToAttacker.normalized);
-        if (angle < 45f)
+        float reflectDmg = info.TotalRawDamage * 0.15f;
+        if (reflectDmg <= 0f) return;
+
+        // Phản 15% dưới dạng sát thương VẬT LÝ AoE quanh bản thân (GetComponentInParent + dedupe).
+        Collider[] enemies = Physics.OverlapSphere(transform.position, 2f, player.dangerLayer);
+        HashSet<Stats> done = new HashSet<Stats>();
+        foreach (var e in enemies)
         {
-            float reflectDmg = info.TotalRawDamage * 0.15f;
-            Collider[] enemies = Physics.OverlapSphere(transform.position, 1f, player.dangerLayer);
-            foreach (var e in enemies)
-            {
-                Stats eStats = e.GetComponent<Stats>();
-                if (eStats != null) eStats.TakeDamage(reflectDmg);
-            }
+            Stats es = e.GetComponentInParent<Stats>();
+            if (es == null || es.currentHp <= 0 || !done.Add(es)) continue;
+            es.TakeDamage(new DamageInfo { physDamage = reflectDmg, attacker = stats, sourcePosition = transform.position });
         }
+        Debug.Log($"<color=red>[SHD_CS_T3_03]</color> Phản đòn trực diện AoE: {reflectDmg:F0} ST vật lý.");
     }
     // SHD_CS_T3_04: BUFF TỐC ĐỘ (CÓ KHÓA CHỐNG SPAM)
     // ==========================================
@@ -275,73 +271,20 @@ public class CoreShieldEffectManager : MonoBehaviour
         SHD_CS_T3_04_Coroutine = null;
     }
 
-    private bool SHD_CS_T3_05_BloodShieldActive = false;
-    private bool SHD_CS_T3_05_HasTriggered = false; // Cờ khóa chống spam bất tử
-
-    // Hàm kiểm tra dùng chung (Cho cả khi bị đánh lẫn khi vừa mặc đồ)
-    private void Check_SHD_CS_T3_05_Trigger()
-    {
-        float hpPercent = stats.currentHp / stats.maxHp;
-
-        // [CƠ CHẾ AAA]: Nếu máu hồi phục an toàn lên trên 30%, mở khóa cò súng
-        if (hpPercent > 0.3f && SHD_CS_T3_05_HasTriggered)
-        {
-            SHD_CS_T3_05_HasTriggered = false;
-        }
-
-        // Kích hoạt: Máu dưới 30%, Huyết Thuẫn đang tắt, và Cò súng chưa bị khóa
-        if (hpPercent <= 0.3f && !SHD_CS_T3_05_BloodShieldActive && !SHD_CS_T3_05_HasTriggered)
-        {
-            SHD_CS_T3_05_BloodShieldActive = true;
-            SHD_CS_T3_05_HasTriggered = true; // Khóa cò lại cho đến khi máu > 30%
-            Debug.Log("<color=red>[SHD_CS_T3_05]</color> HUYẾT THUẪN KÍCH HOẠT! (Tồn tại 5 giây)");
-
-            Invoke(nameof(ResetT3_05), 5f);
-        }
-    }
-
-    private void Effect_SHD_CS_T3_05(float dmg, Stats myStats)
-    {
-        // Chỉ việc gọi hàm Check mỗi khi nhận sát thương
-        Check_SHD_CS_T3_05_Trigger();
-    }
-
-    private void ResetT3_05()
-    {
-        SHD_CS_T3_05_BloodShieldActive = false;
-        Debug.Log("<color=red>[SHD_CS_T3_05]</color> Huyết Thuẫn đã tắt.");
-    }
-
-    // Khi đánh trúng địch lúc Huyết Thuẫn đang bật
+    // SHD_CS_T3_05: Khi Máu (HP) dưới 30%, mỗi đòn đánh trúng địch hồi thêm máu
+    // bằng 15% physicalAtk + 15% magicAtk. Chỉ hồi 1 LẦN mỗi lần vung (dù AoE trúng nhiều).
+    private int SHD_CS_T3_05_LastHealFrame = -1;
     private void Effect_SHD_CS_T3_05_LifestealHit(Stats target, int step, bool isH, bool isC)
     {
-        if (SHD_CS_T3_05_BloodShieldActive)
-        {
-            // LƯU Ý CHO BẠN: Vì hàm OnHitEnemy của bạn không có biến truyền Lượng Sát Thương thực tế,
-            // nên tui dùng tạm `stats.physicalAtk` của nhân vật để làm Sát Thương Gốc.
-            // (Nếu bạn dùng phép, có thể đổi thành stats.magicAtk, hoặc tổng của cả 2)
-            float approximateDamageDealt = stats.physicalAtk + stats.magicAtk;
+        if (stats.maxHp <= 0f) return;
+        if (stats.currentHp / stats.maxHp > 0.3f) return;        // chỉ khi máu dưới 30%
+        if (target == null || target.currentHp <= 0) return;      // phải đánh trúng địch còn sống
+        if (Time.frameCount == SHD_CS_T3_05_LastHealFrame) return; // chống hồi nhiều lần trong 1 đòn AoE
+        SHD_CS_T3_05_LastHealFrame = Time.frameCount;
 
-            float totalHeal = approximateDamageDealt * 0.10f; // 10% sát thương gây ra
-
-            // Khởi chạy Coroutine để hồi máu từ từ trong 5 giây
-            StartCoroutine(T3_05_HealOverTime(totalHeal, 5f));
-        }
-    }
-
-    // Coroutine chia nhỏ lượng máu ra hồi trong 5 giây (Hồi từ từ)
-    private IEnumerator T3_05_HealOverTime(float totalHealAmount, float duration)
-    {
-        int ticks = 5; // Chia làm 5 nhịp (mỗi giây hồi 1 lần)
-        float healPerTick = totalHealAmount / ticks;
-        float timePerTick = duration / ticks;
-
-        for (int i = 0; i < ticks; i++)
-        {
-            yield return new WaitForSeconds(timePerTick);
-            stats.Heal(healPerTick);
-            Debug.Log($"<color=green>[Huyết Thuẫn]</color> Đang hồi {healPerTick} HP...");
-        }
+        float heal = stats.physicalAtk * 0.15f + stats.magicAtk * 0.15f;
+        stats.Heal(heal);
+        Debug.Log($"<color=green>[SHD_CS_T3_05]</color> Máu dưới 30% — đánh trúng hồi {heal:F0} HP.");
     }
 
 
@@ -512,6 +455,7 @@ public class CoreShieldEffectManager : MonoBehaviour
 
     private void Effect_SHD_CS_T4_03(DamageInfo info)
     {
+        if (info.sourceType != DamageSourceType.Melee) return; // chỉ phản đòn CẬN CHIẾN (bỏ đạn/DoT)
         float hpPercent = stats.currentHp / stats.maxHp;
         if (hpPercent < 0.5f)
         {
@@ -535,9 +479,12 @@ public class CoreShieldEffectManager : MonoBehaviour
         // sát thương phép bằng biến khác (ví dụ: vũ khí phép, hoặc skill phép) thì bạn 
         // hãy thay thế điều kiện tui viết dưới đây nhé!)
 
-        bool isMagicAttack = (stats.magicAtk > 120); // ĐIỀU KIỆN TẠM THỜI
+        // Đòn đánh thường gây sát thương PHÉP = vũ khí đang cầm có atkType Magic hoặc Both.
+        WeaponData wpn = eqManager != null ? eqManager.currentWeapon : null;
+        bool isMagicAttack = wpn != null &&
+            (wpn.weaponAtkType == WeaponData.WeaponAtkType.Magic || wpn.weaponAtkType == WeaponData.WeaponAtkType.Both);
 
-        if (!isMagicAttack) return; // Nếu không phải đánh phép -> Bỏ qua ngay lập tức
+        if (!isMagicAttack) return; // Không phải đánh phép -> bỏ qua
 
         // --- GIẢI QUYẾT LỖI 2: RESET THỜI GIAN THAY VÌ CỘNG DỒN ---
         // Nếu đang đếm ngược 3 giây rồi mà lại đánh trúng tiếp -> Hủy bộ đếm cũ
@@ -599,13 +546,17 @@ public class CoreShieldEffectManager : MonoBehaviour
     private void Effect_SHD_CS_T4_06_TriggerBuff() { SHD_CS_T4_06_NextAttackBuffed = true; }
     private void Effect_SHD_CS_T4_06_ApplyHit(Stats target, int step, bool isH, bool isC)
     {
-        if (SHD_CS_T4_06_NextAttackBuffed)
-        {
-            SHD_CS_T4_06_NextAttackBuffed = false;
-            float magicDmg = target.maxHp * 0.05f;
-            target.TakeDamage(magicDmg);
-            stats.Heal(magicDmg * 0.5f);
-        }
+        if (!SHD_CS_T4_06_NextAttackBuffed) return;
+        if (target == null || target.currentHp <= 0) return;     // chỉ kẻ địch ĐẦU TIÊN trúng đòn
+        SHD_CS_T4_06_NextAttackBuffed = false;
+
+        float magicDmg = target.maxHp * 0.05f;
+        float cap = (stats.physicalAtk + stats.magicAtk) * 5f;    // tối đa 500% physAtk + 500% magicAtk
+        if (magicDmg > cap) magicDmg = cap;
+
+        target.TakeDamage(new DamageInfo { magicDamage = magicDmg, attacker = stats, sourcePosition = transform.position });
+        stats.Heal(magicDmg * 0.5f);                              // hồi 50% giá trị đó
+        Debug.Log($"<color=magenta>[SHD_CS_T4_06]</color> Sau Perfect Dodge: +{magicDmg:F0} ST phép, hồi {magicDmg * 0.5f:F0} HP.");
     }
 
     // ==========================================
@@ -683,48 +634,45 @@ public class CoreShieldEffectManager : MonoBehaviour
     private bool SHD_CS_T4_08_DeathBuffActive = false;
     private void HandleCompanionDamageShare(DamageInfo info)
     {
-        if (eqManager == null || eqManager.currentCoreShield == null) return;
+        if (eqManager == null || eqManager.currentCoreShield == null || companionStats == null) return;
+        string id = eqManager.currentCoreShield.id.Trim();
 
-        // Chỉ gánh khi đang đeo đúng khiên T4_08 và Companion CHƯA CHẾT
-        if (eqManager.currentCoreShield.id.Trim() == "SHD_CS_T4_08" && !companionStats.isDead)
+        // T5_08 — Hợp nhất sinh mệnh: Player GÁNH 100% sát thương của Companion.
+        if (id == "SHD_CS_T5_08")
         {
-            // Tính toán 50% lượng sát thương
+            DamageInfo redirect = new DamageInfo
+            {
+                physDamage = info.physDamage, magicDamage = info.magicDamage, trueDamage = info.trueDamage,
+                attacker = info.attacker, impactLevel = 0, sourcePosition = info.sourcePosition
+            };
+            info.physDamage = 0; info.magicDamage = 0; info.trueDamage = 0; // Companion không mất máu
+            stats.TakeDamage(redirect);
+            Debug.Log("<color=red>[T5_08]</color> Hợp nhất sinh mệnh: Player gánh 100% sát thương thay Companion!");
+            return;
+        }
+
+        // T4_08 — Player gánh 50% sát thương Companion (khi Companion chưa chết).
+        if (id == "SHD_CS_T4_08" && !companionStats.isDead)
+        {
             float sharedPhys = info.physDamage * 0.5f;
             float sharedMagic = info.magicDamage * 0.5f;
             float sharedTrue = info.trueDamage * 0.5f;
 
-            // 1. Trừ bớt 50% damage khỏi đòn đánh đang giáng xuống Companion
             info.physDamage -= sharedPhys;
             info.magicDamage -= sharedMagic;
             info.trueDamage -= sharedTrue;
 
-            // 2. Tạo một đòn đánh ảo giáng xuống đầu Player
-            DamageInfo playerDmg = new DamageInfo
+            stats.TakeDamage(new DamageInfo
             {
-                physDamage = sharedPhys,
-                magicDamage = sharedMagic,
-                trueDamage = sharedTrue, // Vẫn chia sẻ True Damage
-                attacker = info.attacker,
-                impactLevel = 0 // Tránh việc Player bị giật lùi (knockback) vì gánh dame
-            };
-            // KHIÊN T5_08: Chuyển 100% sát thương của Companion về cho Player gánh
-            if (eqManager.currentCoreShield.id.Trim() == "SHD_CS_T5_08")
-            {
-                // Bắt Player phải nhận gói sát thương này
-                stats.TakeDamage(info);
-
-                // Triệt tiêu sát thương lên Companion (đưa về 0)
-                info.physDamage = 0;
-                info.magicDamage = 0;
-                info.trueDamage = 0;
-
-                Debug.Log("<color=red>[T5_08]</color> Hợp nhất sinh mệnh: Player đã gánh 100% sát thương thay Companion!");
-            }
-
-            stats.TakeDamage(playerDmg); // Player tự lãnh thẹo
-            Debug.Log($"<color=blue>[T4_08]</color> Player chịu giùm Companion {playerDmg.TotalRawDamage} sát thương!");
+                physDamage = sharedPhys, magicDamage = sharedMagic, trueDamage = sharedTrue,
+                attacker = info.attacker, impactLevel = 0, sourcePosition = info.sourcePosition
+            });
+            Debug.Log($"<color=blue>[T4_08]</color> Player chịu giùm Companion {sharedPhys + sharedMagic + sharedTrue:F0} sát thương!");
+            return;
         }
-        else if (eqManager.currentCoreShield.id.Trim() == "SHD_CS_T5_05")
+
+        // T5_05 — đánh dấu Điên Loạn lên kẻ tấn công Companion.
+        if (id == "SHD_CS_T5_05")
         {
             ApplyMadnessMark(info.attacker);
         }
@@ -813,31 +761,41 @@ public class CoreShieldEffectManager : MonoBehaviour
         stats.RecalculateStats();
     }
 
+    private float SHD_CS_T5_03_LastUseTime = -1000f;
+    private const float SHD_CS_T5_03_Cooldown = 90f;
     private void Effect_SHD_CS_T5_03(DamageInfo info)
     {
+        if (Time.time < SHD_CS_T5_03_LastUseTime + SHD_CS_T5_03_Cooldown) return; // còn cooldown → chết bình thường
         if (stats.currentHp - info.TotalRawDamage <= 0)
         {
-            info.physDamage = 0;
-            info.magicDamage = 0;
-            info.trueDamage = 0;
+            info.physDamage = 0; info.magicDamage = 0; info.trueDamage = 0;
             stats.currentHp = 1;
             stats.isInvincible = true;
+            SHD_CS_T5_03_LastUseTime = Time.time;
             StartCoroutine(T5_03_Routine());
         }
     }
     private IEnumerator T5_03_Routine()
     {
+        float accumulatedHeal = 0f; // máu hồi được TÍCH DỒN, chỉ áp dụng sau khi hết 5s
         for (int i = 0; i < 5; i++)
         {
-            Collider[] enemies = Physics.OverlapSphere(transform.position, 5f, player.dangerLayer);
+            yield return new WaitForSeconds(1f);
+            Collider[] enemies = Physics.OverlapSphere(transform.position, 2f, player.dangerLayer);
+            HashSet<Stats> done = new HashSet<Stats>();
             foreach (var e in enemies)
             {
-                Stats eStats = e.GetComponent<Stats>();
-                if (eStats != null) { float drain = eStats.maxHp * 0.05f; eStats.TakeDamage(drain); stats.Heal(drain); }
+                Stats es = e.GetComponentInParent<Stats>();
+                if (es == null || es.currentHp <= 0 || !done.Add(es)) continue;
+                float drain = es.maxHp * 0.01f; // rút 1% máu tối đa của địch
+                es.TakeDamage(new DamageInfo { trueDamage = drain, attacker = stats, sourcePosition = transform.position });
+                accumulatedHeal += drain;
             }
-            yield return new WaitForSeconds(1f);
         }
         stats.isInvincible = false;
+        stats.currentHp = 1;            // vẫn ở 1 HP trước khi áp dụng máu tích
+        stats.Heal(accumulatedHeal, true, false, HealSource.Drain); // áp dụng toàn bộ máu hồi sau khi hết khóa 1HP
+        Debug.Log($"<color=red>[SHD_CS_T5_03]</color> Hết 5s khóa 1HP → hồi {accumulatedHeal:F0} HP tích lũy. (CD 90s)");
     }
 
     // ==========================================
@@ -1018,12 +976,12 @@ public class CoreShieldEffectManager : MonoBehaviour
         {
             if (t5_08_AddedHpToPlayer == 0f)
             {
-                // Lấy Max HP của Companion cộng vào cho Player
+                // Lấy Max HP của Companion cộng vào cho Player — dùng flatBonusMaxHp để KHÔNG bị bonusHp nhân lên.
                 t5_08_AddedHpToPlayer = companionStats.maxHp;
-                stats.flatHp += t5_08_AddedHpToPlayer;
-                stats.Heal(t5_08_AddedHpToPlayer); // Hồi đầy phần máu vừa được cộng thêm
+                stats.flatBonusMaxHp += t5_08_AddedHpToPlayer;
                 stats.RecalculateStats();
-                Debug.Log($"<color=green>[SHD_CS_T5_08]</color> Đã hợp nhất thanh máu! +{t5_08_AddedHpToPlayer} HP từ Companion.");
+                stats.Heal(t5_08_AddedHpToPlayer); // Hồi đầy phần máu vừa được cộng thêm (sau khi maxHp đã cập nhật)
+                Debug.Log($"<color=green>[SHD_CS_T5_08]</color> Đã hợp nhất thanh máu! +{t5_08_AddedHpToPlayer} HP từ Companion (không bị bonusHp scale).");
             }
         }
         else
@@ -1031,7 +989,7 @@ public class CoreShieldEffectManager : MonoBehaviour
             if (t5_08_AddedHpToPlayer > 0f)
             {
                 // Trả lại Max HP bình thường cho Player
-                stats.flatHp -= t5_08_AddedHpToPlayer;
+                stats.flatBonusMaxHp -= t5_08_AddedHpToPlayer;
                 t5_08_AddedHpToPlayer = 0f;
                 stats.RecalculateStats();
                 Debug.Log("<color=gray>[T5_08]</color> Đã tách thanh máu.");
