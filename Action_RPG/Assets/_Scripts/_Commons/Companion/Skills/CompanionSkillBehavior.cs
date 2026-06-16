@@ -244,24 +244,12 @@ public abstract class CompanionSkillBehavior : MonoBehaviour
         e.TakeDamage(new DamageInfo { isStun = true, stunDuration = dur, impactLevel = impact, attacker = stats, sourcePosition = transform.position });
     }
 
-    /// <summary>Trói chân địch (moveSpeed=0) trong dur giây — vẫn cho tấn công. Tránh dùng SlowEnemy(1.0) (chia 0).</summary>
+    /// <summary>Trói chân địch trong dur giây — vẫn cho tấn công. Qua effect system (endTime, không
+    /// đụng baseMoveSpeed/agent.isStopped trực tiếp → tránh xóa nhầm trạng thái nguồn khác).</summary>
     protected void RootEnemy(Stats e, float dur)
     {
         if (e == null) return;
-        StartCoroutine(RootRoutine(e, dur));
-    }
-    private System.Collections.IEnumerator RootRoutine(Stats e, float dur)
-    {
-        float orig = e.baseMoveSpeed;
-        e.baseMoveSpeed = 0f;
-        var agent = e.GetComponentInParent<UnityEngine.AI.NavMeshAgent>();
-        if (agent != null && agent.enabled && agent.isOnNavMesh) agent.isStopped = true;
-        yield return new WaitForSeconds(dur);
-        if (e != null)
-        {
-            e.baseMoveSpeed = orig;
-            if (agent != null && agent.enabled && agent.isOnNavMesh) agent.isStopped = false;
-        }
+        e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Root, dur), stats);
     }
 
     /// <summary>Kéo địch về 'center' (hút). Dùng NavMeshAgent.Warp nếu có để mượt.</summary>

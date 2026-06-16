@@ -78,6 +78,7 @@ public class PlayerController : MonoBehaviour
     private WeaponEffectManager _weaponFx; // hệ effect vũ khí (hook nhân dmg đòn đánh thường / xuyên giáp)
     private AccessoryEffectManager _accessoryFx; // hệ effect trang sức (hook chỉnh dmg đòn đánh thường)
     private CompanionSkillController _companionSkillCtrl; // cache controller skill của Companion (phím R/T)
+    private int _heavyArmorApplied = 0; // +armor tạm khi heavy swing; FIELD để hoàn trả được nếu bị ngắt giữa chừng
 
     /// <summary>Tìm/cache CompanionSkillController của Companion trong scene (companion có thể spawn sau).</summary>
     private CompanionSkillController ResolveCompanionSkillCtrl()
@@ -155,6 +156,7 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         stats = GetComponent<AllyStats>();
+        if (stats != null) stats.OnInterrupted += HandleInterrupted; // CC ngắt đòn đánh
 
         animator = GetComponentInChildren<Animator>();
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
@@ -227,6 +229,9 @@ public class PlayerController : MonoBehaviour
         if (stats == null) return;
 
         if (InventoryUIManager.IsInventoryOpen || SkillTreeController.IsSkillTreeOpen || IsDevToolOpen()) return;
+
+        // [ACTION-LOCK] Stun / Airborne / Root đều khóa di chuyển (qua query thống nhất).
+        if (stats.IsMovementLocked) return;
 
         // [SỬA Ở ĐÂY] Khóa di chuyển vật lý nếu đang dùng skill, lướt, parry, hoặc ĐANG GỒNG
         // Bow heavy charge: cho phép di chuyển nhưng cản thường (isCharging block bị tắt)
@@ -410,6 +415,9 @@ public class PlayerController : MonoBehaviour
 
     void HandleAttackInput()
     {
+        // [ACTION-LOCK] Airborne / Stun khóa đánh thường (Root & Silence KHÔNG chặn basic attack).
+        if (stats.IsActionLocked) return;
+
         // [ACC_CH_T4_03] Đang gồng skill (channel) → khóa mọi thao tác đánh.
         if (isSkillChanneling) return;
 
@@ -528,6 +536,9 @@ public class PlayerController : MonoBehaviour
     {
         AllyStats allyDashStats = stats as AllyStats;
 
+        // [ACTION-LOCK] Stun / Airborne / Root khóa Dash.
+        if (stats.IsMovementLocked) return;
+
         // [ACC_CH_T4_03] Đang gồng skill (channel) → không cho Dash.
         if (isSkillChanneling) return;
 
@@ -563,33 +574,65 @@ public class PlayerController : MonoBehaviour
         }
 
         // --- LOGIC CANCEL ATTACK ---
-        if (isAttacking)
-        {
-            // 1. Dừng ngay lập tức Coroutine đánh đang chạy
-            if (currentAttackCoroutine != null)
-            {
-                StopCoroutine(currentAttackCoroutine);
-            }
-
-            // 2. Reset các trạng thái tấn công
-            isAttacking = false;
-            isStaffSpinning = false;
-            nextAttackQueued = false; // Xóa luôn lệnh đánh tiếp theo nếu có
-
-            // 3. Reset Animator để nó không bị kẹt ở pose đánh
-            if (animator != null)
-            {
-                animator.ResetTrigger("Attack");
-                animator.SetFloat("ComboStep", 0);
-                // Có thể cần play ngay animation khác hoặc để Blend Tree tự xử lý
-            }
-
-            Debug.Log(">> Đã Cancel Attack để Dash!");
-        }
+        CancelCurrentAttack("Dash");
         // ---------------------------------
 
         StartCoroutine(DashCoroutine());
         OnDashPerformed?.Invoke();
+    }
+
+    /// <summary>
+    /// Hủy đòn đánh thường đang thực hiện (dùng cho Dash và khi bị CC ngắt).
+    /// reason chỉ để log.
+    /// </summary>
+    public void CancelCurrentAttack(string reason)
+    {
+        bool channeling = attackDispatcher != null && attackDispatcher.IsChanneledActive;
+        // KHÔNG return sớm nếu đang channel (staff spin) — nó cần được dừng dù isAttacking có thể đã lệch.
+        if (!isAttacking && !channeling) return;
+
+        // 0. Dừng staff channeled (spin) nếu đang chạy — dispatcher tự reset isAttacking/isStaffSpinning.
+        if (channeling) attackDispatcher.StopChanneled();
+
+        // 1. Dừng ngay lập tức Coroutine đánh đang chạy
+        if (currentAttackCoroutine != null)
+            StopCoroutine(currentAttackCoroutine);
+
+        // 2. Reset các trạng thái tấn công
+        isAttacking = false;
+        isStaffSpinning = false;
+        nextAttackQueued = false; // Xóa luôn lệnh đánh tiếp theo nếu có
+        isCharging = false;       // Hủy luôn gồng nếu đang charge
+        currentDamageMultiplier = 1.0f;
+
+        // [FIX LEAK] AttackRoutine bị StopCoroutine giữa chừng → phần hoàn trả heavyArmorBonus ở
+        // cuối routine KHÔNG chạy. Hoàn trả thủ công ở đây để không leak +armor vĩnh viễn.
+        RefundHeavyArmor();
+
+        // 3. Reset Animator để nó không bị kẹt ở pose đánh
+        if (animator != null)
+        {
+            animator.ResetTrigger("Attack");
+            animator.SetFloat("ComboStep", 0);
+        }
+
+        Debug.Log($">> Đã Cancel Attack ({reason})!");
+    }
+
+    /// <summary>Hoàn trả +armor tạm của heavy swing (idempotent — gọi nhiều lần không trừ dư).</summary>
+    private void RefundHeavyArmor()
+    {
+        if (_heavyArmorApplied > 0 && stats is AllyStats a)
+            a.armor -= _heavyArmorApplied;
+        _heavyArmorApplied = 0;
+    }
+
+    /// <summary>Bị STUN/KNOCKBACK → hủy đòn đánh đang vung. (Skill đặc biệt tự xử lý qua isStunned nếu cần.)</summary>
+    private void HandleInterrupted() => CancelCurrentAttack("CC: Stun/Knockback");
+
+    private void OnDisable()
+    {
+        if (stats != null) stats.OnInterrupted -= HandleInterrupted;
     }
 
 
@@ -831,7 +874,7 @@ public class PlayerController : MonoBehaviour
 
         // Setup Multiplier — dùng heavyDamageMultiplier từ WeaponData nếu có
         AllyStats allyAttack = stats as AllyStats;
-        int heavyArmorApplied = 0;
+        _heavyArmorApplied = 0; // dùng FIELD để CancelCurrentAttack có thể hoàn trả nếu bị ngắt giữa chừng
         if (isHeavy)
         {
             float wepMultiplier = equipmentManager?.currentWeapon?.heavyDamageMultiplier ?? 0f;
@@ -842,8 +885,8 @@ public class PlayerController : MonoBehaviour
             // CM2: Heavy Attack khó bị ngắt hơn (+heavyArmorBonus armor trong lúc swing)
             if (allyAttack != null && allyAttack.heavyArmorBonus > 0)
             {
-                heavyArmorApplied = allyAttack.heavyArmorBonus;
-                allyAttack.armor += heavyArmorApplied;
+                _heavyArmorApplied = allyAttack.heavyArmorBonus;
+                allyAttack.armor += _heavyArmorApplied;
             }
         }
         else currentDamageMultiplier = 1.0f;
@@ -891,8 +934,7 @@ public class PlayerController : MonoBehaviour
         isAttacking = false;
         currentDamageMultiplier = 1.0f;
         // CM2: hoàn trả heavy armor bonus sau khi swing xong
-        if (heavyArmorApplied > 0 && allyAttack != null)
-            allyAttack.armor -= heavyArmorApplied;
+        RefundHeavyArmor();
 
         // 7. Input Buffer
         if (nextAttackQueued)
@@ -1205,6 +1247,9 @@ public class PlayerController : MonoBehaviour
     // Hàm AI tự di chuyển (Bỏ qua Input người chơi)
     public void AI_MoveTo(Vector3 targetPos)
     {
+        // [ACTION-LOCK] AI-control (Ravager...) cũng phải tuân luật CC: Root/Stun/Airborne → không tự đi.
+        if (stats == null || stats.IsMovementLocked) return;
+
         // 1. Tính hướng
         Vector3 dir = (targetPos - transform.position).normalized;
         dir.y = 0;
@@ -1232,6 +1277,9 @@ public class PlayerController : MonoBehaviour
     // Hàm AI tự đánh
     public void AI_Attack()
     {
+        // [ACTION-LOCK] Stun/Airborne khóa đánh (Root/Silence vẫn cho basic attack — IsActionLocked không gồm 2 cái đó).
+        if (stats == null || stats.IsActionLocked) return;
+
         // 1. Dừng animation chạy để chuyển sang đánh
         if (animator != null) animator.SetBool("IsWalking", false);
 

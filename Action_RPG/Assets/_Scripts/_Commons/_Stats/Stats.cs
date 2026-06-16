@@ -161,9 +161,35 @@ public class Stats : MonoBehaviour
     // [COMPANION MTX_DEF_T3_01] Miễn nhiễm mọi khống chế (stun/knockback) khi true.
     public bool ccImmune = false;
 
-    // [COMPANION PRT_SUP_T3_02] Bị Trầm Mặc (cấm dùng kĩ năng). Enemy chưa có hệ cast skill nên hiện
-    // mới mang tính chuẩn bị; chỗ nào cho phép cast skill sau này nên kiểm tra cờ này.
+    // [COMPANION PRT_SUP_T3_02] Bị Trầm Mặc (cấm dùng kĩ năng). Giữ public để code cũ set trực tiếp
+    // không vỡ; nhưng KHUYẾN NGHỊ dùng ApplyCombatEffects(Silence) / IsSilenced để an toàn (counter).
     public bool isSilenced = false;
+
+    // ─────────────────────────────────────────────────────────────
+    //  [MỚI] ACTION-LOCK STATE — quản lý qua endTime/counter, an toàn khi chồng nhiều nguồn.
+    //  Player/Enemy/Companion nên dùng các query IsXxx thay vì tự check rải rác.
+    // ─────────────────────────────────────────────────────────────
+    private bool  _isAirborne = false;   // đang bị hất tung (khóa MỌI hành động)
+    private float _airborneEndTime = 0f; // thời điểm hết Airborne (cho phép nhiều nguồn chồng → lấy mốc xa nhất)
+    private float _rootEndTime = 0f;     // bị trói chân tới thời điểm này
+    private int   _silenceTokens = 0;    // số nguồn Silence đang giữ (counter)
+    private float _silenceEndTime = 0f;  // thời điểm hết Silence (cho nguồn theo duration)
+
+    /// <summary>Đang bị hất tung — khóa mọi hành động, không cleanse được.</summary>
+    public bool IsAirborne => _isAirborne;
+    /// <summary>Đang bị trói chân — khóa di chuyển/dash, KHÔNG khóa skill.</summary>
+    public bool IsRooted => Time.time < _rootEndTime;
+    /// <summary>Đang bị câm lặng — khóa Skill/Signature. True nếu có token hoặc cờ legacy hoặc còn endTime.</summary>
+    public bool IsSilenced => isSilenced || _silenceTokens > 0 || Time.time < _silenceEndTime;
+
+    /// <summary>Khóa MỌI hành động (Airborne, hoặc Stun làm khóa attack/move). Dùng cho move+attack+item.</summary>
+    public bool IsActionLocked => isDead || _isAirborne || isStunned;
+    /// <summary>Khóa di chuyển/dash (Airborne, Stun, Root).</summary>
+    public bool IsMovementLocked => isDead || _isAirborne || isStunned || IsRooted;
+    /// <summary>Khóa Skill/Signature (Airborne, Stun, Silence). Root KHÔNG khóa skill.</summary>
+    public bool IsSkillLocked => isDead || _isAirborne || isStunned || IsSilenced;
+    /// <summary>Khóa dùng vật phẩm/cleanse (Airborne, Stun).</summary>
+    public bool IsItemLocked => isDead || _isAirborne || isStunned;
 
     // [MỚI] Super Armor (Siêu Giáp) - Không bị ngắt chiêu
     [Header("--- Super Armor ---")]
@@ -212,6 +238,12 @@ public class Stats : MonoBehaviour
     private Coroutine resonanceCoroutine;
 
     public Action<DamageInfo> OnBeforeTakeDamage;
+
+    // [CC INTERRUPT] Bắn khi bị STUN hoặc KNOCKBACK bắt đầu → người nghe (PlayerController / EnemyCombat)
+    // tự hủy đòn đánh / skill đang thực hiện. Stun/knockback "ngắt hành động" — chuẩn ARPG.
+    public event Action OnInterrupted;
+    /// <summary>Gọi để báo các hệ điều khiển hủy hành động hiện tại (do CC).</summary>
+    protected void RaiseInterrupted() => OnInterrupted?.Invoke();
     public event Action<float, float> OnHealReceived; // <lượng hồi, lượng dư>
     public event Action<float, float, HealSource> OnHealDetailed; // <lượng hồi, dư, nguồn>
 
@@ -224,6 +256,13 @@ public class Stats : MonoBehaviour
     private NavMeshAgent agent;
     private Rigidbody rb;
     protected Animator animator;
+
+    // [HURT ANIM] Chống spam: chỉ cho phép trigger Hurt mỗi hurtAnimCooldown giây.
+    [Header("--- Hurt Reaction ---")]
+    [Tooltip("Khoảng cách tối thiểu giữa 2 lần chạy animation Hurt (giây). Tránh giật liên tục khi bị đánh dồn.")]
+    public float hurtAnimCooldown = 0.4f;
+    private float _lastHurtTime = -999f;
+    private EnemyCombat _enemyCombatCache; // null nếu không phải enemy → check rẻ
 
     public virtual void Start()
     {
@@ -530,6 +569,11 @@ public class Stats : MonoBehaviour
         // Hiển thị số sát thương nổi lên màn hình (cả bị chặn lẫn xuyên qua Shield)
         DamageNumberManager.Show(info, transform.position);
 
+        // [HURT ANIM] Phản ứng giật mình khi MẤT MÁU THẬT và chưa chết — safe-set + có điều kiện.
+        // Player animator không có "Hurt" nên tự bỏ qua; SlimeAnimator (enemy) có thì chạy.
+        if (animator != null && damageToTake > 0f && currentHp > 0f && HasParameter(animator, "Hurt"))
+            TryPlayHurt();
+
         // 3. XỬ LÝ HIỆU ỨNG (CC)
         ApplyCrowdControl(info);
 
@@ -604,57 +648,131 @@ public class Stats : MonoBehaviour
     }
 
     // --- LOGIC STUN & KNOCKBACK ---
-    void ApplyCrowdControl(DamageInfo info)
+    // Giữ tên cũ làm wrapper để mọi call-site cũ không vỡ; nội bộ chuyển sang ApplyCombatEffects.
+    void ApplyCrowdControl(DamageInfo info) => ApplyCombatEffects(info);
+
+    /// <summary>
+    /// Entry point THỐNG NHẤT xử lý mọi hiệu ứng CC của 1 đòn đánh.
+    /// - Bridge legacy isStun/isKnockback → effects list (không double-apply).
+    /// - ccImmune + super armor chặn như cũ.
+    /// - PHASE 1: giữ NGUYÊN math resistance hiện tại (stun + knockback đều dùng resistanceKnockBack)
+    ///   để không đổi gameplay. Việc tách stun sang resistanceEffect và thêm Airborne/Root/Silence
+    ///   handler là phase sau.
+    /// </summary>
+    public void ApplyCombatEffects(DamageInfo info)
     {
+        if (info == null) return;
+
         // [COMPANION MTX_DEF_T3_01] Miễn nhiễm khống chế.
         if (ccImmune) return;
 
         if (isSuperArmor && info.impactLevel <= superArmorLevel)
         {
-            // Có thể thêm hiệu ứng visual (ví dụ: người lóe sáng trắng chịu đòn)
-             //Debug.Log("Super Armor Blocked CC!");
+            //Debug.Log("Super Armor Blocked CC!");
             return;
         }
 
-        // 1. Xử lý KNOCKBACK
-        if (info.isKnockback)
-        {
-            // Tính lực đẩy lùi thực tế sau khi trừ Kháng
-            // Ví dụ: Force 10, Res 0.2 -> Thực nhận 8
-            float finalForce = info.knockbackForce * (1.0f - resistanceKnockBack);
-            Debug.Log("finalForce: " + finalForce + " info.knockbackForce: "+ info.knockbackForce + " resistanceKnockBack: "+ resistanceKnockBack);
+        // Gộp legacy bool vào effects list (idempotent — không thêm nếu nguồn đã AddEffect).
+        info.BridgeLegacyEffects();
+        if (info.effects == null) return;
 
-            // Nếu lực vẫn > 0 thì đẩy
-            if (finalForce > 0)
+        foreach (var eff in info.effects)
+        {
+            if (eff == null) continue;
+            switch (eff.type)
             {
-                Vector3 knockbackDir = (transform.position - info.sourcePosition).normalized;
-                knockbackDir.y = 0; // Giữ thăng bằng mặt đất
-                StartCoroutine(KnockbackRoutine(knockbackDir, finalForce));
+                case CombatEffectType.Knockback:
+                    ApplyKnockbackEffect(eff);
+                    break;
+                case CombatEffectType.Stun:
+                    ApplyStunEffect(eff);
+                    break;
+                case CombatEffectType.Airborne:
+                    // Airborne KHÔNG bị resistanceEffect giảm (luôn full duration).
+                    Airborne(eff.duration, eff.height);
+                    break;
+                case CombatEffectType.Root:
+                    ApplyRootEffect(eff);
+                    break;
+                case CombatEffectType.Silence:
+                    ApplySilenceEffect(eff);
+                    break;
+                // Slow: chưa nối (cần move/attack-speed modifier) — để phase sau.
             }
         }
+    }
 
-        // 2. Xử lý STUN (Nâng cấp)
-        if (info.isStun)
+    /// <summary>
+    /// Áp 1 hiệu ứng CC THUẦN (không kèm damage) lên mục tiêu — đi qua đúng pipeline
+    /// ApplyCombatEffects (ccImmune / super armor / resistance). Dùng cho các nguồn CC trực tiếp
+    /// (Companion skill/protocol) thay vì gọi Airborne()/isSilenced= trực tiếp.
+    /// </summary>
+    public void ApplyEffect(CombatEffectInfo effect, Stats source = null)
+    {
+        if (effect == null) return;
+        var info = new DamageInfo { attacker = source, sourcePosition = source != null ? source.transform.position : transform.position };
+        info.AddEffect(effect);
+        ApplyCombatEffects(info);
+    }
+
+    /// <summary>Resistance áp cho duration nếu effect cho phép. PHASE NÀY dùng resistanceEffect cho
+    /// Root/Silence (stun vẫn giữ resistanceKnockBack riêng để không đổi balance enemy hiện tại).</summary>
+    private float ResistedDuration(CombatEffectInfo eff)
+        => eff.respectEffectResistance ? eff.duration * (1f - resistanceEffect) : eff.duration;
+
+    private void ApplyRootEffect(CombatEffectInfo eff)
+    {
+        float dur = ResistedDuration(eff);
+        if (dur < 0.1f) return;
+        // endTime-based: nhiều nguồn root chồng → lấy mốc xa nhất, không restore bừa.
+        _rootEndTime = Mathf.Max(_rootEndTime, Time.time + dur);
+        if (eff.interruptCurrentAction) RaiseInterrupted();
+        if (agent != null && agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
+    }
+
+    private void ApplySilenceEffect(CombatEffectInfo eff)
+    {
+        float dur = ResistedDuration(eff);
+        if (dur < 0.1f) return;
+        // endTime-based: nhiều nguồn silence chồng → lấy mốc xa nhất. IsSilenced tự true tới đó.
+        _silenceEndTime = Mathf.Max(_silenceEndTime, Time.time + dur);
+        // Silence ngắt skill đang cast nếu effect yêu cầu (player/enemy đang windup → bị mất + cooldown
+        // xử lý ở tầng SkillManager/EnemyCombat qua RaiseInterrupted + check IsSilenced).
+        if (eff.interruptCurrentAction) RaiseInterrupted();
+    }
+
+    private void ApplyKnockbackEffect(CombatEffectInfo eff)
+    {
+        if (eff.force <= 0f) return;
+        // Knockback force dùng kháng riêng resistanceKnockBack (giữ nguyên).
+        float finalForce = eff.force * (1.0f - resistanceKnockBack);
+        if (finalForce > 0f)
         {
-            float finalDuration = info.stunDuration * (1.0f - resistanceKnockBack);
-            Debug.Log($"Stun: {finalDuration}");
-            // [SỬA] Bỏ hàm Mathf.Max(0.1f). Nếu thời gian < 0.1s coi như kháng hoàn toàn
-            if (finalDuration >= 0.1f)
-            {
-                float proposedEndTime = Time.time + finalDuration;
-                if (proposedEndTime > stunEndTime)
-                {
-                    stunEndTime = proposedEndTime;
-                    if (currentStunCoroutine != null) StopCoroutine(currentStunCoroutine);
-                    currentStunCoroutine = StartCoroutine(StunRoutine(finalDuration));
-                }
-            }
+            Vector3 knockbackDir = (transform.position - eff.sourcePosition).normalized;
+            knockbackDir.y = 0;
+            StartCoroutine(KnockbackRoutine(knockbackDir, finalForce));
+        }
+    }
+
+    private void ApplyStunEffect(CombatEffectInfo eff)
+    {
+        // PHASE 1: giữ nguyên — stun vẫn giảm theo resistanceKnockBack (chưa đổi sang resistanceEffect).
+        float finalDuration = eff.duration * (1.0f - resistanceKnockBack);
+        if (finalDuration < 0.1f) return; // < 0.1s coi như kháng hoàn toàn
+
+        float proposedEndTime = Time.time + finalDuration;
+        if (proposedEndTime > stunEndTime)
+        {
+            stunEndTime = proposedEndTime;
+            if (currentStunCoroutine != null) StopCoroutine(currentStunCoroutine);
+            currentStunCoroutine = StartCoroutine(StunRoutine(finalDuration));
         }
     }
 
     public IEnumerator KnockbackRoutine(Vector3 dir, float force)
     {
         isStunned = true;
+        RaiseInterrupted(); // Knockback ngắt đòn đánh / skill đang thực hiện
 
         bool wasKinematic = false;
         bool hasAgent = (agent != null);
@@ -738,6 +856,7 @@ public class Stats : MonoBehaviour
     IEnumerator StunRoutine(float duration)
     {
         isStunned = true;
+        RaiseInterrupted(); // Stun ngắt đòn đánh / skill đang thực hiện
         Debug.Log($"{gameObject.name} bị STUN!");
 
         if (agent != null && agent.isOnNavMesh)
@@ -755,6 +874,36 @@ public class Stats : MonoBehaviour
 
         isStunned = false;
         // Debug.Log($"{gameObject.name} hết STUN");
+    }
+
+    /// <summary>
+    /// Chạy animation Hurt CÓ ĐIỀU KIỆN:
+    ///  1. Cooldown: không spam khi bị đánh dồn (mỗi hurtAnimCooldown giây 1 lần).
+    ///  2. KHÔNG cắt ngang đòn đánh: nếu enemy đang attack/telegraph thì bỏ qua hurt
+    ///     → đòn đánh của enemy "lì", player vẫn gây damage + nháy đỏ nhưng không khóa cứng được nó.
+    /// (Player không có EnemyCombat nên _enemyCombatCache=null → chỉ áp cooldown.)
+    /// </summary>
+    private void TryPlayHurt()
+    {
+        // Cooldown chống spam
+        if (Time.time < _lastHurtTime + hurtAnimCooldown) return;
+
+        // Đang đánh/gồng → không cho hurt cắt ngang
+        if (_enemyCombatCache == null) _enemyCombatCache = GetComponent<EnemyCombat>();
+        if (_enemyCombatCache != null && (_enemyCombatCache.isAttacking || _enemyCombatCache.isTelegraphing))
+            return;
+
+        _lastHurtTime = Time.time;
+        animator.SetTrigger("Hurt");
+    }
+
+    /// <summary>True nếu Animator có parameter tên paramName — tránh spam warning khi set vào param không tồn tại.</summary>
+    protected static bool HasParameter(Animator anim, string paramName)
+    {
+        if (anim == null || string.IsNullOrEmpty(paramName)) return false;
+        foreach (var p in anim.parameters)
+            if (p.name == paramName) return true;
+        return false;
     }
 
     protected virtual void Die()
@@ -782,17 +931,13 @@ public class Stats : MonoBehaviour
             agent.enabled = false;
         }
 
-        // 4. Play Animation Die
-        // [CHƯA CÓ CLIP] Death animation: code đã sẵn sàng, tạm comment animator.Set, chỉ log.
-        // → Khi đã thêm parameter "Die"(Trigger)/"IsDead"(Bool) vào Animator Controller + clip,
-        //   bỏ comment 2 dòng animator.Set bên dưới là chạy.
+        // 4. Play Animation Die — safe-set: chỉ set nếu Animator CÓ parameter tương ứng
+        // (player animator không có Die/IsDead nên sẽ tự bỏ qua, không spam warning).
         if (animator != null)
         {
-            // animator.SetTrigger("Die");
-            Debug.Log($"[Stats] {gameObject.name} → Death anim (comment) animator.SetTrigger(\"Die\")");
-            // Đảm bảo animator không chuyển sang state khác
-            // animator.SetBool("IsDead", true);
-            Debug.Log($"[Stats] {gameObject.name} → Death anim (comment) animator.SetBool(\"IsDead\", true)");
+            if (HasParameter(animator, "Die"))    animator.SetTrigger("Die");
+            // IsDead = true để giữ ở state chết, không chuyển sang state khác
+            if (HasParameter(animator, "IsDead")) animator.SetBool("IsDead", true);
         }
 
         // 5. Vô hiệu hóa Script điều khiển
@@ -848,24 +993,31 @@ public class Stats : MonoBehaviour
     }
 
     // [MỚI] HẤT TUNG (Airborne): nâng mục tiêu lên cao + không hành động được trong 'duration' giây.
+    // Re-entrant: nếu đang bay mà bị hất tung tiếp → chỉ KÉO DÀI mốc kết thúc (không tạo routine chồng
+    // làm nhân vật lơ lửng / clear cờ lẫn nhau).
     public void Airborne(float duration, float height = 1.2f)
     {
         if (isDead || duration <= 0f) return;
-        StartCoroutine(AirborneRoutine(duration, height));
+        bool alreadyAirborne = _isAirborne && Time.time < _airborneEndTime;
+        _airborneEndTime = Mathf.Max(_airborneEndTime, Time.time + duration);
+        if (!alreadyAirborne) StartCoroutine(AirborneRoutine(height));
+        // đang bay rồi → routine hiện tại tự chạy tới _airborneEndTime mới, không start thêm.
     }
-    private System.Collections.IEnumerator AirborneRoutine(float duration, float height)
+    private System.Collections.IEnumerator AirborneRoutine(float height)
     {
         isStunned = true;
+        _isAirborne = true; // khóa mọi hành động + chặn cleanse trong lúc bay
+        RaiseInterrupted(); // hất tung ngắt đòn đánh / skill đang thực hiện
         bool agentWas = agent != null && agent.enabled;
         if (agentWas) agent.enabled = false;
         Vector3 start = transform.position;
-        float t = 0f;
-        while (t < duration)
+        float startTime = Time.time;
+        while (Time.time < _airborneEndTime)
         {
-            float k = t / duration;
+            float total = Mathf.Max(0.01f, _airborneEndTime - startTime); // có thể tăng nếu bị hất tung chồng
+            float k = Mathf.Clamp01((Time.time - startTime) / total);
             float y = Mathf.Sin(k * Mathf.PI) * height; // bay lên rồi rơi xuống
             transform.position = new Vector3(start.x, start.y + y, start.z);
-            t += Time.deltaTime;
             yield return null;
         }
         transform.position = start;
@@ -874,12 +1026,23 @@ public class Stats : MonoBehaviour
             agent.enabled = true;
             if (agent.isOnNavMesh) agent.Warp(start);
         }
-        isStunned = false;
+        _isAirborne = false;
+        // [IDEMPOTENT] Chỉ gỡ stun nếu KHÔNG còn stun timer đang chạy — tránh xóa nhầm stun từ nguồn khác
+        // overlap (stun đó tự có StunRoutine quản tới stunEndTime).
+        if (Time.time >= stunEndTime) isStunned = false;
     }
 
     // [MỚI] Hàm giải phóng nhân vật khỏi mọi trạng thái khống chế hiện tại
     public void BreakCrowdControl()
     {
+        // RULE: KHÔNG cleanse được trong lúc bị hất tung (Airborne).
+        if (_isAirborne) return;
+
+        // Cleanse Silence (theo duration). Counter-based silence do nguồn tự quản, không xóa ở đây.
+        _silenceEndTime = 0f;
+        // Cleanse Root.
+        _rootEndTime = 0f;
+
         isStunned = false;
         stunEndTime = 0f;
 

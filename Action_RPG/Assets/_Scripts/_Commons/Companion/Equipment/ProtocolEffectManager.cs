@@ -226,7 +226,8 @@ public class ProtocolEffectManager : CompanionEffectManagerBase
             case "PRT_AEG_T3_02": // đòn thứ 3 → hất tung địch trong tầm 0.5s
                 if (_hitCount % 3 == 0)
                 {
-                    foreach (var e in EnemiesInRadius(transform.position, 2f)) e.Airborne(0.5f);
+                    foreach (var e in EnemiesInRadius(transform.position, 2f))
+                        e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Airborne, 0.5f) { respectEffectResistance = false }, stats);
                     VisualDebugHelper.DrawSphere(transform.position, 2f, Color.yellow, 0.3f);
                 }
                 break;
@@ -312,14 +313,11 @@ public class ProtocolEffectManager : CompanionEffectManagerBase
 
     private void SpawnSilenceZone(Vector3 center, float radius, float dur)
     {
-        // Enemy chưa có hệ thống cast skill → đặt cờ + visual (chuẩn bị cho tương lai).
-        SpawnGroundZone(center, radius, dur, 0.25f, e => e.isSilenced = true, new Color(0.5f, 0.5f, 1f, 0.4f));
-        StartCoroutine(ClearSilence(center, radius, dur));
-    }
-    private IEnumerator ClearSilence(Vector3 center, float radius, float dur)
-    {
-        yield return new WaitForSeconds(dur);
-        foreach (var e in EnemiesInRadius(center, radius)) e.isSilenced = false;
+        // Câm lặng địch trong vùng: mỗi tick refresh Silence ngắn (endTime) → tự hết khi rời vùng,
+        // KHÔNG set isSilenced=false trực tiếp (tránh xóa nhầm silence từ nguồn khác).
+        SpawnGroundZone(center, radius, dur, 0.25f,
+            e => e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Silence, 0.4f), stats),
+            new Color(0.5f, 0.5f, 1f, 0.4f));
     }
 
     private void SpawnBlackHole(Vector3 center, float radius, float dur)

@@ -610,7 +610,22 @@ public class EnemyAI : MonoBehaviour
         }
         else
         {
-            // --- HÀNH ĐỘNG TẤN CÔNG ---
+            // --- ƯU TIÊN SKILL (nếu có skill + sẵn sàng) ---
+            // Có skill → cố gắng dùng skill trước; nếu chưa trong tầm thì áp sát; chỉ khi
+            // không có/không sẵn sàng mới rơi xuống đánh thường (fallback).
+            if (combat.HasSkill && combat.IsSkillReady())
+            {
+                if (distToTarget <= combat.SkillRange)
+                {
+                    State_Skill();
+                    return;
+                }
+                // Skill sẵn sàng nhưng xa → chạy lại gần để dùng skill
+                State_Chase();
+                return;
+            }
+
+            // --- HÀNH ĐỘNG TẤN CÔNG THƯỜNG (fallback) ---
             if (distToTarget <= combat.basicAttackRange)
             {
                 State_Attack();
@@ -621,6 +636,21 @@ public class EnemyAI : MonoBehaviour
                 State_Chase();
             }
         }
+    }
+
+    void State_Skill()
+    {
+        if (nearestTarget == null) return;
+        currentState = "Using Skill";
+        if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
+
+        // Ép mặt về phía player trước khi dùng skill
+        Vector3 dirToTarget = (nearestTarget.position - transform.position).normalized;
+        dirToTarget.y = 0;
+        if (dirToTarget != Vector3.zero) stats.facingDirection = dirToTarget;
+
+        stats.EnterCombat();
+        combat.PerformSkillAttack();
     }
 
     void HandleFleeBehavior()
@@ -797,6 +827,14 @@ public class EnemyAI : MonoBehaviour
     void State_MoveTo(Vector3 targetPos, string debugState)
     {
         if (!agent.isOnNavMesh) return;
+        // [ROOT] Bị trói chân → KHÔNG di chuyển/pathfinding (giữ agent dừng, vẫn cho attack/cast ở state khác).
+        if (stats.IsRooted)
+        {
+            currentState = "Rooted";
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+            return;
+        }
         currentState = debugState;
         agent.isStopped = false;
         agent.SetDestination(targetPos);

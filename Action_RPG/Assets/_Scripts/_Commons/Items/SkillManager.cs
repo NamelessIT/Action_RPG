@@ -481,14 +481,71 @@ public class SkillManager : MonoBehaviour
     // --- [MỚI] HÀM DÙNG SKILL (Được gọi từ PlayerController) ---
     private bool _accSkillCharging = false; // ACC_CH_T4_03: đang gồng 1 skill
 
+    // [SAFETY] Nếu object bị disable/unequip GIỮA lúc gồng, coroutine ChargeThenCast dừng giữa chừng
+    // → reset cờ để không leak state (channel/charging kẹt true).
+    private void OnDisable()
+    {
+        if (_accSkillCharging)
+        {
+            _accSkillCharging = false;
+            if (playerController != null) playerController.isSkillChanneling = false;
+        }
+    }
+
+    /// <summary>
+    /// Skill có khả năng GIẢI khống chế (cleanse) — được phép cast ngay cả khi đang bị Stun.
+    /// Nhận diện qua enum effect code (không hard-code string): SwordMasterSkill / WarriorLiteSignature
+    /// (cả 2 đều gọi BreakCrowdControl trong Use()).
+    /// </summary>
+    public static bool IsCleanseSkill(SkillData skillData)
+    {
+        if (skillData == null) return false;
+        return skillData.skillEffectCode == SkillData.SkillEffectCode.SwordMasterSkill
+            || skillData.signatureEffectCode == SkillData.SignatureEffectCode.WarriorLiteSignature;
+    }
+
     public void CastSkill(SkillData skillData)
     {
         if (skillData == null) return;
+
+        // [ACTION-LOCK] Quy tắc cast theo loại khống chế (chỉ áp cho Skill/Signature, không chặn basic attack):
+        //  - Airborne: chặn MỌI skill kể cả cleanse.
+        //  - Silence: chặn skill (không cooldown/cost khi chỉ bấm).
+        //  - Stun: chỉ cho skill CLEANSE (SwordMaster/WarriorLite) để thoát stun; skill khác bị chặn.
+        //  - Root: KHÔNG chặn skill.
+        if (isPlayer && allyStats != null
+            && (skillData.skillType == SkillData.SkillType.Skill || skillData.skillType == SkillData.SkillType.Signature))
+        {
+            if (allyStats.IsAirborne)
+            {
+                Debug.LogWarning($"[SkillManager] '{skillData.skillName}' bị chặn — đang bị Hất Tung (Airborne).");
+                return;
+            }
+            if (allyStats.IsSilenced)
+            {
+                Debug.LogWarning($"[SkillManager] '{skillData.skillName}' bị chặn — đang bị Câm Lặng (Silence).");
+                return;
+            }
+            // Stun: cho phép cleanse skill (để thoát stun), chặn skill thường.
+            if (allyStats.isStunned && !IsCleanseSkill(skillData))
+            {
+                Debug.LogWarning($"[SkillManager] '{skillData.skillName}' bị chặn — đang bị Choáng (Stun, không phải cleanse).");
+                return;
+            }
+        }
 
         // [ACC_CH_T4_03] Gồng trước khi thi triển Skill/Signature; mất máu lúc gồng → mất trắng.
         if (isPlayer && allyStats != null && allyStats.accSkillChargeTime > 0f
             && (skillData.skillType == SkillData.SkillType.Skill || skillData.skillType == SkillData.SkillType.Signature))
         {
+            // [CLEANSE x STUN] Cleanse skill khi đang bị Stun KHÔNG được gồng: ChargeThenCast sẽ bị
+            // IsSkillLocked (stun) ngắt ngay → mất skill/cooldown trước khi kịp giải khống chế.
+            // → Cast thẳng để thoát stun. (Airborne/Silence đã chặn hẳn ở guard phía trên.)
+            if (allyStats.isStunned && IsCleanseSkill(skillData))
+            {
+                CastSkillImmediate(skillData);
+                return;
+            }
             if (!_accSkillCharging) StartCoroutine(ChargeThenCast(skillData, allyStats.accSkillChargeTime));
             return; // đang gồng hoặc bắt đầu gồng → bỏ qua input lặp
         }
@@ -506,6 +563,8 @@ public class SkillManager : MonoBehaviour
         while (elapsed < dur)
         {
             if (allyStats.currentHp < startHp - 0.01f) { interrupted = true; break; } // mất máu → ngắt
+            // [SILENCE] Bị câm lặng (hoặc airborne/stun) trong lúc gồng → ngắt, skill mất trắng.
+            if (allyStats.IsSkillLocked) { interrupted = true; break; }
             elapsed += Time.deltaTime;
             yield return null;
         }

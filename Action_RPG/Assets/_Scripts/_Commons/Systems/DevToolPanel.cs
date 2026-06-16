@@ -320,6 +320,17 @@ public class DevToolPanel : MonoBehaviour
     }
 
     // ============================================================
+    //  GAME SPEED (DevTool) — qua UIPauseManager.GameplayTimeScale
+    //  Không set Time.timeScale trực tiếp để KHÔNG phá pause Inventory/SkillTree/DevTool.
+    // ============================================================
+    public void CMD_SetGameSpeedSlow()   => UIPauseManager.SetGameplayTimeScale(0.25f);
+    public void CMD_SetGameSpeedHalf()   => UIPauseManager.SetGameplayTimeScale(0.5f);
+    public void CMD_SetGameSpeedNormal() => UIPauseManager.SetGameplayTimeScale(1f);
+    public void CMD_SetGameSpeedFast()   => UIPauseManager.SetGameplayTimeScale(2f);
+    /// <summary>Gọi từ Slider/InputField nếu muốn tốc độ tùy ý.</summary>
+    public void CMD_SetGameSpeed(float scale) => UIPauseManager.SetGameplayTimeScale(scale);
+
+    // ============================================================
     //  POPULATE DROPDOWNS
     // ============================================================
 

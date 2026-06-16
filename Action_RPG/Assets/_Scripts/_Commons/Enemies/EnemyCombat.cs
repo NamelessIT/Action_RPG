@@ -60,13 +60,50 @@ public class EnemyCombat : MonoBehaviour
     // [MỚI] Biến này để lưu Coroutine đánh, giúp Boss có thể Cancel
     protected Coroutine currentAttackCoroutine;
 
+    // ── ENEMY SKILL (đơn giản: 1 skill ưu tiên, đánh mạnh hơn theo skillPhysicalMultiplier) ──
+    [Header("--- Enemy Skill (optional) ---")]
+    [Tooltip("Gán SkillData để enemy ƯU TIÊN dùng skill khi sẵn sàng. Để trống = chỉ đánh thường.")]
+    public SkillData enemySkill;
+    [Tooltip("Hồi chiêu skill (giây). Nếu 0 thì lấy theo enemySkill.cooldown.")]
+    public float skillCooldown = 0f;
+    [Tooltip("Tầm dùng skill. Nếu 0 thì dùng basicAttackRange.")]
+    public float skillRange = 0f;
+    [Tooltip("Hiệu ứng CC (Stun/Silence/Airborne/Root...) mà ĐÒN SKILL gây lên Player/Ally. " +
+             "Đòn đánh thường KHÔNG áp các effect này.")]
+    public System.Collections.Generic.List<CombatEffectInfo> skillEffects = new System.Collections.Generic.List<CombatEffectInfo>();
+    private float lastSkillTime = -999f;
+    // Hệ số nhân damage cho đòn hiện tại (1 = đánh thường; skill set = skillPhysicalMultiplier)
+    private float _currentAttackMultiplier = 1f;
+    // Đòn hiện tại có phải skill không (để apply skillEffects, basic thì không).
+    private bool _currentIsSkill = false;
+
+    public bool HasSkill => enemySkill != null;
+    public float SkillRange => skillRange > 0f ? skillRange : basicAttackRange;
+
+    /// <summary>Skill sẵn sàng dùng? (có skill + hết cooldown + không đang đánh + không bị Trầm Mặc).</summary>
+    public bool IsSkillReady()
+    {
+        if (enemySkill == null || isAttacking) return false;
+        if (stats != null && stats.IsSkillLocked) return false; // Silence/Stun/Airborne → không dùng được skill
+        float cd = skillCooldown > 0f ? skillCooldown : Mathf.Max(0.1f, enemySkill.cooldown);
+        return Time.time >= lastSkillTime + cd;
+    }
+
     private List<Transform> hitTargets = new List<Transform>();
 
     public virtual void Setup(EnemyStats _stats, Transform _target, Animator _animator)
     {
+        // [CC INTERRUPT] Gỡ đăng ký cũ (đề phòng Setup gọi lại) rồi đăng ký mới.
+        if (stats != null) stats.OnInterrupted -= CancelAttack;
         stats = _stats;
         target = _target;
         animator = _animator;
+        if (stats != null) stats.OnInterrupted += CancelAttack; // stun/knockback → hủy đòn đánh
+    }
+
+    protected virtual void OnDisable()
+    {
+        if (stats != null) stats.OnInterrupted -= CancelAttack;
     }
 
 
@@ -89,6 +126,28 @@ public class EnemyCombat : MonoBehaviour
 
         if (Time.time < lastAttackTime + cooldownTime) return;
 
+        _currentAttackMultiplier = 1f; // đòn thường
+        _currentIsSkill = false;
+        currentAttackCoroutine = StartCoroutine(EnemyAttackRoutine());
+    }
+
+    /// <summary>
+    /// Dùng skill: tái sử dụng EnemyAttackRoutine nhưng nhân damage theo skillPhysicalMultiplier.
+    /// Giữ đơn giản — enemy "skill" hiện là 1 đòn mạnh hơn (mở rộng sau cho boss qua override).
+    /// </summary>
+    public virtual void PerformSkillAttack()
+    {
+        if (stats == null || target == null || enemySkill == null) return;
+        if (isAttacking) return;
+        if (stats.IsSkillLocked) return; // bị Silence/Stun/Airborne → không cast được
+        if (!IsSkillReady()) return;
+
+        lastSkillTime = Time.time;
+        // Multiplier: dùng skillPhysicalMultiplier nếu > 0, không thì 1.5x mặc định cho dễ thấy.
+        _currentAttackMultiplier = enemySkill.skillPhysicalMultiplier > 0f
+                                   ? enemySkill.skillPhysicalMultiplier : 1.5f;
+        _currentIsSkill = true;
+        Debug.Log($"<color=magenta>{gameObject.name} dùng SKILL '{enemySkill.skillName}' (x{_currentAttackMultiplier})!</color>");
         currentAttackCoroutine = StartCoroutine(EnemyAttackRoutine());
     }
 
@@ -180,9 +239,11 @@ protected IEnumerator EnemyAttackRoutine()
         yield return new WaitForSeconds(realAnimDuration - endDamageTime);
 
         isAttacking = false;
+        _currentIsSkill = false; // reset: đòn sau mặc định là đánh thường
         currentComboStep++;
         if (currentComboStep >= maxCombo) currentComboStep = 0;
         currentAttackCoroutine = null; // routine kết thúc bình thường
+        _currentAttackMultiplier = 1f; // reset về đòn thường cho lần sau
     }
 
     // [MỚI] Hàm hỗ trợ Cancel Attack (Để Boss dùng)
@@ -329,6 +390,7 @@ protected IEnumerator EnemyAttackRoutine()
             if (isCrit) Debug.Log($"<color=orange>{gameObject.name} CRITS!</color>");
 
             // Gọi CombatMath (Nhớ cập nhật tham số ignoreReduction nếu cần, ở đây Enemy thường ko có True Damage nên để false)
+            // externalMult = _currentAttackMultiplier: đòn thường = 1, skill = skillPhysicalMultiplier.
             var dmgTuple = CombatMath.CalculateFullDamage(
                 stats,
                 victimStats,
@@ -336,7 +398,7 @@ protected IEnumerator EnemyAttackRoutine()
                 isCrit,
                 null,
                 null,
-                1.0f,
+                _currentAttackMultiplier,
                 false // Enemy đánh thường không xuyên giáp
             );
 
@@ -344,20 +406,33 @@ protected IEnumerator EnemyAttackRoutine()
             info.magicDamage = dmgTuple.magic;
             info.trueDamage = dmgTuple.trueDmg;
 
+            // [SKILL EFFECTS] Đòn SKILL áp các CombatEffectInfo (Silence/Stun/Airborne/Root...) lên victim.
+            // CLONE từng effect cho mỗi target (set sourcePosition riêng) → tránh mutate dùng chung.
+            if (_currentIsSkill && skillEffects != null)
+            {
+                foreach (var src in skillEffects)
+                {
+                    if (src == null) continue;
+                    info.AddEffect(new CombatEffectInfo(src.type, src.duration)
+                    {
+                        force = src.force,
+                        height = src.height,
+                        impactLevel = src.impactLevel,
+                        sourcePosition = transform.position,
+                        respectEffectResistance = src.respectEffectResistance,
+                        interruptCurrentAction = src.interruptCurrentAction,
+                        putInterruptedSkillOnCooldown = src.putInterruptedSkillOnCooldown,
+                        note = src.note,
+                    });
+                }
+            }
+
             // --- BƯỚC 4: GỬI ---
             victimStats.TakeDamage(info);
 
-            // [COMBAT FEEL] Enemy đánh trúng Player/Ally → feedback 2 chiều.
-            // Chỉ kích khi victim là Player/Ally (không rung khi đánh quái khác).
-            if (victim.CompareTag("Player") || victim.CompareTag("Ally"))
-            {
-                CombatFeel.HitStrength strength =
-                    isCrit ? CombatFeel.HitStrength.Crit :
-                    (info.isKnockback || info.isStun || stats.monsterRank >= 1) ? CombatFeel.HitStrength.Heavy :
-                    CombatFeel.HitStrength.Normal;
-                CombatFeel.OnHit(strength, victim.name);
-                // Hit flash do HitFlash tự lắng nghe OnDamageReceived (1 nguồn) — không gọi Flash() ở đây.
-            }
+            // [COMBAT FEEL OWNER] Camera shake / hit-stop CHỈ thuộc về Player đánh trúng (game feel cho người chơi).
+            // Enemy đánh player KHÔNG gây camera shake (theo yêu cầu). Hit flash + damage number vẫn chạy
+            // qua HitFlash (tự lắng nghe OnDamageReceived) và DamageNumberManager — không phụ thuộc chỗ này.
         }
     }
 

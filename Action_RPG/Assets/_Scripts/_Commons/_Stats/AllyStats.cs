@@ -437,9 +437,10 @@ public class AllyStats : Stats
         yield return new WaitForSecondsRealtime(slowMotionDuration);
 
         // 3. Trả lại thời gian bình thường — nhưng tôn trọng UIPauseManager:
-        // nếu người chơi mở UI (Inventory/SkillTree/DevTool) trong lúc slow-mo, giữ pause (0) thay vì ép 1.
+        // - timeScale: giữ pause (0) nếu UI mở, ngược lại về GameplayTimeScale (dev speed).
+        // - fixedDeltaTime: theo dev speed (không hard-code 0.02f, tránh phá DevTool 2x/0.25x).
         Time.timeScale = UIPauseManager.ResumeTimeScale;
-        Time.fixedDeltaTime = 0.02f;
+        Time.fixedDeltaTime = UIPauseManager.ResumeFixedDeltaTime;
     }
 
     IEnumerator ResetPerfectDodgeFlag()

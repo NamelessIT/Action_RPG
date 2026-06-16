@@ -179,7 +179,13 @@ public class CompanionAI : MonoBehaviour
         // -- CHIẾN ĐẤU --
         if (currentTarget != null)
         {
-            HandleCombat();
+            HandleCombat(); // HandleCombat tự xử lý Root: đứng yên, chỉ đánh nếu địch đã trong tầm.
+        }
+        // [ROOT] Không có mục tiêu mà đang bị trói chân → đứng yên hoàn toàn, KHÔNG follow/wander/pathfind.
+        else if (stats.IsRooted)
+        {
+            if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; agent.ResetPath(); }
+            isWandering = false;
         }
         // -- ĐI THEO / ĐI DẠO --
         else
@@ -387,6 +393,20 @@ public class CompanionAI : MonoBehaviour
     {
         float distToTarget = Vector3.Distance(transform.position, currentTarget.position);
 
+        // [ROOT] Bị trói chân → KHÔNG di chuyển/kite; nhưng nếu mục tiêu đã trong tầm thì vẫn đánh.
+        if (stats.IsRooted)
+        {
+            if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
+            float effRangeR = Behavior != null ? Behavior.AttackRange : FALLBACK_RANGE;
+            if (distToTarget <= effRangeR)
+            {
+                float spd = stats.attackSpeed > 0 ? stats.attackSpeed : 1.0f;
+                if (Time.time >= lastAttackTime + (1.0f / spd)) StartCoroutine(AttackRoutine(spd));
+                Vector3 d = (currentTarget.position - transform.position).normalized; d.y = 0; currentVisualDir = d;
+            }
+            return;
+        }
+
         // [COMPANION EQUIPMENT] Behavior theo role có thể yêu cầu KITE (lùi ra) khi địch quá gần.
         var behavior = Behavior;
         if (behavior != null)
@@ -522,9 +542,9 @@ public class CompanionAI : MonoBehaviour
         {
             Stats e = CompanionCombat.GetEnemy(h);
             if (e == null || !seen.Add(e)) continue;
-            // Aegis đòn thứ 2: gây sát thương + HẤT TUNG 0.5s (Airborne thật).
+            // Aegis đòn thứ 2: gây sát thương + HẤT TUNG 0.5s (Airborne qua effect system).
             CompanionCombat.DealHit(stats, e, transform, isMagic, knockup ? 1 : 0);
-            if (knockup) e.Airborne(0.5f);
+            if (knockup) e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Airborne, 0.5f) { respectEffectResistance = false }, stats);
         }
         if (knockup) Debug.Log("[Companion-Aegis] Đòn thứ 2 — HẤT TUNG 0.5s!");
     }
@@ -656,7 +676,8 @@ public class CompanionAI : MonoBehaviour
         if (agent.isOnNavMesh)
         {
             agent.ResetPath();
-            agent.isStopped = false;
+            // [ROOT] Đang trói chân → KHÔNG bật agent chạy tới target (chỉ đổi target để đánh nếu đã trong tầm).
+            agent.isStopped = stats.IsRooted;
         }
 
         // 2. Cấp Buff an toàn (Chống cộng dồn)

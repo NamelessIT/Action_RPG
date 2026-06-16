@@ -20,7 +20,7 @@ MonoBehaviour:
   effectCondition: 
   effectDescription: 
   matrixName: Reinforced Plating
-  matrixType: 0
+  matrixType: 2
   armor: 30
   magicResist: 30
   flatHp: 200

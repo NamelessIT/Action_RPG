@@ -72,6 +72,9 @@ public static class DamageHelper
         );
 
         // 5. Đóng gói Sát thương cuối cùng
+        // [FIX] Trước đây isKnockback/knockbackForce KHÔNG được set → mọi call-site truyền
+        // applyKnockback=true bị mất tác dụng. Set đầy đủ ở đây.
+        float finalKnockbackForce = applyKnockback ? knockbackForce : 0f;
         DamageInfo info = new DamageInfo
         {
             sourcePosition = sourceTransform != null ? sourceTransform.position : attacker.transform.position,
@@ -83,6 +86,8 @@ public static class DamageHelper
             impactLevel = impactLvl,
             isStun = applyStun,
             stunDuration = stunTime,
+            isKnockback = applyKnockback,
+            knockbackForce = finalKnockbackForce,
             sourceType = sourceType
         };
 

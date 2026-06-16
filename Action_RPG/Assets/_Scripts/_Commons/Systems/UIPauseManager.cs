@@ -15,15 +15,40 @@ public static class UIPauseManager
 {
     private static readonly HashSet<string> _locks = new HashSet<string>();
 
+    /// <summary>Giá trị fixedDeltaTime mặc định của Unity (60 physics step/giây).</summary>
+    public const float DefaultFixedDeltaTime = 0.02f;
+
+    /// <summary>
+    /// Tốc độ game khi KHÔNG bị UI pause (mặc định 1). DevTool đổi qua đây (0.5x / 1x / 2x).
+    /// Khi có UI lock → effective timeScale = 0; hết lock → quay về giá trị này.
+    /// </summary>
+    public static float GameplayTimeScale { get; private set; } = 1f;
+
     /// <summary>Có ít nhất 1 UI chặn đang mở (game đang pause).</summary>
     public static bool IsPaused => _locks.Count > 0;
 
     /// <summary>
-    /// Giá trị timeScale "bình thường" nên trả về: 0 nếu UI đang pause, 1 nếu không.
+    /// Giá trị timeScale "bình thường" nên trả về: 0 nếu UI đang pause, ngược lại GameplayTimeScale.
     /// Slow-motion (perfect dodge / Duelist) gọi hàm này khi kết thúc thay vì cứng nhắc set 1,
-    /// để không vô tình unpause khi người chơi mở UI giữa lúc slow-mo.
+    /// để không (a) unpause khi UI đang mở, (b) ép về 1 khi dev đang chỉnh 2x/0.5x.
     /// </summary>
-    public static float ResumeTimeScale => IsPaused ? 0f : 1f;
+    public static float ResumeTimeScale => IsPaused ? 0f : GameplayTimeScale;
+
+    /// <summary>
+    /// fixedDeltaTime nên dùng khi kết thúc slow-motion: scale theo GameplayTimeScale để vật lý
+    /// khớp tốc độ game (vd 2x → physics nhanh tương ứng). Slow-mo dùng thay cho hard-code 0.02f.
+    /// </summary>
+    public static float ResumeFixedDeltaTime => DefaultFixedDeltaTime * GameplayTimeScale;
+
+    /// <summary>Đổi tốc độ gameplay (DevTool). Áp ngay nếu không có UI lock; nếu đang pause thì
+    /// giữ pause, đổi sẽ có hiệu lực khi đóng UI.</summary>
+    public static void SetGameplayTimeScale(float scale)
+    {
+        GameplayTimeScale = Mathf.Clamp(scale, 0.05f, 8f);
+        Apply();
+        Debug.Log($"[UIPauseManager] GameplayTimeScale = {GameplayTimeScale:0.##}x" +
+                  (IsPaused ? " (đang pause bởi UI, sẽ áp khi đóng)" : ""));
+    }
 
     /// <summary>Bật/tắt khóa pause cho 1 panel. key nên là hằng định danh ("Inventory", "SkillTree", "DevTool"...).</summary>
     public static void SetLock(string key, bool locked)
@@ -49,8 +74,10 @@ public static class UIPauseManager
     private static void Apply()
     {
         bool paused = _locks.Count > 0;
-        Time.timeScale   = paused ? 0f : 1f;
-        Cursor.visible   = paused;
-        Cursor.lockState = paused ? CursorLockMode.None : CursorLockMode.Locked;
+        Time.timeScale     = paused ? 0f : GameplayTimeScale; // hết lock → tốc độ dev đã chọn (mặc định 1)
+        // Pause (timeScale=0) thì giữ fixedDeltaTime mặc định; khi chạy thì scale theo tốc độ game.
+        Time.fixedDeltaTime = paused ? DefaultFixedDeltaTime : ResumeFixedDeltaTime;
+        Cursor.visible     = paused;
+        Cursor.lockState   = paused ? CursorLockMode.None : CursorLockMode.Locked;
     }
 }
