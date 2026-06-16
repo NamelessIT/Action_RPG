@@ -166,7 +166,7 @@ public class MageSignature : SkillBehavior
             if (enemyStats != null && enemyStats.currentHp > 0)
             {
                 // A. GÂY SÁT THƯƠNG HỖN HỢP
-                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 0, true, 0.2f);
+                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 0, true, 0.2f, sourceType: DamageSourceType.DoT);
 
                 // B. REFRESH DEBUFF (LỬA)
                 float burnDps = stats.magicAtk * burnDamagePercent;

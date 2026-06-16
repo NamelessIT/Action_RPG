@@ -84,7 +84,7 @@ public class MageLiteSignature : SkillBehavior
             if (enemyStats != null && enemyStats.currentHp > 0)
             {
                 // Tính sát thương (x3, hỗn hợp)
-                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 0);
+                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 0, sourceType: DamageSourceType.Ranged);
 
                 // --- Gây 4 loại Debuff Nguyên Tố ---
                 // A. Lửa (Thiêu Đốt - Sử dụng hàm thiêu đốt chuẩn)

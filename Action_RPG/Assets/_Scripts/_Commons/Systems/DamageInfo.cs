@@ -1,8 +1,18 @@
 ﻿using UnityEngine;
 
+/// <summary>
+/// Phân loại nguồn sát thương (cho các effect cần phân biệt, vd phản đòn cận chiến).
+/// Melee: đòn cận chiến trực tiếp. Ranged: đạn bay + skill AoE tầm xa.
+/// DoT: thiêu đốt/chảy máu/độc theo thời gian. Other: môi trường/phản đòn/khác.
+/// </summary>
+public enum DamageSourceType { Melee, Ranged, DoT, Other }
+
 [System.Serializable]
 public class DamageInfo
 {
+    // Nguồn sát thương — mặc định Melee (đòn trực tiếp thường gặp nhất).
+    public DamageSourceType sourceType = DamageSourceType.Melee;
+
     // [MỚI] Chia làm 3 biến thành phần
     public float physDamage;
     public float magicDamage;

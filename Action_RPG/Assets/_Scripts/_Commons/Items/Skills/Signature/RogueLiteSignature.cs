@@ -151,6 +151,7 @@ public class RogueLiteSignature : SkillBehavior
             bleedInfo.sourcePosition = target.transform.position;
             bleedInfo.physDamage = tickDamage;
             bleedInfo.attacker = stats;
+            bleedInfo.sourceType = DamageSourceType.DoT;
 
             target.TakeDamage(bleedInfo);
             Debug.Log($"<color=red>Ám sát (Rút máu):</color> {target.name} mất {tickDamage} HP.");

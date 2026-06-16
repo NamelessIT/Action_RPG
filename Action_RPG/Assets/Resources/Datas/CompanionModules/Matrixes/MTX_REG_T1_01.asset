@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4873d6db67d502247839ae8a1e23c8e0, type: 3}
+  m_Name: MTX_REG_T1_01
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionMatrixData
+  id: MTX_REG_T1_01
+  description: 'Standard auto-repair framework. [Aggro: Normal]'
+  icon: {fileID: 0}
+  rarity: 0
+  effectType: 0
+  effectCondition: 
+  effectDescription: 
+  matrixName: Basic Mending Mesh
+  matrixType: 0
+  armor: 15
+  magicResist: 15
+  flatHp: 100
+  bonusHp: 0

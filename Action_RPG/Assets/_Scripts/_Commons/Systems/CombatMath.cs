@@ -51,7 +51,7 @@ public static class CombatMath
     /// <param name="externalMult">Hệ số phụ (Combo, Charge... mặc định là 1)</param>
     /// Hàm tính damage chính thức (Đã thêm ignoreReduction)
     /// </summary>
-    public static (float phys, float magic, float trueDmg) CalculateFullDamage(Stats attacker, Stats target, float t, bool isCrit, SkillData skill, WeaponData weapon, float externalMult = 1.0f, bool ignoreReduction = false)
+    public static (float phys, float magic, float trueDmg) CalculateFullDamage(Stats attacker, Stats target, float t, bool isCrit, SkillData skill, WeaponData weapon, float externalMult = 1.0f, bool ignoreReduction = false, float armorPenetration = 0f)
     {
         // --- 1. Tính Raw Damage ---
         float critMult = isCrit ? attacker.baseCritMultiplier : 1.0f; //Sửa lại thành critMultiplier 
@@ -118,7 +118,8 @@ public static class CombatMath
 
 
         // --- 2. Tính Armor/MagicResist thực tế theo hướng đánh (Armor Direction) ---
-        float armorDir = target.armor * (1 - (attacker.armorBackstabReduce * t));
+        // armorPenetration: bỏ qua % Giáp của mục tiêu (vd ACC_RM_T5_03 đánh thường xuyên 25%/50% giáp).
+        float armorDir = target.armor * (1 - (attacker.armorBackstabReduce * t)) * (1f - Mathf.Clamp01(armorPenetration));
         float magicResistDir = target.magicResist * (1 - (attacker.magicResistBackstabReduce * t));
 
 
@@ -191,6 +192,48 @@ public static class CombatMath
 
 
         // Tổng Damage: Trả về 3 cục riêng biệt (True = 0 ở đòn đánh thường)
+        return (finalPhys, finalMagic, 0f);
+    }
+
+    /// <summary>
+    /// WPN_GR_T4_04 (Phi Dao): đòn chính giữ MAGNITUDE theo magicAtk nhưng GÂY RA dưới dạng VẬT LÝ
+    /// (chịu Giáp thay vì MR); kèm 1 lượng sát thương PHÉP = magicAtk * magicBonusMult (chịu MR).
+    /// Tái lập pipeline giảm trừ của CalculateFullDamage cho 2 thành phần.
+    /// </summary>
+    public static (float phys, float magic, float trueDmg) CalculateGrimoirePhiDao(
+        AllyStats attacker, Stats target, float t, bool isCrit, float externalMult, float magicBonusMult)
+    {
+        float critMult = isCrit ? attacker.baseCritMultiplier : 1.0f;
+        // Đòn chính: magnitude theo magicAtk nhưng tính là VẬT LÝ.
+        float rawMain  = attacker.magicAtk * 1.0f * externalMult * critMult * attacker.damageOutputMultiplier;
+        // Bonus phép.
+        float rawBonus = attacker.magicAtk * magicBonusMult * critMult * attacker.damageOutputMultiplier;
+
+        float armorDir = target.armor * (1 - (attacker.armorBackstabReduce * t));
+        float magicResistDir = target.magicResist * (1 - (attacker.magicResistBackstabReduce * t));
+        float physDR  = 0.25f * (armorDir / (armorDir + C_CONST));
+        float magicDR = 0.25f * (magicResistDir / (magicResistDir + C_CONST));
+
+        float defenseValMult = 1.0f;
+        float skillReductionMult = 1.0f;
+        if (t <= target.blockThreshold)
+        {
+            float effDef = target.defenseValue;
+            if (attacker is AllyStats ai && ai.defenseValueIgnore > 0f)
+                effDef *= (1f - Mathf.Clamp01(ai.defenseValueIgnore));
+            defenseValMult = 1f / (1f + effDef * K_CONST);
+            if (target is AllyStats at && at.isManualGuarding)
+            {
+                skillReductionMult = 1.0f - at.manualGuardReduction;
+                at.NotifyBlockSuccess();
+            }
+        }
+        if (target is AllyStats warrior && warrior.isMomentumActive)
+            skillReductionMult *= (1.0f - warrior.momentumReduction);
+
+        float dirBonusMult = 1.0f + (0.25f * t);
+        float finalPhys  = rawMain  * (1 - physDR)  * defenseValMult * dirBonusMult * skillReductionMult;
+        float finalMagic = rawBonus * (1 - magicDR) * defenseValMult * dirBonusMult * skillReductionMult;
         return (finalPhys, finalMagic, 0f);
     }
 }

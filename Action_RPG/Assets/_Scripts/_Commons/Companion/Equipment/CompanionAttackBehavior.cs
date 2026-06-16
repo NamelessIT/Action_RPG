@@ -2,46 +2,53 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  COMPANION ATTACK BEHAVIOR — strategy theo role.
+//  COMPANION ATTACK BEHAVIOR — strategy theo protocolType (Slot 1).
 //
-//  Mức nền (giai đoạn này): mỗi behavior cung cấp QUYẾT ĐỊNH cơ bản cho CompanionAI:
-//    - DesiredRange: khoảng cách muốn giữ với mục tiêu (kite/áp sát).
-//    - ShouldFlee:   có nên lùi khi địch lại quá gần / máu thấp không.
-//    - PickTarget:   chọn mục tiêu theo role (gần nhất / xa nhất / máu thấp / cụm đông).
+//  Cung cấp QUYẾT ĐỊNH cho CompanionAI:
+//    - DesiredRange:  khoảng cách muốn giữ với mục tiêu.
+//    - ShouldFlee:    có nên kite (lùi) khi địch lại quá gần không.
+//    - PickTarget:    chọn mục tiêu theo protocol.
+//    - IsRanged / AoeRadius / DoesKnockup: tính chất đòn đánh để AI thực thi.
 //
-//  CompanionAI gọi các hàm này nếu có Attack Module; nếu không có module thì dùng
-//  logic fallback cũ (giữ nguyên hành vi hiện tại).
-//
-//  TODO[T4/T5]: các effect nâng cao (execute, fear, black hole, projectile block...)
-//  sẽ móc thêm vào đây khi có hệ thống nền tương ứng.
+//  Không có Protocol → fallback = Carnage tay không (5 physicalAtk) theo GDD.
 // ─────────────────────────────────────────────────────────────────────────────
-
 public abstract class CompanionAttackBehavior
 {
-    protected readonly CompanionAttackModuleData data;
-    protected CompanionAttackBehavior(CompanionAttackModuleData d) { data = d; }
+    protected readonly CompanionProtocolData data;
+    /// <summary>Player transform — AI gán vào để Aegis biết "ai đang đánh player".</summary>
+    public Transform Player { get; set; }
 
-    /// <summary>Khoảng cách muốn giữ với mục tiêu.</summary>
-    public virtual float DesiredRange => data != null ? data.preferredRange : 2f;
+    protected CompanionAttackBehavior(CompanionProtocolData d) { data = d; }
 
-    /// <summary>Có nên lùi/kite khi mục tiêu ở khoảng cách distToTarget, máu hiện hpPercent (0-1).</summary>
+    public CompanionProtocolType ProtocolType => data != null ? data.protocolType : CompanionProtocolType.Carnage;
+    public bool IsRanged => data != null && data.isRange;
+    public float AttackRange => data != null ? data.attackRange : 2f;
+
+    /// <summary>Bán kính nổ AoE của đòn đánh (Suppression 0.5f, Carnage/Aegis = attackRange quét).</summary>
+    public virtual float AoeRadius => 0f;
+    /// <summary>Aegis: mỗi đòn thứ 2 hất tung mục tiêu.</summary>
+    public virtual bool DoesKnockup => false;
+
+    public virtual float DesiredRange => data != null ? data.attackRange : 2f;
+    /// <summary>Địch lại gần hơn mức này → kite (chỉ protocol tầm xa).</summary>
+    public virtual float FleeTriggerRange => 3f;
     public virtual bool ShouldFlee(float distToTarget, float hpPercent) => false;
 
-    /// <summary>Chọn mục tiêu trong danh sách (đã lọc sống). null nếu rỗng.</summary>
     public virtual Transform PickTarget(Vector3 self, IReadOnlyList<Transform> candidates)
         => Nearest(self, candidates);
 
-    // ── Factory: tạo behavior theo role ─────────────────────────────────────
-    public static CompanionAttackBehavior Create(CompanionAttackModuleData d)
+    // ── Factory theo protocolType ───────────────────────────────────────────
+    public static CompanionAttackBehavior Create(CompanionProtocolData d)
     {
-        if (d == null) return null;
-        switch (d.role)
+        // d == null → tay không kiểu Carnage (GDD: 5 physicalAtk, AI giống Carnage).
+        if (d == null) return new CarnageBehavior(null);
+        switch (d.protocolType)
         {
-            case CompanionRole.Sniper:    return new SniperBehavior(d);
-            case CompanionRole.Berserker: return new BerserkerBehavior(d);
-            case CompanionRole.Control:   return new ControlBehavior(d);
-            case CompanionRole.Vanguard:  return new VanguardBehavior(d);
-            default:                      return new BerserkerBehavior(d);
+            case CompanionProtocolType.Artillery:   return new ArtilleryBehavior(d);
+            case CompanionProtocolType.Carnage:     return new CarnageBehavior(d);
+            case CompanionProtocolType.Suppression: return new SuppressionBehavior(d);
+            case CompanionProtocolType.Aegis:       return new AegisBehavior(d);
+            default:                                 return new CarnageBehavior(d);
         }
     }
 
@@ -52,20 +59,8 @@ public abstract class CompanionAttackBehavior
         for (int i = 0; i < c.Count; i++)
         {
             if (c[i] == null) continue;
-            float d = Vector3.Distance(self, c[i].position);
+            float d = Vector3.SqrMagnitude(self - c[i].position);
             if (d < min) { min = d; best = c[i]; }
-        }
-        return best;
-    }
-
-    protected static Transform Farthest(Vector3 self, IReadOnlyList<Transform> c)
-    {
-        Transform best = null; float max = -1f;
-        for (int i = 0; i < c.Count; i++)
-        {
-            if (c[i] == null) continue;
-            float d = Vector3.Distance(self, c[i].position);
-            if (d > max) { max = d; best = c[i]; }
         }
         return best;
     }
@@ -76,14 +71,13 @@ public abstract class CompanionAttackBehavior
         for (int i = 0; i < c.Count; i++)
         {
             if (c[i] == null) continue;
-            var s = c[i].GetComponent<Stats>();
+            var s = c[i].GetComponentInParent<Stats>();
             if (s == null || s.isDead) continue;
             if (s.currentHp < min) { min = s.currentHp; best = c[i]; }
         }
         return best;
     }
 
-    /// <summary>Mục tiêu có NHIỀU đồng bọn xung quanh nhất (cho Control AoE).</summary>
     protected static Transform MostClustered(IReadOnlyList<Transform> c, float clusterRadius)
     {
         Transform best = null; int bestCount = -1;
@@ -99,58 +93,87 @@ public abstract class CompanionAttackBehavior
     }
 }
 
-// ── SNIPER: giữ khoảng cách xa, kite, target xa/máu thấp ────────────────────
-public class SniperBehavior : CompanionAttackBehavior
+// ── ARTILLERY (Xạ Kích): bắn xa, kite, ưu tiên máu thấp ─────────────────────
+public class ArtilleryBehavior : CompanionAttackBehavior
 {
-    public SniperBehavior(CompanionAttackModuleData d) : base(d) { }
-    public override float DesiredRange => Mathf.Max(10f, data.preferredRange);
-    // Lùi khi địch lại gần hơn 70% desired range — ưu tiên sống sót.
-    public override bool ShouldFlee(float distToTarget, float hpPercent) => distToTarget < DesiredRange * 0.7f;
-    // Ưu tiên máu thấp để dứt điểm, không có thì xa nhất.
-    public override Transform PickTarget(Vector3 self, IReadOnlyList<Transform> c)
-        => LowestHp(c) ?? Farthest(self, c);
-    // TODO[T4/T5]: pierce terrain; execute enemy < 15% HP.
+    public ArtilleryBehavior(CompanionProtocolData d) : base(d) { }
+    public override float DesiredRange => Mathf.Max(15f, AttackRange);
+    public override bool ShouldFlee(float distToTarget, float hpPercent) => distToTarget < FleeTriggerRange;
+    public override Transform PickTarget(Vector3 self, IReadOnlyList<Transform> c) => LowestHp(c) ?? Nearest(self, c);
 }
 
-// ── BERSERKER: lao vào gần nhất, không bỏ chạy ──────────────────────────────
-public class BerserkerBehavior : CompanionAttackBehavior
+// ── CARNAGE (Cuồng Huyết): cận chiến AoE quét, lao vào, không bỏ chạy ────────
+public class CarnageBehavior : CompanionAttackBehavior
 {
-    public BerserkerBehavior(CompanionAttackModuleData d) : base(d) { }
-    public override float DesiredRange => Mathf.Min(2f, data.preferredRange);
-    public override bool ShouldFlee(float distToTarget, float hpPercent) => false; // không bao giờ chạy
+    public CarnageBehavior(CompanionProtocolData d) : base(d) { }
+    public override float AoeRadius => AttackRange;                 // quét quanh attackRange (mặc định 2f)
+    public override float DesiredRange => data != null ? AttackRange : 2f;
+    public override bool ShouldFlee(float distToTarget, float hpPercent) => false;
     public override Transform PickTarget(Vector3 self, IReadOnlyList<Transform> c) => Nearest(self, c);
-    // TODO[T4/T5]: máu thấp đánh nhanh hơn; hit heal 5% missing HP; kill gây fear.
 }
 
-// ── CONTROL: giữ khoảng cách trung bình, nhắm cụm đông ──────────────────────
-public class ControlBehavior : CompanionAttackBehavior
+// ── SUPPRESSION (Áp Chế): bắn phép tầm trung, nhắm cụm đông, kite ───────────
+public class SuppressionBehavior : CompanionAttackBehavior
 {
-    public ControlBehavior(CompanionAttackModuleData d) : base(d) { }
-    public override float DesiredRange => Mathf.Clamp(data.preferredRange, 5f, 7f);
-    public override bool ShouldFlee(float distToTarget, float hpPercent) => distToTarget < DesiredRange * 0.6f;
-    public override Transform PickTarget(Vector3 self, IReadOnlyList<Transform> c)
-        => MostClustered(c, 4f) ?? Nearest(self, c);
-    // TODO[T4/T5]: paralysis stack 3 → stun/freeze 2s; black hole mỗi 15s.
+    public SuppressionBehavior(CompanionProtocolData d) : base(d) { }
+    public override float AoeRadius => 0.5f;                        // nổ AoE 0.5f khi trúng
+    public override float DesiredRange => Mathf.Max(8f, AttackRange);
+    public override bool ShouldFlee(float distToTarget, float hpPercent) => distToTarget < FleeTriggerRange;
+    public override Transform PickTarget(Vector3 self, IReadOnlyList<Transform> c) => MostClustered(c, 4f) ?? Nearest(self, c);
 }
 
-// ── VANGUARD: chắn giữa player & enemy lớn, tank ────────────────────────────
-public class VanguardBehavior : CompanionAttackBehavior
+// ── AEGIS (Vệ Thần): bám player, đánh kẻ đang đánh player, đòn 2 hất tung ────
+public class AegisBehavior : CompanionAttackBehavior
 {
-    public VanguardBehavior(CompanionAttackModuleData d) : base(d) { }
-    public override float DesiredRange => Mathf.Min(2.5f, Mathf.Max(1.5f, data.preferredRange));
-    public override bool ShouldFlee(float distToTarget, float hpPercent) => false; // tank đứng giữ
-    // Nhắm mục tiêu khoẻ nhất (máu cao nhất ~ enemy to/boss).
+    public AegisBehavior(CompanionProtocolData d) : base(d) { }
+    public override float AoeRadius => AttackRange;                 // quét 2.5f
+    public override float DesiredRange => data != null ? AttackRange : 2.5f;
+    public override bool ShouldFlee(float distToTarget, float hpPercent) => false;
+    public override bool DoesKnockup => true;
+
     public override Transform PickTarget(Vector3 self, IReadOnlyList<Transform> c)
     {
-        Transform best = null; float max = -1f;
-        for (int i = 0; i < c.Count; i++)
+        // Ưu tiên kẻ địch đang nhắm Player.
+        if (Player != null)
         {
-            if (c[i] == null) continue;
-            var s = c[i].GetComponent<Stats>();
-            if (s == null || s.isDead) continue;
-            if (s.maxHp > max) { max = s.maxHp; best = c[i]; }
+            for (int i = 0; i < c.Count; i++)
+            {
+                if (c[i] == null) continue;
+                EnemyAI ai = c[i].GetComponentInParent<EnemyAI>();
+                if (ai != null && ai.nearestTarget == Player) return c[i];
+            }
         }
-        return best ?? Nearest(self, c);
+        return Nearest(self, c);
     }
-    // TODO[T4/T5]: intercept projectile về player + heal; damage cap mỗi hit <= 10% maxHP.
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  MATRIX PROFILE — dodge% và aggro weight theo matrixType (Slot 2).
+//  Không có Matrix → mặc định như Regen (GDD).
+// ─────────────────────────────────────────────────────────────────────────────
+public static class CompanionMatrixProfile
+{
+    /// <summary>Tỉ lệ né đòn định hướng của địch.</summary>
+    public static float DodgeChance(CompanionMatrixType? type)
+    {
+        switch (type)
+        {
+            case CompanionMatrixType.Regen:     return 0.25f;
+            case CompanionMatrixType.Phantoms:  return 0.65f;
+            case CompanionMatrixType.Deflector: return 0.00f;
+            default:                            return 0.25f; // không có Matrix ~ Regen
+        }
+    }
+
+    /// <summary>Xác suất kẻ địch chọn tấn công Companion (thay vì Player). 0.5 = ngang nhau.</summary>
+    public static float AggroWeight(CompanionMatrixType? type)
+    {
+        switch (type)
+        {
+            case CompanionMatrixType.Regen:     return 0.50f;
+            case CompanionMatrixType.Phantoms:  return 0.20f;
+            case CompanionMatrixType.Deflector: return 0.80f;
+            default:                            return 0.50f; // không có Matrix ~ Regen
+        }
+    }
 }

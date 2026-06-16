@@ -187,7 +187,9 @@ public class MagePassive : SkillBehavior
         bool wasEquipped = isGrimoireEquipped;
 
         if (bypassWeaponCheck) isGrimoireEquipped = true;
-        else isGrimoireEquipped = (weapon != null && weapon.weaponType == requiredWeaponType);
+        // WPN_GR_T4_04: là Grimoire nhưng KHÔNG kích hoạt hiệu ứng yêu cầu Grimoire (tính như vũ khí khác).
+        else isGrimoireEquipped = (weapon != null && weapon.weaponType == requiredWeaponType
+                                   && (weapon.id == null || weapon.id.Trim() != "WPN_GR_T4_04"));
 
         if (isGrimoireEquipped && !wasEquipped)
         {
@@ -383,7 +385,7 @@ public class MagePassive : SkillBehavior
         // ĐÒN THỨ 8 ĐÓNG BĂNG: Chỉ nổ khi TRƯỚC ĐÓ đã có đủ 7 cộng dồn
         if (chillDict[target].stacks >= maxChillStacks)
         {
-            DamageHelper.ApplyStandardDamage(stats, target, player.transform, 0f, null, null, 0, true, freezeStunDuration);
+            DamageHelper.ApplyStandardDamage(stats, target, player.transform, 0f, null, null, 0, true, freezeStunDuration, sourceType: DamageSourceType.Ranged);
             chillDict.Remove(target);
             immuneDict[target] = Time.time + chillImmuneDuration;
             VisualDebugHelper.DrawBox(target.transform.position + Vector3.up, new Vector3(1, 2, 1), Quaternion.identity, new Color(0, 1, 1, 0.6f), 3f);
@@ -545,7 +547,7 @@ public class MagePassive : SkillBehavior
     public void SkillForceFreeze(Stats target, float stunDuration)
     {
         if (target == null || target.currentHp <= 0) return;
-        DamageHelper.ApplyStandardDamage(stats, target, player.transform, 0f, null, null, 0, true, stunDuration);
+        DamageHelper.ApplyStandardDamage(stats, target, player.transform, 0f, null, null, 0, true, stunDuration, sourceType: DamageSourceType.Ranged);
         if (chillDict.ContainsKey(target)) chillDict.Remove(target);
         immuneDict[target] = Time.time + chillImmuneDuration;
     }
@@ -654,7 +656,7 @@ public class MageMeteor : MonoBehaviour
             {
                 hitTargets.Add(e);
                 // Gây 200% dmg PHÉP + Stun 2s (truyền weapon Grimoire = Magic)
-                DamageHelper.ApplyStandardDamage(attacker, e, transform, 2.0f, null, weapon, 0, true, 2f);
+                DamageHelper.ApplyStandardDamage(attacker, e, transform, 2.0f, null, weapon, 0, true, 2f, sourceType: DamageSourceType.Ranged);
 
                 // Đính kèm các debuff của hướng NW (thiêu đốt 5s + giảm giáp/kháng phép 5s, tự khôi phục)
                 if (passive != null) passive.ApplyMeteorHit(e);

@@ -41,7 +41,11 @@ public class GrimoireHeavyAttack : IWeaponAttackHandler
             ctx.Player.suppressNextKnockback = true;
             ctx.Player.nextHitStun           = true;
             ctx.Player.nextHitStunDuration   = STUN_DURATION;
-            ctx.ApplyDamage(enemy, true, ctx.ComboStep);
+            // WPN_GR_T4_04: heavy vẫn như Grimoire bình thường nhưng đổi sang vật lý + bonus phép 150% magicAtk.
+            if (ctx.Weapon != null && ctx.Weapon.id.Trim() == "WPN_GR_T4_04")
+                ctx.Player.ApplyDamageToTarget(enemy, true, ctx.ComboStep, false, true);
+            else
+                ctx.ApplyDamage(enemy, true, ctx.ComboStep);
             ctx.OnHitEvent?.Invoke(ctx.ComboStep, true);
         }
 

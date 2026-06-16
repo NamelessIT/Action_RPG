@@ -183,13 +183,12 @@ namespace Systems
             {
                 icon.enabled = false; // Tắt Image Icon để tránh bị ô vuông trắng
 
-                // Ép Cooldown Overlay đầy 100% để làm lớp màng đen che kín nút
+                // Ép Cooldown Overlay đầy 100% làm lớp màng xám che kín nút trống
                 cooldownOverlay.fillAmount = 1f;
-                cooldownOverlay.color = new Color(0f, 0f, 0f, 0.7f); // Đen mờ 70%
+                cooldownOverlay.color = new Color(0.4f, 0.4f, 0.4f, 0.7f);
 
-                // Hiện chữ E/Q
-                centerText.text = keyName;
-                centerText.gameObject.SetActive(true);
+                // KHÔNG hiện chữ gì (chỉ icon + số cooldown)
+                if (centerText) centerText.gameObject.SetActive(false);
                 return;
             }
 
@@ -197,7 +196,7 @@ namespace Systems
             // TRƯỜNG HỢP 2: ĐÃ CÓ SKILL
             // ============================================
             icon.enabled = true; // Bật Image trở lại
-            cooldownOverlay.color = new Color(0f, 0f, 0f, 0.6f); // Trả overlay về màu chuẩn cho việc hồi chiêu
+            cooldownOverlay.color = new Color(0.4f, 0.4f, 0.4f, 0.7f); // lớp phủ XÁM khi đang hồi chiêu
 
             // Xử lý Icon
             if (activeSkillData.icon != null)
@@ -245,16 +244,8 @@ namespace Systems
                 // -- ĐÃ HỒI XONG, SẴN SÀNG DÙNG --
                 cooldownOverlay.fillAmount = 0;
 
-                // Nếu có hình Icon, ta ẩn chữ E/Q đi cho icon đẹp. Nếu không có hình, ta hiện chữ E/Q để đỡ trống.
-                if (activeSkillData.icon != null)
-                {
-                    centerText.gameObject.SetActive(false);
-                }
-                else
-                {
-                    centerText.text = keyName;
-                    centerText.gameObject.SetActive(true);
-                }
+                // KHÔNG hiện chữ E/Q — chỉ icon.
+                if (centerText) centerText.gameObject.SetActive(false);
 
                 // Check coi có đủ Năng lượng (Sin) để dùng không?
                 float cost = activeSkillData.sinChargeReq;

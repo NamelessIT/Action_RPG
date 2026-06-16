@@ -240,7 +240,7 @@ public class ArcaneEmpowerment
             Stats e = h.GetComponentInParent<Stats>();
             if (e == null || e.currentHp <= 0 || !done.Add(e)) continue;
 
-            DamageHelper.ApplyStandardDamage(stats, e, self, mult * dmgScale, null, MagicProxy, 1, stun > 0f, stun);
+            DamageHelper.ApplyStandardDamage(stats, e, self, mult * dmgScale, null, MagicProxy, 1, stun > 0f, stun, sourceType: DamageSourceType.Ranged);
             if (burnPct > 0f) e.ApplyBurn(stats.magicAtk * burnPct, burnTime);
         }
     }
@@ -301,7 +301,7 @@ public class ArcaneEmpowerment
         VisualDebugHelper.DrawSphere(center, sRadius, Color.yellow, 0.6f);
         foreach (Stats e in EnemiesInRadius(center, sRadius))
         {
-            DamageHelper.ApplyStandardDamage(stats, e, self, sMult * dmgScale, null, MagicProxy, 1);
+            DamageHelper.ApplyStandardDamage(stats, e, self, sMult * dmgScale, null, MagicProxy, 1, sourceType: DamageSourceType.Ranged);
             if (magePassive != null) magePassive.SkillForceFreeze(e, sFreezeStun);
         }
     }
@@ -311,7 +311,7 @@ public class ArcaneEmpowerment
         VisualDebugHelper.DrawSphere(center, swRadius, new Color(0.4f, 0.9f, 1f, 0.5f), 0.6f);
         foreach (Stats e in EnemiesInRadius(center, swRadius))
         {
-            DamageHelper.ApplyStandardDamage(stats, e, self, swMult * dmgScale, null, MagicProxy, 1);
+            DamageHelper.ApplyStandardDamage(stats, e, self, swMult * dmgScale, null, MagicProxy, 1, sourceType: DamageSourceType.Ranged);
             host.StartCoroutine(TempSlowRoutine(e, swSlowPct, swSlowTime));
             if (magePassive != null)
             {
@@ -326,7 +326,7 @@ public class ArcaneEmpowerment
         VisualDebugHelper.DrawSphere(center, wRadius, new Color(0.6f, 0.4f, 0.2f, 0.5f), 0.6f);
         foreach (Stats e in EnemiesInRadius(center, wRadius))
         {
-            DamageHelper.ApplyStandardDamage(stats, e, self, wMult * dmgScale, null, MagicProxy, 1);
+            DamageHelper.ApplyStandardDamage(stats, e, self, wMult * dmgScale, null, MagicProxy, 1, sourceType: DamageSourceType.Ranged);
             // Giảm 30% giáp/kháng phép 5s rồi về 15% nội tại — tính tập trung trong MagePassive.
             if (magePassive != null) magePassive.SkillApplyEarthquakeShred(e, wShredTime);
         }
@@ -334,19 +334,19 @@ public class ArcaneEmpowerment
 
     private void OnPierceHit(Stats e)
     {
-        DamageHelper.ApplyStandardDamage(stats, e, self, ePierceMult * dmgScale, null, MagicProxy, 1);
+        DamageHelper.ApplyStandardDamage(stats, e, self, ePierceMult * dmgScale, null, MagicProxy, 1, sourceType: DamageSourceType.Ranged);
     }
 
     private void OnShardArrive(Stats e)
     {
         if (e == null || e.currentHp <= 0) return;
-        DamageHelper.ApplyStandardDamage(stats, e, self, seShardMult * dmgScale, null, MagicProxy, 0);
+        DamageHelper.ApplyStandardDamage(stats, e, self, seShardMult * dmgScale, null, MagicProxy, 0, sourceType: DamageSourceType.Ranged);
         if (magePassive != null) magePassive.SkillAddChill(e, seChillPerShard);
     }
 
     private void OnLavaTick(Stats e)
     {
-        DamageHelper.ApplyStandardDamage(stats, e, self, lavaTickDmgPct * dmgScale, null, MagicProxy, 0);
+        DamageHelper.ApplyStandardDamage(stats, e, self, lavaTickDmgPct * dmgScale, null, MagicProxy, 0, sourceType: DamageSourceType.DoT);
         e.ApplyBurn(stats.magicAtk * lavaBurnPct, lavaBurnTime);
         if (magePassive != null) magePassive.SkillAddFracture(e, 1);
     }

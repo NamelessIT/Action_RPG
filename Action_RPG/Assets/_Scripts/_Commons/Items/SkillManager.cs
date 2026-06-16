@@ -5,6 +5,8 @@ using System.Collections.Generic;
 public class SkillManager : MonoBehaviour
 {
     public Action OnSkillCast;
+    /// <summary>[COMPANION SYNC_T4_02] Bắn khi PLAYER thi triển Signature thành công.</summary>
+    public static event Action OnPlayerSignatureCast;
     [Header("Settings")]
     public bool isPlayer = false; // Tick vào nếu là Player, bỏ tick nếu là Enemy
 
@@ -475,9 +477,62 @@ public class SkillManager : MonoBehaviour
         }
     }
 
-    // Active Skill 
+    // Active Skill
     // --- [MỚI] HÀM DÙNG SKILL (Được gọi từ PlayerController) ---
+    private bool _accSkillCharging = false; // ACC_CH_T4_03: đang gồng 1 skill
+
     public void CastSkill(SkillData skillData)
+    {
+        if (skillData == null) return;
+
+        // [ACC_CH_T4_03] Gồng trước khi thi triển Skill/Signature; mất máu lúc gồng → mất trắng.
+        if (isPlayer && allyStats != null && allyStats.accSkillChargeTime > 0f
+            && (skillData.skillType == SkillData.SkillType.Skill || skillData.skillType == SkillData.SkillType.Signature))
+        {
+            if (!_accSkillCharging) StartCoroutine(ChargeThenCast(skillData, allyStats.accSkillChargeTime));
+            return; // đang gồng hoặc bắt đầu gồng → bỏ qua input lặp
+        }
+
+        CastSkillImmediate(skillData);
+    }
+
+    private System.Collections.IEnumerator ChargeThenCast(SkillData skillData, float dur)
+    {
+        _accSkillCharging = true;
+        if (playerController != null) playerController.isSkillChanneling = true; // khóa di chuyển/dash/đánh (channel)
+        float startHp = allyStats.currentHp;
+        float elapsed = 0f;
+        bool interrupted = false;
+        while (elapsed < dur)
+        {
+            if (allyStats.currentHp < startHp - 0.01f) { interrupted = true; break; } // mất máu → ngắt
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (playerController != null) playerController.isSkillChanneling = false; // mở khóa trước khi thi triển/ngắt
+
+        if (interrupted)
+        {
+            // "Mất trắng": vào cooldown + tốn tài nguyên, KHÔNG ra hiệu ứng.
+            if (activeSkills.TryGetValue(skillData, out var sb) && sb != null)
+            {
+                float cost = skillData.sinChargeReq * allyStats.accSkillSinCostMult;
+                if (skillData.skillType == SkillData.SkillType.Signature)
+                    cost *= allyStats.signatureSinCostMult * allyStats.accSignatureSinCostMult;
+                allyStats.currentSin = Mathf.Max(0f, allyStats.currentSin - cost);
+                sb.lastUseTime = Time.time; // vào cooldown
+                Debug.Log("<color=red>[ACC_CH_T4_03]</color> Gồng bị ngắt → mất skill (cooldown + tốn tài nguyên).");
+            }
+        }
+        else
+        {
+            CastSkillImmediate(skillData);
+        }
+        _accSkillCharging = false;
+    }
+
+    private void CastSkillImmediate(SkillData skillData)
     {
         if (skillData == null) return;
 
@@ -508,6 +563,10 @@ public class SkillManager : MonoBehaviour
                     // [ACCESSORY] Báo cho AccessoryEffectManager biết vừa dùng skill (cùng pattern CoreShield/Weapon)
                     AccessoryEffectManager accEffectManager = GetComponentInChildren<AccessoryEffectManager>();
                     if (accEffectManager != null) accEffectManager.TriggerSkillCastEffects(skillData.skillType);
+
+                    // [COMPANION SYNC_T4_02] Player vừa thi triển Signature → báo cho Sync Core.
+                    if (isPlayer && skillData.skillType == SkillData.SkillType.Signature)
+                        OnPlayerSignatureCast?.Invoke();
                 }
             }
         }
@@ -543,6 +602,45 @@ public class SkillManager : MonoBehaviour
                 behavior.ReduceCooldown(amount);
             }
         }
+    }
+
+    // [GR_T3_01] Reset hồi chiêu của kỹ năng VỪA DÙNG (lastUseTime mới nhất).
+    public void ResetMostRecentSkillCooldown()
+    {
+        if (!isPlayer) return;
+        SkillBehavior recent = GetMostRecentBehavior();
+        if (recent != null) recent.ReduceCooldown(99999f);
+    }
+
+    // [GR_T3_03] Giảm 50% (theo frac) hồi chiêu của kỹ năng vừa dùng.
+    public void ReduceMostRecentCooldownByFraction(float frac)
+    {
+        if (!isPlayer) return;
+        SkillBehavior recent = GetMostRecentBehavior();
+        if (recent != null) recent.ReduceCooldownByFraction(frac);
+    }
+
+    private SkillBehavior GetMostRecentBehavior()
+    {
+        SkillBehavior recent = null;
+        float best = float.NegativeInfinity;
+        foreach (var kvp in activeSkills)
+            if (kvp.Value != null && kvp.Value.lastUseTime > best) { best = kvp.Value.lastUseTime; recent = kvp.Value; }
+        return recent;
+    }
+
+    // [GR_T5_03] Làm mới toàn bộ hồi chiêu, TRỪ một skill (thường là Signature vừa dùng).
+    public void ResetAllCooldownsExcept(SkillData except)
+    {
+        foreach (var kvp in activeSkills)
+            if (kvp.Key != except && kvp.Value != null) kvp.Value.ReduceCooldown(99999f);
+    }
+
+    // Làm mới toàn bộ hồi chiêu (không guard isPlayer — dùng cho Companion best-effort).
+    public void ResetAllCooldowns()
+    {
+        foreach (var kvp in activeSkills)
+            if (kvp.Value != null) kvp.Value.ReduceCooldown(99999f);
     }
 
     // Hàm này để Enemy AI gọi ngẫu nhiên 1 skill để đánh

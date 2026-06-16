@@ -208,10 +208,15 @@ public class EnemyAI : MonoBehaviour
         float distToSpawn = Vector3.Distance(transform.position, stats.spawnPosition);
         float distToTarget = (nearestTarget != null) ? Vector3.Distance(transform.position, nearestTarget.position) : 9999f;
 
-        // Điều kiện quay về: Đi quá xa và không phải là Friendly
+        // Điều kiện quay về (không phải Friendly):
+        //  - Bản thân đi quá xa nhà, HOẶC
+        //  - Mục tiêu đã ra NGOÀI vùng hoạt động (bị nhử ra rìa). → cam kết chạy về, đừng đứng rìa.
+        float homeZone = stats.aggroRadius * 1.5f;
+        bool targetOutOfZone = nearestTarget != null
+                               && Vector3.Distance(nearestTarget.position, stats.spawnPosition) > homeZone;
         bool shouldReturn = !isReturningHome
-                            && distToSpawn > (stats.aggroRadius * 1.5f)
-                            && stats.enemyType != EnemyType.Friendly;
+                            && stats.enemyType != EnemyType.Friendly
+                            && (distToSpawn > homeZone || targetOutOfZone);
 
         if (shouldReturn)
         {
@@ -399,6 +404,10 @@ public class EnemyAI : MonoBehaviour
         Transform bestPredator = null;
         float closeDist = Mathf.Infinity;
 
+        // [COMPANION AGGRO] Ứng viên Player & Companion (để cân aggro theo Matrix khi CHỌN mục tiêu mới).
+        Transform aggroPlayerCand = null;
+        Transform aggroCompanionCand = null;
+
         foreach (var hit in hits)
         {
             Transform t = hit.transform;
@@ -415,6 +424,9 @@ public class EnemyAI : MonoBehaviour
             {
                 if (CanSeeTarget(t))
                 {
+                    if (t.CompareTag("Player")) aggroPlayerCand = t;
+                    else if (t.GetComponentInParent<CompanionAI>() != null) aggroCompanionCand = t;
+
                     float d = Vector3.Distance(transform.position, t.position);
                     if (d < closeDist)
                     {
@@ -429,7 +441,16 @@ public class EnemyAI : MonoBehaviour
         // --- [MỚI] GÁN MỤC TIÊU VÀ RESET ĐỒNG HỒ ---
         if (nearestTarget == null && bestTarget != null)
         {
-            nearestTarget = bestTarget;
+            // [COMPANION AGGRO] Thấy CẢ Player lẫn Companion → cân theo AggroWeight của Matrix
+            // (Regen 50/50, Phantoms 20/80, Deflector 80/20 = Companion/Player). Chỉ roll khi CHỌN mới.
+            Transform chosen = bestTarget;
+            if (aggroPlayerCand != null && aggroCompanionCand != null)
+            {
+                var eq = aggroCompanionCand.GetComponentInParent<CompanionEquipmentManager>();
+                float w = eq != null ? eq.AggroWeight : 0.5f;
+                chosen = (Random.value < w) ? aggroCompanionCand : aggroPlayerCand;
+            }
+            nearestTarget = chosen;
             // Vừa tự phát hiện ra mục tiêu mới -> Reset đồng hồ 15s cho nó
             lastTimeCurrentTargetDamagedMe = Time.time;
         }
@@ -700,9 +721,15 @@ public class EnemyAI : MonoBehaviour
 
     void HandleReturningState(float distToSpawn, float distToTarget)
     {
-        bool gotHit = stats.currentAggro > 0;
-        bool blockedByTarget = distToTarget <= combat.basicAttackRange;
-        if (gotHit || (blockedByTarget && nearestTarget != null))
+        // Đã CAM KẾT chạy về nhà. CHỈ dừng lại để đánh nếu có kẻ địch vừa Ở TRONG vùng hoạt động
+        // vừa ÁP SÁT trong tầm đánh (chặn đường / cận chiến). Kẻ kite/bắn xa ngoài vùng → phớt lờ.
+        // (Điều kiện áp sát tránh dao động khi Companion kite quanh ranh giới vùng.)
+        float zone = stats.aggroRadius * 1.5f;
+        bool blocker = nearestTarget != null
+            && Vector3.Distance(nearestTarget.position, stats.spawnPosition) <= zone
+            && distToTarget <= combat.basicAttackRange + 1.0f;
+
+        if (blocker)
         {
             isReturningHome = false;
             stats.outCombat = false;
@@ -711,12 +738,16 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        // Còn lại: PHỚT LỜ mọi tấn công, xoá aggro/target, LUÔN chạy về nhà (không đứng yên/xoay).
+        stats.currentAggro = 0;
+        nearestTarget = null;
+
         if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.5f)
         {
             isReturningHome = false;
-            stats.currentAggro = 0;
             stats.outCombat = true;
             baseIdleDirection = stats.facingDirection;
+            stats.currentHp = stats.maxHp; // Về tới nhà an toàn → HỒI ĐẦY MÁU ngay.
             ResetPatrolState();
         }
         else
@@ -823,6 +854,10 @@ public class EnemyAI : MonoBehaviour
         // [MỚI] Không khóa mục tiêu nếu kẻ tấn công vô hình
         Stats attackerStats = attacker.GetComponent<Stats>();
         if (attackerStats != null && attackerStats.isInvisible) return;
+
+        // [LEASH] Kẻ tấn công NGOÀI vùng hoạt động (vd Companion nhử ra rìa rồi bắn từ xa)
+        // → PHỚT LỜ hoàn toàn: không đánh thức, không khóa mục tiêu, không hủy lệnh về nhà.
+        if (Vector3.Distance(attacker.position, stats.spawnPosition) > stats.aggroRadius * 1.5f) return;
 
         // Đánh thức AI
         isReturningHome = false;

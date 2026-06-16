@@ -153,7 +153,7 @@ public class BloodReaverSignature : SkillBehavior
             {
                 // Khóa hồi máu của signature này đã được Pop ở trên; finisher heal dùng Heal() trực tiếp.
                 float amountToHeal = targetHp - stats.currentHp;
-                stats.Heal(amountToHeal);
+                stats.Heal(amountToHeal, true, false, HealSource.Skill);
                 Debug.Log($"<color=green>Kết thúc Huyết Tế: Đặt lại máu về {targetHp} HP.</color>");
             }
         }

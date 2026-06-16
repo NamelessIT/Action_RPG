@@ -5,6 +5,9 @@ using UnityEngine;
 using UnityEngine.AI;
 using static UnityEngine.AdaptivePerformance.Provider.AdaptivePerformanceSubsystemDescriptor;
 
+/// <summary>Nguồn hồi máu — để effect phân biệt máu hồi từ đâu (skill, potion, hút máu, regen...).</summary>
+public enum HealSource { Other, Skill, Potion, Lifesteal, Regen, Drain }
+
 public class Stats : MonoBehaviour
 {
     [Header("--- Identity ---")]
@@ -75,6 +78,7 @@ public class Stats : MonoBehaviour
 
     [Header("--- Modifiers ---")]
     public float damageOutputMultiplier = 1.0f; // % sát thương gây ra, default là 100%
+    public float damageTakenMultiplier = 1.0f;  // % sát thương NHẬN vào (1 = 100%; >1 dễ tổn thương; <1 giảm nhận)
 
     [Header("--- LifeSteal ---")]
     public float physicalLifeSteal;
@@ -154,6 +158,13 @@ public class Stats : MonoBehaviour
     // [MỚI] Trạng thái bị khống chế
     public bool isStunned = false;
 
+    // [COMPANION MTX_DEF_T3_01] Miễn nhiễm mọi khống chế (stun/knockback) khi true.
+    public bool ccImmune = false;
+
+    // [COMPANION PRT_SUP_T3_02] Bị Trầm Mặc (cấm dùng kĩ năng). Enemy chưa có hệ cast skill nên hiện
+    // mới mang tính chuẩn bị; chỗ nào cho phép cast skill sau này nên kiểm tra cờ này.
+    public bool isSilenced = false;
+
     // [MỚI] Super Armor (Siêu Giáp) - Không bị ngắt chiêu
     [Header("--- Super Armor ---")]
     public bool isSuperArmor = false;
@@ -202,6 +213,7 @@ public class Stats : MonoBehaviour
 
     public Action<DamageInfo> OnBeforeTakeDamage;
     public event Action<float, float> OnHealReceived; // <lượng hồi, lượng dư>
+    public event Action<float, float, HealSource> OnHealDetailed; // <lượng hồi, dư, nguồn>
 
     // [ACCESSORY] Bắn KHI VÀ CHỈ KHI sát thương chạm máu thật (Global Rule 3) — kèm DamageInfo
     // để effect biết hướng đánh (info.attacker/sourcePosition) và loại damage (phys/magic/true).
@@ -303,8 +315,8 @@ public class Stats : MonoBehaviour
             // Trừ thời gian
             bleedTimer -= 1.0f;
 
-            // Gây sát thương
-            TakeDamage(currentBleedDamage);
+            // Gây sát thương (Bleed = DoT vật lý)
+            TakeDamage(new DamageInfo { physDamage = currentBleedDamage, sourceType = DamageSourceType.DoT });
             Debug.Log($"<color=red>{gameObject.name} đang chảy máu: -{currentBleedDamage} HP (Còn {bleedTimer}s)</color>");
         }
 
@@ -340,8 +352,8 @@ public class Stats : MonoBehaviour
             // Trừ thời gian
             burnTimer -= 1.0f;
 
-            // Gây sát thương
-            TakeDamage(new DamageInfo { magicDamage = currentBurnDamage });
+            // Gây sát thương (Burn = DoT phép)
+            TakeDamage(new DamageInfo { magicDamage = currentBurnDamage, sourceType = DamageSourceType.DoT });
             Debug.Log($"<color=red>{gameObject.name} đang bị thiêu đốt: -{currentBurnDamage} HP (Còn {burnTimer}s)</color>");
         }
 
@@ -385,7 +397,7 @@ public class Stats : MonoBehaviour
     }
 
     // [CẬP NHẬT] Hàm tiêu hao thể lực dùng chung cho Dash và Run
-    public bool TryConsumeStamina(float amount, bool isDash = false)
+    public bool TryConsumeStamina(float amount, bool isDash = false, bool isMovement = false)
     {
         EquipmentManager eq = GetComponent<EquipmentManager>();
         string shieldId = (eq != null && eq.currentCoreShield != null) ? eq.currentCoreShield.id : "";
@@ -402,10 +414,13 @@ public class Stats : MonoBehaviour
             return false;
         }
 
-        // SHD_CS_T5_04: Dash tốn 10% Sin, không tốn Stamina
+        // SHD_CS_T5_04: tiêu Sin thay Stamina.
+        //  • Dash (isDash): tốn cố định 10% maxSin.
+        //  • Hành động khác (chạy nhanh/HeavyAttack...): tốn Sin BẰNG ĐÚNG lượng Stamina (1:1)
+        //    → giữ tốc độ tiêu hao khi sprint giống hệt khi dùng Stamina (không cạn Sin tức thì).
         if (shieldId == "SHD_CS_T5_04")
         {
-            float sinCost = maxSin * 0.1f;
+            float sinCost = isDash ? maxSin * 0.1f : amount;
             if (currentSin >= sinCost)
             {
                 currentSin -= sinCost;
@@ -420,12 +435,42 @@ public class Stats : MonoBehaviour
             amount *= 0.9f; // Giảm 10%
         }
 
+        // [ACCESSORY] Hook tiêu hao Stamina.
+        AllyStats accAlly = this as AllyStats;
+        // ACC_CH_T4_04: dash/chạy nhanh KHÔNG cập nhật mốc tiêu Stamina → không gián đoạn hồi tự nhiên.
+        bool noStaminaInterrupt = false;
+        if (accAlly != null)
+        {
+            // ACC_CH_T5_04: HP > 80% → Stamina không bao giờ giảm.
+            if (accAlly.accStaminaFreeWhileHighHp && currentHp > maxHp * 0.80f) return true;
+            // ACC_RM_T5_02: giảm % Stamina tiêu hao.
+            amount *= accAlly.accStaminaConsumeMult;
+            noStaminaInterrupt = accAlly.accDashSprintNoRegenInterrupt && (isDash || isMovement);
+        }
+
         // Logic mặc định
         if (currentStamina >= amount)
         {
             currentStamina -= amount;
-            lastStaminaConsumeTime = Time.time;
+            if (!noStaminaInterrupt) lastStaminaConsumeTime = Time.time;
+            // ACC_CH_T5_05: tiêu Stamina → nhận Sin = % lượng Stamina tiêu hao.
+            if (accAlly != null && accAlly.accStaminaToSinGain > 0f)
+                currentSin = Mathf.Min(maxSin, currentSin + amount * accAlly.accStaminaToSinGain);
             return true;
+        }
+
+        // ACC_CH_T5_02: thiếu Stamina → trả phần thiếu bằng Máu (giữ tối thiểu 1 HP).
+        if (accAlly != null && accAlly.accHpPerStaminaOverride > 0f)
+        {
+            float missing = amount - currentStamina;
+            float hpCost = missing * accAlly.accHpPerStaminaOverride;
+            if (currentHp - hpCost >= 1f)
+            {
+                currentHp -= hpCost;
+                currentStamina = 0f;
+                if (!noStaminaInterrupt) lastStaminaConsumeTime = Time.time;
+                return true;
+            }
         }
         return false;
     }
@@ -443,7 +488,7 @@ public class Stats : MonoBehaviour
 
         EnterCombat();
         // 1. TÍNH TOÁN DAMAGE VÀ SHIELD
-        float damageToTake = info.TotalRawDamage;
+        float damageToTake = info.TotalRawDamage * damageTakenMultiplier; // dễ tổn thương / giảm nhận (companion debuff/buff)
 
         // [MỚI] KIỂM TRA CỘNG HƯỞNG TỪ COMPANION
         // Giả sử Companion của bạn có tag là "Companion" và khi đánh có truyền info.attacker = stats của nó
@@ -513,11 +558,21 @@ public class Stats : MonoBehaviour
     // isLifesteal=true: hồi máu từ HÚT MÁU (PhysicalLifeSteal/MagicLifeSteal) — KHÔNG bị
     //   healing-block chặn (GDD: MS_T5_02 "không nhận hồi máu từ skill/potion, CHỈ hút máu";
     //   MS_T4_01 "vô hiệu mọi hồi máu" áp cho heal thường). Các nguồn skill/potion để mặc định false.
-    public virtual void Heal(float amount, bool showPopup = true, bool isLifesteal = false)
+    public virtual void Heal(float amount, bool showPopup = true, bool isLifesteal = false, HealSource source = HealSource.Other)
     {
         if (isDead) return;
+        if (isLifesteal) source = HealSource.Lifesteal;
         // Healing-block: chặn mọi hồi máu TRỪ hút máu.
         if (isHealingBlocked && !isLifesteal) return;
+
+        // [ACC_MS_T5_02] Chỉ nhận hồi máu từ Hút máu; và Hút máu x3 khi HP<50%.
+        AllyStats accHealAlly = this as AllyStats;
+        if (accHealAlly != null)
+        {
+            if (accHealAlly.accOnlyLifestealHeal && source != HealSource.Lifesteal) return;
+            if (accHealAlly.accLifestealTripleLowHp && source == HealSource.Lifesteal && currentHp < maxHp * 0.5f)
+                amount *= 3f;
+        }
 
         float excess = (currentHp + amount) - maxHp;
         if (excess < 0) excess = 0;
@@ -526,6 +581,7 @@ public class Stats : MonoBehaviour
         if (currentHp > maxHp) currentHp = maxHp;
 
         OnHealReceived?.Invoke(amount, excess);
+        OnHealDetailed?.Invoke(amount, excess, source);
         if (showPopup && amount > 0f)
             DamageNumberManager.ShowHeal(amount, transform.position);
     }
@@ -550,6 +606,9 @@ public class Stats : MonoBehaviour
     // --- LOGIC STUN & KNOCKBACK ---
     void ApplyCrowdControl(DamageInfo info)
     {
+        // [COMPANION MTX_DEF_T3_01] Miễn nhiễm khống chế.
+        if (ccImmune) return;
+
         if (isSuperArmor && info.impactLevel <= superArmorLevel)
         {
             // Có thể thêm hiệu ứng visual (ví dụ: người lóe sáng trắng chịu đòn)
@@ -787,6 +846,37 @@ public class Stats : MonoBehaviour
 
         Debug.Log($"<color=green>{gameObject.name} ĐÃ ĐƯỢC HỒI SINH!</color>");
     }
+
+    // [MỚI] HẤT TUNG (Airborne): nâng mục tiêu lên cao + không hành động được trong 'duration' giây.
+    public void Airborne(float duration, float height = 1.2f)
+    {
+        if (isDead || duration <= 0f) return;
+        StartCoroutine(AirborneRoutine(duration, height));
+    }
+    private System.Collections.IEnumerator AirborneRoutine(float duration, float height)
+    {
+        isStunned = true;
+        bool agentWas = agent != null && agent.enabled;
+        if (agentWas) agent.enabled = false;
+        Vector3 start = transform.position;
+        float t = 0f;
+        while (t < duration)
+        {
+            float k = t / duration;
+            float y = Mathf.Sin(k * Mathf.PI) * height; // bay lên rồi rơi xuống
+            transform.position = new Vector3(start.x, start.y + y, start.z);
+            t += Time.deltaTime;
+            yield return null;
+        }
+        transform.position = start;
+        if (agentWas && agent != null)
+        {
+            agent.enabled = true;
+            if (agent.isOnNavMesh) agent.Warp(start);
+        }
+        isStunned = false;
+    }
+
     // [MỚI] Hàm giải phóng nhân vật khỏi mọi trạng thái khống chế hiện tại
     public void BreakCrowdControl()
     {

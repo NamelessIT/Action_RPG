@@ -28,7 +28,12 @@
       "Bash(cat)",
       "Bash(python /tmp/extract.py \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Data\\\\Skill tree.docx\")",
       "Bash(PYTHONIOENCODING=utf-8 python /tmp/extract.py \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Docs\\\\Tổng hợp Kĩ năng.docx\")",
-      "Bash(PYTHONIOENCODING=utf-8 python /tmp/find_mage.py \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Docs\\\\Tổng hợp Kĩ năng.docx\" \"magepassive\")"
+      "Bash(PYTHONIOENCODING=utf-8 python /tmp/find_mage.py \"C:\\\\Users\\\\xuand\\\\OneDrive\\\\Desktop\\\\ARPG\\\\Docs\\\\Tổng hợp Kĩ năng.docx\" \"magepassive\")",
+      "Bash(PYTHONIOENCODING=utf-8 python -c ' *)",
+      "Read(//c/Users/xuand/OneDrive/Desktop/**)",
+      "Bash(extract-text \"Tổng hợp Effect Weapon.docx\")",
+      "Bash(extract-text \"/c/Users/xuand/OneDrive/Desktop/ARPG/Docs/Tổng hợp Effect Weapon.docx\")",
+      "Bash(echo \"---EXIT $?---\")"
     ]
   }
 }

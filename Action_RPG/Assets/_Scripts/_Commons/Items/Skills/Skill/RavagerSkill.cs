@@ -157,7 +157,7 @@ public class RavagerSkill : SkillBehavior
         if (triggerFinisher)
         {
             float healAmt = stats.maxHp * healOnEndPercent;
-            stats.Heal(healAmt);
+            stats.Heal(healAmt, true, false, HealSource.Skill);
             Debug.Log($"<color=green>Ravager End: Heal {healAmt} HP</color>");
 
             Collider[] hits = Physics.OverlapSphere(transform.position, stunRadius, player.dangerLayer);
