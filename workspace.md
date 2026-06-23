@@ -10,6 +10,8 @@ Day la workspace quan ly cong viec chung, khong phai prompt dung mot lan.
 
 Tat ca checkbox trong muc nay phai duoc user xac nhan truoc commit/push cuoi.
 
+Trang thai sau checkpoint code EAM: cac viec duoi day chua duoc Codex tick vi can user thao tac trong Unity Editor/Play Mode. Theo yeu cau user ngay vong nay, commit code EAM duoc phep di truoc; cac muc nay tiep tuc la checklist editor sau push.
+
 - [ ] **[GAP] M-01 - Xac minh scene dang dirty**
   - File user-owned: `Action_RPG/Assets/Scenes/OdoScene.unity`.
   - Diff hien tai chi tang `EnemyCombat.skillEffects.Array.size` len `1` tren mot prefab instance.
@@ -60,7 +62,7 @@ Tat ca checkbox trong muc nay phai duoc user xac nhan truoc commit/push cuoi.
 2. Khong commit/push, khong stage, khong revert user changes va khong tu sua/xoa checkbox task.
 3. Truoc khi sua symbol, bat buoc chay GitNexus impact theo `AGENTS.md`; HIGH/CRITICAL phai dung va bao user/Codex.
 4. Khong sua `OdoScene.unity` hoac manual assets tru khi task ghi ro va user cho phep.
-5. Sau khi code/test, chi thay noi dung ben trong marker `CLAUDE_REPORT_START/END`.
+5. Sau khi code/test, chi duoc APPEND report moi ben trong marker `CLAUDE_REPORT_START/END`; khong xoa/sua report vong truoc. Chi Codex duoc reset/compact report sau review.
 6. Bao cao phai co: task ID, symbols/files/API doi, impact risk, lenh test va output, smoke evidence, task partial, test chua chay va regression moi.
 7. Khong tu them noi dung vao `FINAL COMMIT DRAFT`.
 
@@ -70,10 +72,10 @@ Tat ca checkbox trong muc nay phai duoc user xac nhan truoc commit/push cuoi.
 2. Chay lai build/static checks/repro quan trong va review Unity YAML/GUID khi co asset changes.
 3. Task dat acceptance moi duoc xoa khoi `ACTIVE TASKS`; sau do append mot bullet ngan vao `FINAL COMMIT DRAFT`.
 4. Task partial/fail phai duoc viet lai theo van de thuc te; regression moi phai them task ID moi.
-5. Sau review, tra `CLAUDE_REPORT` ve placeholder.
+5. Chi Codex duoc reset/compact `CLAUDE_REPORT` ve placeholder sau review. Neu Codex chua reset, Claude phai append report vong moi, khong overwrite report cu.
 6. Chi Codex duoc commit/push, va chi khi:
    - `ACTIVE TASKS` rong.
-   - Toan bo `MANUAL UNITY EDITOR TASKS` da check.
+   - Toan bo `MANUAL UNITY EDITOR TASKS` da check, tru khi user yeu cau ro checkpoint code truoc manual.
    - Build/static checks pass.
    - GitNexus `detect-changes` chi ra dung pham vi, khong con HIGH/CRITICAL chua xu ly.
    - Working tree khong chua thay doi ngoai pham vi da xac nhan.
@@ -88,7 +90,7 @@ Tat ca checkbox trong muc nay phai duoc user xac nhan truoc commit/push cuoi.
 
 ## VERIFIED BASELINE
 
-- Branch: `test`; baseline commit: `c3d7cb3` (`origin/test`).
+- Branch: `test`; baseline commit checkpoint: `c6934eb` (`origin/test`) sau commit CE/INT.
 - Baseline build ngay 2026-06-22: 0 error, 17 warning co san.
 - `git diff --check`: pass.
 - Dirty user change: chi `OdoScene.unity`, them `skillEffects.Array.size = 1`; phai giu nguyen toi khi user xac minh.
@@ -108,43 +110,19 @@ Tat ca checkbox trong muc nay phai duoc user xac nhan truoc commit/push cuoi.
   - P0-INT-01A da them `InterruptContext`, `OnInterruptedContext` va bridge legacy `OnInterrupted` trong Stats.
   - P0-INT-01B da cho SkillManager consume interrupt context khi player charge ACC_CH_T4_03, voi cost/cooldown theo flag.
   - P0-INT-01C da cho EnemyCombat consume interrupt context, cleanup attack state va commit/uncommit skill cooldown theo flag.
+  - P1-EAM-01 da tao `EnemyAttackModuleData` va module-aware API trong EnemyCombat/EnemyAI, module null van fallback melee cu.
+  - P1-EAM-02A da implement melee/local runtime cho Enemy Attack Module: Single/Sweep/Thrust/CircleAOE, module effect clone, damageMultiplier cho basic/skill va cleanup state.
+  - P1-EAM-03 da them `EnemyProjectile` runtime cho ProjectileDirectional/ProjectileTargeted: Player/Ally target, lifetime, dedupe, safe destroy va cloned module effects.
+  - P1-EAM-02B da implement DashStrike, ProjectileDirectional, ProjectileTargeted va GroundTargetAOE runtime trong EnemyCombat, dung EnemyProjectile, telegraph optional va dash movement override cleanup.
+  - P1-EAM-04 da cho EnemyAI dung `GetBasicRange()` cho attack decision/stopping/chase/spacing, module null van fallback `basicAttackRange` cu.
 - Da xac minh con no:
-  - Chua co Enemy Attack Module/runtime/projectile/assets.
+  - Khong con code task active cho EAM trong workspace nay.
+  - Con sample module assets/Play Mode matrix la viec Unity Editor/manual.
+  - Follow-up thiet ke sau EAM neu can: GroundTargetAOE knockback sourcePosition theo tam AoE, projectile magic atkType, ConeBreath/SelfBuff/Summon runtime.
 
 ## ACTIVE TASKS
 
-### P1-EAM-01 - Enemy Attack Module data/API
-
-- Tao `EnemyAttackModuleData` ScriptableObject voi:
-  - id/displayName/style, range/cooldown/damageMultiplier.
-  - windup/active/recovery durations.
-  - attack angle, sweep start/end, AoE radius.
-  - projectile speed/lifetime/prefab va optional telegraph prefab.
-  - facing/telegraph flags, impact bonus va `List<CombatEffectInfo>`.
-- Enum: `MeleeSingle`, `MeleeSweep`, `MeleeThrust`, `MeleeCircleAOE`, `DashStrike`, `ProjectileDirectional`, `ProjectileTargeted`, `GroundTargetAOE`, `ConeBreath`, `SelfBuff`, `Summon`.
-- EnemyCombat public API: `basicAttackModule`, `skillAttackModule`, `CanUseSkill()`, `GetSkillRange()`, `PerformBasicAttack()`, `PerformSkillAttack()` va mot dispatcher module noi bo.
-- Module null phai dung melee fallback hien tai.
-
-### P1-EAM-02 - Enemy module runtime styles
-
-- Implement: Single, Sweep, Thrust, CircleAOE, DashStrike, ProjectileDirectional, ProjectileTargeted, GroundTargetAOE.
-- Module runtime phai clone effect per target/projectile, set source va khong mutate ScriptableObject.
-- ConeBreath/SelfBuff/Summon chua implement phai warning mot lan moi attack va cleanup state, khong crash.
-- Timing, hit window, range va telegraph lay tu module; khong dung skill range roi melee hitbox khac range.
-
-### P1-EAM-03 - EnemyProjectile
-
-- Projectile ho tro direction hoac target, lifetime, speed, hit dedupe va safe destroy.
-- Chi damage Player/Ally; khong enemy friendly fire va khong trung owner.
-- Dung EnemyStats attacker, `DamageInfo` va cloned module effects.
-- Targeted projectile mat target phai tiep tuc theo huong cu hoac self-destroy an toan, khong null exception.
-
-### P1-EAM-04 - EnemyAI integration va fallback
-
-- EnemyAI chi hoi combat ve skill availability/range va goi attack; khong chua projectile/AoE implementation.
-- Skill san sang nhung ngoai range thi chase; trong range thi cast.
-- Basic module range chi phoi stopping/chase range; module null dung `basicAttackRange` cu.
-- Stun/Knockback/Airborne/Silence cancel khong ket NavMesh, animation hoac attack state.
+Khong con code task active sau checkpoint EAM. Vong tiep theo chi them task moi khi user/Codex tao.
 
 ## ACCEPTANCE AND TEST MATRIX
 
@@ -171,13 +149,18 @@ Subject:
 
 `TODO`
 
-Body - Codex chi append task da verify vao marker nay. Da reset sau checkpoint commit CE/INT.
+Body - Codex chi append task da verify vao marker nay. Da reset sau checkpoint commit EAM.
 
 <!-- CODEX_COMMIT_NOTES_START -->
+- Chua co task moi nao duoc verify sau checkpoint EAM.
 <!-- CODEX_COMMIT_NOTES_END -->
 
 ## CLAUDE_REPORT - temporary handoff
 
 <!-- CLAUDE_REPORT_START -->
-Claude report placeholder. Ghi bao cao vong tiep theo tai day, khong sua ngoai marker.
+Claude report placeholder.
+
+Codex da dong toan bo code task EAM va commit checkpoint. Task tiep theo chi bat dau khi user/Codex tao ACTIVE TASK moi.
+
+Rule nhac lai: Claude phai APPEND report vong moi trong marker nay, khong xoa/sua report cu. Chi Codex duoc reset/compact report sau review.
 <!-- CLAUDE_REPORT_END -->

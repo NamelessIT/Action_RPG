@@ -528,7 +528,7 @@ public class EnemyAI : MonoBehaviour
         if (stats.monsterRank >= 1 && !isBossDodging && Time.time >= lastBossDodgeTime + bossDodgeCooldown)
         {
             PlayerController pc = nearestTarget?.GetComponent<PlayerController>();
-            if (pc != null && pc.isAttacking && distToTarget <= combat.basicAttackRange * 2.5f)
+            if (pc != null && pc.isAttacking && distToTarget <= combat.GetBasicRange() * 2.5f)
             {
                 if (Random.value <= bossDodgeChance)
                 {
@@ -596,7 +596,7 @@ public class EnemyAI : MonoBehaviour
         if (shouldDefend)
         {
             // --- HÀNH ĐỘNG PHÒNG THỦ (CHỜ ĐỢI) ---
-            if (distToTarget <= combat.basicAttackRange * 1.5f) // Cho tầm nhìn rộng hơn chút để nó biết xoay mặt
+            if (distToTarget <= combat.GetBasicRange() * 1.5f) // Cho tầm nhìn rộng hơn chút để nó biết xoay mặt
             {
                 currentState = "Defending (Waiting)";
                 if (agent.isOnNavMesh) agent.isStopped = true;
@@ -617,9 +617,9 @@ public class EnemyAI : MonoBehaviour
             // --- ƯU TIÊN SKILL (nếu có skill + sẵn sàng) ---
             // Có skill → cố gắng dùng skill trước; nếu chưa trong tầm thì áp sát; chỉ khi
             // không có/không sẵn sàng mới rơi xuống đánh thường (fallback).
-            if (combat.HasSkill && combat.IsSkillReady())
+            if (combat.HasSkill && combat.CanUseSkill())
             {
-                if (distToTarget <= combat.SkillRange)
+                if (distToTarget <= combat.GetSkillRange())
                 {
                     State_Skill();
                     return;
@@ -630,13 +630,13 @@ public class EnemyAI : MonoBehaviour
             }
 
             // --- HÀNH ĐỘNG TẤN CÔNG THƯỜNG (fallback) ---
-            if (distToTarget <= combat.basicAttackRange)
+            if (distToTarget <= combat.GetBasicRange())
             {
                 State_Attack();
             }
             else
             {
-                //Debug.Log("EnemyAI HandleCombatBehavior do không đủ combat.basicAttackRange");
+                //Debug.Log("EnemyAI HandleCombatBehavior do không đủ combat.GetBasicRange()");
                 State_Chase();
             }
         }
@@ -722,7 +722,7 @@ public class EnemyAI : MonoBehaviour
         if (nearestTarget == null) return;
         if (agent.isOnNavMesh)
         {
-            agent.stoppingDistance = combat.basicAttackRange * 0.9f;
+            agent.stoppingDistance = combat.GetBasicRange() * 0.9f;
             SetMoveSpeed(1f); // đảm bảo tốc độ về bình thường sau khi circle (đã trừ Slow)
         }
         else
@@ -796,7 +796,7 @@ public class EnemyAI : MonoBehaviour
         float zone = stats.aggroRadius * 1.5f;
         bool blocker = nearestTarget != null
             && Vector3.Distance(nearestTarget.position, stats.spawnPosition) <= zone
-            && distToTarget <= combat.basicAttackRange + 1.0f;
+            && distToTarget <= combat.GetBasicRange() + 1.0f;
 
         if (blocker)
         {
@@ -986,7 +986,7 @@ public class EnemyAI : MonoBehaviour
     void HandlePostAttackBehavior(float distToTarget)
     {
         // Quá xa → áp sát (reset về chase, không giữ behavior cũ)
-        if (distToTarget > combat.basicAttackRange * 2.0f)
+        if (distToTarget > combat.GetBasicRange() * 2.0f)
         {
             _postAttackBehaviorChosen = false;
             RestoreNormalSpeed();
@@ -995,7 +995,7 @@ public class EnemyAI : MonoBehaviour
         }
 
         // Quá gần (player áp sát) → lùi ra (override behavior hiện tại)
-        if (distToTarget < combat.basicAttackRange * 0.6f)
+        if (distToTarget < combat.GetBasicRange() * 0.6f)
         {
             _postAttackBehaviorChosen = false;
             RestoreNormalSpeed();
@@ -1050,7 +1050,7 @@ public class EnemyAI : MonoBehaviour
         toTarget.y = 0;
         Vector3 circleDir = Vector3.Cross(toTarget, Vector3.up).normalized;
         if (!_postAttackCircleRight) circleDir = -circleDir; // chiều đã cố định từ lúc chọn
-        float circleDist = combat.basicAttackRange * 0.8f;
+        float circleDist = combat.GetBasicRange() * 0.8f;
         Vector3 dest = transform.position + circleDir * circleDist;
         NavMeshHit hit;
         if (NavMesh.SamplePosition(dest, out hit, circleDist + 1f, NavMesh.AllAreas))
@@ -1134,7 +1134,7 @@ public class EnemyAI : MonoBehaviour
         if (nearestTarget != null && !stats.isDead && !stats.isStunned)
         {
             float dist = Vector3.Distance(transform.position, nearestTarget.position);
-            if (dist <= combat.basicAttackRange + 1.5f) State_Attack();
+            if (dist <= combat.GetBasicRange() + 1.5f) State_Attack();
             else State_Chase();
         }
     }

@@ -79,9 +79,39 @@ public class EnemyCombat : MonoBehaviour
     private float _currentAttackMultiplier = 1f;
     // Đòn hiện tại có phải skill không (để apply skillEffects, basic thì không).
     private bool _currentIsSkill = false;
+    // [EAM] Module của đòn hiện tại (null = đòn legacy melee). Quyết định nguồn CC trong DealDamageToTarget.
+    private EnemyAttackModuleData _currentModule = null;
+    // [EAM-02B] DashStrike: mượn external move override của EnemyAI; cần dọn khi complete/interrupt.
+    private bool _moduleDashOverride = false;
+    private EnemyAI _dashAI = null;
 
-    public bool HasSkill => enemySkill != null;
+    public bool HasSkill => enemySkill != null || skillAttackModule != null;
     public float SkillRange => skillRange > 0f ? skillRange : basicAttackRange;
+
+    [Header("--- [EAM] Attack Modules (optional — null = melee fallback cũ) ---")]
+    [Tooltip("Module đòn THƯỜNG. Null → dùng EnemyAttackRoutine melee hiện tại.")]
+    public EnemyAttackModuleData basicAttackModule;
+    [Tooltip("Module đòn SKILL. Null → dùng enemySkill melee + skillEffects hiện tại.")]
+    public EnemyAttackModuleData skillAttackModule;
+
+    /// <summary>[EAM] Tầm dùng skill — module.range (nếu >0) ưu tiên; module null hoặc range≤0 → SkillRange cũ.</summary>
+    public float GetSkillRange()
+        => (skillAttackModule != null && skillAttackModule.range > 0f) ? skillAttackModule.range : SkillRange;
+
+    /// <summary>[EAM-04] Tầm đòn THƯỜNG cho EnemyAI (stopping/chase/spacing). basicAttackModule.range (nếu >0)
+    /// ưu tiên; module null hoặc range≤0 → basicAttackRange cũ.</summary>
+    public float GetBasicRange()
+        => (basicAttackModule != null && basicAttackModule.range > 0f) ? basicAttackModule.range : basicAttackRange;
+
+    /// <summary>[EAM] Skill sẵn sàng? Module-aware: dùng cooldown của skillAttackModule nếu có; null → IsSkillReady() cũ.</summary>
+    public bool CanUseSkill()
+    {
+        if (skillAttackModule == null) return IsSkillReady(); // fallback legacy (enemySkill)
+        if (isAttacking) return false;
+        if (stats != null && stats.IsSkillLocked) return false; // Silence/Stun/Airborne → không cast
+        float cd = skillAttackModule.cooldown > 0f ? skillAttackModule.cooldown : 0.1f;
+        return Time.time >= lastSkillTime + cd;
+    }
 
     /// <summary>Skill sẵn sàng dùng? (có skill + hết cooldown + không đang đánh + không bị Trầm Mặc).</summary>
     public bool IsSkillReady()
@@ -143,28 +173,419 @@ public class EnemyCombat : MonoBehaviour
 
         _currentAttackMultiplier = 1f; // đòn thường
         _currentIsSkill = false;
-        currentAttackCoroutine = StartCoroutine(EnemyAttackRoutine());
+        // [EAM] Có module → dispatch theo style; null → melee fallback cũ.
+        if (basicAttackModule != null) PerformModuleAttack(basicAttackModule, false);
+        else currentAttackCoroutine = StartCoroutine(EnemyAttackRoutine());
     }
 
     /// <summary>
-    /// Dùng skill: tái sử dụng EnemyAttackRoutine nhưng nhân damage theo skillPhysicalMultiplier.
-    /// Giữ đơn giản — enemy "skill" hiện là 1 đòn mạnh hơn (mở rộng sau cho boss qua override).
+    /// Dùng skill: module (EAM) dispatch theo style, hoặc fallback enemySkill melee (nhân skillPhysicalMultiplier).
     /// </summary>
     public virtual void PerformSkillAttack()
     {
-        if (stats == null || target == null || enemySkill == null) return;
+        if (stats == null || target == null) return;
         if (isAttacking) return;
         if (stats.IsSkillLocked) return; // bị Silence/Stun/Airborne → không cast được
-        if (!IsSkillReady()) return;
 
+        // [EAM] Module skill: tự quản cooldown/range theo data.
+        if (skillAttackModule != null)
+        {
+            if (!CanUseSkill()) return;
+            _prevSkillTime = lastSkillTime; // [INT-01C] un-commit nếu bị interrupt (flag false)
+            lastSkillTime = Time.time;
+            _currentAttackMultiplier = skillAttackModule.damageMultiplier > 0f ? skillAttackModule.damageMultiplier : 1f;
+            _currentIsSkill = true;
+            Debug.Log($"<color=magenta>{gameObject.name} dùng SKILL MODULE '{skillAttackModule.displayName}' (style {skillAttackModule.style})</color>");
+            PerformModuleAttack(skillAttackModule, true);
+            return;
+        }
+
+        // Fallback legacy (enemySkill + EnemyAttackRoutine).
+        if (enemySkill == null) return;
+        if (!IsSkillReady()) return;
         _prevSkillTime = lastSkillTime; // [INT-01C] lưu để un-commit nếu skill bị interrupt (flag false)
         lastSkillTime = Time.time;
-        // Multiplier: dùng skillPhysicalMultiplier nếu > 0, không thì 1.5x mặc định cho dễ thấy.
         _currentAttackMultiplier = enemySkill.skillPhysicalMultiplier > 0f
                                    ? enemySkill.skillPhysicalMultiplier : 1.5f;
         _currentIsSkill = true;
         Debug.Log($"<color=magenta>{gameObject.name} dùng SKILL '{enemySkill.skillName}' (x{_currentAttackMultiplier})!</color>");
         currentAttackCoroutine = StartCoroutine(EnemyAttackRoutine());
+    }
+
+    // [EAM] Warn-once mỗi style chưa có runtime (tránh spam log mỗi đòn).
+    private readonly System.Collections.Generic.HashSet<EnemyAttackStyle> _warnedStyles = new System.Collections.Generic.HashSet<EnemyAttackStyle>();
+
+    /// <summary>[EAM-02A] Dispatch đòn theo style của module. Melee/local → ModuleMeleeRoutine; các style
+    /// projectile/dash/ground/cone/buff/summon CHƯA implement ở 02A → warn-once + cleanup (không crash).</summary>
+    protected virtual void PerformModuleAttack(EnemyAttackModuleData module, bool isSkill)
+    {
+        if (module == null) { _currentModule = null; currentAttackCoroutine = StartCoroutine(EnemyAttackRoutine()); return; }
+
+        switch (module.style)
+        {
+            case EnemyAttackStyle.MeleeSingle:
+            case EnemyAttackStyle.MeleeSweep:
+            case EnemyAttackStyle.MeleeThrust:
+            case EnemyAttackStyle.MeleeCircleAOE:
+                _currentModule = module;
+                currentAttackCoroutine = StartCoroutine(ModuleMeleeRoutine(module));
+                break;
+            case EnemyAttackStyle.DashStrike:
+                _currentModule = module;
+                currentAttackCoroutine = StartCoroutine(ModuleDashRoutine(module));
+                break;
+            case EnemyAttackStyle.ProjectileDirectional:
+                _currentModule = module;
+                currentAttackCoroutine = StartCoroutine(ModuleProjectileRoutine(module, targeted: false));
+                break;
+            case EnemyAttackStyle.ProjectileTargeted:
+                _currentModule = module;
+                currentAttackCoroutine = StartCoroutine(ModuleProjectileRoutine(module, targeted: true));
+                break;
+            case EnemyAttackStyle.GroundTargetAOE:
+                _currentModule = module;
+                currentAttackCoroutine = StartCoroutine(ModuleGroundAoeRoutine(module));
+                break;
+            default:
+                // [EAM-02B] ConeBreath/SelfBuff/Summon → chưa implement: warn-once + cleanup (không crash).
+                if (_warnedStyles.Add(module.style))
+                    Debug.LogWarning($"[EAM] '{gameObject.name}' style {module.style} chưa implement → bỏ qua đòn này.");
+                _currentModule = null;
+                _currentIsSkill = false;
+                _currentAttackMultiplier = 1f;
+                break;
+        }
+    }
+
+    // [EAM] Clone module.effects lên info (per-target sourcePosition, +impactBonus). KHÔNG mutate ScriptableObject.
+    private void AddModuleEffects(DamageInfo info, EnemyAttackModuleData module)
+    {
+        if (module == null || module.effects == null) return;
+        foreach (var src in module.effects)
+        {
+            if (src == null) continue;
+            info.AddEffect(new CombatEffectInfo(src.type, src.duration)
+            {
+                force = src.force,
+                height = src.height,
+                magnitude = src.magnitude,
+                impactLevel = src.impactLevel + module.impactBonus, // +impactBonus của module
+                sourcePosition = transform.position,
+                respectEffectResistance = src.respectEffectResistance,
+                interruptCurrentAction = src.interruptCurrentAction,
+                putInterruptedSkillOnCooldown = src.putInterruptedSkillOnCooldown,
+                note = src.note,
+            });
+        }
+    }
+
+    // ── [EAM-02B] Helpers dùng chung cho các module routine ──
+
+    /// <summary>Khóa hướng mặt về target (nếu faceTargetOnStart) và trả về hướng commit.</summary>
+    private Vector3 ModuleFaceTarget(EnemyAttackModuleData module)
+    {
+        Vector3 facingDir = stats != null ? stats.facingDirection : transform.forward;
+        if (module.faceTargetOnStart && target != null)
+        {
+            Vector3 d = (target.position - transform.position); d.y = 0f;
+            if (d.sqrMagnitude > 0.0001f) { facingDir = d.normalized; if (stats != null) stats.facingDirection = facingDir; }
+        }
+        return facingDir;
+    }
+
+    /// <summary>Telegraph + windup theo animator (projectile/dash). GroundAOE tự xử lý telegraphPrefab.</summary>
+    private IEnumerator ModuleAnimWindup(EnemyAttackModuleData module)
+    {
+        if (module.useTelegraph && module.windupDuration > 0f)
+        {
+            isTelegraphing = true;
+            if (animator != null)
+            {
+                if (!string.IsNullOrEmpty(telegraphAnimBool) && HasParameter(animator, telegraphAnimBool))
+                    animator.SetBool(telegraphAnimBool, true);
+                else if (!string.IsNullOrEmpty(telegraphAnimTrigger) && HasParameter(animator, telegraphAnimTrigger))
+                    animator.SetTrigger(telegraphAnimTrigger);
+            }
+            yield return new WaitForSeconds(module.windupDuration);
+            isTelegraphing = false;
+            if (animator != null && !string.IsNullOrEmpty(telegraphAnimBool) && HasParameter(animator, telegraphAnimBool))
+                animator.SetBool(telegraphAnimBool, false);
+        }
+        else if (module.windupDuration > 0f)
+        {
+            yield return new WaitForSeconds(module.windupDuration);
+        }
+    }
+
+    /// <summary>Reset state cuối routine module (giống EnemyAttackRoutine end).</summary>
+    private void ModuleAttackCleanup()
+    {
+        isAttacking = false;
+        _currentIsSkill = false;
+        _currentModule = null;
+        _currentAttackMultiplier = 1f;
+        currentAttackCoroutine = null;
+    }
+
+    /// <summary>Cone hit trong range + attackAngle (dùng cho DashStrike).</summary>
+    private void ModuleConeHit(EnemyAttackModuleData module, Vector3 facingDir)
+    {
+        float range = Mathf.Max(0.1f, module.range);
+        float halfAngle = Mathf.Max(1f, module.attackAngle) * 0.5f;
+        foreach (var hit in Physics.OverlapSphere(transform.position, range))
+        {
+            Vector3 to = (hit.transform.position - transform.position); to.y = 0f;
+            if (to.sqrMagnitude < 0.0001f) { TryModuleHit(hit.transform, module); continue; }
+            if (Vector3.Angle(facingDir, to.normalized) <= halfAngle) TryModuleHit(hit.transform, module);
+        }
+    }
+
+    // [EAM-02B] ProjectileDirectional/Targeted: windup → spawn EnemyProjectile từ prefab → recovery.
+    private IEnumerator ModuleProjectileRoutine(EnemyAttackModuleData module, bool targeted)
+    {
+        isAttacking = true;
+        lastAttackTime = Time.time;
+        _currentAttackMultiplier = module.damageMultiplier > 0f ? module.damageMultiplier : 1f;
+        if (stats != null) stats.EnterCombat();
+
+        Vector3 facingDir = ModuleFaceTarget(module);
+        yield return ModuleAnimWindup(module);
+        if (animator != null) animator.SetTrigger("Attack");
+
+        if (module.projectilePrefab == null)
+        {
+            if (_warnedStyles.Add(module.style))
+                Debug.LogWarning($"[EAM] '{gameObject.name}' style {module.style} thiếu projectilePrefab → bỏ qua đạn.");
+        }
+        else
+        {
+            Vector3 spawn = transform.position + facingDir * 0.6f + Vector3.up * 0.5f;
+            Quaternion rot = facingDir.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(facingDir) : transform.rotation;
+            GameObject go = Instantiate(module.projectilePrefab, spawn, rot);
+            EnemyProjectile proj = go.GetComponent<EnemyProjectile>();
+            if (proj == null) proj = go.AddComponent<EnemyProjectile>(); // an toàn nếu prefab thiếu script
+            proj.Init(stats, facingDir, targeted ? target : null, module.projectileSpeed, module.projectileLifetime,
+                      module.damageMultiplier, module.impactBonus, module.effects);
+        }
+
+        if (module.recoveryDuration > 0f) yield return new WaitForSeconds(module.recoveryDuration);
+        ModuleAttackCleanup();
+    }
+
+    // [EAM-02B] GroundTargetAOE: telegraphPrefab tại tâm + delay windup → hit Player/Ally trong aoeRadius.
+    private IEnumerator ModuleGroundAoeRoutine(EnemyAttackModuleData module)
+    {
+        isAttacking = true;
+        lastAttackTime = Time.time;
+        hitTargets.Clear();
+        _currentAttackMultiplier = module.damageMultiplier > 0f ? module.damageMultiplier : 1f;
+        if (stats != null) stats.EnterCombat();
+
+        Vector3 facingDir = ModuleFaceTarget(module);
+        // Tâm AoE = vị trí target (nếu có) hoặc trước mặt theo range.
+        Vector3 center = target != null ? target.position : transform.position + facingDir * Mathf.Max(0.1f, module.range);
+        center.y = transform.position.y;
+
+        GameObject tele = (module.telegraphPrefab != null) ? Instantiate(module.telegraphPrefab, center, Quaternion.identity) : null;
+        isTelegraphing = true;
+        if (module.windupDuration > 0f) yield return new WaitForSeconds(module.windupDuration);
+        isTelegraphing = false;
+        if (tele != null) Destroy(tele);
+
+        // Active: quét Player/Ally trong aoeRadius quanh tâm (capsule dọc bắt mọi độ cao).
+        float r = Mathf.Max(0.1f, module.aoeRadius);
+        foreach (var col in Physics.OverlapCapsule(center + Vector3.up * 1.5f, center - Vector3.up * 1.5f, r))
+            TryModuleHit(col.transform, module);
+
+        if (module.recoveryDuration > 0f) yield return new WaitForSeconds(module.recoveryDuration);
+        ModuleAttackCleanup();
+    }
+
+    // [EAM-02B] DashStrike: lướt tới target (mượn external move override của EnemyAI) + cone hit dọc đường.
+    private IEnumerator ModuleDashRoutine(EnemyAttackModuleData module)
+    {
+        isAttacking = true;
+        lastAttackTime = Time.time;
+        hitTargets.Clear();
+        _currentAttackMultiplier = module.damageMultiplier > 0f ? module.damageMultiplier : 1f;
+        if (stats != null) stats.EnterCombat();
+
+        Vector3 facingDir = ModuleFaceTarget(module);
+        yield return ModuleAnimWindup(module);
+        if (animator != null) animator.SetTrigger("Attack");
+
+        var agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+        _dashAI = GetComponent<EnemyAI>();
+        float dashTime = Mathf.Max(0.05f, module.activeDuration);
+        float range = Mathf.Max(0.1f, module.range);
+
+        if (agent != null && agent.isOnNavMesh)
+        {
+            float baseMv = (stats != null && stats.baseMoveSpeed > 0f) ? stats.baseMoveSpeed : 5f;
+            float dashSpeed = range / dashTime;
+            // Mượn override để EnemyAI.Update KHÔNG ghi đè destination/speed trong lúc dash; RefreshAgentSpeed vẫn áp Slow.
+            if (_dashAI != null) { _dashAI.BeginExternalMoveOverride(dashSpeed / baseMv); _moduleDashOverride = true; }
+            agent.isStopped = false;
+            agent.SetDestination(transform.position + facingDir * range);
+        }
+
+        float t = 0f;
+        while (t < dashTime)
+        {
+            t += Time.deltaTime;
+            ModuleConeHit(module, stats != null ? stats.facingDirection : facingDir);
+            yield return null;
+        }
+
+        if (agent != null && agent.isOnNavMesh) { agent.velocity = Vector3.zero; agent.isStopped = true; }
+        EndModuleDashOverride();
+
+        if (module.recoveryDuration > 0f) yield return new WaitForSeconds(module.recoveryDuration);
+        ModuleAttackCleanup();
+    }
+
+    /// <summary>Trả lại external move override của EnemyAI (idempotent) — gọi ở dash end + khi bị interrupt.</summary>
+    private void EndModuleDashOverride()
+    {
+        if (_moduleDashOverride && _dashAI != null) _dashAI.EndExternalMoveOverride();
+        _moduleDashOverride = false;
+        _dashAI = null;
+    }
+
+    // [EAM-02A] Runtime cho melee/local styles. Timing/telegraph/hình học lấy từ module data.
+    private IEnumerator ModuleMeleeRoutine(EnemyAttackModuleData module)
+    {
+        isAttacking = true;
+        lastAttackTime = Time.time;
+        hitTargets.Clear();
+        // [EAM] Damage multiplier theo MODULE (cả basic lẫn skill) — PerformBasicAttack set 1f không đủ.
+        _currentAttackMultiplier = module.damageMultiplier > 0f ? module.damageMultiplier : 1f;
+        if (stats != null) stats.EnterCombat();
+
+        // Khóa hướng mặt về target (commit từ telegraph).
+        Vector3 facingDir = stats != null ? stats.facingDirection : transform.forward;
+        if (module.faceTargetOnStart && target != null)
+        {
+            Vector3 d = (target.position - transform.position); d.y = 0;
+            if (d.sqrMagnitude > 0.0001f) { facingDir = d.normalized; if (stats != null) stats.facingDirection = facingDir; }
+        }
+
+        // ── TELEGRAPH (windup) ──
+        if (module.useTelegraph && module.windupDuration > 0f)
+        {
+            isTelegraphing = true;
+            if (animator != null)
+            {
+                if (!string.IsNullOrEmpty(telegraphAnimBool) && HasParameter(animator, telegraphAnimBool))
+                    animator.SetBool(telegraphAnimBool, true);
+                else if (!string.IsNullOrEmpty(telegraphAnimTrigger) && HasParameter(animator, telegraphAnimTrigger))
+                    animator.SetTrigger(telegraphAnimTrigger);
+            }
+            yield return new WaitForSeconds(module.windupDuration);
+            isTelegraphing = false;
+            if (animator != null && !string.IsNullOrEmpty(telegraphAnimBool) && HasParameter(animator, telegraphAnimBool))
+                animator.SetBool(telegraphAnimBool, false);
+        }
+        else if (module.windupDuration > 0f)
+        {
+            yield return new WaitForSeconds(module.windupDuration);
+        }
+
+        // Attack animation.
+        if (animator != null) animator.SetTrigger("Attack");
+
+        // ── ACTIVE (gây damage) ──
+        float active = Mathf.Max(0.01f, module.activeDuration);
+        if (module.style == EnemyAttackStyle.MeleeSweep)
+        {
+            float t = 0f; float prevAngle = module.sweepStartAngle;
+            while (t < active)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / active);
+                float curAngle = Mathf.Lerp(module.sweepStartAngle, module.sweepEndAngle, k);
+                ModuleSweepCheck(module, curAngle, prevAngle, facingDir);
+                prevAngle = curAngle;
+                yield return null;
+            }
+        }
+        else
+        {
+            // Single / Thrust / CircleAOE: quét MỘT lần ở đầu active window.
+            ModuleApplyInstantHit(module, facingDir);
+            yield return new WaitForSeconds(active);
+        }
+
+        // ── RECOVERY ──
+        if (module.recoveryDuration > 0f) yield return new WaitForSeconds(module.recoveryDuration);
+
+        // Cleanup (giống EnemyAttackRoutine end).
+        isAttacking = false;
+        _currentIsSkill = false;
+        _currentModule = null;
+        _currentAttackMultiplier = 1f;
+        currentAttackCoroutine = null;
+    }
+
+    // Single (cone trong range+angle) / Thrust (box thẳng) / CircleAOE (vòng quanh enemy).
+    private void ModuleApplyInstantHit(EnemyAttackModuleData module, Vector3 facingDir)
+    {
+        if (module.style == EnemyAttackStyle.MeleeCircleAOE)
+        {
+            foreach (var hit in Physics.OverlapSphere(transform.position, Mathf.Max(0.1f, module.aoeRadius)))
+                TryModuleHit(hit.transform, module);
+            return;
+        }
+
+        if (module.style == EnemyAttackStyle.MeleeThrust)
+        {
+            // Hộp thẳng phía trước: dài = range, rộng cố định (module không có field rộng riêng).
+            float halfLen = Mathf.Max(0.1f, module.range) * 0.5f;
+            Vector3 center = transform.position + facingDir * halfLen + Vector3.up * 0.5f;
+            Vector3 halfExtents = new Vector3(0.6f, 1f, halfLen);
+            Quaternion rot = facingDir.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(facingDir) : transform.rotation;
+            foreach (var hit in Physics.OverlapBox(center, halfExtents, rot))
+                TryModuleHit(hit.transform, module);
+            return;
+        }
+
+        // MeleeSingle: cone trong range + attackAngle.
+        float halfAngle = Mathf.Max(1f, module.attackAngle) * 0.5f;
+        foreach (var hit in Physics.OverlapSphere(transform.position, Mathf.Max(0.1f, module.range)))
+        {
+            Vector3 to = (hit.transform.position - transform.position); to.y = 0;
+            if (to.sqrMagnitude < 0.0001f) { TryModuleHit(hit.transform, module); continue; }
+            if (Vector3.Angle(facingDir, to.normalized) <= halfAngle) TryModuleHit(hit.transform, module);
+        }
+    }
+
+    // Sweep-past detection cho module (dùng module.range).
+    private void ModuleSweepCheck(EnemyAttackModuleData module, float currentAngle, float prevAngle, Vector3 facingDir)
+    {
+        float range = Mathf.Max(0.1f, module.range);
+        foreach (var hit in Physics.OverlapSphere(transform.position, range))
+        {
+            if (hitTargets.Contains(hit.transform)) continue;
+            if (!hit.CompareTag("Player") && !hit.CompareTag("Ally")) continue;
+            Vector3 to = (hit.transform.position - transform.position); to.y = 0;
+            if (to.sqrMagnitude < 0.0001f) continue;
+            if (Vector3.Distance(transform.position, hit.transform.position) > range) continue;
+            float targetAngle = Vector3.SignedAngle(facingDir, to.normalized, Vector3.up);
+            bool sweptPast = currentAngle >= prevAngle
+                ? (targetAngle > prevAngle && targetAngle <= currentAngle)
+                : (targetAngle < prevAngle && targetAngle >= currentAngle);
+            if (sweptPast) TryModuleHit(hit.transform, module);
+        }
+    }
+
+    // Lọc Player/Ally + dedupe + gây damage qua DealDamageToTarget (đã branch _currentModule ở BƯỚC 2).
+    private void TryModuleHit(Transform victim, EnemyAttackModuleData module)
+    {
+        if (victim == null) return;
+        if (!victim.CompareTag("Player") && !victim.CompareTag("Ally")) return;
+        if (hitTargets.Contains(victim)) return;
+        hitTargets.Add(victim);
+        DealDamageToTarget(victim, 0);
     }
 
 protected IEnumerator EnemyAttackRoutine()
@@ -260,6 +681,7 @@ protected IEnumerator EnemyAttackRoutine()
 
         isAttacking = false;
         _currentIsSkill = false; // reset: đòn sau mặc định là đánh thường
+        _currentModule = null;   // [EAM] đòn legacy không gắn module
         currentComboStep++;
         if (currentComboStep >= maxCombo) currentComboStep = 0;
         currentAttackCoroutine = null; // routine kết thúc bình thường
@@ -301,6 +723,8 @@ protected IEnumerator EnemyAttackRoutine()
         // [INT-01C] Reset đầy đủ state để đòn sau sạch sẽ (không kẹt skill multiplier / hit dedupe).
         _currentIsSkill = false;
         _currentAttackMultiplier = 1f;
+        _currentModule = null; // [EAM] dọn module của đòn bị hủy
+        EndModuleDashOverride(); // [EAM-02B] trả override nếu đang DashStrike (interrupt giữa dash)
         hitTargets.Clear();
 
         Debug.Log($"{gameObject.name} đã HỦY đòn đánh!");
@@ -395,51 +819,59 @@ protected IEnumerator EnemyAttackRoutine()
             info.impactLevel = stats.monsterRank;
 
             // --- BƯỚC 2: HIỆU ỨNG (CC) ---
-            // [SKILL EFFECTS] AUTHORITATIVE — đòn SKILL áp các CombatEffectInfo (Silence/Stun/Airborne/Root...)
-            // TRƯỚC. CLONE từng effect cho mỗi target (sourcePosition riêng) → tránh mutate list dùng chung.
-            if (_currentIsSkill && skillEffects != null)
+            // [EAM] Đòn module → dùng effects của module (clone per-target, +impactBonus). Bỏ qua skillEffects/hard-code.
+            if (_currentModule != null)
             {
-                foreach (var src in skillEffects)
+                AddModuleEffects(info, _currentModule);
+            }
+            else
+            {
+                // [SKILL EFFECTS] AUTHORITATIVE — đòn SKILL áp các CombatEffectInfo (Silence/Stun/Airborne/Root...)
+                // TRƯỚC. CLONE từng effect cho mỗi target (sourcePosition riêng) → tránh mutate list dùng chung.
+                if (_currentIsSkill && skillEffects != null)
                 {
-                    if (src == null) continue;
-                    info.AddEffect(new CombatEffectInfo(src.type, src.duration)
+                    foreach (var src in skillEffects)
                     {
-                        force = src.force,
-                        height = src.height,
-                        impactLevel = src.impactLevel,
-                        sourcePosition = transform.position,
-                        respectEffectResistance = src.respectEffectResistance,
-                        interruptCurrentAction = src.interruptCurrentAction,
-                        putInterruptedSkillOnCooldown = src.putInterruptedSkillOnCooldown,
-                        note = src.note,
-                    });
+                        if (src == null) continue;
+                        info.AddEffect(new CombatEffectInfo(src.type, src.duration)
+                        {
+                            force = src.force,
+                            height = src.height,
+                            magnitude = src.magnitude,
+                            impactLevel = src.impactLevel,
+                            sourcePosition = transform.position,
+                            respectEffectResistance = src.respectEffectResistance,
+                            interruptCurrentAction = src.interruptCurrentAction,
+                            putInterruptedSkillOnCooldown = src.putInterruptedSkillOnCooldown,
+                            note = src.note,
+                        });
+                    }
                 }
-            }
 
-            // [HARD-CODE FALLBACK theo enemyID] (EAM vòng sau thay bằng module data). CHỈ add khi skillEffects
-            // CHƯA có effect cùng loại (skill effect thắng) → mỗi loại ≤1 effect/đòn. Đòn thường (không skillEffects)
-            // vẫn nhận hard-code như cũ.
-            // Boss Golem
-            if (stats.enemyID == "Boss_Golem" && !info.HasEffect(CombatEffectType.Knockback))
-            {
-                info.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f)
-                { force = 12f, impactLevel = info.impactLevel, sourcePosition = info.sourcePosition, respectEffectResistance = false });
-            }
-            // Orc Warrior (Đòn cuối combo)
-            if (stats.enemyID == "Orc_Warrior" && step == 2)
-            {
-                if (!info.HasEffect(CombatEffectType.Stun))
-                    info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, 1.0f)
-                    { impactLevel = info.impactLevel, sourcePosition = info.sourcePosition });
-                if (!info.HasEffect(CombatEffectType.Knockback))
+                // [HARD-CODE FALLBACK theo enemyID] (chỉ áp khi KHÔNG dùng module). CHỈ add khi skillEffects
+                // CHƯA có effect cùng loại (skill effect thắng) → mỗi loại ≤1 effect/đòn.
+                // Boss Golem
+                if (stats.enemyID == "Boss_Golem" && !info.HasEffect(CombatEffectType.Knockback))
+                {
+                    info.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f)
+                    { force = 12f, impactLevel = info.impactLevel, sourcePosition = info.sourcePosition, respectEffectResistance = false });
+                }
+                // Orc Warrior (Đòn cuối combo)
+                if (stats.enemyID == "Orc_Warrior" && step == 2)
+                {
+                    if (!info.HasEffect(CombatEffectType.Stun))
+                        info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, 1.0f)
+                        { impactLevel = info.impactLevel, sourcePosition = info.sourcePosition });
+                    if (!info.HasEffect(CombatEffectType.Knockback))
+                        info.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f)
+                        { force = 8f, impactLevel = info.impactLevel, sourcePosition = info.sourcePosition, respectEffectResistance = false });
+                }
+                // Odo (Đòn 2)
+                if (stats.enemyID == "Odo" && step == 1 && !info.HasEffect(CombatEffectType.Knockback))
+                {
                     info.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f)
                     { force = 8f, impactLevel = info.impactLevel, sourcePosition = info.sourcePosition, respectEffectResistance = false });
-            }
-            // Odo (Đòn 2)
-            if (stats.enemyID == "Odo" && step == 1 && !info.HasEffect(CombatEffectType.Knockback))
-            {
-                info.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f)
-                { force = 8f, impactLevel = info.impactLevel, sourcePosition = info.sourcePosition, respectEffectResistance = false });
+                }
             }
 
             // --- BƯỚC 3: TÍNH DAMAGE ---
