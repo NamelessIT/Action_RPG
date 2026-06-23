@@ -43,6 +43,10 @@ public class MatrixEffectManager : CompanionEffectManagerBase
             playerStats.OnPerfectDodgeTriggered += OnPlayerPerfectDodge;
             playerStats.OnBeforeTakeDamage    += OnPlayerBeforeDamage;
         }
+
+        // [REAPPLY] Sau khi references hợp lệ, bật lại passive tức thời của module ĐANG GIỮ (nếu có).
+        // Guard bằng cờ _xApplied nên không double push/add khi enable lặp.
+        ApplyImmediatePassive();
     }
     private void OnDisable()
     {
@@ -60,24 +64,46 @@ public class MatrixEffectManager : CompanionEffectManagerBase
             playerStats.OnPerfectDodgeTriggered -= OnPlayerPerfectDodge;
             playerStats.OnBeforeTakeDamage    -= OnPlayerBeforeDamage;
         }
+
+        // [CLEANUP] Nhả passive đang giữ khi component bị disable/destroy (idempotent một lần).
+        RevertImmediatePassive();
     }
 
     public void SetModule(CompanionMatrixData m)
     {
-        // revert passive cũ
-        if (_ccImmuneApplied) { stats.ccImmune = false; _ccImmuneApplied = false; }
-        if (_moveSpeedApplied) { stats.bonusMoveSpeed -= 0.15f; stats.CalculateCombatStatsOnly(); _moveSpeedApplied = false; }
+        RevertImmediatePassive(); // nhả passive module cũ trước
 
         _module = m;
         _cd1 = _cd2 = 0f;
         _lastDamageTime = Time.time;
         _regT5Passed = new bool[3];
 
-        if (!Active) return;
+        ApplyImmediatePassive(); // bật passive module mới (no-op nếu !Active)
+    }
 
-        // bật passive tức thời
-        if (_module.id == "MTX_DEF_T3_01") { stats.ccImmune = true; _ccImmuneApplied = true; }
-        if (_module.id == "MTX_PHA_T3_01") { stats.bonusMoveSpeed += 0.15f; stats.CalculateCombatStatsOnly(); _moveSpeedApplied = true; }
+    // ── Passive TỨC THỜI (giữ liên tục khi module active): MTX_DEF_T3_01 miễn CC, MTX_PHA_T3_01 +15% move ──
+    // Apply/Revert idempotent qua cờ _xApplied → enable/disable/SetModule lặp không double push/add hay pop dư.
+    private void ApplyImmediatePassive()
+    {
+        // Chỉ apply khi component đang active+enabled. SetModule lúc disabled → chỉ lưu module/revert old,
+        // OnEnable mới apply passive (tránh push/add khi đang tắt rồi OnDisable không revert được).
+        if (stats == null || !isActiveAndEnabled || !Active) return;
+        if (_module.id == "MTX_DEF_T3_01" && !_ccImmuneApplied)
+        {
+            stats.PushCrowdControlImmunity();
+            _ccImmuneApplied = true;
+        }
+        if (_module.id == "MTX_PHA_T3_01" && !_moveSpeedApplied)
+        {
+            stats.bonusMoveSpeed += 0.15f; stats.CalculateCombatStatsOnly();
+            _moveSpeedApplied = true;
+        }
+    }
+    private void RevertImmediatePassive()
+    {
+        if (stats == null) return;
+        if (_ccImmuneApplied) { stats.PopCrowdControlImmunity(); _ccImmuneApplied = false; }
+        if (_moveSpeedApplied) { stats.bonusMoveSpeed -= 0.15f; stats.CalculateCombatStatsOnly(); _moveSpeedApplied = false; }
     }
 
     private bool Active => _module != null && _module.HasEffect;
@@ -124,7 +150,7 @@ public class MatrixEffectManager : CompanionEffectManagerBase
 
     private void Cleanse()
     {
-        stats.isStunned = false;
+        stats.BreakCrowdControl(); // gỡ Stun/Root/Silence/Slow qua API chung (Airborne KHÔNG cleanse được)
         stats.isBleeding = false;
         stats.damageTakenMultiplier = 1f; // gỡ "dễ tổn thương"
         VisualDebugHelper.DrawSphere(transform.position, 1f, Color.blue, 0.3f);

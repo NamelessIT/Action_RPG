@@ -74,7 +74,6 @@ public class MagePassive : SkillBehavior
     private Dictionary<Stats, ChillData> chillDict = new Dictionary<Stats, ChillData>();
     private Dictionary<Stats, FractureData> fracDict = new Dictionary<Stats, FractureData>();
     private Dictionary<Stats, float> immuneDict = new Dictionary<Stats, float>();
-    private Dictionary<Stats, float> atkSlowDict = new Dictionary<Stats, float>(); // Chống cộng dồn Tốc đánh
 
     private enum Direction8 { None = 0, N = 1, NE = 2, E = 3, SE = 4, S = 5, SW = 6, W = 7, NW = 8 }
 
@@ -116,11 +115,9 @@ public class MagePassive : SkillBehavior
         }
 
         RestoreAllFracturedStats();
-        RestoreAllAtkSpeed();
         chillDict.Clear();
         fracDict.Clear();
         immuneDict.Clear();
-        atkSlowDict.Clear();
     }
 
     private void Update()
@@ -164,14 +161,7 @@ public class MagePassive : SkillBehavior
         List<Stats> immuneKeys = new List<Stats>(immuneDict.Keys);
         foreach (var k in immuneKeys)
             if (k == null || k.currentHp <= 0 || Time.time > immuneDict[k]) immuneDict.Remove(k);
-
-        List<Stats> slowKeys = new List<Stats>(atkSlowDict.Keys);
-        foreach (var k in slowKeys)
-            if (k == null || k.currentHp <= 0 || Time.time > atkSlowDict[k])
-            {
-                RestoreSingleAtkSpeed(k);
-                atkSlowDict.Remove(k);
-            }
+        // [CE-02C4] atkSlow giờ qua effect system (tự hết hạn) → không cần quản lý dict/restore ở đây.
     }
 
     // ========================================================
@@ -434,34 +424,12 @@ public class MagePassive : SkillBehavior
             if (k != null) RestoreSingleFracture(k);
     }
 
-    // [FIX SE]: Quản lý Giảm Tốc Đánh bằng Dictionary để không bị cộng dồn
+    // [CE-02C4] Giảm Tốc Đánh -10% qua effect system (Slow strongest-wins, expiry-safe, không mutate base stat).
+    // Lưu ý: Slow thống nhất giảm cả move + attack cadence (xem EffectiveSlowMultiplier).
     private void ApplyAtkSlow(Stats target)
     {
-        if (!atkSlowDict.ContainsKey(target))
-        {
-            // Lần đầu dính -> Trừ thẳng 10%
-            target.baseAttackSpeed *= 0.9f;
-            atkSlowDict[target] = Time.time + 3f;
-        }
-        else
-        {
-            // Đã dính rồi -> Chỉ làm mới thời gian
-            atkSlowDict[target] = Time.time + 3f;
-        }
-    }
-
-    private void RestoreSingleAtkSpeed(Stats target)
-    {
-        if (target != null)
-        {
-            target.baseAttackSpeed /= 0.9f; // Phục hồi lại chỉ số gốc
-        }
-    }
-
-    private void RestoreAllAtkSpeed()
-    {
-        foreach (var k in atkSlowDict.Keys)
-            RestoreSingleAtkSpeed(k);
+        if (target == null || target.currentHp <= 0) return;
+        target.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, 3f) { magnitude = 0.1f }, stats);
     }
 
     // Gọi bởi Thiên Thạch (NW): thiêu đốt 5s + giảm giáp/kháng phép CÓ THỜI HẠN (5s)

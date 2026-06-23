@@ -41,7 +41,16 @@ public class SkillManager : MonoBehaviour
             if (playerController == null)
                 Debug.LogError("[SkillManager] isPlayer=true nhưng không tìm thấy PlayerController trên " +
                                $"'{gameObject.name}'. Skill Initialize sẽ bị lỗi NullRef.");
+
+            // [INT-01B] Nghe interrupt CÓ ngữ cảnh để xử lý charge ACC_CH_T4_03 theo flag (cost/cooldown).
+            // KHÔNG nghe legacy OnInterrupted (tránh double-handle) — PlayerController giữ riêng attack-cancel legacy.
+            if (allyStats != null) allyStats.OnInterruptedContext += OnInterruptContext;
         }
+    }
+
+    private void OnDestroy()
+    {
+        if (allyStats != null) allyStats.OnInterruptedContext -= OnInterruptContext;
     }
     // --- HÀM TRANG BỊ SKILL (Dùng chung) ---
     /// <returns>true nếu skill thật sự nằm trong slot sau khi equip (gắn được script);
@@ -470,7 +479,7 @@ public class SkillManager : MonoBehaviour
             case StatModifier.StatType.DefenseValue: allyStats.defenseValue += value; break;
             case StatModifier.StatType.PhysicalLifeSteal: allyStats.physicalLifeSteal += value; break;
             case StatModifier.StatType.MagicLifeSteal: allyStats.magicLifeSteal += value; break;
-            case StatModifier.StatType.KnockBackRes: allyStats.resistanceKnockBack += value; break;
+            case StatModifier.StatType.KnockBackRes: allyStats.knockbackResistance += value; break;
             case StatModifier.StatType.EffectRes: allyStats.resistanceEffect += value; break;
 
                 // ... Thêm các case cho các chỉ số khác
@@ -480,6 +489,16 @@ public class SkillManager : MonoBehaviour
     // Active Skill
     // --- [MỚI] HÀM DÙNG SKILL (Được gọi từ PlayerController) ---
     private bool _accSkillCharging = false; // ACC_CH_T4_03: đang gồng 1 skill
+    // [INT-01B] Context interrupt nhận trong lúc charge (chỉ ghi khi interruptCurrentAction=true).
+    private InterruptContext? _pendingChargeInterrupt = null;
+
+    // [INT-01B] Chỉ ghi nhận interrupt khi ĐANG charge & effect THỰC SỰ ngắt hành động. Cost/cooldown
+    // quyết theo putInterruptedSkillOnCooldown ở ChargeThenCast.
+    private void OnInterruptContext(InterruptContext ctx)
+    {
+        if (_accSkillCharging && ctx.interruptCurrentAction)
+            _pendingChargeInterrupt = ctx;
+    }
 
     // [SAFETY] Nếu object bị disable/unequip GIỮA lúc gồng, coroutine ChargeThenCast dừng giữa chừng
     // → reset cờ để không leak state (channel/charging kẹt true).
@@ -490,6 +509,7 @@ public class SkillManager : MonoBehaviour
             _accSkillCharging = false;
             if (playerController != null) playerController.isSkillChanneling = false;
         }
+        _pendingChargeInterrupt = null;
     }
 
     /// <summary>
@@ -538,8 +558,8 @@ public class SkillManager : MonoBehaviour
         if (isPlayer && allyStats != null && allyStats.accSkillChargeTime > 0f
             && (skillData.skillType == SkillData.SkillType.Skill || skillData.skillType == SkillData.SkillType.Signature))
         {
-            // [CLEANSE x STUN] Cleanse skill khi đang bị Stun KHÔNG được gồng: ChargeThenCast sẽ bị
-            // IsSkillLocked (stun) ngắt ngay → mất skill/cooldown trước khi kịp giải khống chế.
+            // [CLEANSE x STUN] Cleanse skill khi đang bị Stun KHÔNG được gồng: Stun (interruptCurrentAction=true)
+            // sẽ ngắt charge ngay → skill không kịp cast để giải khống chế (mà cleanse cần CAST mới gỡ stun).
             // → Cast thẳng để thoát stun. (Airborne/Silence đã chặn hẳn ở guard phía trên.)
             if (allyStats.isStunned && IsCleanseSkill(skillData))
             {
@@ -556,32 +576,47 @@ public class SkillManager : MonoBehaviour
     private System.Collections.IEnumerator ChargeThenCast(SkillData skillData, float dur)
     {
         _accSkillCharging = true;
+        _pendingChargeInterrupt = null;
         if (playerController != null) playerController.isSkillChanneling = true; // khóa di chuyển/dash/đánh (channel)
         float startHp = allyStats.currentHp;
         float elapsed = 0f;
         bool interrupted = false;
+        bool wasteSkill = false; // true → "mất trắng" (trừ cost + vào cooldown)
         while (elapsed < dur)
         {
-            if (allyStats.currentHp < startHp - 0.01f) { interrupted = true; break; } // mất máu → ngắt
-            // [SILENCE] Bị câm lặng (hoặc airborne/stun) trong lúc gồng → ngắt, skill mất trắng.
-            if (allyStats.IsSkillLocked) { interrupted = true; break; }
+            // [DAMAGE] Mất máu trong lúc gồng → mất trắng (giữ behavior cũ).
+            if (allyStats.currentHp < startHp - 0.01f) { interrupted = true; wasteSkill = true; break; }
+            // [INT-01B] CC ngắt (interruptCurrentAction=true) → ngắt; cost/cooldown theo putInterruptedSkillOnCooldown.
+            // Effect interruptCurrentAction=false KHÔNG được ghi nhận (OnInterruptContext lọc) → không hủy charge.
+            if (_pendingChargeInterrupt.HasValue)
+            {
+                interrupted = true;
+                wasteSkill = _pendingChargeInterrupt.Value.putInterruptedSkillOnCooldown;
+                break;
+            }
             elapsed += Time.deltaTime;
             yield return null;
         }
 
         if (playerController != null) playerController.isSkillChanneling = false; // mở khóa trước khi thi triển/ngắt
+        _pendingChargeInterrupt = null;
 
         if (interrupted)
         {
-            // "Mất trắng": vào cooldown + tốn tài nguyên, KHÔNG ra hiệu ứng.
-            if (activeSkills.TryGetValue(skillData, out var sb) && sb != null)
+            if (wasteSkill && activeSkills.TryGetValue(skillData, out var sb) && sb != null)
             {
+                // "Mất trắng": vào cooldown + tốn tài nguyên, KHÔNG ra hiệu ứng.
                 float cost = skillData.sinChargeReq * allyStats.accSkillSinCostMult;
                 if (skillData.skillType == SkillData.SkillType.Signature)
                     cost *= allyStats.signatureSinCostMult * allyStats.accSignatureSinCostMult;
                 allyStats.currentSin = Mathf.Max(0f, allyStats.currentSin - cost);
                 sb.lastUseTime = Time.time; // vào cooldown
-                Debug.Log("<color=red>[ACC_CH_T4_03]</color> Gồng bị ngắt → mất skill (cooldown + tốn tài nguyên).");
+                Debug.Log("<color=red>[ACC_CH_T4_03]</color> Gồng bị ngắt (mất máu / CC harsh) → mất skill (cooldown + tốn tài nguyên).");
+            }
+            else
+            {
+                // putInterruptedSkillOnCooldown=false → ngắt nhưng KHÔNG mất cost/cooldown (bấm lại được).
+                Debug.Log("<color=yellow>[ACC_CH_T4_03]</color> Gồng bị ngắt (CC không harsh) → KHÔNG trừ cost/cooldown.");
             }
         }
         else

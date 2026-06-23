@@ -194,15 +194,17 @@ public class WardenSkill : SkillBehavior
                                  + selfVit * vitToTrueDamageScale
                                  + e.maxHp * targetMaxHpPercent;
 
-                e.TakeDamage(new DamageInfo
+                var wardenInfo = new DamageInfo
                 {
                     sourcePosition = transform.position,
                     attacker = stats,
                     trueDamage = trueDamage, // bỏ qua giáp/kháng phép
-                    isStun = true,
-                    stunDuration = effStun,
                     impactLevel = 2 // phá siêu giáp
-                });
+                };
+                // [CC] Stun qua effect system, impact 2 trên chính CombatEffectInfo.
+                wardenInfo.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, effStun)
+                { impactLevel = 2, sourcePosition = transform.position });
+                e.TakeDamage(wardenInfo);
                 Debug.Log($"<color=red>True Damage:</color> {trueDamage:F0} lên {e.name}");
             }
 

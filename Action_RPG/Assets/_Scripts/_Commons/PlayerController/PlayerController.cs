@@ -241,7 +241,8 @@ public class PlayerController : MonoBehaviour
         // Logic di chuyển thường
         if (!isTurning && isWalking)
         {
-            float currentSpeed = stats.moveSpeed * (isSprinting ? stats.runSpeedMultiplier : 1f);
+            // [SLOW] nhân hệ số giảm tốc dùng chung (EffectiveSlowMultiplier = 1 nếu không bị Slow).
+            float currentSpeed = stats.moveSpeed * (isSprinting ? stats.runSpeedMultiplier : 1f) * stats.EffectiveSlowMultiplier;
 
             // Bow heavy charge: giảm tốc 50% — trừ khi WPN_BW_T3_01 (gồng bắn không giảm tốc).
             bool bowNoSlow = (stats as AllyStats)?.bowNoChargeSlow ?? false;
@@ -835,8 +836,8 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // Check cooldown bình thường cho đòn đầu tiên
-        float cooldownTime = 1.0f / stats.attackSpeed;
+        // Check cooldown bình thường cho đòn đầu tiên. [SLOW] giảm tốc → tăng cooldown (đọc multiplier chung).
+        float cooldownTime = 1.0f / Mathf.Max(0.01f, stats.attackSpeed * stats.EffectiveSlowMultiplier);
         if (Time.time < lastAttackTime + cooldownTime) return;
 
         // Reset combo nếu quá hạn
@@ -964,15 +965,20 @@ public class PlayerController : MonoBehaviour
         WeaponData currentWpn = equipmentManager.currentWeapon;
         // Phân loại nguồn: vũ khí đánh xa (Bow/Grimoire) → Ranged; còn lại → Melee.
         info.sourceType = (currentWpn != null && currentWpn.isRanged) ? DamageSourceType.Ranged : DamageSourceType.Melee;
+
+        // [CC] Gom Stun/Knockback vào biến cục bộ (last-wins như legacy), AddEffect MỘT lần/loại trước
+        // TakeDamage → mỗi đòn ≤1 Stun + ≤1 Knockback, không set legacy fields trên DamageInfo.
+        bool wantKnockback = false; float kbForce = 0f;
+        bool wantStun = false;      float stunDur = 0f;
         if (isHeavy)
         {
             // Handler có thể set suppressNextKnockback=true trước khi gọi ApplyDamage
             // để bỏ qua knockback (Dagger spin, Spear thrust...)
             if (!suppressNextKnockback)
             {
-                info.isKnockback    = true;
-                info.knockbackForce = (nextHitKnockbackForce >= 0f) ? nextHitKnockbackForce : 15f;
-                info.impactLevel    = 1;
+                wantKnockback    = true;
+                kbForce          = (nextHitKnockbackForce >= 0f) ? nextHitKnockbackForce : 15f;
+                info.impactLevel = 1;
             }
             suppressNextKnockback    = false; // auto-reset
             nextHitKnockbackForce    = -1f;   // auto-reset
@@ -983,10 +989,10 @@ public class PlayerController : MonoBehaviour
             if (currentWpn != null && currentWpn.comboEffects != null && stepIndex < currentWpn.comboEffects.Count)
             {
                 var effect = currentWpn.comboEffects[stepIndex];
-                info.isKnockback    = effect.causesKnockback;
-                info.knockbackForce = effect.knockbackForce;
-                info.isStun         = effect.causesStun;
-                info.stunDuration   = effect.stunDuration;
+                wantKnockback = effect.causesKnockback;
+                kbForce       = effect.knockbackForce;
+                wantStun      = effect.causesStun;
+                stunDur       = effect.stunDuration;
             }
         }
 
@@ -994,8 +1000,8 @@ public class PlayerController : MonoBehaviour
         // Set nextHitStun=true + nextHitStunDuration trước khi gọi ApplyDamage
         if (nextHitStun)
         {
-            info.isStun       = true;
-            info.stunDuration = nextHitStunDuration;
+            wantStun = true;
+            stunDur  = nextHitStunDuration;
             nextHitStun          = false; // auto-reset
             nextHitStunDuration  = 0f;
         }
@@ -1003,8 +1009,8 @@ public class PlayerController : MonoBehaviour
         // Perfect Dodge Counter (Check từ Stats)
         if (stats.isPerfectDodgeSuccess)
         {
-            info.isStun = true;
-            info.stunDuration = 1f;
+            wantStun = true;
+            stunDur  = 1f;
             info.impactLevel = 1;
             stats.isPerfectDodgeSuccess = false;
             Debug.Log(">> DODGE COUNTER!");
@@ -1016,8 +1022,8 @@ public class PlayerController : MonoBehaviour
         if (isDuelistEmpoweredAttackActive)
         {
             attackMultiplier *= 2.0f; // x2 Sát thương
-            info.isStun = true;
-            info.stunDuration = 3.0f; // Choáng 3 giây
+            wantStun = true;
+            stunDur  = 3.0f;          // Choáng 3 giây
             info.impactLevel = 1;     // Phá luôn Super Armor
         }
 
@@ -1081,6 +1087,14 @@ public class PlayerController : MonoBehaviour
             info.magicDamage = dmgTuple.magic;
             info.trueDamage = dmgTuple.trueDmg;
         }
+
+        // [CC] Chuyển Stun/Knockback đã gom thành effect (impactLevel/sourcePosition theo info — lấy giá trị cuối).
+        if (wantStun && stunDur > 0f)
+            info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, stunDur)
+            { impactLevel = info.impactLevel, sourcePosition = info.sourcePosition });
+        if (wantKnockback && kbForce > 0f)
+            info.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f)
+            { force = kbForce, impactLevel = info.impactLevel, sourcePosition = info.sourcePosition, respectEffectResistance = false });
 
         // --- 6. Send ---
         enemyStats.TakeDamage(info);
@@ -1261,8 +1275,8 @@ public class PlayerController : MonoBehaviour
         // 3. Di chuyển Rigidbody
         if (!isAttacking && !isDashing)
         {
-            // Tính tốc độ (có tính sprint nếu cần, hoặc mặc định)
-            float speed = stats.moveSpeed;
+            // Tính tốc độ (có tính sprint nếu cần, hoặc mặc định). [SLOW] nhân multiplier chung.
+            float speed = stats.moveSpeed * stats.EffectiveSlowMultiplier;
             // Nếu muốn Ravager chạy nhanh như Sprint thì nhân thêm:
             // float speed = stats.moveSpeed * stats.runSpeedMultiplier; 
 

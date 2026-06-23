@@ -120,6 +120,11 @@ public class CompanionAI : MonoBehaviour
             return;
         }
 
+        // [SLOW] Companion di chuyển theo baseMoveSpeed × EffectiveSlowMultiplier (cập nhật mỗi frame; 1 nếu không Slow).
+        // Giữ fallback 5f như lúc init (tránh agent.speed=0 nếu baseMoveSpeed chưa set).
+        if (agent.enabled && agent.isOnNavMesh)
+            agent.speed = (stats.baseMoveSpeed > 0 ? stats.baseMoveSpeed : 5f) * stats.EffectiveSlowMultiplier;
+
         // [MỚI THÊM] NẾU ĐANG BỊ ÉP ĐỨNG YÊN THÌ KHÔNG LÀM GÌ CẢ
         if (forceWaitTimer > 0)
         {
@@ -401,6 +406,7 @@ public class CompanionAI : MonoBehaviour
             if (distToTarget <= effRangeR)
             {
                 float spd = stats.attackSpeed > 0 ? stats.attackSpeed : 1.0f;
+                spd = Mathf.Max(0.01f, spd * stats.EffectiveSlowMultiplier); // [SLOW] giảm cadence đánh
                 if (Time.time >= lastAttackTime + (1.0f / spd)) StartCoroutine(AttackRoutine(spd));
                 Vector3 d = (currentTarget.position - transform.position).normalized; d.y = 0; currentVisualDir = d;
             }
@@ -444,6 +450,7 @@ public class CompanionAI : MonoBehaviour
             agent.isStopped = true;
             // Cooldown theo tốc độ đánh (baseAttackSpeed đã được Protocol cộng vào stats).
             float speed = stats.attackSpeed > 0 ? stats.attackSpeed : 1.0f;
+            speed = Mathf.Max(0.01f, speed * stats.EffectiveSlowMultiplier); // [SLOW] giảm cadence đánh
             if (Time.time >= lastAttackTime + (1.0f / speed))
             {
                 StartCoroutine(AttackRoutine(speed));
@@ -562,7 +569,7 @@ public class CompanionAI : MonoBehaviour
 
         // Né thành công → vô hiệu đòn này.
         info.physDamage = 0f; info.magicDamage = 0f; info.trueDamage = 0f;
-        info.isStun = false; info.isKnockback = false;
+        info.ClearCombatEffects(); // né thành công → đòn không còn CC (effects list + legacy)
 
         // Hướng né: ra xa kẻ tấn công.
         Vector3 away = transform.position - info.sourcePosition; away.y = 0;

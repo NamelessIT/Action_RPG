@@ -254,10 +254,11 @@ public class DuelistPassive : SkillBehavior
             if (attacker != null)
             {
                 DamageInfo stunInfo = new DamageInfo();
-                stunInfo.isStun = true;
-                stunInfo.stunDuration = 0.5f;
                 stunInfo.physDamage = 0;
                 stunInfo.attacker = stats;
+                stunInfo.sourcePosition = transform.position;
+                // [CC] Parry counter Stun 0.5s qua effect system.
+                stunInfo.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, 0.5f) { sourcePosition = transform.position });
                 attacker.TakeDamage(stunInfo);
             }
 

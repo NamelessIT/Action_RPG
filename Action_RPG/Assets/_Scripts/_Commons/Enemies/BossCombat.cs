@@ -13,12 +13,18 @@ public class BossCombat : EnemyCombat
     private float lastDashTime = -10f;
     private bool isDashing = false;
     private NavMeshAgent agent; // Boss cần tham chiếu Agent để lướt
+    private EnemyAI _enemyAI;   // để mượn external move override (tránh đánh nhau agent.speed với EnemyAI.Update)
+
+    // Trạng thái dash cần restore idempotent (mọi exit path + disable)
+    private float _dashOriginalAccel;
+    private bool _dashAccelStored;
 
     // Override Setup để lấy thêm NavMeshAgent
     public override void Setup(EnemyStats _stats, Transform _target, Animator _animator)
     {
         base.Setup(_stats, _target, _animator);
         agent = GetComponent<NavMeshAgent>();
+        _enemyAI = GetComponent<EnemyAI>();
     }
 
     // Hàm Dash đặc biệt của Boss
@@ -55,29 +61,41 @@ public class BossCombat : EnemyCombat
         // Logic Lướt bằng NavMeshAgent
         if (agent != null)
         {
-            float originalSpeed = agent.speed;
-            float originalAccel = agent.acceleration;
-
-            // Tăng tốc cực đại để lướt
-            agent.speed = stats.baseMoveSpeed * dashSpeedMultiplier;
+            // Lưu acceleration gốc (idempotent) để EndDash trả lại đúng.
+            if (!_dashAccelStored) { _dashOriginalAccel = agent.acceleration; _dashAccelStored = true; }
             agent.acceleration = 1000f; // Tăng tốc tức thì
-            agent.isStopped = false; // Đảm bảo agent được chạy
+            agent.isStopped = false;    // Đảm bảo agent được chạy
+
+            // [OWNERSHIP] Mượn override của EnemyAI: tốc độ = base × dashMult × Slow, AI.Update không ghi đè
+            // SetDestination/agent.speed trong lúc dash. Fallback set trực tiếp nếu không có EnemyAI.
+            if (_enemyAI != null) _enemyAI.BeginExternalMoveOverride(dashSpeedMultiplier);
+            else agent.speed = stats.baseMoveSpeed * dashSpeedMultiplier;
 
             // Set điểm đến là vị trí cách đó 1 đoạn theo hướng Dash
             agent.SetDestination(transform.position + dir * 5.0f);
 
             yield return new WaitForSeconds(dashDuration);
 
-            // Trả lại tốc độ cũ
-            agent.speed = stats.baseMoveSpeed;
-            agent.acceleration = originalAccel;
-            agent.velocity = Vector3.zero; // Dừng lại
-
-            // Nếu muốn boss đứng lại 1 chút sau khi Dash
-            agent.isStopped = true;
+            if (agent.isOnNavMesh) { agent.velocity = Vector3.zero; agent.isStopped = true; }
         }
 
-        stats.isInvincible = false;
+        EndDash(); // restore tốc độ/accel/invincibility/override idempotent
+    }
+
+    /// <summary>Kết thúc dash idempotent: trả override, acceleration, invincibility, cờ. Gọi được nhiều lần an toàn.</summary>
+    private void EndDash()
+    {
+        if (_enemyAI != null) _enemyAI.EndExternalMoveOverride();
+        else if (agent != null && stats != null) agent.speed = stats.baseMoveSpeed;
+        if (agent != null && _dashAccelStored) { agent.acceleration = _dashOriginalAccel; _dashAccelStored = false; }
+        if (stats != null) stats.isInvincible = false;
         isDashing = false;
+    }
+
+    // [CLEANUP] Bị disable/destroy giữa lúc dash → coroutine dừng; vẫn phải trả mọi trạng thái (idempotent).
+    protected override void OnDisable()
+    {
+        base.OnDisable();
+        if (isDashing) EndDash();
     }
 }

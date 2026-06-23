@@ -520,7 +520,7 @@ public class EquipmentManager : MonoBehaviour
             case StatModifier.StatType.PhysicalLifeSteal: allyStats.physicalLifeSteal += value; break;
             case StatModifier.StatType.MagicLifeSteal: allyStats.magicLifeSteal += value; break;
 
-            case StatModifier.StatType.KnockBackRes: allyStats.resistanceKnockBack += value; break;
+            case StatModifier.StatType.KnockBackRes: allyStats.knockbackResistance += value; break;
             case StatModifier.StatType.EffectRes: allyStats.resistanceEffect += value; break;
 
             case StatModifier.StatType.FlatHpGain: allyStats.flatHpGain += value; break;

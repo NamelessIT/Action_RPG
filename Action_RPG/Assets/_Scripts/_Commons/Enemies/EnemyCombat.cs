@@ -72,6 +72,9 @@ public class EnemyCombat : MonoBehaviour
              "Đòn đánh thường KHÔNG áp các effect này.")]
     public System.Collections.Generic.List<CombatEffectInfo> skillEffects = new System.Collections.Generic.List<CombatEffectInfo>();
     private float lastSkillTime = -999f;
+    // [INT-01C] lastSkillTime TRƯỚC khi skill hiện tại bắt đầu — để un-commit cooldown nếu skill bị
+    // interrupt với putInterruptedSkillOnCooldown=false (không "phế" skill).
+    private float _prevSkillTime = -999f;
     // Hệ số nhân damage cho đòn hiện tại (1 = đánh thường; skill set = skillPhysicalMultiplier)
     private float _currentAttackMultiplier = 1f;
     // Đòn hiện tại có phải skill không (để apply skillEffects, basic thì không).
@@ -93,17 +96,28 @@ public class EnemyCombat : MonoBehaviour
 
     public virtual void Setup(EnemyStats _stats, Transform _target, Animator _animator)
     {
-        // [CC INTERRUPT] Gỡ đăng ký cũ (đề phòng Setup gọi lại) rồi đăng ký mới.
-        if (stats != null) stats.OnInterrupted -= CancelAttack;
+        // [INT-01C] Nghe interrupt CÓ ngữ cảnh (KHÔNG nghe legacy OnInterrupted để tránh cancel 2 lần
+        // — RaiseInterrupted(ctx) fire cả 2 event). Gỡ đăng ký cũ (đề phòng Setup gọi lại) rồi đăng ký mới.
+        if (stats != null) stats.OnInterruptedContext -= OnInterruptContext;
         stats = _stats;
         target = _target;
         animator = _animator;
-        if (stats != null) stats.OnInterrupted += CancelAttack; // stun/knockback → hủy đòn đánh
+        if (stats != null) stats.OnInterruptedContext += OnInterruptContext; // CC ngắt windup/đòn đánh (context-aware)
     }
 
     protected virtual void OnDisable()
     {
-        if (stats != null) stats.OnInterrupted -= CancelAttack;
+        if (stats != null) stats.OnInterruptedContext -= OnInterruptContext;
+    }
+
+    // [INT-01C] CC ngắt: chỉ hủy khi effect THỰC SỰ ngắt hành động (interruptCurrentAction=true).
+    // Cooldown skill commit/un-commit theo putInterruptedSkillOnCooldown. Legacy/Unknown (interruptCurrentAction
+    // mặc định true) vẫn hủy như cũ.
+    private void OnInterruptContext(InterruptContext ctx)
+    {
+        if (!ctx.interruptCurrentAction) return; // Root/Slow/effect không-ngắt → KHÔNG hủy đòn
+        bool keepSkillCooldown = !_currentIsSkill || ctx.putInterruptedSkillOnCooldown;
+        CancelAttack(keepSkillCooldown);
     }
 
 
@@ -119,10 +133,11 @@ public class EnemyCombat : MonoBehaviour
         if (stats == null || target == null) return;
         if (isAttacking) return;
 
-        // Tính Cooldown
+        // Tính Cooldown. [SLOW] giảm cadence đánh (cooldown dài hơn) — chỉ tác động đòn thường, không skillCooldown.
         float speed = stats.baseAttackSpeed;
         if (speed <= 0) speed = 0.25f;
-        float cooldownTime = 1.0f / speed;
+        speed *= stats.EffectiveSlowMultiplier;
+        float cooldownTime = 1.0f / Mathf.Max(0.01f, speed);
 
         if (Time.time < lastAttackTime + cooldownTime) return;
 
@@ -142,6 +157,7 @@ public class EnemyCombat : MonoBehaviour
         if (stats.IsSkillLocked) return; // bị Silence/Stun/Airborne → không cast được
         if (!IsSkillReady()) return;
 
+        _prevSkillTime = lastSkillTime; // [INT-01C] lưu để un-commit nếu skill bị interrupt (flag false)
         lastSkillTime = Time.time;
         // Multiplier: dùng skillPhysicalMultiplier nếu > 0, không thì 1.5x mặc định cho dễ thấy.
         _currentAttackMultiplier = enemySkill.skillPhysicalMultiplier > 0f
@@ -199,14 +215,18 @@ protected IEnumerator EnemyAttackRoutine()
         }
         // ─────────────────────────────────────────────────────────────────────
 
+        // [SLOW] Tốc độ đánh hiệu lực = baseAttackSpeed × EffectiveSlowMultiplier → animation + hit window (startN/endN)
+        // + recovery chậm ĐỒNG BỘ (Slow tác động cadence thực thi đòn đánh; KHÔNG đụng skillCooldown ở IsSkillReady).
+        float effAttackSpeed = Mathf.Max(0.1f, stats.baseAttackSpeed * stats.EffectiveSlowMultiplier);
+
         // 2. Trigger Attack Animation (sau khi telegraph xong)
         if (animator != null)
         {
-            animator.SetFloat("AttackSpeedMultiplier", stats.baseAttackSpeed);
+            animator.SetFloat("AttackSpeedMultiplier", effAttackSpeed);
             animator.SetTrigger("Attack");
         }
 
-        float realAnimDuration = baseAttackAnimDuration / Mathf.Max(stats.baseAttackSpeed, 0.1f);
+        float realAnimDuration = baseAttackAnimDuration / effAttackSpeed;
 
         // Cửa sổ gây damage (chỉnh qua Inspector). Clamp hợp lệ: 0 <= start < end <= 1.
         float startN = Mathf.Clamp01(damageWindowStartNormalized);
@@ -246,11 +266,18 @@ protected IEnumerator EnemyAttackRoutine()
         _currentAttackMultiplier = 1f; // reset về đòn thường cho lần sau
     }
 
-    // [MỚI] Hàm hỗ trợ Cancel Attack (Để Boss dùng)
-    public void CancelAttack()
+    // [MỚI] Hàm hỗ trợ Cancel Attack (Boss dash gọi trực tiếp). Mặc định GIỮ cooldown skill (như cũ).
+    public void CancelAttack() => CancelAttack(keepSkillCooldown: true);
+
+    /// <summary>[INT-01C] Hủy đòn đánh/skill hiện tại + reset đầy đủ state. keepSkillCooldown=false →
+    /// un-commit cooldown skill (restore lastSkillTime cũ) khi đòn hiện tại là skill.</summary>
+    public void CancelAttack(bool keepSkillCooldown)
     {
         // Không có gì để hủy
         if (currentAttackCoroutine == null && !isAttacking && !isTelegraphing) return;
+
+        // [INT-01C] Un-commit cooldown skill nếu interrupt không "phế" skill.
+        if (_currentIsSkill && !keepSkillCooldown) lastSkillTime = _prevSkillTime;
 
         if (currentAttackCoroutine != null)
         {
@@ -270,6 +297,11 @@ protected IEnumerator EnemyAttackRoutine()
 
         // Reset Animation trigger nếu cần
         if (animator != null) animator.ResetTrigger("Attack");
+
+        // [INT-01C] Reset đầy đủ state để đòn sau sạch sẽ (không kẹt skill multiplier / hit dedupe).
+        _currentIsSkill = false;
+        _currentAttackMultiplier = 1f;
+        hitTargets.Clear();
 
         Debug.Log($"{gameObject.name} đã HỦY đòn đánh!");
     }
@@ -363,25 +395,51 @@ protected IEnumerator EnemyAttackRoutine()
             info.impactLevel = stats.monsterRank;
 
             // --- BƯỚC 2: HIỆU ỨNG (CC) ---
-            // Boss Golem
-            if (stats.enemyID == "Boss_Golem")
+            // [SKILL EFFECTS] AUTHORITATIVE — đòn SKILL áp các CombatEffectInfo (Silence/Stun/Airborne/Root...)
+            // TRƯỚC. CLONE từng effect cho mỗi target (sourcePosition riêng) → tránh mutate list dùng chung.
+            if (_currentIsSkill && skillEffects != null)
             {
-                info.isKnockback = true;
-                info.knockbackForce = 12f;
+                foreach (var src in skillEffects)
+                {
+                    if (src == null) continue;
+                    info.AddEffect(new CombatEffectInfo(src.type, src.duration)
+                    {
+                        force = src.force,
+                        height = src.height,
+                        impactLevel = src.impactLevel,
+                        sourcePosition = transform.position,
+                        respectEffectResistance = src.respectEffectResistance,
+                        interruptCurrentAction = src.interruptCurrentAction,
+                        putInterruptedSkillOnCooldown = src.putInterruptedSkillOnCooldown,
+                        note = src.note,
+                    });
+                }
+            }
+
+            // [HARD-CODE FALLBACK theo enemyID] (EAM vòng sau thay bằng module data). CHỈ add khi skillEffects
+            // CHƯA có effect cùng loại (skill effect thắng) → mỗi loại ≤1 effect/đòn. Đòn thường (không skillEffects)
+            // vẫn nhận hard-code như cũ.
+            // Boss Golem
+            if (stats.enemyID == "Boss_Golem" && !info.HasEffect(CombatEffectType.Knockback))
+            {
+                info.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f)
+                { force = 12f, impactLevel = info.impactLevel, sourcePosition = info.sourcePosition, respectEffectResistance = false });
             }
             // Orc Warrior (Đòn cuối combo)
             if (stats.enemyID == "Orc_Warrior" && step == 2)
             {
-                info.isStun = true;
-                info.stunDuration = 1.0f;
-                info.isKnockback = true;
-                info.knockbackForce = 8f;
+                if (!info.HasEffect(CombatEffectType.Stun))
+                    info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, 1.0f)
+                    { impactLevel = info.impactLevel, sourcePosition = info.sourcePosition });
+                if (!info.HasEffect(CombatEffectType.Knockback))
+                    info.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f)
+                    { force = 8f, impactLevel = info.impactLevel, sourcePosition = info.sourcePosition, respectEffectResistance = false });
             }
             // Odo (Đòn 2)
-            if (stats.enemyID == "Odo" && step == 1)
+            if (stats.enemyID == "Odo" && step == 1 && !info.HasEffect(CombatEffectType.Knockback))
             {
-                info.isKnockback = true;
-                info.knockbackForce = 8f;
+                info.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f)
+                { force = 8f, impactLevel = info.impactLevel, sourcePosition = info.sourcePosition, respectEffectResistance = false });
             }
 
             // --- BƯỚC 3: TÍNH DAMAGE ---
@@ -406,28 +464,7 @@ protected IEnumerator EnemyAttackRoutine()
             info.magicDamage = dmgTuple.magic;
             info.trueDamage = dmgTuple.trueDmg;
 
-            // [SKILL EFFECTS] Đòn SKILL áp các CombatEffectInfo (Silence/Stun/Airborne/Root...) lên victim.
-            // CLONE từng effect cho mỗi target (set sourcePosition riêng) → tránh mutate dùng chung.
-            if (_currentIsSkill && skillEffects != null)
-            {
-                foreach (var src in skillEffects)
-                {
-                    if (src == null) continue;
-                    info.AddEffect(new CombatEffectInfo(src.type, src.duration)
-                    {
-                        force = src.force,
-                        height = src.height,
-                        impactLevel = src.impactLevel,
-                        sourcePosition = transform.position,
-                        respectEffectResistance = src.respectEffectResistance,
-                        interruptCurrentAction = src.interruptCurrentAction,
-                        putInterruptedSkillOnCooldown = src.putInterruptedSkillOnCooldown,
-                        note = src.note,
-                    });
-                }
-            }
-
-            // --- BƯỚC 4: GỬI ---
+            // --- BƯỚC 4: GỬI --- (skillEffects + hard-code CC đã gắn ở BƯỚC 2)
             victimStats.TakeDamage(info);
 
             // [COMBAT FEEL OWNER] Camera shake / hit-stop CHỈ thuộc về Player đánh trúng (game feel cho người chơi).

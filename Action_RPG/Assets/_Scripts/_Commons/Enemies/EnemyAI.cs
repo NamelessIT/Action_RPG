@@ -1,7 +1,4 @@
-﻿using Mono.Cecil.Cil;
-using System.Collections;
-using UnityEditor;
-using UnityEditor.PackageManager.UI;
+﻿using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -109,7 +106,7 @@ public class EnemyAI : MonoBehaviour
 
         agent.updateRotation = false;
         agent.updateUpAxis = false;
-        agent.speed = stats.baseMoveSpeed;
+        SetMoveSpeed(1f);
         agent.acceleration = 20f;   // Dừng nhanh nhưng không instant → không khựng
         agent.angularSpeed = 0f;    // Tắt rotation của NavMesh, dùng facingDirection thủ công
 
@@ -143,6 +140,13 @@ public class EnemyAI : MonoBehaviour
             if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
             return;
         }
+
+        // [SLOW] Refresh tốc độ theo hệ số chiến thuật hiện tại × Slow mỗi frame (áp/hết hạn phản hồi ngay).
+        RefreshAgentSpeed();
+
+        // [EXTERNAL OVERRIDE] Dash/nguồn ngoài đang giữ movement — vẫn refresh Slow ở trên nhưng AI thường
+        // KHÔNG chen SetDestination/agent.speed.
+        if (_externalMoveOverride) return;
 
         // Boss dodge đang chạy — coroutine tự quản lý movement
         if (isBossDodging) return;
@@ -719,7 +723,7 @@ public class EnemyAI : MonoBehaviour
         if (agent.isOnNavMesh)
         {
             agent.stoppingDistance = combat.basicAttackRange * 0.9f;
-            agent.speed = stats.baseMoveSpeed; // đảm bảo tốc độ về bình thường sau khi circle
+            SetMoveSpeed(1f); // đảm bảo tốc độ về bình thường sau khi circle (đã trừ Slow)
         }
         else
         {
@@ -731,7 +735,42 @@ public class EnemyAI : MonoBehaviour
 
     void RestoreNormalSpeed()
     {
-        if (agent.isOnNavMesh) agent.speed = stats.baseMoveSpeed;
+        SetMoveSpeed(1f);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  [SLOW] Tốc độ agent = baseMoveSpeed × hệ số chiến thuật (state) × EffectiveSlowMultiplier.
+    //  Tính từ BASE (KHÔNG nhân lên agent.speed hiện tại) → không cộng dồn. Lưu hệ số chiến thuật
+    //  để refresh mỗi frame trong Update (Slow áp/hết hạn phản hồi tức thì, không kẹt tốc độ cũ).
+    // ─────────────────────────────────────────────────────────────
+    private float _tacticalSpeedMult = 1f;
+    private void SetMoveSpeed(float tacticalMult)
+    {
+        _tacticalSpeedMult = tacticalMult;
+        RefreshAgentSpeed();
+    }
+    private void RefreshAgentSpeed()
+    {
+        if (agent != null && agent.isOnNavMesh)
+            agent.speed = stats.baseMoveSpeed * _tacticalSpeedMult * stats.EffectiveSlowMultiplier;
+    }
+
+    // [EXTERNAL MOVE OVERRIDE] Cho phép nguồn ngoài (vd BossCombat.DashRoutine) chiếm quyền điều khiển
+    // movement: AI thường KHÔNG ghi đè SetDestination/agent.speed, nhưng RefreshAgentSpeed mỗi frame VẪN
+    // áp Slow lên hệ số chiến thuật do override đặt (vd dash 5x → 5x×Slow). Tránh việc EnemyAI và
+    // BossCombat cùng ghi agent.speed trực tiếp gây giật/đè nhau.
+    private bool _externalMoveOverride = false;
+    public bool IsExternalMoveOverride => _externalMoveOverride;
+    public void BeginExternalMoveOverride(float tacticalMult)
+    {
+        _externalMoveOverride = true;
+        SetMoveSpeed(tacticalMult);
+    }
+    public void EndExternalMoveOverride()
+    {
+        if (!_externalMoveOverride) return; // idempotent — không clear nhầm khi chưa override
+        _externalMoveOverride = false;
+        SetMoveSpeed(1f);
     }
 
     void State_Attack()
@@ -995,7 +1034,7 @@ public class EnemyAI : MonoBehaviour
         NavMeshHit hit;
         if (NavMesh.SamplePosition(dest, out hit, backOffDistance + 1f, NavMesh.AllAreas))
         {
-            agent.speed = stats.baseMoveSpeed * 0.8f; // lùi ra xa player với 80% tốc độ
+            SetMoveSpeed(0.8f); // lùi ra xa player với 80% tốc độ (đã trừ Slow)
             State_MoveTo(hit.position, "Post-Attack BackOff");
         }
         else
@@ -1016,7 +1055,7 @@ public class EnemyAI : MonoBehaviour
         NavMeshHit hit;
         if (NavMesh.SamplePosition(dest, out hit, circleDist + 1f, NavMesh.AllAreas))
         {
-            agent.speed = stats.baseMoveSpeed * 0.5f;
+            SetMoveSpeed(0.5f); // xoay vòng 50% tốc độ (đã trừ Slow)
             State_MoveTo(hit.position, "Post-Attack Circle");
         }
         else
@@ -1064,7 +1103,7 @@ public class EnemyAI : MonoBehaviour
         if (agent.isOnNavMesh)
         {
             agent.isStopped = false;
-            agent.speed = stats.baseMoveSpeed * 3.5f;
+            SetMoveSpeed(3.5f); // lướt né 3.5x (đã trừ Slow)
             agent.SetDestination(dodgeDest);
         }
 
@@ -1085,7 +1124,7 @@ public class EnemyAI : MonoBehaviour
 
         if (agent.isOnNavMesh)
         {
-            agent.speed = stats.baseMoveSpeed;
+            SetMoveSpeed(1f);
             agent.isStopped = true;
         }
 

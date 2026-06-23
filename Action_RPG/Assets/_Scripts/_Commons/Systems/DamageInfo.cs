@@ -57,6 +57,17 @@ public class DamageInfo
         return this;
     }
 
+    /// <summary>
+    /// Xóa MỌI hiệu ứng CC của đòn này (cho đòn bị HẤP THỤ / VÔ HIỆU): clear effects list + reset
+    /// legacy Stun/Knockback. KHÔNG đụng damage/crit/attacker/sourceType/impactLevel/sourcePosition.
+    /// </summary>
+    public void ClearCombatEffects()
+    {
+        effects?.Clear();
+        isStun = false; stunDuration = 0f;
+        isKnockback = false; knockbackForce = 0f;
+    }
+
     /// <summary>Có hiệu ứng nào thuộc loại type trong list effects không (không tính legacy).</summary>
     public bool HasEffect(CombatEffectType type)
     {

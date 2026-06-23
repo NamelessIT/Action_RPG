@@ -173,7 +173,7 @@ public static class CompanionStatApplier
             case StatModifier.StatType.BonusCDR: a.bonusCdr += v; break;
             case StatModifier.StatType.PhysicalLifeSteal: a.physicalLifeSteal += v; break;
             case StatModifier.StatType.MagicLifeSteal: a.magicLifeSteal += v; break;
-            case StatModifier.StatType.KnockBackRes: a.resistanceKnockBack += v; break;
+            case StatModifier.StatType.KnockBackRes: a.knockbackResistance += v; break;
             case StatModifier.StatType.EffectRes: a.resistanceEffect += v; break;
             case StatModifier.StatType.FlatHpGain: a.flatHpGain += v; break;
             case StatModifier.StatType.FlatSinGain: /* companion không dùng Sin */ break;

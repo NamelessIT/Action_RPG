@@ -77,9 +77,12 @@ public class EnemyStats : Stats
 
     void SetupResistances()
     {
-        if (monsterRank == 0) { isSuperArmor = false; resistanceKnockBack = 0.1f; }
-        else if (monsterRank == 1) { isSuperArmor = true; superArmorLevel = 0; resistanceKnockBack = 0.5f; }
-        else if (monsterRank == 2) { isSuperArmor = true; superArmorLevel = 10; resistanceKnockBack = 1.0f; resistanceEffect = 1.0f; }
+        // resistanceEffect giảm THỜI LƯỢNG Stun/Root/Silence/Slow; knockbackResistance chỉ giảm lực đẩy.
+        // rank1: resistanceEffect=0.5 để BẢO TOÀN balance Stun cũ (xưa Stun dùng knockbackResistance=0.5).
+        // Lưu ý: nay rank1 cũng giảm 50% Root/Silence/Slow (đồng nhất qua resistanceEffect).
+        if (monsterRank == 0) { isSuperArmor = false; knockbackResistance = 0.1f; resistanceEffect = 0f; }
+        else if (monsterRank == 1) { isSuperArmor = true; superArmorLevel = 0; knockbackResistance = 0.5f; resistanceEffect = 0.5f; }
+        else if (monsterRank == 2) { isSuperArmor = true; superArmorLevel = 10; knockbackResistance = 1.0f; resistanceEffect = 1.0f; }
     }
 
     public override void Update()

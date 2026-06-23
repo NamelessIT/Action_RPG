@@ -1106,7 +1106,7 @@ public class AccessoryEffectManager : MonoBehaviour
         if (Has(PA_T5_06) && pa_t5_06_armed)
         {
             info.physDamage = 0f; info.magicDamage = 0f; info.trueDamage = 0f;
-            info.isStun = false; info.isKnockback = false;
+            info.ClearCombatEffects(); // đòn bị khiên bất tử vô hiệu → không CC
             pa_t5_06_armed = false;
             StartCoroutine(PA_T5_06_ArmorPenalty());
             Debug.Log("<color=cyan>[ACC_PA_T5_06]</color> Khiên bất tử chặn 1 đòn!");
@@ -1133,7 +1133,7 @@ public class AccessoryEffectManager : MonoBehaviour
             if (dmgToHp >= stats.currentHp)
             {
                 info.physDamage = 0f; info.magicDamage = 0f; info.trueDamage = 0f;
-                info.isStun = false; info.isKnockback = false;
+                info.ClearCombatEffects(); // đòn chí mạng bị xoá → không CC
                 ms_t5_01_active = true;
                 ms_t5_01_nextReady = Time.time + 30f;
                 StartCoroutine(MS_T5_01_Immortal());
@@ -1152,8 +1152,10 @@ public class AccessoryEffectManager : MonoBehaviour
         yield return new WaitForSeconds(5f);
         stats.damageOutputMultiplier -= 1.0f;
         stats.CalculateCombatStatsOnly();
-        // Tự choáng 2s (đi qua ApplyCrowdControl; có thể bị superArmor chặn).
-        stats.TakeDamage(new DamageInfo { isStun = true, stunDuration = 2f, attacker = stats, sourcePosition = transform.position });
+        // Tự choáng 2s (đi qua ApplyCombatEffects; có thể bị superArmor chặn).
+        var selfStun = new DamageInfo { attacker = stats, sourcePosition = transform.position };
+        selfStun.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, 2f) { sourcePosition = transform.position });
+        stats.TakeDamage(selfStun);
         ms_t5_06_active = false;
     }
 
