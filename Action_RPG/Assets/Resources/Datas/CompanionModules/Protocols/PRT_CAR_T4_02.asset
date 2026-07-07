@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e40770cb45e9ce4c9d849e90913ad92, type: 3}
+  m_Name: PRT_CAR_T4_02
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionProtocolData
+  id: PRT_CAR_T4_02
+  description: Absorbs vital fluids from the prey to sustain operation.
+  icon: {fileID: 0}
+  rarity: 3
+  effectType: 1
+  effectCondition: 
+  effectDescription: "Companion t\u1EF1 h\u1ED3i m\xE1u b\u1EB1ng 10% s\xE1t th\u01B0\u01A1ng
+    Companion g\xE2y ra."
+  protocolName: Predator's Instinct
+  protocolType: 1
+  atkType: 0
+  baseAtk: 55
+  defenseValue: 30
+  bonusCritChance: 0.1
+  baseAttackSpeed: 1.3
+  attackRange: 2
+  isRange: 0

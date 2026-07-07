@@ -26,7 +26,7 @@ public abstract class CompanionAttackBehavior
 
     /// <summary>Bán kính nổ AoE của đòn đánh (Suppression 0.5f, Carnage/Aegis = attackRange quét).</summary>
     public virtual float AoeRadius => 0f;
-    /// <summary>Aegis: mỗi đòn thứ 2 hất tung mục tiêu.</summary>
+    /// <summary>Aegis: mỗi đòn thứ 3 hất tung mục tiêu.</summary>
     public virtual bool DoesKnockup => false;
 
     public virtual float DesiredRange => data != null ? data.attackRange : 2f;
@@ -122,7 +122,7 @@ public class SuppressionBehavior : CompanionAttackBehavior
     public override Transform PickTarget(Vector3 self, IReadOnlyList<Transform> c) => MostClustered(c, 4f) ?? Nearest(self, c);
 }
 
-// ── AEGIS (Vệ Thần): bám player, đánh kẻ đang đánh player, đòn 2 hất tung ────
+// ── AEGIS (Vệ Thần): bám player, đánh kẻ đang đánh player, đòn 3 hất tung ────
 public class AegisBehavior : CompanionAttackBehavior
 {
     public AegisBehavior(CompanionProtocolData d) : base(d) { }

@@ -10,18 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4873d6db67d502247839ae8a1e23c8e0, type: 3}
-  m_Name: MTX_DEF_T1_01
+  m_Name: MTX_PHA_T5_01
   m_EditorClassIdentifier: Assembly-CSharp::CompanionMatrixData
-  id: MTX_DEF_T1_01
-  description: 'Thick armor designed to draw fire. [Aggro: High]'
+  id: MTX_PHA_T5_01
+  description: Warps the space around both the unit and its master.
   icon: {fileID: 0}
-  rarity: 0
-  effectType: 0
-  effectCondition: 
-  effectDescription: 
-  matrixName: Reinforced Plating
-  matrixType: 2
-  armor: 30
-  magicResist: 30
-  flatHp: 200
+  rarity: 4
+  effectType: 2
+  effectCondition: "M\u1ED7i khi Player th\u1EF1c hi\u1EC7n Perfect Dodge"
+  effectDescription: "Companion \u0111\u01B0\u1EE3c b\u1EA5t t\u1EED trong 2 gi\xE2y
+    ti\u1EBFp theo."
+  matrixName: Voidwalker Phantom Matrix
+  matrixType: 1
+  armor: 40
+  magicResist: 40
+  flatHp: 240
   bonusHp: 0

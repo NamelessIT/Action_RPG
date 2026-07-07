@@ -10,18 +10,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4873d6db67d502247839ae8a1e23c8e0, type: 3}
-  m_Name: MTX_DEF_T1_01
+  m_Name: MTX_PHA_T3_01
   m_EditorClassIdentifier: Assembly-CSharp::CompanionMatrixData
-  id: MTX_DEF_T1_01
-  description: 'Thick armor designed to draw fire. [Aggro: High]'
+  id: MTX_PHA_T3_01
+  description: Micro-thrusters allowing sudden, rapid repositioning.
   icon: {fileID: 0}
-  rarity: 0
-  effectType: 0
+  rarity: 2
+  effectType: 1
   effectCondition: 
-  effectDescription: 
-  matrixName: Reinforced Plating
-  matrixType: 2
-  armor: 30
-  magicResist: 30
-  flatHp: 200
+  effectDescription: "Nh\u1EADn 15% t\u1ED1c \u0111\u1ED9 di chuy\u1EC3n (bonusMoveSpeed),
+    t\u0103ng th\xE0nh 30% trong 3 gi\xE2y sau khi b\u1ECB ch\u1ECBu s\xE1t th\u01B0\u01A1ng
+    b\u1EA5t k\u1EF3."
+  matrixName: Evasive Thrusters
+  matrixType: 1
+  armor: 20
+  magicResist: 20
+  flatHp: 120
   bonusHp: 0

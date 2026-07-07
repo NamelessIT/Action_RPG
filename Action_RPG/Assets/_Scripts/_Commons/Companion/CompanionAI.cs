@@ -46,7 +46,7 @@ public class CompanionAI : MonoBehaviour
     // [COMPANION EQUIPMENT] Hệ trang bị riêng. Protocol → behavior tấn công; Matrix → dodge/aggro.
     private CompanionEquipmentManager _equipment;
     private CompanionAttackBehavior Behavior => _equipment != null ? _equipment.CurrentBehavior : null;
-    private int _aegisHitCount = 0;     // đếm đòn cho Aegis (đòn thứ 2 hất tung)
+    private int _aegisHitCount = 0;     // đếm đòn cho Aegis (đòn thứ 3 hất tung)
     private LayerMask obstacleMask;     // layer "Obstacle" — chặn đường ngắm/đạn của đòn xa
 
     [Header("--- Target Memory ---")]
@@ -513,7 +513,7 @@ public class CompanionAI : MonoBehaviour
         }
 
         // ── CẬN CHIẾN QUÉT AoE (Carnage / Aegis) — nhận diện địch theo tag ──
-        bool knockup = behavior != null && behavior.DoesKnockup && (++_aegisHitCount % 2 == 0);
+        bool knockup = behavior != null && behavior.DoesKnockup && (++_aegisHitCount % 3 == 0);
         float radius = behavior != null ? Mathf.Max(behavior.AoeRadius, 1f) : FALLBACK_RANGE;
 
         Collider[] hits = Physics.OverlapSphere(transform.position, radius);
@@ -522,11 +522,11 @@ public class CompanionAI : MonoBehaviour
         {
             Stats e = CompanionCombat.GetEnemy(h);
             if (e == null || !seen.Add(e)) continue;
-            // Aegis đòn thứ 2: gây sát thương + HẤT TUNG 0.5s (Airborne thật).
+            // Aegis đòn thứ 3: gây sát thương + HẤT TUNG 0.5s (Airborne thật).
             CompanionCombat.DealHit(stats, e, transform, isMagic, knockup ? 1 : 0);
             if (knockup) e.Airborne(0.5f);
         }
-        if (knockup) Debug.Log("[Companion-Aegis] Đòn thứ 2 — HẤT TUNG 0.5s!");
+        if (knockup) Debug.Log("[Companion-Aegis] Đòn thứ 3 — HẤT TUNG 0.5s!");
     }
 
     // Matrix dodge: né đòn ĐỊNH HƯỚNG của kẻ địch (zero damage trong DamageInfo, không đụng interceptor).

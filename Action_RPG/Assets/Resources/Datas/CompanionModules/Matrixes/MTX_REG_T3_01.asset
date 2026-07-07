@@ -10,18 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4873d6db67d502247839ae8a1e23c8e0, type: 3}
-  m_Name: MTX_DEF_T1_01
+  m_Name: MTX_REG_T3_01
   m_EditorClassIdentifier: Assembly-CSharp::CompanionMatrixData
-  id: MTX_DEF_T1_01
-  description: 'Thick armor designed to draw fire. [Aggro: High]'
+  id: MTX_REG_T3_01
+  description: Repairs structural damage when hostilities cease.
   icon: {fileID: 0}
-  rarity: 0
-  effectType: 0
+  rarity: 2
+  effectType: 1
   effectCondition: 
-  effectDescription: 
-  matrixName: Reinforced Plating
-  matrixType: 2
-  armor: 30
-  magicResist: 30
-  flatHp: 200
-  bonusHp: 0
+  effectDescription: "Khi tho\xE1t kh\u1ECFi giao tranh 3s, Companion t\u1EF1 h\u1ED3i
+    5% M\xE1u t\u1ED1i \u0111a m\u1ED7i gi\xE2y."
+  matrixName: Out-of-Combat Restorer
+  matrixType: 0
+  armor: 40
+  magicResist: 40
+  flatHp: 300
+  bonusHp: 0.1
