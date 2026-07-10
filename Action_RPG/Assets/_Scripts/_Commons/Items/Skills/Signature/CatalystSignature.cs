@@ -83,8 +83,8 @@ public class CatalystSignature : SkillBehavior
             }
             else
             {
-                // Nếu dùng Stats thường, giảm thời gian vung đòn (Cooldown) đi 3 lần để mô phỏng +200% tốc đánh
-                compStats.baseAttackSpeed /= (1f + compAttackSpeedBuff);
+                // [P2-DATA-FIX-01] baseAttackSpeed là TỐC ĐỘ (đòn/giây), không phải cooldown → buff phải NHÂN.
+                compStats.MultiplyBaseAttackSpeed(1f + compAttackSpeedBuff);
             }
 
             // Đăng ký lắng nghe sự kiện đánh trúng của Player
@@ -123,7 +123,7 @@ public class CatalystSignature : SkillBehavior
                 }
                 else
                 {
-                    compStats.baseAttackSpeed *= (1f + compAttackSpeedBuff);
+                    compStats.MultiplyBaseAttackSpeed(1f / (1f + compAttackSpeedBuff)); // revert đối xứng của nhánh apply
                 }
             }
 

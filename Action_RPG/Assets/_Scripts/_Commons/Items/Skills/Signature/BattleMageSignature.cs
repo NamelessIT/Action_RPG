@@ -28,7 +28,9 @@ public class BattleMageSignature : SkillBehavior
     // --- Quản lý Trạng thái ---
     private float shieldTimer = 0f;
     private float totalGrantedShield = 0f; // Theo dõi tổng lượng giáp đã cấp để thu hồi cho đúng
-    private List<Stats> slowedEnemies = new List<Stats>(); // Danh sách kẻ địch đang bị làm chậm
+
+    /// <summary>Slow được refresh mỗi tick nên chỉ cần sống hơi lâu hơn 1 nhịp tick.</summary>
+    private float SlowRefreshDuration => Mathf.Max(0.2f, tickRate * 1.5f);
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
@@ -97,7 +99,6 @@ public class BattleMageSignature : SkillBehavior
     {
         Collider[] hits = Physics.OverlapSphere(transform.position, radius, player.dangerLayer);
 
-        List<Stats> currentTickEnemies = new List<Stats>();
         float totalDamageDealtThisTick = 0f;
 
         stats.EnterCombat();
@@ -108,40 +109,19 @@ public class BattleMageSignature : SkillBehavior
             Stats enemyStats = hit.GetComponent<Stats>();
             if (enemyStats != null && enemyStats.currentHp > 0)
             {
-                currentTickEnemies.Add(enemyStats);
-
                 // --- A. GÂY SÁT THƯƠNG RÚT MÁU ---
                 float hpBefore = enemyStats.currentHp;
                 DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 0, sourceType: DamageSourceType.DoT);
                 totalDamageDealtThisTick += Mathf.Max(0f, hpBefore - enemyStats.currentHp);
 
-                // --- B. ÁP DỤNG LÀM CHẬM (Nếu kẻ địch mới bước vào) ---
-                if (!slowedEnemies.Contains(enemyStats))
-                {
-                    enemyStats.baseMoveSpeed = enemyStats.baseMoveSpeed * (1 - slowPercent); 
-                    slowedEnemies.Add(enemyStats);
-                }
+                // --- B. LÀM CHẬM ---
+                // Refresh mỗi tick, duration > tickRate. Địch rời vùng thì nguồn Slow này tự hết hạn,
+                // không cần list tracking / restore thủ công (strongest-wins, expiry-safe).
+                enemyStats.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, SlowRefreshDuration) { magnitude = slowPercent }, stats);
             }
         }
 
-        // --- C. GỠ LÀM CHẬM CHO KẺ ĐỊCH ĐÃ CHẠY RA KHỎI VÙNG ---
-        // Duyệt ngược list để xóa phần tử an toàn
-        for (int i = slowedEnemies.Count - 1; i >= 0; i--)
-        {
-            Stats enemy = slowedEnemies[i];
-
-            // Nếu kẻ địch đã chết, bị xóa, hoặc không còn nằm trong danh sách quét ở tick này
-            if (enemy == null || enemy.currentHp <= 0 || !currentTickEnemies.Contains(enemy))
-            {
-                if (enemy != null)
-                {
-                    enemy.baseMoveSpeed = enemy.baseMoveSpeed / (1 - slowPercent); // Trả lại tốc độ
-                }
-                slowedEnemies.RemoveAt(i);
-            }
-        }
-
-        // --- D. CỘNG DỒN GIÁP ẢO VÀ RESET TIMER ---
+        // --- C. CỘNG DỒN GIÁP ẢO VÀ RESET TIMER ---
         if (totalDamageDealtThisTick > 0)
         {
             float newShield = totalDamageDealtThisTick * shieldConversionRate;
@@ -165,15 +145,7 @@ public class BattleMageSignature : SkillBehavior
     {
         if (currentZoneVfx != null) Destroy(currentZoneVfx);
 
-        // Gỡ làm chậm cho toàn bộ kẻ địch còn kẹt lại lúc vùng tối biến mất
-        foreach (var enemy in slowedEnemies)
-        {
-            if (enemy != null && enemy.currentHp > 0)
-            {
-                enemy.baseMoveSpeed = enemy.baseMoveSpeed / (1 - slowPercent); // Trả lại tốc độ
-            }
-        }
-        slowedEnemies.Clear();
+        // Không cần gỡ Slow thủ công: nguồn Slow do zone cấp tự hết hạn sau SlowRefreshDuration.
         zoneCoroutine = null;
         Debug.Log("<color=gray>BattleMage: Lãnh địa đã khép lại.</color>");
     }

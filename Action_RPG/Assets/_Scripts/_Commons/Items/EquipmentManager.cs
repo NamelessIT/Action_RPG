@@ -189,7 +189,7 @@ public class EquipmentManager : MonoBehaviour
             allyStats.flatMagicAtk += newWeapon.baseAtk;
         }
 
-        allyStats.baseAttackSpeed = newWeapon.baseAttackSpeed;
+        allyStats.SetBaseAttackSpeed(newWeapon.baseAttackSpeed);
         allyStats.moveFlexibility = newWeapon.moveFlexibility;
         allyStats.defenseValue += newWeapon.defenseValue;
         allyStats.bonusCritChance += newWeapon.bonusCritChance;

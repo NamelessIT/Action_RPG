@@ -138,19 +138,19 @@ public class StatAllocationUI : MonoBehaviour
         switch (attributeType)
         {
             case AttributeType.STR:
-                _allyStats.baseSTR += 1f;
+                _allyStats.AddBaseAttribute(Stats.BaseAttribute.STR, 1f);
                 break;
             case AttributeType.INT:
-                _allyStats.baseINT += 1f;
+                _allyStats.AddBaseAttribute(Stats.BaseAttribute.INT, 1f);
                 break;
             case AttributeType.DEX:
-                _allyStats.baseDEX += 1f;
+                _allyStats.AddBaseAttribute(Stats.BaseAttribute.DEX, 1f);
                 break;
             case AttributeType.AGI:
-                _allyStats.baseAGI += 1f;
+                _allyStats.AddBaseAttribute(Stats.BaseAttribute.AGI, 1f);
                 break;
             case AttributeType.VIT:
-                _allyStats.baseVIT += 1f;
+                _allyStats.AddBaseAttribute(Stats.BaseAttribute.VIT, 1f);
                 break;
         }
 

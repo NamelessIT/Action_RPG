@@ -85,31 +85,61 @@ public class EnemyCombat : MonoBehaviour
     private bool _moduleDashOverride = false;
     private EnemyAI _dashAI = null;
 
-    public bool HasSkill => enemySkill != null || skillAttackModule != null;
+    public bool HasSkill => enemySkill != null || GetResolvedSkillModule() != null;
     public float SkillRange => skillRange > 0f ? skillRange : basicAttackRange;
 
-    [Header("--- [EAM] Attack Modules (optional — null = melee fallback cũ) ---")]
-    [Tooltip("Module đòn THƯỜNG. Null → dùng EnemyAttackRoutine melee hiện tại.")]
+    [Header("--- [EAM] Attack Modules (LOCAL OVERRIDE — null = lấy từ EnemyStats.data) ---")]
+    [Tooltip("Override đòn THƯỜNG cho riêng prefab/instance này. Null → EnemyData.basicAttackModule → melee fallback cũ.")]
     public EnemyAttackModuleData basicAttackModule;
-    [Tooltip("Module đòn SKILL. Null → dùng enemySkill melee + skillEffects hiện tại.")]
+    [Tooltip("Override đòn SKILL cho riêng prefab/instance này. Null → EnemyData.skillAttackModule → enemySkill legacy.")]
     public EnemyAttackModuleData skillAttackModule;
+
+    // ─────────────────────────────────────────────────────────────
+    //  [P2-DATA-03] Resolve module theo thứ tự ưu tiên:
+    //    1. local override trên EnemyCombat (khác null)
+    //    2. EnemyStats.data.{basic,skill}AttackModule
+    //    3. null → fallback legacy (melee routine / enemySkill)
+    //  MỌI runtime path phải đi qua 2 helper này, không đọc thẳng field.
+    // ─────────────────────────────────────────────────────────────
+    public EnemyAttackModuleData GetResolvedBasicModule()
+    {
+        if (basicAttackModule != null) return basicAttackModule;
+        return (stats != null && stats.data != null) ? stats.data.basicAttackModule : null;
+    }
+
+    public EnemyAttackModuleData GetResolvedSkillModule()
+    {
+        if (skillAttackModule != null) return skillAttackModule;
+        return (stats != null && stats.data != null) ? stats.data.skillAttackModule : null;
+    }
+
+    /// <summary>Tên hiển thị null-safe cho log (data/module có thể thiếu tên).</summary>
+    private static string ModuleName(EnemyAttackModuleData m)
+        => m == null ? "<null>" : (string.IsNullOrEmpty(m.displayName) ? m.name : m.displayName);
 
     /// <summary>[EAM] Tầm dùng skill — module.range (nếu >0) ưu tiên; module null hoặc range≤0 → SkillRange cũ.</summary>
     public float GetSkillRange()
-        => (skillAttackModule != null && skillAttackModule.range > 0f) ? skillAttackModule.range : SkillRange;
+    {
+        var m = GetResolvedSkillModule();
+        return (m != null && m.range > 0f) ? m.range : SkillRange;
+    }
 
-    /// <summary>[EAM-04] Tầm đòn THƯỜNG cho EnemyAI (stopping/chase/spacing). basicAttackModule.range (nếu >0)
+    /// <summary>[EAM-04] Tầm đòn THƯỜNG cho EnemyAI (stopping/chase/spacing). module.range (nếu >0)
     /// ưu tiên; module null hoặc range≤0 → basicAttackRange cũ.</summary>
     public float GetBasicRange()
-        => (basicAttackModule != null && basicAttackModule.range > 0f) ? basicAttackModule.range : basicAttackRange;
+    {
+        var m = GetResolvedBasicModule();
+        return (m != null && m.range > 0f) ? m.range : basicAttackRange;
+    }
 
-    /// <summary>[EAM] Skill sẵn sàng? Module-aware: dùng cooldown của skillAttackModule nếu có; null → IsSkillReady() cũ.</summary>
+    /// <summary>[EAM] Skill sẵn sàng? Module-aware: dùng cooldown của skill module nếu có; null → IsSkillReady() cũ.</summary>
     public bool CanUseSkill()
     {
-        if (skillAttackModule == null) return IsSkillReady(); // fallback legacy (enemySkill)
+        var m = GetResolvedSkillModule();
+        if (m == null) return IsSkillReady(); // fallback legacy (enemySkill)
         if (isAttacking) return false;
         if (stats != null && stats.IsSkillLocked) return false; // Silence/Stun/Airborne → không cast
-        float cd = skillAttackModule.cooldown > 0f ? skillAttackModule.cooldown : 0.1f;
+        float cd = m.cooldown > 0f ? m.cooldown : 0.1f;
         return Time.time >= lastSkillTime + cd;
     }
 
@@ -173,8 +203,9 @@ public class EnemyCombat : MonoBehaviour
 
         _currentAttackMultiplier = 1f; // đòn thường
         _currentIsSkill = false;
-        // [EAM] Có module → dispatch theo style; null → melee fallback cũ.
-        if (basicAttackModule != null) PerformModuleAttack(basicAttackModule, false);
+        // [EAM] Có module (local override hoặc EnemyData) → dispatch theo style; null → melee fallback cũ.
+        var basicModule = GetResolvedBasicModule();
+        if (basicModule != null) PerformModuleAttack(basicModule, false);
         else currentAttackCoroutine = StartCoroutine(EnemyAttackRoutine());
     }
 
@@ -188,15 +219,16 @@ public class EnemyCombat : MonoBehaviour
         if (stats.IsSkillLocked) return; // bị Silence/Stun/Airborne → không cast được
 
         // [EAM] Module skill: tự quản cooldown/range theo data.
-        if (skillAttackModule != null)
+        var skillModule = GetResolvedSkillModule();
+        if (skillModule != null)
         {
             if (!CanUseSkill()) return;
             _prevSkillTime = lastSkillTime; // [INT-01C] un-commit nếu bị interrupt (flag false)
             lastSkillTime = Time.time;
-            _currentAttackMultiplier = skillAttackModule.damageMultiplier > 0f ? skillAttackModule.damageMultiplier : 1f;
+            _currentAttackMultiplier = skillModule.damageMultiplier > 0f ? skillModule.damageMultiplier : 1f;
             _currentIsSkill = true;
-            Debug.Log($"<color=magenta>{gameObject.name} dùng SKILL MODULE '{skillAttackModule.displayName}' (style {skillAttackModule.style})</color>");
-            PerformModuleAttack(skillAttackModule, true);
+            Debug.Log($"<color=magenta>{gameObject.name} dùng SKILL MODULE '{ModuleName(skillModule)}' (style {skillModule.style})</color>");
+            PerformModuleAttack(skillModule, true);
             return;
         }
 

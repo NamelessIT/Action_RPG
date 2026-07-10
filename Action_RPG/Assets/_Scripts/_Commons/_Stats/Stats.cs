@@ -118,6 +118,90 @@ public class Stats : MonoBehaviour
     public float moveThresholdAngle = 45f;
     public float moveFlexibility=1f;
 
+    // ─────────────────────────────────────────────────────────────
+    //  [P2-DATA-01B] BASE STAT WRITE API — source-of-truth boundary.
+    //  Gameplay code KHÔNG ghi thẳng base* / initialBaseHp / maxStamina /
+    //  maxSin / baseAttackSpeed / baseMoveSpeed nữa; đi qua các API dưới đây.
+    //  Phase này CHƯA đổi serialized shape: storage vẫn là public field ở root
+    //  (Unity không migrate được root → nested; xem P2-DATA-01C).
+    //  API không tự gọi RecalculateStats() — caller giữ nguyên thứ tự recalc cũ.
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>Năm chỉ số gốc phân phối được. Tách riêng khỏi StatModifier.StatType (enum đó gồm cả bonus/flat).</summary>
+    public enum BaseAttribute { STR, DEX, INT, VIT, AGI }
+
+    /// <summary>Snapshot base stats dùng để load/save. Là DTO thuần, KHÔNG serialize trên Stats.</summary>
+    [System.Serializable]
+    public struct BaseStatSnapshot
+    {
+        public float initialBaseHp;
+        public float baseHp;
+        public float maxStamina;
+        public float baseSTR, baseDEX, baseINT, baseVIT, baseAGI;
+    }
+
+    public float GetBaseAttribute(BaseAttribute a)
+    {
+        switch (a)
+        {
+            case BaseAttribute.STR: return baseSTR;
+            case BaseAttribute.DEX: return baseDEX;
+            case BaseAttribute.INT: return baseINT;
+            case BaseAttribute.VIT: return baseVIT;
+            case BaseAttribute.AGI: return baseAGI;
+            default: return 0f;
+        }
+    }
+
+    public void SetBaseAttribute(BaseAttribute a, float value)
+    {
+        switch (a)
+        {
+            case BaseAttribute.STR: baseSTR = value; break;
+            case BaseAttribute.DEX: baseDEX = value; break;
+            case BaseAttribute.INT: baseINT = value; break;
+            case BaseAttribute.VIT: baseVIT = value; break;
+            case BaseAttribute.AGI: baseAGI = value; break;
+        }
+    }
+
+    public void AddBaseAttribute(BaseAttribute a, float amount)
+        => SetBaseAttribute(a, GetBaseAttribute(a) + amount);
+
+    public float InitialBaseHp => initialBaseHp;
+    public void SetInitialBaseHp(float value) => initialBaseHp = value;
+    public void AddInitialBaseHp(float amount) => initialBaseHp += amount;
+
+    public void SetMaxStamina(float value) => maxStamina = value;
+    public void SetMaxSin(float value) => maxSin = value;
+
+    public void SetBaseAttackSpeed(float value) => baseAttackSpeed = value;
+    public void AddBaseAttackSpeed(float amount) => baseAttackSpeed += amount;
+    /// <summary>Nhân baseAttackSpeed (buff/debuff tạm). Caller phải gọi lại với nghịch đảo để revert — không tự track.</summary>
+    public void MultiplyBaseAttackSpeed(float factor) { if (factor > 0f) baseAttackSpeed *= factor; }
+
+    public void SetBaseMoveSpeed(float value) => baseMoveSpeed = value;
+
+    /// <summary>Nạp base stats từ save/data. Giá trị ≤0 trong snapshot vẫn được ghi — caller tự lo fallback.</summary>
+    public void ApplyBaseRuntimeStats(BaseStatSnapshot src, bool resetCurrentVitals)
+    {
+        initialBaseHp = src.initialBaseHp;
+        maxStamina    = src.maxStamina;
+        baseSTR = src.baseSTR; baseDEX = src.baseDEX; baseINT = src.baseINT;
+        baseVIT = src.baseVIT; baseAGI = src.baseAGI;
+        if (resetCurrentVitals) { currentHp = maxHp; currentStamina = maxStamina; }
+    }
+
+    /// <summary>Đọc base stats ra DTO để save. `baseHp` là giá trị DẪN XUẤT (initialBaseHp + 20*level).</summary>
+    public BaseStatSnapshot CaptureRuntimeStats() => new BaseStatSnapshot
+    {
+        initialBaseHp = initialBaseHp,
+        baseHp        = baseHp,
+        maxStamina    = maxStamina,
+        baseSTR = baseSTR, baseDEX = baseDEX, baseINT = baseINT,
+        baseVIT = baseVIT, baseAGI = baseAGI,
+    };
+
     [Header("--- Rotation Dynamic ---")]
     public float turnDuration = 0.1f;
     private float idleTurnDuration = 0.1f;

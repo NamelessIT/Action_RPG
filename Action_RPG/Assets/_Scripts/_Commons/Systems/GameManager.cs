@@ -79,13 +79,18 @@ public class GameManager : MonoBehaviour
         // Không ghi đè bằng playerName từ DB (DB chỉ có entry cho player 1 = "Chris Don").
         if (string.IsNullOrEmpty(playerStats.characterName))
             playerStats.characterName = currentPlayerState.playerName;
-        playerStats.initialBaseHp = currentPlayerState.baseHp > 0f ? currentPlayerState.baseHp : 100f;
-        playerStats.baseSTR = currentPlayerState.baseSTR;
-        playerStats.baseDEX = currentPlayerState.baseDEX;
-        playerStats.baseINT = currentPlayerState.baseINT;
-        playerStats.baseVIT = currentPlayerState.baseVIT;
-        playerStats.baseAGI = currentPlayerState.baseAGI;
-        playerStats.maxStamina = currentPlayerState.maxStamina > 0 ? currentPlayerState.maxStamina : playerStats.maxStamina;
+        // [P2-DATA-01B] Nạp base stats qua API. Fallback (baseHp≤0 → 100, maxStamina≤0 → giữ giá trị hiện tại)
+        // do caller quyết định, giống hệt hành vi cũ. resetCurrentVitals=false: currentHp/Stamina được set ở dưới.
+        playerStats.ApplyBaseRuntimeStats(new Stats.BaseStatSnapshot
+        {
+            initialBaseHp = currentPlayerState.baseHp > 0f ? currentPlayerState.baseHp : 100f,
+            maxStamina    = currentPlayerState.maxStamina > 0 ? currentPlayerState.maxStamina : playerStats.maxStamina,
+            baseSTR = currentPlayerState.baseSTR,
+            baseDEX = currentPlayerState.baseDEX,
+            baseINT = currentPlayerState.baseINT,
+            baseVIT = currentPlayerState.baseVIT,
+            baseAGI = currentPlayerState.baseAGI,
+        }, resetCurrentVitals: false);
         playerStats.dashCost = currentPlayerState.dashCost > 0 ? currentPlayerState.dashCost : playerStats.dashCost;
         playerStats.armorBackstabReduce = currentPlayerState.armorBackstabReduce;
         playerStats.attributePointRemain = currentPlayerState.attributePointRemain;
@@ -242,8 +247,13 @@ public class GameManager : MonoBehaviour
         currentPlayerState.currentSin = playerStats.currentSin;
         currentPlayerState.checkpointId = currentPlayerState.checkpointId <= 0 ? 1 : currentPlayerState.checkpointId;
         currentPlayerState.position = new Vector2(playerObject.transform.position.x, playerObject.transform.position.y);
-        currentPlayerState.maxStamina = Mathf.RoundToInt(playerStats.maxStamina);
-        currentPlayerState.baseHp = playerStats.baseHp;
+        // [P2-DATA-01B] Đọc base stats qua API thay vì field.
+        Stats.BaseStatSnapshot snap = playerStats.CaptureRuntimeStats();
+        currentPlayerState.maxStamina = Mathf.RoundToInt(snap.maxStamina);
+        // [P2-DATA-FIX-02] Ghi HẰNG SỐ gốc, không phải `snap.baseHp` (= initialBaseHp + 20*level).
+        // `currentPlayerState.baseHp` được load lại vào `initialBaseHp` và là base của PlayerRuntimeState.MaxHp,
+        // nên ghi giá trị dẫn xuất sẽ cộng dồn 20*level sau mỗi chu kỳ save→load.
+        currentPlayerState.baseHp = snap.initialBaseHp;
         currentPlayerState.dashCost = Mathf.RoundToInt(playerStats.dashCost);
         currentPlayerState.armorBackstabReduce = playerStats.armorBackstabReduce;
         currentPlayerState.level = playerStats.level;
@@ -252,11 +262,11 @@ public class GameManager : MonoBehaviour
         currentPlayerState.maxExpForCurrentLevel = playerStats.maxExpForCurrentLevel;
         currentPlayerState.attributePointRemain = playerStats.attributePointRemain;
         currentPlayerState.skillPointRemain = playerStats.skillPointRemain;
-        currentPlayerState.baseSTR = playerStats.baseSTR;
-        currentPlayerState.baseDEX = playerStats.baseDEX;
-        currentPlayerState.baseINT = playerStats.baseINT;
-        currentPlayerState.baseVIT = playerStats.baseVIT;
-        currentPlayerState.baseAGI = playerStats.baseAGI;
+        currentPlayerState.baseSTR = snap.baseSTR;
+        currentPlayerState.baseDEX = snap.baseDEX;
+        currentPlayerState.baseINT = snap.baseINT;
+        currentPlayerState.baseVIT = snap.baseVIT;
+        currentPlayerState.baseAGI = snap.baseAGI;
 
         if (equipmentManager == null)
         {

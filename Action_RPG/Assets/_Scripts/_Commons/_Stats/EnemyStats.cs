@@ -14,6 +14,11 @@ public enum DetectionMethod
 
 public class EnemyStats : Stats
 {
+    [Header("--- Archetype Data ---")]
+    [Tooltip("[P2-DATA-02] EnemyData là SOURCE-OF-TRUTH cho thông số archetype (ID/rank/hp/move/attack speed/exp/EAM). " +
+             "Các trường runtime stats trên inspector chỉ còn là FALLBACK khi data == null, hoặc override tạm thời khi test.")]
+    public EnemyData data;
+
     [Header("--- Enemy Identity ---")]
     public string enemyID;
     public EnemyType enemyType = EnemyType.Hostile;
@@ -58,21 +63,47 @@ public class EnemyStats : Stats
 
     public override void Start()
     {
+        // [P2-DATA-02] Data phải apply TRƯỚC base.Start() để mọi thứ phía sau (maxHp, SetupResistances,
+        // AI/Combat đọc monsterRank) thấy đúng giá trị archetype.
+        ApplyEnemyData();
+
         base.Start();
         if (maxHp == 0) maxHp = baseHp;
         currentHp = maxHp;
-        base.baseAttackSpeed = 0.667f; // 1 đòn mỗi 1.5 giây (= 1/1.5). Subclass override để chỉnh.
+
+        // Fallback attack speed CHỈ khi không có data và inspector chưa set giá trị hợp lệ.
+        // (Trước đây dòng này vô điều kiện → ghi đè mọi cấu hình. Prefab enemy hiện tại đều là 0 nên hành vi giữ nguyên.)
+        if (data == null && baseAttackSpeed <= 0f) SetBaseAttackSpeed(0.667f); // 1 đòn mỗi 1.5 giây
+
         spawnPosition = transform.position;
 
         currentAggro = 0;
         obstacleMask = LayerMask.GetMask("Obstacle");
 
+        // Chạy SAU khi monsterRank đã được copy từ data.
         SetupResistances();
 
         // Đảm bảo tag đúng để hệ thống nhận diện
         if (this.gameObject.tag == "Untagged") this.gameObject.tag = "Enemy";
 
         enemyAI = GetComponent<EnemyAI>();
+    }
+
+    /// <summary>[P2-DATA-02] Copy archetype config từ `data` vào runtime stats. No-op nếu `data == null`
+    /// (enemy prefab cũ giữ nguyên giá trị inspector). Chỉ copy CONFIG, không đụng runtime state.</summary>
+    private void ApplyEnemyData()
+    {
+        if (data == null) return;
+
+        if (!string.IsNullOrEmpty(data.enemyID))   enemyID       = data.enemyID;
+        if (!string.IsNullOrEmpty(data.enemyName)) characterName = data.enemyName;
+
+        monsterRank = data.monsterRank;
+        expReward   = data.expReward;
+
+        if (data.baseHp > 0f)          baseHp = data.baseHp;
+        if (data.baseMoveSpeed > 0f)   SetBaseMoveSpeed(data.baseMoveSpeed);
+        if (data.baseAttackSpeed > 0f) SetBaseAttackSpeed(data.baseAttackSpeed);
     }
 
     void SetupResistances()

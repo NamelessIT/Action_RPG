@@ -45,3 +45,4 @@ agent_workspace.md
 *.md
 !workspace.md
 /Action_RPG/Assets/_Sprites
+/.claude

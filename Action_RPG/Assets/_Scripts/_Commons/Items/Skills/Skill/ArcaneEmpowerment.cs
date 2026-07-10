@@ -312,7 +312,7 @@ public class ArcaneEmpowerment
         foreach (Stats e in EnemiesInRadius(center, swRadius))
         {
             DamageHelper.ApplyStandardDamage(stats, e, self, swMult * dmgScale, null, MagicProxy, 1, sourceType: DamageSourceType.Ranged);
-            host.StartCoroutine(TempSlowRoutine(e, swSlowPct, swSlowTime));
+            e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, swSlowTime) { magnitude = swSlowPct }, stats);
             if (magePassive != null)
             {
                 magePassive.SkillAddFracture(e, swFractureStacks);
@@ -365,15 +365,6 @@ public class ArcaneEmpowerment
         stats.bonusMoveSpeed -= eMoveSpeedBuff;
         stats.bonusAttackSpeed -= eAtkSpeedBuff;
         if (stats is AllyStats ally2) { ally2.CalculateMoveSpeedOnly(); ally2.CalculateCombatStatsOnly(); }
-    }
-
-    private IEnumerator TempSlowRoutine(Stats enemy, float slowPct, float duration)
-    {
-        if (enemy == null || enemy.currentHp <= 0) yield break;
-        float amount = enemy.baseMoveSpeed * slowPct;
-        enemy.baseMoveSpeed -= amount;
-        yield return new WaitForSeconds(duration);
-        if (enemy != null) enemy.baseMoveSpeed += amount;
     }
 
     // ==========================================================

@@ -111,7 +111,7 @@ public class CompanionEquipmentManager : MonoBehaviour
         else                                        _stats.flatMagicAtk    += p.baseAtk * sign;
         _stats.defenseValue    += p.defenseValue    * sign;
         _stats.bonusCritChance += p.bonusCritChance * sign;
-        _stats.baseAttackSpeed += p.baseAttackSpeed * sign;
+        _stats.AddBaseAttackSpeed(p.baseAttackSpeed * sign); // sign=±1 → equip/unequip đối xứng, không leak
     }
 
     private void ApplyMatrixStats(CompanionMatrixData m)  => AddMatrixStats(m, +1f);

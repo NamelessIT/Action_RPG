@@ -48,12 +48,14 @@ public class DarkDemonAI : MonoBehaviour
 
         // Cấu hình AllyStats sao cho RecalculateStats() ra đúng số mong muốn (mọi attribute = 0).
         var st = go.AddComponent<AllyStats>();
-        st.initialBaseHp = 0f; st.level = 0;
+        st.level = 0;
         st.flatHp = owner.maxHp * 0.2f; st.hpPerVIT = 0f; st.bonusHp = 0f; st.flatBonusMaxHp = 0f;
         st.flatMagicAtk = owner.magicAtk * 0.2f; st.flatPhysicalAtk = 0f; st.bonusMagicAtk = 0f;
-        st.baseAttackSpeed = 1f; st.bonusAttackSpeed = 0f;
-        st.baseMoveSpeed = 5f; st.bonusMoveSpeed = 0f; st.moveFlexibility = 0f;
-        st.baseSTR = st.baseDEX = st.baseINT = st.baseVIT = st.baseAGI = 0f;
+        st.bonusAttackSpeed = 0f; st.bonusMoveSpeed = 0f; st.moveFlexibility = 0f;
+        // [P2-DATA-01B] base stats qua API (maxStamina giữ mặc định — DarkDemon không dùng stamina).
+        st.ApplyBaseRuntimeStats(new Stats.BaseStatSnapshot { initialBaseHp = 0f, maxStamina = st.maxStamina }, resetCurrentVitals: false);
+        st.SetBaseAttackSpeed(1f);
+        st.SetBaseMoveSpeed(5f);
         st.flatSTR = st.flatDEX = st.flatINT = st.flatVIT = st.flatAGI = 0f;
 
         go.AddComponent<DarkDemonAI>();
