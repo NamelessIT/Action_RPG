@@ -29,6 +29,14 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2352538692376010107, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: m_Size.x
+      value: 0.19
+      objectReference: {fileID: 0}
+    - target: {fileID: 2352538692376010107, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
+      propertyPath: m_Size.y
+      value: 0.22
+      objectReference: {fileID: 0}
+    - target: {fileID: 2352538692376010107, guid: ebc646b0ebed3304f96ba0bbcde89c0d, type: 3}
       propertyPath: m_Sprite
       value: 
       objectReference: {fileID: 1973808715400357939, guid: 2b89bcb0e479107429d78da7f4f17328, type: 3}
@@ -176,6 +184,12 @@ MonoBehaviour:
   damageWindowStartNormalized: 0.5
   damageWindowEndNormalized: 0.75
   isTelegraphing: 0
+  enemySkill: {fileID: 0}
+  skillCooldown: 0
+  skillRange: 0
+  skillEffects: []
+  basicAttackModule: {fileID: 11400000, guid: 1d58ae10610514243899a84c6028c416, type: 2}
+  skillAttackModule: {fileID: 0}
 --- !u!195 &9178546373541960436
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -262,6 +276,7 @@ MonoBehaviour:
   physicalAtk: 1
   magicAtk: 1
   damageOutputMultiplier: 1
+  damageTakenMultiplier: 1
   physicalLifeSteal: 0
   magicLifeSteal: 0
   baseAttackSpeed: 0
@@ -282,11 +297,12 @@ MonoBehaviour:
   moveFlexibility: 1
   turnDuration: 0.1
   combatTurnDuration: 0
-  resistanceKnockBack: 0.1
+  knockbackResistance: 0.1
   resistanceEffect: 0
   isDead: 0
   currentShield: 0
   isStunned: 0
+  isSilenced: 0
   isSuperArmor: 0
   superArmorLevel: 0
   buffDurationBonus: 0
@@ -301,6 +317,8 @@ MonoBehaviour:
   parryAngle: 120
   isChallenged: 0
   isResonated: 0
+  hurtAnimCooldown: 0.4
+  data: {fileID: 0}
   enemyID: Odo
   enemyType: 0
   detectionMethod: 1

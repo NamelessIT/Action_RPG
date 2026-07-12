@@ -289,6 +289,24 @@ public class EnemyCombat : MonoBehaviour
         }
     }
 
+    // [EAM] Proxy WeaponData để CombatMath biết đòn là Physical/Magic/Both (enemy không có weapon thật).
+    // Physical → null (mặc định của CombatMath). Cache tĩnh, chỉ tạo 1 lần.
+    private static WeaponData _magicProxy, _bothProxy;
+    private static WeaponData ModuleWeaponProxy(WeaponData.WeaponAtkType type)
+    {
+        if (type == WeaponData.WeaponAtkType.Magic)
+        {
+            if (_magicProxy == null) { _magicProxy = ScriptableObject.CreateInstance<WeaponData>(); _magicProxy.weaponAtkType = WeaponData.WeaponAtkType.Magic; }
+            return _magicProxy;
+        }
+        if (type == WeaponData.WeaponAtkType.Both)
+        {
+            if (_bothProxy == null) { _bothProxy = ScriptableObject.CreateInstance<WeaponData>(); _bothProxy.weaponAtkType = WeaponData.WeaponAtkType.Both; }
+            return _bothProxy;
+        }
+        return null; // Physical
+    }
+
     // [EAM] Clone module.effects lên info (per-target sourcePosition, +impactBonus). KHÔNG mutate ScriptableObject.
     private void AddModuleEffects(DamageInfo info, EnemyAttackModuleData module)
     {
@@ -359,6 +377,14 @@ public class EnemyCombat : MonoBehaviour
         currentAttackCoroutine = null;
     }
 
+    /// <summary>[DashStrike] Chỉ gây damage khi enemy CHẠM tới Player (bán kính nhỏ quanh enemy),
+    /// không phải quét cả tầm ngay lúc bắt đầu lướt.</summary>
+    private void ModuleContactHit(EnemyAttackModuleData module, float contactRadius)
+    {
+        foreach (var hit in Physics.OverlapSphere(transform.position, contactRadius))
+            TryModuleHit(hit.transform, module);
+    }
+
     /// <summary>Cone hit trong range + attackAngle (dùng cho DashStrike).</summary>
     private void ModuleConeHit(EnemyAttackModuleData module, Vector3 facingDir)
     {
@@ -397,7 +423,8 @@ public class EnemyCombat : MonoBehaviour
             EnemyProjectile proj = go.GetComponent<EnemyProjectile>();
             if (proj == null) proj = go.AddComponent<EnemyProjectile>(); // an toàn nếu prefab thiếu script
             proj.Init(stats, facingDir, targeted ? target : null, module.projectileSpeed, module.projectileLifetime,
-                      module.damageMultiplier, module.impactBonus, module.effects);
+                      module.damageMultiplier, module.impactBonus, module.effects,
+                      atkTypeProxy: ModuleWeaponProxy(module.atkType));
         }
 
         if (module.recoveryDuration > 0f) yield return new WaitForSeconds(module.recoveryDuration);
@@ -418,14 +445,20 @@ public class EnemyCombat : MonoBehaviour
         Vector3 center = target != null ? target.position : transform.position + facingDir * Mathf.Max(0.1f, module.range);
         center.y = transform.position.y;
 
+        float r = Mathf.Max(0.1f, module.aoeRadius);
         GameObject tele = (module.telegraphPrefab != null) ? Instantiate(module.telegraphPrefab, center, Quaternion.identity) : null;
+        // [DEBUG] Luôn vẽ vòng cảnh báo suốt windup — thấy được vùng AoE kể cả khi CHƯA gán telegraphPrefab.
+        // Tím = phép, cam = vật lý (theo VisualDebugHelper convention).
+        Color aoeColor = (module.atkType == WeaponData.WeaponAtkType.Magic)
+            ? new Color(0.7f, 0.3f, 1f, 0.5f) : new Color(1f, 0.45f, 0.2f, 0.5f);
+        VisualDebugHelper.DrawSphere(center, r, aoeColor, Mathf.Max(0.1f, module.windupDuration));
         isTelegraphing = true;
         if (module.windupDuration > 0f) yield return new WaitForSeconds(module.windupDuration);
         isTelegraphing = false;
         if (tele != null) Destroy(tele);
 
         // Active: quét Player/Ally trong aoeRadius quanh tâm (capsule dọc bắt mọi độ cao).
-        float r = Mathf.Max(0.1f, module.aoeRadius);
+        VisualDebugHelper.DrawSphere(center, r, aoeColor, 0.25f); // flash lúc nổ
         foreach (var col in Physics.OverlapCapsule(center + Vector3.up * 1.5f, center - Vector3.up * 1.5f, r))
             TryModuleHit(col.transform, module);
 
@@ -449,23 +482,37 @@ public class EnemyCombat : MonoBehaviour
         var agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
         _dashAI = GetComponent<EnemyAI>();
         float dashTime = Mathf.Max(0.05f, module.activeDuration);
-        float range = Mathf.Max(0.1f, module.range);
+        float maxDash = Mathf.Max(0.1f, module.range); // quãng lướt tối đa (= module.range)
+        const float endGap = 0.5f;                     // dừng cách Player ~0.5m
+        const float contactRadius = 1.1f;              // bán kính "chạm" — chỉ trúng khi lướt tới sát Player
 
-        if (agent != null && agent.isOnNavMesh)
-        {
-            float baseMv = (stats != null && stats.baseMoveSpeed > 0f) ? stats.baseMoveSpeed : 5f;
-            float dashSpeed = range / dashTime;
-            // Mượn override để EnemyAI.Update KHÔNG ghi đè destination/speed trong lúc dash; RefreshAgentSpeed vẫn áp Slow.
-            if (_dashAI != null) { _dashAI.BeginExternalMoveOverride(dashSpeed / baseMv); _moduleDashOverride = true; }
-            agent.isStopped = false;
-            agent.SetDestination(transform.position + facingDir * range);
-        }
+        // Quãng lướt thực = khoảng cách tới target trừ endGap, chặn trong [0, maxDash]
+        // → không lướt quá xa / không xuyên qua Player.
+        float distToTarget = target != null ? Vector3.Distance(transform.position, target.position) : maxDash;
+        float travel = Mathf.Clamp(distToTarget - endGap, 0f, maxDash);
+        float dashSpeed = travel / dashTime;
+
+        // Mượn override để EnemyAI.Update KHÔNG chen SetDestination trong lúc dash.
+        if (_dashAI != null) { _dashAI.BeginExternalMoveOverride(1f); _moduleDashOverride = true; }
+        if (agent != null && agent.isOnNavMesh) { agent.isStopped = false; agent.ResetPath(); }
 
         float t = 0f;
         while (t < dashTime)
         {
-            t += Time.deltaTime;
-            ModuleConeHit(module, stats != null ? stats.facingDirection : facingDir);
+            float dt = Time.deltaTime;
+            t += dt;
+            Vector3 moveDir = stats != null ? stats.facingDirection : facingDir; moveDir.y = 0f;
+            if (moveDir.sqrMagnitude < 0.0001f) moveDir = facingDir;
+            moveDir.Normalize();
+            // Dừng sớm nếu đã tới sát Player (không lấn vào trong) — coi như đã chạm → gây damage.
+            if (target != null && Vector3.Distance(transform.position, target.position) <= endGap)
+            { ModuleContactHit(module, contactRadius); break; }
+            float slow = stats != null ? stats.EffectiveSlowMultiplier : 1f;
+            // Đẩy vị trí TRỰC TIẾP mỗi frame (bỏ qua giới hạn gia tốc của NavMeshAgent) nhưng vẫn bám NavMesh.
+            if (agent != null && agent.isOnNavMesh) agent.Move(moveDir * dashSpeed * slow * dt);
+            else transform.position += moveDir * dashSpeed * slow * dt;
+            // Chỉ trúng khi thân enemy CHẠM tới Player trong lúc lướt (không phải ngay lúc bắt đầu).
+            ModuleContactHit(module, contactRadius);
             yield return null;
         }
 
@@ -913,13 +960,15 @@ protected IEnumerator EnemyAttackRoutine()
 
             // Gọi CombatMath (Nhớ cập nhật tham số ignoreReduction nếu cần, ở đây Enemy thường ko có True Damage nên để false)
             // externalMult = _currentAttackMultiplier: đòn thường = 1, skill = skillPhysicalMultiplier.
+            // [EAM] Đòn module → truyền proxy Physical/Magic theo module.atkType (đòn legacy giữ null = Physical).
+            WeaponData weaponForCalc = (_currentModule != null) ? ModuleWeaponProxy(_currentModule.atkType) : null;
             var dmgTuple = CombatMath.CalculateFullDamage(
                 stats,
                 victimStats,
                 t,
                 isCrit,
                 null,
-                null,
+                weaponForCalc,
                 _currentAttackMultiplier,
                 false // Enemy đánh thường không xuyên giáp
             );

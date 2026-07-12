@@ -39,6 +39,9 @@ public class EnemyAttackModuleData : ScriptableObject
     [Tooltip("Hệ số nhân sát thương (× physicalAtk/magicAtk theo nguồn).")]
     public float damageMultiplier = 1f;
 
+    [Tooltip("Loại sát thương: Physical (mặc định, theo physicalAtk + Armor) hoặc Magic (theo magicAtk + Magic Resist). Both = chia đôi.")]
+    public WeaponData.WeaponAtkType atkType = WeaponData.WeaponAtkType.Physical;
+
     [Header("--- Timing (giây) ---")]
     [Tooltip("Windup / telegraph — báo đòn để player né.")]
     public float windupDuration = 0.5f;
