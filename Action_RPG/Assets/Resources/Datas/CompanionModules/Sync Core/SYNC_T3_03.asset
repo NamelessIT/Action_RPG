@@ -21,4 +21,13 @@ MonoBehaviour:
   effectDescription: "Companion \u0111\u01B0\u1EE3c h\u1ED3i m\xE1u b\u1EB1ng 5%
     s\xE1t th\u01B0\u01A1ng Player g\xE2y ra."
   syncCoreName: Bond of Fortitude
-  statModifiers: []
+  statModifiers:
+  - stat: 3
+    val: 30
+    powerMod: 0
+  - stat: 4
+    val: 20
+    powerMod: 0
+  - stat: 1
+    val: 10
+    powerMod: 0

@@ -23,4 +23,16 @@ MonoBehaviour:
     k\u1EBB \u0111\u1ECBch g\u1EA7n nh\u1EA5t v\xE0 g\xE2y Cho\xE1ng (Stun) trong
     1.5s, k\xE8m theo 150% magicAtk c\u1EE7a Companion."
   syncCoreName: Tactical Blink Tether
-  statModifiers: []
+  statModifiers:
+  - stat: 2
+    val: 50
+    powerMod: 0
+  - stat: 4
+    val: 30
+    powerMod: 0
+  - stat: 1
+    val: 30
+    powerMod: 0
+  - stat: 3
+    val: 30
+    powerMod: 0

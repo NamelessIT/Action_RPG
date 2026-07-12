@@ -25,4 +25,16 @@ MonoBehaviour:
     n\xE0y s\u1EBD li\xEAn t\u1EE5c b\u1ECB Bleed, ch\u1ECBu 10% physicalAtk c\u1EE7a
     Companion m\u1ED7i gi\xE2y."
   syncCoreName: Blood-Sworn Contract
-  statModifiers: []
+  statModifiers:
+  - stat: 0
+    val: 50
+    powerMod: 0
+  - stat: 4
+    val: 30
+    powerMod: 0
+  - stat: 1
+    val: 30
+    powerMod: 0
+  - stat: 3
+    val: 30
+    powerMod: 0

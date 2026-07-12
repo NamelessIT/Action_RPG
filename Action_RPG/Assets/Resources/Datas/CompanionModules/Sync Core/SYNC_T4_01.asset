@@ -22,4 +22,16 @@ MonoBehaviour:
     \u0111\u01B0\u1EE3c h\u1ED3i 3% M\xE1u T\u1ED1i \u0110a v\xE0 t\u0103ng 20% bonusMoveSpeed
     trong 5 gi\xE2y."
   syncCoreName: Soul-Eater's Link
-  statModifiers: []
+  statModifiers:
+  - stat: 0
+    val: 40
+    powerMod: 0
+  - stat: 2
+    val: 40
+    powerMod: 0
+  - stat: 4
+    val: 30
+    powerMod: 0
+  - stat: 1
+    val: 30
+    powerMod: 0

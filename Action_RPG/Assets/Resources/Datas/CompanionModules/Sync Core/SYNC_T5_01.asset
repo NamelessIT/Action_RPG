@@ -26,4 +26,19 @@ MonoBehaviour:
     Cu\u1ED3ng N\u1ED9 (+50% S\xE1t th\u01B0\u01A1ng) trong 10s. (H\u1ED3i chi\xEAu:
     90s)."
   syncCoreName: Bond of Ultimate Sacrifice
-  statModifiers: []
+  statModifiers:
+  - stat: 3
+    val: 100
+    powerMod: 0
+  - stat: 0
+    val: 25
+    powerMod: 0
+  - stat: 1
+    val: 25
+    powerMod: 0
+  - stat: 2
+    val: 25
+    powerMod: 0
+  - stat: 4
+    val: 25
+    powerMod: 0

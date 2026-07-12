@@ -22,4 +22,10 @@ MonoBehaviour:
     T\u1ED1c \u0111\u1ED9 di chuy\u1EC3n v\xE0 20% T\u1ED1c \u0111\u1ED9 \u0111\xE1nh
     trong 2s."
   syncCoreName: Bond of Haste
-  statModifiers: []
+  statModifiers:
+  - stat: 4
+    val: 30
+    powerMod: 0
+  - stat: 1
+    val: 30
+    powerMod: 0
