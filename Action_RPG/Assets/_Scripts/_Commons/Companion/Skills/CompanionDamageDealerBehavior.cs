@@ -104,7 +104,7 @@ public class CompanionDamageDealerBehavior : CompanionSkillBehavior
                 physDamage = magic ? 0f : dmg, magicDamage = magic ? dmg : 0f,
                 attacker = stats, sourcePosition = transform.position, impactLevel = 1
             });
-            e.Airborne(1f); // hất tung 1s
+            e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Airborne, 1f) { respectEffectResistance = false }, stats); // hất tung 1s
         }
         VisualDebugHelper.DrawSphere(transform.position, 0.5f, Color.yellow, 0.4f);
     }

@@ -320,6 +320,17 @@ public class DevToolPanel : MonoBehaviour
     }
 
     // ============================================================
+    //  GAME SPEED (DevTool) — qua UIPauseManager.GameplayTimeScale
+    //  Không set Time.timeScale trực tiếp để KHÔNG phá pause Inventory/SkillTree/DevTool.
+    // ============================================================
+    public void CMD_SetGameSpeedSlow()   => UIPauseManager.SetGameplayTimeScale(0.25f);
+    public void CMD_SetGameSpeedHalf()   => UIPauseManager.SetGameplayTimeScale(0.5f);
+    public void CMD_SetGameSpeedNormal() => UIPauseManager.SetGameplayTimeScale(1f);
+    public void CMD_SetGameSpeedFast()   => UIPauseManager.SetGameplayTimeScale(2f);
+    /// <summary>Gọi từ Slider/InputField nếu muốn tốc độ tùy ý.</summary>
+    public void CMD_SetGameSpeed(float scale) => UIPauseManager.SetGameplayTimeScale(scale);
+
+    // ============================================================
     //  POPULATE DROPDOWNS
     // ============================================================
 
@@ -837,13 +848,15 @@ public class DevToolPanel : MonoBehaviour
         _playerStats.exp                 = 0f;
         _playerStats.attributePointRemain = 5;
         _playerStats.skillPointRemain    = 1;
-        _playerStats.baseSTR             = dbEntry.STR;
-        _playerStats.baseDEX             = dbEntry.DEX;
-        _playerStats.baseINT             = dbEntry.INT;
-        _playerStats.baseVIT             = dbEntry.VIT;
-        _playerStats.baseAGI             = dbEntry.AGI;
-        _playerStats.initialBaseHp       = dbEntry.base_hp;
-        _playerStats.maxStamina          = dbEntry.max_stamina;
+        // [P2-DATA-01B] Reset base stats từ DB qua API. currentHp/currentStamina được set thủ công ngay
+        // sau RecalculateStats() bên dưới nên resetCurrentVitals=false (maxHp chưa đúng ở thời điểm này).
+        _playerStats.ApplyBaseRuntimeStats(new Stats.BaseStatSnapshot
+        {
+            initialBaseHp = dbEntry.base_hp,
+            maxStamina    = dbEntry.max_stamina,
+            baseSTR = dbEntry.STR, baseDEX = dbEntry.DEX, baseINT = dbEntry.INT,
+            baseVIT = dbEntry.VIT, baseAGI = dbEntry.AGI,
+        }, resetCurrentVitals: false);
 
         _playerStats.RefreshExpRequirements();
         _playerStats.RecalculateStats();

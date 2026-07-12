@@ -588,12 +588,12 @@ public class SkillTreeRuntime : MonoBehaviour
         // Stats nằm trong base class Stats (accessible qua _allyStats kế thừa)
         switch (type)
         {
-            case StatFieldType.BaseHp:                    _allyStats.initialBaseHp             += val;       break;
-            case StatFieldType.BaseVIT:                   _allyStats.baseVIT                   += val;       break;
-            case StatFieldType.BaseSTR:                   _allyStats.baseSTR                   += val;       break;
-            case StatFieldType.BaseINT:                   _allyStats.baseINT                   += val;       break;
-            case StatFieldType.BaseDEX:                   _allyStats.baseDEX                   += val;       break;
-            case StatFieldType.BaseAGI:                   _allyStats.baseAGI                   += val;       break;
+            case StatFieldType.BaseHp:                    _allyStats.AddInitialBaseHp(val);                          break;
+            case StatFieldType.BaseVIT:                   _allyStats.AddBaseAttribute(Stats.BaseAttribute.VIT, val); break;
+            case StatFieldType.BaseSTR:                   _allyStats.AddBaseAttribute(Stats.BaseAttribute.STR, val); break;
+            case StatFieldType.BaseINT:                   _allyStats.AddBaseAttribute(Stats.BaseAttribute.INT, val); break;
+            case StatFieldType.BaseDEX:                   _allyStats.AddBaseAttribute(Stats.BaseAttribute.DEX, val); break;
+            case StatFieldType.BaseAGI:                   _allyStats.AddBaseAttribute(Stats.BaseAttribute.AGI, val); break;
             case StatFieldType.Armor:                     _allyStats.armor                     += val;       break;
             case StatFieldType.MagicResist:               _allyStats.magicResist               += val;       break;
             case StatFieldType.DefenseValue:              _allyStats.defenseValue              += val;       break;

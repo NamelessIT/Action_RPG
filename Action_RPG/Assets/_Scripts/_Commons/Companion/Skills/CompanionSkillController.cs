@@ -62,7 +62,7 @@ public class CompanionSkillController : MonoBehaviour
             float want = maxSinOverride > 0f ? maxSinOverride : currentBehavior.SignatureSinCost;
             if (!Mathf.Approximately(stats.maxSin, want))
             {
-                stats.maxSin = want;
+                stats.SetMaxSin(want);
                 if (stats.currentSin > stats.maxSin) stats.currentSin = stats.maxSin;
             }
         }
@@ -122,7 +122,7 @@ public class CompanionSkillController : MonoBehaviour
         Archetype = a;
         skillReadyTime = -999f;
         sigReadyTime   = -999f;
-        if (currentBehavior != null) { stats.maxSin = currentBehavior.SignatureSinCost; stats.currentSin = 0f; }
+        if (currentBehavior != null) { stats.SetMaxSin(currentBehavior.SignatureSinCost); stats.currentSin = 0f; }
 
         if (save) { PlayerPrefs.SetInt(PREF_KEY, (int)a); PlayerPrefs.Save(); }
         Debug.Log($"<color=cyan>[Companion]</color> Đổi nguyên mẫu → {a}");

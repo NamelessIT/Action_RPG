@@ -91,8 +91,8 @@ public class MageLiteSignature : SkillBehavior
                 float burnDps = stats.magicAtk * burnDamagePercent;
                 enemyStats.ApplyBurn(burnDps, burnDuration);
 
-                // B. Băng (Làm Chậm)
-                StartCoroutine(TempSlowRoutine(enemyStats, slowPercent, chillDuration));
+                // B. Băng (Làm Chậm) — qua effect system (strongest-wins, expiry-safe).
+                enemyStats.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, chillDuration) { magnitude = slowPercent }, stats);
 
                 // C. Đất (Giảm song thủ: Armor & MagicResist)
                 StartCoroutine(TempSunderRoutine(enemyStats, defReductionPercent, sunderDuration));
@@ -111,17 +111,6 @@ public class MageLiteSignature : SkillBehavior
     // CÁC COROUTINE HIỆU ỨNG TẠM THỜI
     // ==========================================================
 
-    //
-    private IEnumerator TempSlowRoutine(Stats enemy, float percent, float duration)
-    {
-        if (enemy != null && enemy.currentHp > 0)
-        {
-            enemy.baseMoveSpeed *= (1-percent);
-            // enemyStats is a parent variable, you may need a component variable in the new context if it is not defined
-            yield return new WaitForSeconds(duration);
-            if (enemy != null) enemy.baseMoveSpeed /= (1-percent);
-        }
-    }
 
     private IEnumerator TempSunderRoutine(Stats enemy, float percent, float duration)
     {

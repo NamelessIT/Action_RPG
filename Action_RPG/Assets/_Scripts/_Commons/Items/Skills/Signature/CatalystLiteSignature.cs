@@ -27,12 +27,6 @@ public class CatalystLiteSignature : SkillBehavior
     // Quản lý để không cộng dồn/trừ lố chỉ số (Chống Stacking Bug)
     private HashSet<AllyStats> affectedAllies = new HashSet<AllyStats>();
 
-    private class DebuffData
-    {
-        public float originalBaseMoveSpeed;
-        public float originalBaseAttackSpeed;
-    }
-    private Dictionary<Stats, DebuffData> affectedEnemies = new Dictionary<Stats, DebuffData>();
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
@@ -141,7 +135,6 @@ public class CatalystLiteSignature : SkillBehavior
         Collider[] enemyHits = Physics.OverlapSphere(transform.position, auraRadius, player.dangerLayer);
 
         HashSet<AllyStats> currentAllies = new HashSet<AllyStats>();
-        HashSet<Stats> currentEnemies = new HashSet<Stats>();
 
         // --- XỬ LÝ ĐỒNG MINH (BUFF) ---
         foreach (var hit in allyHits)
@@ -163,31 +156,16 @@ public class CatalystLiteSignature : SkillBehavior
         }
 
         // --- XỬ LÝ KẺ ĐỊCH (DEBUFF) ---
+        // [CE-02C4] Slow -debuffPercent (move+attack) qua effect system; refresh mỗi frame khi còn trong vùng,
+        // tự hết hạn khi rời vùng (strongest-wins, KHÔNG mutate base stat → không cần lưu gốc/restore).
         foreach (var hit in enemyHits)
         {
             Stats enemy = hit.GetComponent<Stats>();
             if (enemy != null && !enemy.isDead)
-            {
-                currentEnemies.Add(enemy);
-                if (!affectedEnemies.ContainsKey(enemy))
-                {
-                    // Lưu giá trị gốc và trừ 20% vào Base như yêu cầu
-                    DebuffData data = new DebuffData
-                    {
-                        originalBaseMoveSpeed = enemy.baseMoveSpeed,
-                        originalBaseAttackSpeed = enemy.baseAttackSpeed
-                    };
-
-                    enemy.baseMoveSpeed *= (1f - debuffPercent);
-                    enemy.baseAttackSpeed *= (1f - debuffPercent);
-
-                    affectedEnemies.Add(enemy, data);
-                }
-            }
+                enemy.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, 0.25f) { magnitude = debuffPercent }, stats);
         }
 
-        // --- DỌN DẸP KHI RỜI VÙNG ---
-        // Đồng minh rời vùng
+        // --- DỌN DẸP KHI RỜI VÙNG (chỉ ĐỒNG MINH; enemy Slow tự hết hạn) ---
         affectedAllies.RemoveWhere(ally => {
             if (!currentAllies.Contains(ally))
             {
@@ -202,18 +180,6 @@ public class CatalystLiteSignature : SkillBehavior
             }
             return false;
         });
-
-        // Kẻ địch rời vùng
-        var enemiesToRemove = affectedEnemies.Where(kvp => !currentEnemies.Contains(kvp.Key)).ToList();
-        foreach (var kvp in enemiesToRemove)
-        {
-            if (kvp.Key != null)
-            {
-                kvp.Key.baseMoveSpeed = kvp.Value.originalBaseMoveSpeed;
-                kvp.Key.baseAttackSpeed = kvp.Value.originalBaseAttackSpeed;
-            }
-            affectedEnemies.Remove(kvp.Key);
-        }
     }
 
     private void CleanUpAura()
@@ -232,16 +198,7 @@ public class CatalystLiteSignature : SkillBehavior
             }
         }
         affectedAllies.Clear();
-
-        foreach (var kvp in affectedEnemies)
-        {
-            if (kvp.Key != null)
-            {
-                kvp.Key.baseMoveSpeed = kvp.Value.originalBaseMoveSpeed;
-                kvp.Key.baseAttackSpeed = kvp.Value.originalBaseAttackSpeed;
-            }
-        }
-        affectedEnemies.Clear();
+        // enemy Slow tự hết hạn qua effect system → không cần restore base stat ở cleanup.
 
         auraCoroutine = null;
     }

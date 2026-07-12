@@ -132,8 +132,7 @@ public class VanguardSignature : SkillBehavior
             reflectInfo.sourcePosition = transform.position;
             reflectInfo.trueDamage = reflectDmg;
             reflectInfo.attacker = stats;
-            reflectInfo.isKnockback = false;
-            reflectInfo.isStun = false;
+            // [CC] Phản đòn là PURE true damage — không kèm CC (DamageInfo mới, effects rỗng sẵn).
 
             // Xuyên luôn giáp để phản đòn đau nhất có thể
             info.attacker.TakeDamage(reflectInfo);

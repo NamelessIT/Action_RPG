@@ -111,7 +111,7 @@ public class CompanionEquipmentManager : MonoBehaviour
         else                                        _stats.flatMagicAtk    += p.baseAtk * sign;
         _stats.defenseValue    += p.defenseValue    * sign;
         _stats.bonusCritChance += p.bonusCritChance * sign;
-        _stats.baseAttackSpeed += p.baseAttackSpeed * sign;
+        _stats.AddBaseAttackSpeed(p.baseAttackSpeed * sign); // sign=±1 → equip/unequip đối xứng, không leak
     }
 
     private void ApplyMatrixStats(CompanionMatrixData m)  => AddMatrixStats(m, +1f);
@@ -173,7 +173,7 @@ public static class CompanionStatApplier
             case StatModifier.StatType.BonusCDR: a.bonusCdr += v; break;
             case StatModifier.StatType.PhysicalLifeSteal: a.physicalLifeSteal += v; break;
             case StatModifier.StatType.MagicLifeSteal: a.magicLifeSteal += v; break;
-            case StatModifier.StatType.KnockBackRes: a.resistanceKnockBack += v; break;
+            case StatModifier.StatType.KnockBackRes: a.knockbackResistance += v; break;
             case StatModifier.StatType.EffectRes: a.resistanceEffect += v; break;
             case StatModifier.StatType.FlatHpGain: a.flatHpGain += v; break;
             case StatModifier.StatType.FlatSinGain: /* companion không dùng Sin */ break;

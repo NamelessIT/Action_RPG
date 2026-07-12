@@ -112,26 +112,26 @@ public abstract class CompanionEffectManagerBase : MonoBehaviour
     protected void DealTrue(Stats target, float amount, bool stun = false, float stunTime = 0f)
     {
         if (target == null || target.currentHp <= 0 || amount <= 0f) return;
-        target.TakeDamage(new DamageInfo { trueDamage = amount, attacker = stats, sourcePosition = transform.position, isStun = stun, stunDuration = stunTime, sourceType = DamageSourceType.Other });
+        var info = new DamageInfo { trueDamage = amount, attacker = stats, sourcePosition = transform.position, sourceType = DamageSourceType.Other };
+        if (stun && stunTime > 0f)
+            info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, stunTime) { sourcePosition = transform.position });
+        target.TakeDamage(info);
     }
 
-    // ───────────────────────── KHỐNG CHẾ / DEBUFF (tự khôi phục) ─────────────────────────
+    // ───────────────────────── KHỐNG CHẾ / DEBUFF ─────────────────────────
     protected void StunEnemy(Stats e, float dur, int impact = 0)
     {
         if (e == null || e.currentHp <= 0) return;
-        e.TakeDamage(new DamageInfo { isStun = true, stunDuration = dur, impactLevel = impact, attacker = stats, sourcePosition = transform.position });
+        var info = new DamageInfo { attacker = stats, sourcePosition = transform.position, impactLevel = impact };
+        info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, dur) { impactLevel = impact, sourcePosition = transform.position });
+        e.TakeDamage(info);
     }
 
     protected void SlowEnemy(Stats target, float percent, float dur)
     {
         if (target == null || percent <= 0f) return;
-        StartCoroutine(SlowRoutine(target, percent, dur));
-    }
-    private IEnumerator SlowRoutine(Stats target, float percent, float dur)
-    {
-        target.baseMoveSpeed *= (1f - percent);
-        yield return new WaitForSeconds(dur);
-        if (target != null) target.baseMoveSpeed /= (1f - percent);
+        // [SLOW] qua effect system (strongest-wins, expiry-safe) — KHÔNG mutate baseMoveSpeed nữa.
+        target.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, dur) { magnitude = percent }, stats);
     }
 
     /// <summary>Giảm Armor & MR theo lượng tuyệt đối trong dur giây.</summary>

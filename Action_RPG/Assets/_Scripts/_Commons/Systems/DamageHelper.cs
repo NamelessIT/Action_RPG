@@ -72,6 +72,7 @@ public static class DamageHelper
         );
 
         // 5. Đóng gói Sát thương cuối cùng
+        float finalKnockbackForce = applyKnockback ? knockbackForce : 0f;
         DamageInfo info = new DamageInfo
         {
             sourcePosition = sourceTransform != null ? sourceTransform.position : attacker.transform.position,
@@ -81,10 +82,16 @@ public static class DamageHelper
             trueDamage = dmgTuple.trueDmg,
             isCrit = isCrit,
             impactLevel = impactLvl,
-            isStun = applyStun,
-            stunDuration = stunTime,
             sourceType = sourceType
         };
+
+        // [CC] Dùng Combat Effect system thay legacy isStun/isKnockback (mỗi loại 1 effect/đòn).
+        if (applyStun && stunTime > 0f)
+            info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, stunTime)
+            { impactLevel = impactLvl, sourcePosition = info.sourcePosition });
+        if (applyKnockback && finalKnockbackForce > 0f)
+            info.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f)
+            { force = finalKnockbackForce, impactLevel = impactLvl, sourcePosition = info.sourcePosition, respectEffectResistance = false });
 
         // 6. Giáng đòn thực tế
         target.TakeDamage(info);

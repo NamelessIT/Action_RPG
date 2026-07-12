@@ -38,7 +38,6 @@ public class MageSignature : SkillBehavior
     // ==========================================
     // BỘ QUẢN LÝ DEBUFF (CHỐNG CỘNG DỒN)
     // ==========================================
-    private Dictionary<Stats, float> activeSlows = new Dictionary<Stats, float>();
 
     // Class lưu trữ lượng giáp đã trừ để trả lại cho đúng
     private class SunderData
@@ -69,21 +68,7 @@ public class MageSignature : SkillBehavior
     // ==========================================
     void Update()
     {
-        // 1. Quản lý Làm chậm (Slow)
-        if (activeSlows.Count > 0)
-        {
-            List<Stats> expiredSlows = new List<Stats>();
-            foreach (var enemy in activeSlows.Keys.ToList())
-            {
-                activeSlows[enemy] -= Time.deltaTime;
-                if (activeSlows[enemy] <= 0) expiredSlows.Add(enemy);
-            }
-            foreach (var enemy in expiredSlows)
-            {
-                if (enemy != null) enemy.baseMoveSpeed /= (1-slowPercent); // Trả lại tốc độ
-                activeSlows.Remove(enemy);
-            }
-        }
+        // 1. Slow giờ qua effect system (tự hết hạn, strongest-wins) → không quản lý dict ở đây.
 
         // 2. Quản lý Giảm thủ (Sunder)
         if (activeSunders.Count > 0)
@@ -172,12 +157,8 @@ public class MageSignature : SkillBehavior
                 float burnDps = stats.magicAtk * burnDamagePercent;
                 enemyStats.ApplyBurn(burnDps, burnDuration);
 
-                // C. REFRESH DEBUFF (BĂNG - Làm chậm)
-                if (!activeSlows.ContainsKey(enemyStats))
-                {
-                    enemyStats.baseMoveSpeed *= (1-slowPercent); // Trừ lần đầu
-                }
-                activeSlows[enemyStats] = chillDuration; // Cập nhật/Làm mới thời gian
+                // C. REFRESH DEBUFF (BĂNG - Làm chậm) — qua effect system (strongest-wins, mỗi pulse refresh).
+                enemyStats.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, chillDuration) { magnitude = slowPercent }, stats);
 
                 // D. REFRESH DEBUFF (ĐẤT - Giảm giáp)
                 if (!activeSunders.ContainsKey(enemyStats))
@@ -221,11 +202,7 @@ public class MageSignature : SkillBehavior
 
     private void CleanUpAllDebuffs()
     {
-        foreach (var enemy in activeSlows.Keys)
-        {
-            if (enemy != null) enemy.baseMoveSpeed /= (1 - slowPercent);
-        }
-        activeSlows.Clear();
+        // Slow tự hết hạn qua effect system → không cần restore baseMoveSpeed ở cleanup.
 
         foreach (var kvp in activeSunders)
         {

@@ -408,7 +408,7 @@ public class WeaponEffectManager : MonoBehaviour
                 if (e != null)
                 {
                     DamageHelper.ApplyQuickProcDamage(stats, e, 0f, 1.0f, transform);
-                    StartCoroutine(SlowEnemyRoutine(e, 0.3f, 3f));
+                    e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, 3f) { magnitude = 0.3f }, stats);
                 }
             }
         }
@@ -420,7 +420,12 @@ public class WeaponEffectManager : MonoBehaviour
         foreach (var e in enemies)
         {
             Stats eStats = e.GetComponent<Stats>();
-            if (eStats != null) eStats.TakeDamage(new DamageInfo { physDamage = 0, isStun = true, stunDuration = 2f });
+            if (eStats != null)
+            {
+                var info = new DamageInfo { physDamage = 0 };
+                info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, 2f));
+                eStats.TakeDamage(info);
+            }
         }
         stats.Heal(stats.maxHp * 0.03f);
         if (skillManager != null) skillManager.ReduceAllCooldowns(1f);
@@ -862,7 +867,9 @@ public class WeaponEffectManager : MonoBehaviour
                 foreach (var e in seen)
                 {
                     DamageHelper.ApplyQuickProcDamage(stats, e, 0f, 0.5f, transform);
-                    e.TakeDamage(new DamageInfo { isKnockback = true, knockbackForce = 4f, attacker = stats, sourcePosition = transform.position, sourceType = DamageSourceType.Other });
+                    var kbInfo = new DamageInfo { attacker = stats, sourcePosition = transform.position, sourceType = DamageSourceType.Other };
+                    kbInfo.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f) { force = 4f, sourcePosition = transform.position, respectEffectResistance = false });
+                    e.TakeDamage(kbInfo);
                 }
                 stats.AddShield(stats.magicAtk * 0.5f * 0.3f * seen.Count, 3f); // ~30% sát thương gây ra
                 VisualDebugHelper.DrawSphere(transform.position, 2f, new Color(0.4f, 0.7f, 1f, 0.4f), 0.5f);
@@ -967,7 +974,9 @@ public class WeaponEffectManager : MonoBehaviour
         foreach (var e in chain)
         {
             if (e == null || e.currentHp <= 0) continue;
-            e.TakeDamage(new DamageInfo { trueDamage = stats.physicalAtk, attacker = stats, sourcePosition = transform.position, isStun = true, stunDuration = 1f, impactLevel = 1, sourceType = DamageSourceType.Melee });
+            var chainInfo = new DamageInfo { trueDamage = stats.physicalAtk, attacker = stats, sourcePosition = transform.position, impactLevel = 1, sourceType = DamageSourceType.Melee };
+            chainInfo.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, 1f) { impactLevel = 1, sourcePosition = transform.position });
+            e.TakeDamage(chainInfo);
             VisualDebugHelper.DrawSphere(e.transform.position + Vector3.up, 0.4f, new Color(1, 1, 0.3f, 0.6f), 0.3f);
         }
     }
@@ -1034,7 +1043,6 @@ public class WeaponEffectManager : MonoBehaviour
     private void SP_T5_02_Skill() { StartCoroutine(SP_T5_02_Tornado(transform.position + stats.facingDirection * 3f)); }
     private IEnumerator SP_T5_02_Tornado(Vector3 center)
     {
-        HashSet<Stats> slowed = new HashSet<Stats>();
         float t = 0f;
         while (t < 3f)
         {
@@ -1044,13 +1052,13 @@ public class WeaponEffectManager : MonoBehaviour
                 Stats e = h.GetComponentInParent<Stats>();
                 if (e == null || e.currentHp <= 0) continue;
                 PullEnemyTo(e, center, 2f);
-                if (slowed.Add(e)) { e.baseMoveSpeed *= 0.5f; e.baseAttackSpeed *= 0.5f; } // áp 1 lần, khôi phục cuối
+                // [SLOW] Chìm Đuối -50% move+attack: refresh effect ngắn mỗi tick (strongest-wins, không đụng base stat).
+                e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, 0.7f) { magnitude = 0.5f }, stats);
             }
             VisualDebugHelper.DrawSphere(center, 3f, new Color(0f, 0.5f, 1f, 0.2f), 0.5f);
             yield return new WaitForSeconds(0.5f);
             t += 0.5f;
         }
-        foreach (var e in slowed) if (e != null) { e.baseMoveSpeed /= 0.5f; e.baseAttackSpeed /= 0.5f; }
     }
 
     // SP_T5_03: sau khi chịu 1 đòn → hấp thụ (vô hiệu) đòn đó vào lò 3s; đòn tấn công kế tiếp giải phóng
@@ -1062,7 +1070,7 @@ public class WeaponEffectManager : MonoBehaviour
         if (Time.time <= sp_t5_03_until) return; // đang giữ lò → không hấp thụ chồng
         sp_t5_03_stored = info.TotalRawDamage;
         info.physDamage = 0; info.magicDamage = 0; info.trueDamage = 0; // hấp thụ trọn đòn
-        info.isStun = false; info.isKnockback = false;
+        info.ClearCombatEffects(); // đòn bị hấp thụ → không còn BẤT KỲ CC nào (effects list + legacy)
         sp_t5_03_until = Time.time + 3f;
         VisualDebugHelper.DrawSphere(transform.position + Vector3.up, 1f, new Color(1, 0.5f, 0, 0.3f), 0.5f);
     }
@@ -1143,7 +1151,9 @@ public class WeaponEffectManager : MonoBehaviour
             if (e == null || e.currentHp <= 0 || !seen.Add(e)) continue;
             Vector3 to = e.transform.position - transform.position; to.y = 0;
             if (Vector3.Angle(fwd, to) > 60f) continue; // hình nón
-            e.TakeDamage(new DamageInfo { physDamage = stats.physicalAtk * 0.4f, attacker = stats, sourcePosition = transform.position, isKnockback = true, knockbackForce = 2f, sourceType = DamageSourceType.Melee });
+            var coneInfo = new DamageInfo { physDamage = stats.physicalAtk * 0.4f, attacker = stats, sourcePosition = transform.position, sourceType = DamageSourceType.Melee };
+            coneInfo.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f) { force = 2f, sourcePosition = transform.position, respectEffectResistance = false });
+            e.TakeDamage(coneInfo);
         }
         VisualDebugHelper.DrawBox(center, new Vector3(4f, 1f, 4f), Quaternion.LookRotation(fwd), new Color(1, 0.6f, 0.1f, 0.4f), 0.4f);
     }
@@ -1308,7 +1318,7 @@ public class WeaponEffectManager : MonoBehaviour
             Stats e = h.GetComponentInParent<Stats>();
             if (e == null || e.currentHp <= 0 || !seen.Add(e)) continue;
             DamageHelper.ApplyQuickProcDamage(stats, e, 0.8f, 0f, transform);
-            StartCoroutine(SlowEnemyRoutine(e, 0.3f, 2f));
+            e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, 2f) { magnitude = 0.3f }, stats);
         }
         VisualDebugHelper.DrawSphere(center, 2.5f, new Color(1f, 0.5f, 0.3f, 0.4f), 0.5f);
     }
@@ -1318,14 +1328,18 @@ public class WeaponEffectManager : MonoBehaviour
     {
         if (target == null) return;
         if (Vector3.Distance(transform.position, target.transform.position) < 3f)
-            target.TakeDamage(new DamageInfo { isKnockback = true, knockbackForce = 3f, attacker = stats, sourcePosition = transform.position, sourceType = DamageSourceType.Ranged });
+        {
+            var kbInfo = new DamageInfo { attacker = stats, sourcePosition = transform.position, sourceType = DamageSourceType.Ranged };
+            kbInfo.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f) { force = 3f, sourcePosition = transform.position, respectEffectResistance = false });
+            target.TakeDamage(kbInfo);
+        }
     }
 
     // BW_T5_02: Chim Ánh Trăng trúng địch → làm chậm 20% trong 3s (homing xử lý ở Projectile).
     private void BW_T5_02_Hit(Stats target, int step, bool isH, bool isC)
     {
         if (target == null || target.currentHp <= 0) return;
-        StartCoroutine(SlowEnemyRoutine(target, 0.2f, 3f));
+        target.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, 3f) { magnitude = 0.2f }, stats);
     }
 
     // BW_T5_01: Tia Sáng Mặt Trời — hitscan tức thì, xuyên mọi vật thể/địa hình/kẻ địch trên đường thẳng.
@@ -1490,8 +1504,10 @@ public class WeaponEffectManager : MonoBehaviour
         if (st_t4_03_until.TryGetValue(target, out float u) && Time.time < u) return; // đang dính → không refresh liên tục
         st_t4_03_until[target] = Time.time + 3f;
 
-        target.TakeDamage(new DamageInfo { isStun = true, stunDuration = 3f, attacker = stats, sourcePosition = transform.position });
-        StartCoroutine(SlowEnemyRoutine(target, 0.4f, 3f));
+        var stInfo = new DamageInfo { attacker = stats, sourcePosition = transform.position };
+        stInfo.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, 3f) { sourcePosition = transform.position });
+        target.TakeDamage(stInfo);
+        target.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, 3f) { magnitude = 0.4f }, stats);
         StartCoroutine(ST_T4_03_Drain(target, 3f));
         VisualDebugHelper.DrawSphere(target.transform.position + Vector3.up, 0.6f, Color.yellow, 3f);
     }
@@ -1656,16 +1672,6 @@ public class WeaponEffectManager : MonoBehaviour
             yield return new WaitForSeconds(duration);
             if (target != null) target.armor += amount;
             onComplete?.Invoke();
-        }
-    }
-
-    private IEnumerator SlowEnemyRoutine(Stats target, float percent, float duration)
-    {
-        if (target != null)
-        {
-            target.baseMoveSpeed *= (1 - percent);
-            yield return new WaitForSeconds(duration);
-            if (target != null) target.baseMoveSpeed /= (1 - percent);
         }
     }
 

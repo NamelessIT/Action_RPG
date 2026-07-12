@@ -102,7 +102,7 @@ public class CompanionControllerBehavior : CompanionSkillBehavior
     private IEnumerator AirborneThenStun(Stats e, float airTime, float stunTime)
     {
         if (e == null) yield break;
-        e.Airborne(airTime);
+        e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Airborne, airTime) { respectEffectResistance = false }, stats);
         yield return new WaitForSeconds(airTime);
         if (e != null && e.currentHp > 0) StunEnemy(e, stunTime);
     }

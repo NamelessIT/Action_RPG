@@ -136,7 +136,10 @@ public abstract class CompanionSkillBehavior : MonoBehaviour
     protected void DealTrue(Stats target, float amount, bool stun = false, float stunTime = 0f)
     {
         if (target == null || target.currentHp <= 0 || amount <= 0f) return;
-        target.TakeDamage(new DamageInfo { trueDamage = amount, attacker = stats, sourcePosition = transform.position, isStun = stun, stunDuration = stunTime, sourceType = DamageSourceType.Other });
+        var info = new DamageInfo { trueDamage = amount, attacker = stats, sourcePosition = transform.position, sourceType = DamageSourceType.Other };
+        if (stun && stunTime > 0f)
+            info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, stunTime) { sourcePosition = transform.position });
+        target.TakeDamage(info);
     }
 
     /// <summary>Lấy mọi Stats địch trong bán kính (dedupe).</summary>
@@ -163,17 +166,11 @@ public abstract class CompanionSkillBehavior : MonoBehaviour
         return best;
     }
 
-    /// <summary>Làm chậm baseMoveSpeed địch theo % trong dur giây (tự khôi phục).</summary>
+    /// <summary>Làm chậm địch theo % trong dur giây — qua effect system (strongest-wins, expiry-safe).</summary>
     protected void SlowEnemy(Stats target, float percent, float dur)
     {
-        if (target == null) return;
-        StartCoroutine(SlowRoutine(target, percent, dur));
-    }
-    private System.Collections.IEnumerator SlowRoutine(Stats target, float percent, float dur)
-    {
-        target.baseMoveSpeed *= (1f - percent);
-        yield return new WaitForSeconds(dur);
-        if (target != null) target.baseMoveSpeed /= (1f - percent);
+        if (target == null || percent <= 0f) return;
+        target.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, dur) { magnitude = percent }, stats);
     }
 
     /// <summary>Giảm Armor địch trong dur giây (tự khôi phục).</summary>
@@ -237,31 +234,21 @@ public abstract class CompanionSkillBehavior : MonoBehaviour
         }
     }
 
-    /// <summary>Choáng địch dur giây (đòn 0 sát thương, qua ApplyCrowdControl).</summary>
+    /// <summary>Choáng địch dur giây (đòn 0 sát thương, qua ApplyCombatEffects).</summary>
     protected void StunEnemy(Stats e, float dur, int impact = 0)
     {
         if (e == null || e.currentHp <= 0) return;
-        e.TakeDamage(new DamageInfo { isStun = true, stunDuration = dur, impactLevel = impact, attacker = stats, sourcePosition = transform.position });
+        var info = new DamageInfo { attacker = stats, sourcePosition = transform.position, impactLevel = impact };
+        info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, dur) { impactLevel = impact, sourcePosition = transform.position });
+        e.TakeDamage(info);
     }
 
-    /// <summary>Trói chân địch (moveSpeed=0) trong dur giây — vẫn cho tấn công. Tránh dùng SlowEnemy(1.0) (chia 0).</summary>
+    /// <summary>Trói chân địch trong dur giây — vẫn cho tấn công. Qua effect system (endTime, không
+    /// đụng baseMoveSpeed/agent.isStopped trực tiếp → tránh xóa nhầm trạng thái nguồn khác).</summary>
     protected void RootEnemy(Stats e, float dur)
     {
         if (e == null) return;
-        StartCoroutine(RootRoutine(e, dur));
-    }
-    private System.Collections.IEnumerator RootRoutine(Stats e, float dur)
-    {
-        float orig = e.baseMoveSpeed;
-        e.baseMoveSpeed = 0f;
-        var agent = e.GetComponentInParent<UnityEngine.AI.NavMeshAgent>();
-        if (agent != null && agent.enabled && agent.isOnNavMesh) agent.isStopped = true;
-        yield return new WaitForSeconds(dur);
-        if (e != null)
-        {
-            e.baseMoveSpeed = orig;
-            if (agent != null && agent.enabled && agent.isOnNavMesh) agent.isStopped = false;
-        }
+        e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Root, dur), stats);
     }
 
     /// <summary>Kéo địch về 'center' (hút). Dùng NavMeshAgent.Warp nếu có để mượt.</summary>

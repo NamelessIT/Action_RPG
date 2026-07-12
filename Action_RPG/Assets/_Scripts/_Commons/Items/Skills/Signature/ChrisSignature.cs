@@ -71,10 +71,10 @@ public class ChrisSignature : SkillBehavior
                 DamageInfo info = new DamageInfo();
                 info.sourcePosition = transform.position; // Lấy tâm từ Player đẩy ra
                 info.physDamage = 0f;                   // Không gây sát thương
-                info.isKnockback = true;
-                info.knockbackForce = knockbackForce;     // Lực đẩy lùi
-                info.isStun = false;
                 info.attacker = stats;
+                // [CC] Chỉ Knockback theo config knockbackForce.
+                info.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f)
+                { force = knockbackForce, sourcePosition = info.sourcePosition, respectEffectResistance = false });
 
                 // Hàm TakeDamage sẽ bỏ qua vụ trừ máu (do dmg = 0) nhưng vẫn xử lý Knockback
                 enemyStats.TakeDamage(info);

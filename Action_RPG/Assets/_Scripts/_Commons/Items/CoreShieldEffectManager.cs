@@ -538,7 +538,12 @@ public class CoreShieldEffectManager : MonoBehaviour
         foreach (var e in enemies)
         {
             Stats eStats = e.GetComponent<Stats>();
-            if (eStats != null) eStats.TakeDamage(new DamageInfo { physDamage = 0, isStun = true, stunDuration = 2f });
+            if (eStats != null)
+            {
+                var info = new DamageInfo { physDamage = 0 };
+                info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, 2f));
+                eStats.TakeDamage(info);
+            }
         }
     }
 

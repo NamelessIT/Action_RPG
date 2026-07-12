@@ -189,7 +189,7 @@ public class EquipmentManager : MonoBehaviour
             allyStats.flatMagicAtk += newWeapon.baseAtk;
         }
 
-        allyStats.baseAttackSpeed = newWeapon.baseAttackSpeed;
+        allyStats.SetBaseAttackSpeed(newWeapon.baseAttackSpeed);
         allyStats.moveFlexibility = newWeapon.moveFlexibility;
         allyStats.defenseValue += newWeapon.defenseValue;
         allyStats.bonusCritChance += newWeapon.bonusCritChance;
@@ -520,7 +520,7 @@ public class EquipmentManager : MonoBehaviour
             case StatModifier.StatType.PhysicalLifeSteal: allyStats.physicalLifeSteal += value; break;
             case StatModifier.StatType.MagicLifeSteal: allyStats.magicLifeSteal += value; break;
 
-            case StatModifier.StatType.KnockBackRes: allyStats.resistanceKnockBack += value; break;
+            case StatModifier.StatType.KnockBackRes: allyStats.knockbackResistance += value; break;
             case StatModifier.StatType.EffectRes: allyStats.resistanceEffect += value; break;
 
             case StatModifier.StatType.FlatHpGain: allyStats.flatHpGain += value; break;

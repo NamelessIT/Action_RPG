@@ -167,10 +167,12 @@ public class RavagerSkill : SkillBehavior
                 if (enemy != null && enemy.currentHp > 0)
                 {
                     DamageInfo info = new DamageInfo();
-                    info.isStun = true;
-                    info.stunDuration = _appliedStunDur;
                     info.physDamage = 0;
                     info.attacker = stats;
+                    info.sourcePosition = transform.position;
+                    // [CC] Stun finisher qua effect system (giữ duration đã upgrade _appliedStunDur).
+                    info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, _appliedStunDur)
+                    { sourcePosition = transform.position });
                     enemy.TakeDamage(info);
                 }
             }
