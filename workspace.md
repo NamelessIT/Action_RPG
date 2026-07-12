@@ -94,3 +94,12 @@ Tat ca checkbox trong muc nay can user thuc hien/confirm trong Unity Editor hoac
 ## NEXT CODE TASKS
 
 Khong co. Khi user muon lam tiep, Codex se tao task moi trong workspace nay.
+
+## INFRA NOTES
+
+### 2026-07-12 - Fix mat sprite khi clone tu nhanh `test`
+- Nguyen nhan: `.gitignore` co dong `/Action_RPG/Assets/_Sprites` -> toan bo thu muc sprite nhan vat/enemy bi bo, khong push len. Prefab + animation van co, nhung tham chieu sprite bi thieu -> hien o hong/missing khi clone.
+- Da xu ly: xoa dong ignore do, `git add` lai 813 file trong `Action_RPG/Assets/_Sprites` (bao gom pack Player `FREE_Adventurer 2D Pixel Art` truoc day 0 file duoc track), commit + push nhanh `test`.
+- Art dung o day la asset pack free duoc phep dung, chi la art tam thoi giai doan dev.
+- **Viec can lam cho ai da clone truoc do:** `git pull origin test` de lay du sprite. Sau khi pull, mo Unity de re-import; neu prefab van missing thi Reimport All.
+- `_Animations` va `_Prefabs` da day du tren remote tu truoc, khong thay doi.
