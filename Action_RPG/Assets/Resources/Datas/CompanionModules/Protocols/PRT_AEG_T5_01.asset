@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e40770cb45e9ce4c9d849e90913ad92, type: 3}
+  m_Name: PRT_AEG_T5_01
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionProtocolData
+  id: PRT_AEG_T5_01
+  description: Turns the companion into an immovable, towering fortress.
+  icon: {fileID: 0}
+  rarity: 4
+  effectType: 2
+  effectCondition: "M\u1ED7i 10 gi\xE2y"
+  effectDescription: "\u0110\xF2n \u0111\xE1nh k\u1EBF ti\u1EBFp t\u1EA1o s\xF3ng
+    xung k\xEDch, g\xE2y s\xE1t th\u01B0\u01A1ng l\xEAn t\u1EA5t c\u1EA3 k\u1EBB
+    \u0111\u1ECBch trong b\xE1n k\xEDnh 5f, \xE9p to\xE0n b\u1ED9 \u0111\u1ECBch
+    xung quanh trong b\xE1n k\xEDnh chuy\u1EC3n Aggro sang Companion v\xE0 gi\u1EA3m
+    30% s\xE1t th\u01B0\u01A1ng ch\xFAng g\xE2y ra trong 4s."
+  protocolName: Colossus Aegis Protocol
+  protocolType: 3
+  atkType: 0
+  baseAtk: 117
+  defenseValue: 50
+  bonusCritChance: 0
+  baseAttackSpeed: 0.9
+  attackRange: 2.5
+  isRange: 0

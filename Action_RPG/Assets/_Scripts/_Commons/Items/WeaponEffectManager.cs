@@ -567,7 +567,7 @@ public class WeaponEffectManager : MonoBehaviour
             DamageHelper.ApplyStandardDamage(stats, closest, transform, 3.0f, null, null, 0, false, 0f, true);
             sw_t5_04_seeds.Remove(closest);
 
-            VisualDebugHelper.DrawSphere(closest.transform.position, 3f, new Color(1, 0, 0, 0.5f), 0.5f); // Nổ máu
+            VisualDebugHelper.DrawSphere(closest.transform.position, 1f, new Color(1, 0, 0, 0.5f), 0.5f); // Nổ máu
         }
     }
     #endregion

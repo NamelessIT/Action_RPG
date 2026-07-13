@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4873d6db67d502247839ae8a1e23c8e0, type: 3}
+  m_Name: MTX_DEF_T2_01
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionMatrixData
+  id: MTX_DEF_T2_01
+  description: 'Emits signals that provoke hostile entities. [Aggro: High]'
+  icon: {fileID: 0}
+  rarity: 1
+  effectType: 0
+  effectCondition: 
+  effectDescription: 
+  matrixName: Magnetic Taunt Core
+  matrixType: 2
+  armor: 60
+  magicResist: 60
+  flatHp: 400
+  bonusHp: 0.05

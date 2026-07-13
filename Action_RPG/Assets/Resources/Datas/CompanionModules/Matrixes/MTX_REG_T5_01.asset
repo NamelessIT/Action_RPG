@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4873d6db67d502247839ae8a1e23c8e0, type: 3}
+  m_Name: MTX_REG_T5_01
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionMatrixData
+  id: MTX_REG_T5_01
+  description: Upon destruction, its core radiates pure life energy.
+  icon: {fileID: 0}
+  rarity: 4
+  effectType: 2
+  effectCondition: "M\u1ED7i khi Companion b\u1ECB gi\u1EA3m \u0111\u1EBFn 1 trong
+    c\xE1c ng\u01B0\u1EE1ng m\xE1u: 75% m\xE1u t\u1ED1i \u0111a, 50% m\xE1u t\u1ED1i
+    \u0111a, 25% m\xE1u t\u1ED1i \u0111a"
+  effectDescription: "\u0110\u1EC3 l\u1EA1i m\u1ED9t V\xF9ng Th\xE1nh \u0110\u1ECBa
+    b\xE1n k\xEDnh 3f trong 5 gi\xE2y. Player v\xE0 Companion \u0111\u1EE9ng trong
+    v\xF9ng n\xE0y \u0111\u01B0\u1EE3c h\u1ED3i 5% M\xE1u T\u1ED1i \u0110a m\u1ED7i
+    gi\xE2y. (Cooldown 15s)"
+  matrixName: Immortal Genesis Matrix
+  matrixType: 0
+  armor: 120
+  magicResist: 120
+  flatHp: 800
+  bonusHp: 0.15

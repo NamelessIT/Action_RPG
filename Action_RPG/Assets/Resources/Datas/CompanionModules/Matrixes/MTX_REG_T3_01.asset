@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4873d6db67d502247839ae8a1e23c8e0, type: 3}
+  m_Name: MTX_REG_T3_01
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionMatrixData
+  id: MTX_REG_T3_01
+  description: Repairs structural damage when hostilities cease.
+  icon: {fileID: 0}
+  rarity: 2
+  effectType: 1
+  effectCondition: 
+  effectDescription: "Khi tho\xE1t kh\u1ECFi giao tranh 3s, Companion t\u1EF1 h\u1ED3i
+    5% M\xE1u t\u1ED1i \u0111a m\u1ED7i gi\xE2y."
+  matrixName: Out-of-Combat Restorer
+  matrixType: 0
+  armor: 40
+  magicResist: 40
+  flatHp: 300
+  bonusHp: 0.1

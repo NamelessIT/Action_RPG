@@ -171,6 +171,7 @@ MonoBehaviour:
   isRangedAttack: 0
   projectilePrefab: {fileID: 0}
   projectileSpawnOffsetY: 0
+  isSkillChanneling: 0
   isWalking: 0
   isDashing: 0
   isTestCrit: 0
@@ -345,6 +346,7 @@ MonoBehaviour:
   physicalAtk: 0
   magicAtk: 0
   damageOutputMultiplier: 1
+  damageTakenMultiplier: 1
   physicalLifeSteal: 0
   magicLifeSteal: 0
   baseAttackSpeed: 0
@@ -365,11 +367,12 @@ MonoBehaviour:
   moveFlexibility: 1
   turnDuration: 0.1
   combatTurnDuration: 0
-  resistanceKnockBack: 0.1
+  knockbackResistance: 0.1
   resistanceEffect: 0
   isDead: 0
   currentShield: 0
   isStunned: 0
+  isSilenced: 0
   isSuperArmor: 0
   superArmorLevel: 0
   buffDurationBonus: 0
@@ -384,6 +387,7 @@ MonoBehaviour:
   parryAngle: 120
   isChallenged: 0
   isResonated: 0
+  hurtAnimCooldown: 0.4
   attributePointRemain: 0
   H: 200
   maxHpGainBonus: 10
@@ -393,9 +397,32 @@ MonoBehaviour:
   bonusHpGain: 0
   bonusHp: 0
   flatHp: 0
+  flatBonusMaxHp: 0
+  dashNoCooldown: 0
+  accBlockDashSprint: 0
+  accStaminaConsumeMult: 1
+  accStaminaFreeWhileHighHp: 0
+  accStaminaToSinGain: 0
+  accHpPerSinOverride: 0
+  accHpPerStaminaOverride: 0
+  accSignatureSinCostMult: 1
+  accBloodSignatureDmgBonus: 0
+  lastSignatureBloodPaid: 0
+  accDashSprintNoRegenInterrupt: 0
+  accSkillChargeTime: 0
+  accSkillCdrBonus: 0
+  accSkillSinCostMult: 1
+  accSignatureDmgBonusAlways: 0
+  accOnlyLifestealHeal: 0
+  accLifestealTripleLowHp: 0
+  bowNoChargeSlow: 0
+  bowHoming: 0
+  bowSunBeam: 0
+  stT4_05QuestComplete: 0
   flatSinGain: 0
   sinGain: 0
   bonusSinGain: 0
+  signatureSinCostMult: 1
   S: 100
   maxSinBonus: 0.7
   physicalAtkPerSTR: 2.5
@@ -663,7 +690,7 @@ SpriteRenderer:
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 0.48, y: 0.64}
+  m_Size: {x: 0.96, y: 0.8}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1

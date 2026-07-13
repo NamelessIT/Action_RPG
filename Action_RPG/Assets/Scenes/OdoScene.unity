@@ -1534,6 +1534,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1355773656}
     m_Modifications:
+    - target: {fileID: 2168595274256218563, guid: f45801a0ad288b24aa033575a022bc31, type: 3}
+      propertyPath: magicAtk
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2168595274256218563, guid: f45801a0ad288b24aa033575a022bc31, type: 3}
+      propertyPath: physicalAtk
+      value: 5
+      objectReference: {fileID: 0}
     - target: {fileID: 4971569114127031493, guid: f45801a0ad288b24aa033575a022bc31, type: 3}
       propertyPath: m_Name
       value: Slime
@@ -1583,8 +1591,12 @@ PrefabInstance:
       value: 0.35
       objectReference: {fileID: 0}
     - target: {fileID: 9084518326681079638, guid: f45801a0ad288b24aa033575a022bc31, type: 3}
+      propertyPath: basicAttackModule
+      value: 
+      objectReference: {fileID: 11400000, guid: 9328561f7e47bea49bf5adb1c1481427, type: 2}
+    - target: {fileID: 9084518326681079638, guid: f45801a0ad288b24aa033575a022bc31, type: 3}
       propertyPath: skillEffects.Array.size
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1738,7 +1750,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1995522831}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b410f924152f11b448df0a2fe28ffb4b, type: 3}
   m_Name: 
@@ -1860,12 +1872,11 @@ MonoBehaviour:
   moveFlexibility: 1
   turnDuration: 0.1
   combatTurnDuration: 0
-  resistanceKnockBack: 0.1
+  knockbackResistance: 0.1
   resistanceEffect: 0
   isDead: 0
   currentShield: 0
   isStunned: 0
-  ccImmune: 0
   isSilenced: 0
   isSuperArmor: 0
   superArmorLevel: 0

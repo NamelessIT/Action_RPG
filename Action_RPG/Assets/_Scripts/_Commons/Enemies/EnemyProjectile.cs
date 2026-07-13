@@ -19,6 +19,7 @@ public class EnemyProjectile : MonoBehaviour
     private List<CombatEffectInfo> effects; // tham chiếu list của module — CLONE khi gây hit
     private float hitRadius;
     private bool pierce;              // true = xuyên (dedupe), false = nổ ở mục tiêu đầu
+    private WeaponData weaponProxy;   // [EAM] proxy Physical/Magic cho CombatMath (null = Physical)
 
     private LayerMask obstacleMask;
     private readonly HashSet<Stats> _hit = new HashSet<Stats>();
@@ -27,7 +28,7 @@ public class EnemyProjectile : MonoBehaviour
     /// <summary>Khởi tạo đạn. direction dùng khi bắn thẳng; target (optional) để khoá mục tiêu (homing).</summary>
     public void Init(EnemyStats atk, Vector3 direction, Transform target, float spd, float lifetime,
                      float dmgMult, int impBonus, List<CombatEffectInfo> moduleEffects,
-                     float radius = 0.4f, bool piercing = false)
+                     float radius = 0.4f, bool piercing = false, WeaponData atkTypeProxy = null)
     {
         attacker = atk;
         homingTarget = target;
@@ -39,6 +40,7 @@ public class EnemyProjectile : MonoBehaviour
         effects = moduleEffects;
         hitRadius = Mathf.Max(0.1f, radius);
         pierce = piercing;
+        weaponProxy = atkTypeProxy;
         obstacleMask = LayerMask.GetMask("Obstacle"); // 0 nếu chưa có layer → không chặn
         _inited = true;
         Destroy(gameObject, Mathf.Max(0.1f, lifetime)); // an toàn: tự huỷ theo lifetime
@@ -129,7 +131,7 @@ public class EnemyProjectile : MonoBehaviour
 
         bool isCrit = CombatMath.CheckIsCrit(attacker.baseCritChance);
         info.isCrit = isCrit;
-        var dmg = CombatMath.CalculateFullDamage(attacker, victim, t, isCrit, null, null, damageMultiplier, false);
+        var dmg = CombatMath.CalculateFullDamage(attacker, victim, t, isCrit, null, weaponProxy, damageMultiplier, false);
         info.physDamage = dmg.phys;
         info.magicDamage = dmg.magic;
         info.trueDamage = dmg.trueDmg;
