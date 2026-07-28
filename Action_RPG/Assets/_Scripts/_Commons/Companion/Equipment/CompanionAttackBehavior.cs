@@ -26,7 +26,7 @@ public abstract class CompanionAttackBehavior
 
     /// <summary>Bán kính nổ AoE của đòn đánh (Suppression 0.5f, Carnage/Aegis = attackRange quét).</summary>
     public virtual float AoeRadius => 0f;
-    /// <summary>Aegis: mỗi đòn thứ 3 hất tung mục tiêu.</summary>
+    /// <summary>Aegis: mỗi đòn thứ 5 hất tung mục tiêu.</summary>
     public virtual bool DoesKnockup => false;
 
     public virtual float DesiredRange => data != null ? data.attackRange : 2f;

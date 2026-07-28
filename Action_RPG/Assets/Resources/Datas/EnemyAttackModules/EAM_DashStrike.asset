@@ -15,9 +15,10 @@ MonoBehaviour:
   id: EAM_DashStrike
   displayName: "Lao ch\xE9m"
   style: 4
-  range: 6
+  range: 3
   cooldown: 4
   damageMultiplier: 1.2
+  atkType: 0
   windupDuration: 0.35
   activeDuration: 0.35
   recoveryDuration: 0.4
