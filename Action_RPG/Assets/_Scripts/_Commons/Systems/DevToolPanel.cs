@@ -160,18 +160,18 @@ public class DevToolPanel : MonoBehaviour
 
     private void Start()
     {
-        _weapons     = new List<WeaponData>(Resources.LoadAll<WeaponData>("Datas/Weapons"));
-        _shields     = new List<CoreShieldData>(Resources.LoadAll<CoreShieldData>("Datas/Core Shields"));
-        _accessories = new List<AccessoryData>(Resources.LoadAll<AccessoryData>("Datas/Accessories"));
-        _skills      = new List<SkillData>(Resources.LoadAll<SkillData>("Datas/Skills"));
+        _weapons     = new List<WeaponData>(Resources.LoadAll<WeaponData>(ResourcePaths.Weapons));
+        _shields     = new List<CoreShieldData>(Resources.LoadAll<CoreShieldData>(ResourcePaths.CoreShields));
+        _accessories = new List<AccessoryData>(Resources.LoadAll<AccessoryData>(ResourcePaths.Accessories));
+        _skills      = new List<SkillData>(Resources.LoadAll<SkillData>(ResourcePaths.Skills));
 
         Debug.Log($"[DevTool] Loaded — Weapons:{_weapons.Count} Shields:{_shields.Count} " +
                   $"Accessories:{_accessories.Count} Skills:{_skills.Count}");
 
         // Companion module data (đường dẫn Resources/Datas/CompanionModules)
-        _compProtocols = new List<CompanionProtocolData>(Resources.LoadAll<CompanionProtocolData>("Datas/CompanionModules"));
-        _compMatrices  = new List<CompanionMatrixData>(Resources.LoadAll<CompanionMatrixData>("Datas/CompanionModules"));
-        _compSyncCores = new List<CompanionSyncCoreData>(Resources.LoadAll<CompanionSyncCoreData>("Datas/CompanionModules"));
+        _compProtocols = new List<CompanionProtocolData>(Resources.LoadAll<CompanionProtocolData>(ResourcePaths.CompanionModules));
+        _compMatrices  = new List<CompanionMatrixData>(Resources.LoadAll<CompanionMatrixData>(ResourcePaths.CompanionModules));
+        _compSyncCores = new List<CompanionSyncCoreData>(Resources.LoadAll<CompanionSyncCoreData>(ResourcePaths.CompanionModules));
 
         BuildFilteredLists();
         PopulateDropdowns();
@@ -262,7 +262,7 @@ public class DevToolPanel : MonoBehaviour
         FillDropdown(_ddCompSyncCore, _compSyncCores, m => m.name);
     }
 
-    private CompanionAI FindCompanion() => FindFirstObjectByType<CompanionAI>();
+    private CompanionAI FindCompanion() => CompanionAI.Current;
 
     /// <summary>Tab Companion: đổi nguyên mẫu theo dropdown (lưu PlayerPrefs).</summary>
     public void CMD_SetCompanionArchetype()

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 public class EquipmentManager : MonoBehaviour
@@ -45,10 +45,7 @@ public class EquipmentManager : MonoBehaviour
     // 1. Tự động load vũ khí mặc định từ Resources
     void InitializeBaseWeapon()
     {
-        // Đường dẫn file trong thư mục Resources (bỏ đuôi .asset)
-        // Ví dụ: Assets/Resources/Weapons/WPN_H_T1_01.asset -> Load "Weapons/WPN_H_T1_01"
-        // Bạn hãy điều chỉnh pathString cho đúng với project của bạn
-        string path = "Datas/Weapons/Hand/Tier 1/WPN_H_T1_01";
+        string path = ResourcePaths.DefaultBaseWeapon;
 
         baseWeapon = Resources.Load<WeaponData>(path);
 

@@ -40,7 +40,7 @@ public class CatalystSignature : SkillBehavior
     public override bool Use()
     {
         // 1. Kiểm tra xem có Companion trên sân không
-        CompanionAI companion = FindFirstObjectByType<CompanionAI>();
+        CompanionAI companion = CompanionAI.Current;
         if (companion == null)
         {
             Debug.Log("<color=red>CATALYST: Không tìm thấy Companion để truyền năng lượng!</color>");

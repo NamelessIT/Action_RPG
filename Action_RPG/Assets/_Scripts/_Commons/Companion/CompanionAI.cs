@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
@@ -8,6 +8,23 @@ using Game.Features.Companion; // [003-E] For CompanionVisionManager
 [RequireComponent(typeof(AllyStats))] // Thú cưng thuộc phe Ally
 public class CompanionAI : MonoBehaviour
 {
+    // ---------------Truy cap chung---------------
+    private static CompanionAI _current;
+
+    /// <summary>
+    /// Companion đang có trong scene. Thay cho FindFirstObjectByType&lt;CompanionAI&gt;() rải khắp code:
+    /// lần đầu vẫn quét scene, các lần sau lấy từ cache.
+    /// Companion bị huỷ thì cache tự rỗng (Unity coi object đã destroy là null) nên lần gọi kế tiếp quét lại.
+    /// </summary>
+    public static CompanionAI Current
+    {
+        get
+        {
+            if (_current == null) _current = FindFirstObjectByType<CompanionAI>();
+            return _current;
+        }
+    }
+
     [Header("--- References ---")]
     public Transform player;
     private NavMeshAgent agent;
@@ -614,6 +631,8 @@ public class CompanionAI : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (_current == this) _current = null;
+
         if (stats != null) stats.OnBeforeTakeDamage -= HandleMatrixDodge;
     }
 

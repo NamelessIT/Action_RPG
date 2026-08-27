@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using Unity.Cinemachine;
 using System.Collections;
 using UnityEngine.Rendering;
@@ -84,7 +84,7 @@ public class PlayerController : MonoBehaviour
     private CompanionSkillController ResolveCompanionSkillCtrl()
     {
         if (_companionSkillCtrl != null) return _companionSkillCtrl;
-        CompanionAI c = FindFirstObjectByType<CompanionAI>();
+        CompanionAI c = CompanionAI.Current;
         if (c != null) _companionSkillCtrl = c.GetComponent<CompanionSkillController>();
         return _companionSkillCtrl;
     }
@@ -1115,7 +1115,7 @@ public class PlayerController : MonoBehaviour
         }
 
         // --- 7 BÁO CHO THÚ CƯNG BIẾT ĐỂ GHI SỔ ĐEN ---
-        CompanionAI myCompanion = FindFirstObjectByType<CompanionAI>();
+        CompanionAI myCompanion = CompanionAI.Current;
         if (myCompanion != null)
         {
             myCompanion.AddMarkedTarget(enemyStats.transform);

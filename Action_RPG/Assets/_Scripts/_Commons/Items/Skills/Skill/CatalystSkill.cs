@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 
 public class CatalystSkill : SkillBehavior
@@ -95,7 +95,7 @@ public class CatalystSkill : SkillBehavior
             //}
 
             // Gọi Companion ra lệnh Focus
-            CompanionAI companion = FindFirstObjectByType<CompanionAI>();
+            CompanionAI companion = CompanionAI.Current;
             if (companion != null)
             {
                 companion.ForceFocusTarget(bestTarget.transform, companionAtkSpeedBuff, focusDuration);

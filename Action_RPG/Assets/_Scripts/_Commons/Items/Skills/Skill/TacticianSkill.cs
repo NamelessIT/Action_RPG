@@ -50,7 +50,7 @@ public class TacticianSkill : SkillBehavior
 
     public override bool Use()
     {
-        companion = FindFirstObjectByType<CompanionAI>();
+        companion = CompanionAI.Current;
         if (companion == null)
         {
             Debug.Log("<color=red>TACTICIAN: Không có Companion để gắn mồi nhử!</color>");

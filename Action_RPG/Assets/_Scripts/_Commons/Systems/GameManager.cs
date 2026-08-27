@@ -1,4 +1,4 @@
-﻿// _Scripts/_Commons/System/GameManager.cs
+// _Scripts/_Commons/System/GameManager.cs
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
@@ -428,9 +428,9 @@ public class GameManager : MonoBehaviour
         coreShieldLookup = new Dictionary<string, CoreShieldData>();
         accessoryLookup = new Dictionary<string, AccessoryData>();
 
-        RegisterWeapons(Resources.LoadAll<WeaponData>("Datas/Weapons"));
-        RegisterCoreShields(Resources.LoadAll<CoreShieldData>("Datas/Core Shields"));
-        RegisterAccessories(Resources.LoadAll<AccessoryData>("Datas/Accessories"));
+        RegisterWeapons(Resources.LoadAll<WeaponData>(ResourcePaths.Weapons));
+        RegisterCoreShields(Resources.LoadAll<CoreShieldData>(ResourcePaths.CoreShields));
+        RegisterAccessories(Resources.LoadAll<AccessoryData>(ResourcePaths.Accessories));
     }
 
     private void RegisterWeapons(WeaponData[] weapons)

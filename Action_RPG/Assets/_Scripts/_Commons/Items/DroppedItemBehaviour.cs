@@ -40,11 +40,11 @@ public class DroppedItemBehaviour : MonoBehaviour
         {
             switch (entry.weaponData.rarity)
             {
-                case WeaponData.Rarity.Residual_1:  return new Color(0.70f, 0.70f, 0.70f); // grey
-                case WeaponData.Rarity.Stained_2:   return new Color(0.30f, 0.80f, 0.30f); // green
-                case WeaponData.Rarity.Corrupted_3: return new Color(0.30f, 0.50f, 1.00f); // blue
-                case WeaponData.Rarity.Condemned_4: return new Color(0.60f, 0.20f, 0.90f); // purple
-                case WeaponData.Rarity.Anomalous_5: return new Color(1.00f, 0.50f, 0.10f); // orange
+                case Rarity.Residual_1:  return new Color(0.70f, 0.70f, 0.70f); // grey
+                case Rarity.Stained_2:   return new Color(0.30f, 0.80f, 0.30f); // green
+                case Rarity.Corrupted_3: return new Color(0.30f, 0.50f, 1.00f); // blue
+                case Rarity.Condemned_4: return new Color(0.60f, 0.20f, 0.90f); // purple
+                case Rarity.Anomalous_5: return new Color(1.00f, 0.50f, 0.10f); // orange
                 default:                            return Color.white;
             }
         }

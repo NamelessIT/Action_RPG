@@ -186,7 +186,7 @@ public class InfiltratorSkill : SkillBehavior
             yield return new WaitForSeconds(0.25f);
 
             // ---------- NHỊP 2: COMPANION LAO VÀO STUN + GÂY SÁT THƯƠNG ----------
-            CompanionAI companion = FindFirstObjectByType<CompanionAI>();
+            CompanionAI companion = CompanionAI.Current;
             if (companion != null && target != null && target.currentHp > 0)
             {
                 NavMeshAgent compAgent = companion.GetComponent<NavMeshAgent>();

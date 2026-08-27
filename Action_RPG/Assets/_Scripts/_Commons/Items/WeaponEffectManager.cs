@@ -1526,7 +1526,7 @@ public class WeaponEffectManager : MonoBehaviour
     private Stats GetCompanionStats()
     {
         if (_cachedCompanion != null) return _cachedCompanion;
-        CompanionAI c = FindFirstObjectByType<CompanionAI>();
+        CompanionAI c = CompanionAI.Current;
         if (c != null) _cachedCompanion = c.GetComponent<Stats>();
         return _cachedCompanion;
     }
@@ -1615,7 +1615,7 @@ public class WeaponEffectManager : MonoBehaviour
     private void GR_T5_03_Signature()
     {
         if (skillManager != null) skillManager.ResetAllCooldownsExcept(skillManager.currentSignature);
-        CompanionAI c = FindFirstObjectByType<CompanionAI>();
+        CompanionAI c = CompanionAI.Current;
         if (c != null)
         {
             SkillManager csm = c.GetComponentInChildren<SkillManager>();

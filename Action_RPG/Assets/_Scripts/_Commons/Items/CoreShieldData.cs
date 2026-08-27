@@ -1,17 +1,9 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 [CreateAssetMenu(fileName = "New Core Shield", menuName = "Inventory/Core Shield Data")]
 public class CoreShieldData : ScriptableObject
 {
-    public enum Rarity
-    {
-        Residual_1,
-        Stained_2,
-        Corrupted_3,
-        Condemned_4,
-        Anomalous_5
-    }
     public string id;
     public string coreShieldName;
     public Sprite icon;

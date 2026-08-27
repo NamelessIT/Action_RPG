@@ -150,7 +150,7 @@ public class CompanionHUD : MonoBehaviour
         if (_resolveTimer > 0f && _stats == null) return false;
         _resolveTimer = 0.5f;
 
-        CompanionAI c = FindFirstObjectByType<CompanionAI>();
+        CompanionAI c = CompanionAI.Current;
         if (c == null) { _stats = null; _equip = null; _ctrl = null; return false; }
         _stats = c.GetComponent<AllyStats>();
         _equip = c.GetComponent<CompanionEquipmentManager>();

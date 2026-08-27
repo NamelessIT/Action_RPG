@@ -43,7 +43,7 @@ public class InventoryItemRecord
 
     /// <summary>
     /// Bậc rarity 0-4 (Residual→Anomalous) lấy từ data nguồn; -1 nếu không có data rarity.
-    /// 3 enum Rarity (Weapon/CoreShield/Accessory) trùng thứ tự nên ép int an toàn.
+    /// Cả 3 loại data dùng chung enum Rarity nên ép int luôn đúng thứ tự Residual→Anomalous.
     /// </summary>
     public int RarityTier
     {

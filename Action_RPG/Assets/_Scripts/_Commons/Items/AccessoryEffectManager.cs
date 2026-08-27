@@ -976,7 +976,7 @@ public class AccessoryEffectManager : MonoBehaviour
 
     private void BindCompanion()
     {
-        CompanionAI c = FindFirstObjectByType<CompanionAI>();
+        CompanionAI c = CompanionAI.Current;
         if (c == null) return;
         AllyStats cs = c.GetComponent<AllyStats>();
         if (cs == null) return;

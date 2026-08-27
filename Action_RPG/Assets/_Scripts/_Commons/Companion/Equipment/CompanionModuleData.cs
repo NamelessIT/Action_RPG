@@ -13,8 +13,6 @@ using UnityEngine;
 //  Rarity 5: Effect đột biến. (Logic Effect xử lý ở 3 EffectManager riêng.)
 // ─────────────────────────────────────────────────────────────────────────────
 
-public enum CompanionRarity { Residual_1, Stained_2, Corrupted_3, Condemned_4, Anomalous_5 }
-
 /// <summary>Loại hiệu ứng của module (chỉ Rarity 3+ mới có).</summary>
 public enum CompanionEffectType { None, Passive, Trigger }
 
@@ -34,7 +32,7 @@ public abstract class CompanionModuleData : ScriptableObject
     public string id;                  // VD: PRT_ART_T3_01
     [TextArea] public string description;
     public Sprite icon;
-    public CompanionRarity rarity = CompanionRarity.Residual_1;
+    public Rarity rarity = Rarity.Residual_1;
 
     [Header("Hiệu Ứng (Rarity 3+)")]
     public CompanionEffectType effectType = CompanionEffectType.None;
@@ -43,7 +41,7 @@ public abstract class CompanionModuleData : ScriptableObject
 
     /// <summary>Module Rarity 3 trở lên (mới có Effect).</summary>
     public bool HasEffect => effectType != CompanionEffectType.None
-        && (rarity == CompanionRarity.Corrupted_3
-            || rarity == CompanionRarity.Condemned_4
-            || rarity == CompanionRarity.Anomalous_5);
+        && (rarity == Rarity.Corrupted_3
+            || rarity == Rarity.Condemned_4
+            || rarity == Rarity.Anomalous_5);
 }

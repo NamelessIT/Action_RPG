@@ -28,7 +28,7 @@ public class CoreShieldEffectManager : MonoBehaviour
         // [SỬA ĐỔI 1] Quét tìm SkillManager ở mọi ngóc ngách của Player
         skillManager = GetComponentInChildren<SkillManager>();
         // Đi tìm Companion và cắm dây cáp lắng nghe sự kiện BỊ ĐÁNH của nó
-        CompanionAI comp = FindFirstObjectByType<CompanionAI>();
+        CompanionAI comp = CompanionAI.Current;
         if (comp != null)
         {
             companionStats = comp.GetComponent<Stats>();
@@ -370,7 +370,7 @@ public class CoreShieldEffectManager : MonoBehaviour
         // ==========================================
         if (id == "SHD_CS_T4_08")
         {
-            CompanionAI comp = FindFirstObjectByType<CompanionAI>();
+            CompanionAI comp = CompanionAI.Current;
             bool isCompDead = (comp != null && comp.GetComponent<Stats>().isDead);
 
             // BẬT BUFF (Chỉ chạy 1 lần khi Companion vừa nằm xuống)

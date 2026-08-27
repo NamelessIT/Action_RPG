@@ -64,7 +64,7 @@ public class SpellbinderSkill : SkillBehavior
 
     public override bool Use()
     {
-        CompanionAI companion = FindFirstObjectByType<CompanionAI>();
+        CompanionAI companion = CompanionAI.Current;
         if (companion == null)
         {
             Debug.Log("<color=red>SPELLBINDER: Không có Companion để cường hóa!</color>");

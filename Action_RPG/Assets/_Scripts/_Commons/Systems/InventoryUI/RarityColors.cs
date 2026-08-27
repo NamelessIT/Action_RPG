@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Bảng màu rarity dùng chung cho UI inventory (border slot, tooltip tên item...).
-/// 5 bậc khớp enum Rarity của Weapon/CoreShield/Accessory:
+/// 5 bậc khớp enum Rarity dùng chung (Weapon / CoreShield / Accessory / CompanionModule):
 ///   0 Residual · 1 Stained · 2 Corrupted · 3 Condemned · 4 Anomalous
 /// </summary>
 public static class RarityColors
