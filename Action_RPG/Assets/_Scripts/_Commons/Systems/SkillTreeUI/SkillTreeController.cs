@@ -133,7 +133,7 @@ public class SkillTreeController : MonoBehaviour
     private void Start()
     {
         _runtime      = FindFirstObjectByType<SkillTreeRuntime>();
-        _playerStats  = FindFirstObjectByType<PlayerStats>();
+        _playerStats  = PlayerStats.Current;
 
         if (_runtime == null)
             Debug.LogWarning("[SkillTreeController] Không tìm thấy SkillTreeRuntime!");

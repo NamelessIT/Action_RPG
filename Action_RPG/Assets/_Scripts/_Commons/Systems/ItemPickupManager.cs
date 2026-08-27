@@ -28,7 +28,7 @@ public class ItemPickupManager : MonoBehaviour
     private void Awake()
     {
         if (_inventoryRuntime == null)
-            _inventoryRuntime = FindFirstObjectByType<InventoryRuntime>();
+            _inventoryRuntime = InventoryRuntime.Current;
     }
 
     private void Update()

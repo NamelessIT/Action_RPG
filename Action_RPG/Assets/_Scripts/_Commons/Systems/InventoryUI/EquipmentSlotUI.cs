@@ -24,7 +24,7 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler, IBeginDragHandler, I
     {
         if (_equipmentManager == null)
         {
-            _equipmentManager = FindFirstObjectByType<EquipmentManager>();
+            _equipmentManager = EquipmentManager.Current;
         }
 
         if (_inventoryController == null)

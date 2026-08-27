@@ -58,7 +58,7 @@ public class StatDetailUI : MonoBehaviour
     {
         if (_playerStats == null)
         {
-            _playerStats = FindFirstObjectByType<PlayerStats>();
+            _playerStats = PlayerStats.Current;
         }
 
         if (_closeButton != null)
@@ -66,7 +66,7 @@ public class StatDetailUI : MonoBehaviour
             _closeButton.onClick.AddListener(Hide);
         }
 
-        _equipmentManager = FindFirstObjectByType<EquipmentManager>();
+        _equipmentManager = EquipmentManager.Current;
         if (_equipmentManager != null)
             _equipmentManager.OnEquipmentChanged += Refresh;
     }

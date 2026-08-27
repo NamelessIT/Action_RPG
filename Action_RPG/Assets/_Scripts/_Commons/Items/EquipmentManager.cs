@@ -3,6 +3,21 @@ using System.Collections.Generic;
 
 public class EquipmentManager : MonoBehaviour
 {
+    private static EquipmentManager _current;
+
+    /// <summary>
+    /// EquipmentManager của Player (duy nhất trong scene). Companion dùng
+    /// CompanionEquipmentManager riêng nên không đụng nhau.
+    /// </summary>
+    public static EquipmentManager Current
+    {
+        get
+        {
+            if (_current == null) _current = FindFirstObjectByType<EquipmentManager>();
+            return _current;
+        }
+    }
+
     private AllyStats allyStats;
     //Weapon
     [Header("Weapon")]

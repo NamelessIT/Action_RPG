@@ -46,7 +46,7 @@ public class InventoryController : MonoBehaviour
     private void Awake()
     {
         if (_inventoryRuntime == null)
-            _inventoryRuntime = FindFirstObjectByType<InventoryRuntime>();
+            _inventoryRuntime = InventoryRuntime.Current;
 
         if (_rootCanvas == null)
             _rootCanvas = GetComponentInParent<Canvas>();

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
@@ -44,7 +44,7 @@ namespace Systems
         void Start()
         {
             if (playerStats == null)
-                playerStats = FindFirstObjectByType<PlayerStats>();
+                playerStats = PlayerStats.Current;
 
             if (skillManager == null && playerStats != null)
                 skillManager = playerStats.GetComponent<SkillManager>();

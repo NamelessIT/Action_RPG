@@ -123,8 +123,8 @@ public class DevToolPanel : MonoBehaviour
 
     private void Awake()
     {
-        _playerStats      = FindFirstObjectByType<PlayerStats>();
-        _equipmentManager = FindFirstObjectByType<EquipmentManager>();
+        _playerStats      = PlayerStats.Current;
+        _equipmentManager = EquipmentManager.Current;
 
         // Không dùng FindFirstObjectByType<SkillManager>() vì sẽ tìm thấy Enemy SkillManager trước.
         // Tìm đúng SkillManager có isPlayer = true (của Player, không phải Enemy).
@@ -142,7 +142,7 @@ public class DevToolPanel : MonoBehaviour
     private SkillManager FindPlayerSkillManager()
     {
         // Ưu tiên tìm qua tag "Player"
-        GameObject playerObj = GameObject.FindWithTag("Player");
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
         {
             SkillManager sm = playerObj.GetComponent<SkillManager>();
@@ -724,7 +724,7 @@ public class DevToolPanel : MonoBehaviour
         }
 
         // Tìm vị trí player để spawn enemy phía trước
-        GameObject playerObj = GameObject.FindWithTag("Player");
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         Vector3 spawnPos;
         if (playerObj != null)
         {

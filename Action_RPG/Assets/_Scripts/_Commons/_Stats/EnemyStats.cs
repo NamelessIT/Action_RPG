@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 public enum EnemyType { Hostile, Neutral, Friendly }
@@ -241,7 +241,7 @@ public class EnemyStats : Stats
         // ── 1. TRAO EXP CHO PLAYER ──────────────────────────────────────
         if (expReward > 0f)
         {
-            PlayerStats playerStats = FindFirstObjectByType<PlayerStats>();
+            PlayerStats playerStats = PlayerStats.Current;
             if (playerStats != null)
             {
                 float xpGain = expReward;

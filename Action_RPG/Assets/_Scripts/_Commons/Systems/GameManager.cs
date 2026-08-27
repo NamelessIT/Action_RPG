@@ -34,7 +34,7 @@ public class GameManager : MonoBehaviour
 
         // Tải player ID = 1
         currentPlayerState = stateManager.RebuildRuntimeState(playerId: 1);
-        inventoryRuntime = FindFirstObjectByType<InventoryRuntime>();
+        inventoryRuntime = InventoryRuntime.Current;
 
         Debug.Log("[GameManager] ✅ Đã tải xong Player Runtime State!");
     }
@@ -205,12 +205,12 @@ public class GameManager : MonoBehaviour
     {
         if (playerObject == null)
         {
-            playerObject = GameObject.Find("Player");
+            playerObject = GameObject.FindGameObjectWithTag("Player");
         }
 
         if (playerObject == null)
         {
-            Debug.LogError("[GameManager] ❌ Không tìm thấy GameObject 'Player' trong scene!");
+            Debug.LogError("[GameManager] ❌ Không tìm thấy GameObject nào mang tag 'Player' trong scene!");
             return false;
         }
 

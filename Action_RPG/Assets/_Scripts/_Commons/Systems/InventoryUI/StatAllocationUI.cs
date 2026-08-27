@@ -34,10 +34,10 @@ public class StatAllocationUI : MonoBehaviour
     {
         if (_allyStats == null)
         {
-            _allyStats = FindFirstObjectByType<PlayerStats>();
+            _allyStats = PlayerStats.Current;
         }
 
-        _equipmentManager = FindFirstObjectByType<EquipmentManager>();
+        _equipmentManager = EquipmentManager.Current;
         if (_equipmentManager != null)
             _equipmentManager.OnEquipmentChanged += RefreshAll;
     }

@@ -1,8 +1,23 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 public class PlayerStats : AllyStats
 {
+    private static PlayerStats _current;
+
+    /// <summary>
+    /// PlayerStats duy nhất trong scene. Thay cho FindFirstObjectByType&lt;PlayerStats&gt;() rải rác:
+    /// lần đầu quét scene, các lần sau lấy cache. Player bị huỷ thì cache tự rỗng nên quét lại.
+    /// </summary>
+    public static PlayerStats Current
+    {
+        get
+        {
+            if (_current == null) _current = FindFirstObjectByType<PlayerStats>();
+            return _current;
+        }
+    }
+
     [Header("--- Skill Point---")]
     public int skillPointRemain;
 

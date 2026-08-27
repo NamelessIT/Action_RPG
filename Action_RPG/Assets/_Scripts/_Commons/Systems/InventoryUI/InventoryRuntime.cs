@@ -15,6 +15,20 @@ using UnityEngine;
 /// </summary>
 public class InventoryRuntime : MonoBehaviour
 {
+    private static InventoryRuntime _current;
+
+    /// <summary>
+    /// Kho đồ duy nhất trong scene. Thay cho FindFirstObjectByType&lt;InventoryRuntime&gt;() rải rác.
+    /// </summary>
+    public static InventoryRuntime Current
+    {
+        get
+        {
+            if (_current == null) _current = FindFirstObjectByType<InventoryRuntime>();
+            return _current;
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────
     //  CONSTANTS
     // ─────────────────────────────────────────────────────────────
