@@ -204,11 +204,16 @@ namespace Systems
         {
             if (t == null || IsSkinned(t)) return;
 
-            // Phân vai theo cỡ chữ: tiêu đề sáng, thân vừa, chú thích mờ.
+            // Phân vai theo cỡ chữ. CHỈ hai bậc, và bậc thấp nhất vẫn phải đọc được.
+            //
+            // Bản đầu có bậc thứ ba dùng TextDim cho chữ < 18pt — sai. TextDim đo được
+            // tương phản 2.73 trên nền panel, dưới xa ngưỡng 4.5, nên mọi nhãn nhỏ
+            // (STR/DEX/INT..., tên chỉ số) thành tím mờ trên nền đen, không đọc nổi.
+            // TextDim chỉ dành cho chữ trang trí mà người chơi không cần đọc, và
+            // skinner quét đại trà thì không thể biết chữ nào là loại đó.
             float size = t.fontSize;
-            t.color = size >= 28f ? UIPalette.TextBright
-                    : size >= 18f ? UIPalette.TextMuted
-                                  : UIPalette.TextDim;
+            t.color = size >= 28f ? UIPalette.TextBright   // tương phản 15.5
+                                  : UIPalette.TextMuted;   // tương phản 6.19
             MarkSkinned(t);
         }
 

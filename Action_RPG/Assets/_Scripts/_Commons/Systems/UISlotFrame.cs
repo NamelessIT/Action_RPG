@@ -28,6 +28,11 @@ namespace Systems
         [Tooltip("Bật thì viền thở theo nhịp — dùng cho ô đang sẵn sàng / được chọn.")]
         public bool pulsing = false;
 
+        [Tooltip("Lấy chính sprite của Image làm nền, tức BO TRÒN luôn cái ảnh đó.\n" +
+                 "Bật khi gắn thẳng lên icon: icon lấp kín ô nên khung dựng SAU LƯNG nó sẽ bị " +
+                 "che sạch, phải để chính icon mang khung.")]
+        public bool fillFromSprite = false;
+
         [Tooltip("Để trống thì tự Shader.Find. Khi BUILD nhớ thêm UI/RoundedFrame vào " +
                  "Project Settings > Graphics > Always Included Shaders.")]
         public Shader frameShader;
@@ -46,8 +51,9 @@ namespace Systems
             _image = GetComponent<Image>();
             _rt    = (RectTransform)transform;
 
-            // Khung là trang trí — không được nuốt click của ô bên dưới.
-            _image.raycastTarget = false;
+            // KHÔNG đụng raycastTarget ở đây. Awake chạy ngay bên trong AddComponent, tức là
+            // TRƯỚC khi bên gọi kịp gán field, nên mọi cờ đọc ở đây đều là giá trị mặc định.
+            // Ai tạo Image thì người đó tự quyết raycast (xem Create).
 
             Shader sh = frameShader != null ? frameShader : Shader.Find("UI/RoundedFrame");
             if (sh == null)
@@ -80,6 +86,10 @@ namespace Systems
             if (_mat != null) Destroy(_mat);
         }
 
+        /// <summary>Áp lại mọi thuộc tính lên material. Gọi sau khi đổi field từ code —
+        /// bắt buộc với đường AddComponent, vì Awake đã chạy trước lúc gán field.</summary>
+        public void Refresh() => ApplyStaticProperties();
+
         /// <summary>Đổi bộ màu của khung (vd theo bậc rarity, hoặc theo trạng thái ô).</summary>
         public void SetColors(Color fill, Color edge, Color glow)
         {
@@ -97,6 +107,7 @@ namespace Systems
             _mat.SetColor("_FillColor", _fill);
             _mat.SetColor("_BorderColor", _edge);
             _mat.SetColor("_GlowColor", _glow);
+            _mat.SetFloat("_TextureFill", fillFromSprite ? 1f : 0f);
         }
 
         /// <summary>Góc bo phải tính theo tỉ lệ ô, nếu không ô chữ nhật sẽ có góc méo.</summary>
@@ -112,6 +123,26 @@ namespace Systems
 
             _lastAspect = aspect;
             _mat.SetFloat("_Aspect", aspect);
+        }
+
+        /// <summary>
+        /// Gắn khung THẲNG lên một Image có sẵn (icon, ảnh đại diện...) thay vì dựng
+        /// GameObject riêng. Dùng khi Image đó lấp kín ô — khung dựng sau lưng nó sẽ bị che.
+        /// Ảnh sẽ được bo tròn theo khung. Idempotent.
+        /// </summary>
+        public static UISlotFrame AttachTo(Image target, float radius = 0.18f, float border = 0.045f)
+        {
+            if (target == null) return null;
+
+            var existing = target.GetComponent<UISlotFrame>();
+            if (existing != null) return existing;
+
+            var f = target.gameObject.AddComponent<UISlotFrame>();
+            f.fillFromSprite = true;
+            f.radius = radius;
+            f.border = border;
+            f.Refresh();   // Awake đã chạy với field mặc định — phải áp lại
+            return f;
         }
 
         /// <summary>
@@ -143,7 +174,12 @@ namespace Systems
             if (behind) rt.SetAsFirstSibling(); // vẽ trước => nằm sau icon
             else        rt.SetAsLastSibling();  // vẽ sau  => viền nổi trên nền sẵn có
 
-            return go.AddComponent<UISlotFrame>();
+            // Image này do chính hàm này tạo và chỉ để trang trí -> không được nuốt click.
+            go.GetComponent<Image>().raycastTarget = false;
+
+            var f = go.AddComponent<UISlotFrame>();
+            f.Refresh();
+            return f;
         }
     }
 }

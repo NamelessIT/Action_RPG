@@ -84,31 +84,29 @@ namespace Systems
         }
 
         /// <summary>
-        /// Dựng khung bo tròn cho 2 ô skill lúc chạy.
+        /// Bo tròn + viền cho 2 ô skill lúc chạy.
         ///
-        /// Trước đây không ô nào có phần tử viền: khung bo tròn ta thấy trong game là do art
-        /// của từng icon tự vẽ, nên skill nào art không có khung thì nhìn trần và không cách
-        /// nào đồng bộ. Khung dựng ở đây là phần tử UI thật nên mọi skill đều có như nhau.
+        /// Không ô nào có phần tử viền sẵn: khung bo tròn thấy trong game là do art của từng
+        /// icon tự vẽ, nên skill nào art không có khung thì nhìn trần. Khung dựng ở đây là
+        /// phần tử UI thật nên mọi skill đều giống nhau.
         ///
-        /// Gắn vào CHA CỦA ICON chứ không phải vào container, vì hai ô đang được gán lệch
-        /// cấp trong Inspector (xem chú thích ở skillQ_Container).
+        /// Gắn THẲNG lên Image của icon, KHÔNG dựng khung riêng đặt sau lưng nó. Bản trước
+        /// làm vậy và khung biến mất ngay khi vào Play Mode: icon lấp kín đúng 100x100 của ô
+        /// nên nó che sạch khung phía sau, và ô lại trông vuông như cũ.
         /// </summary>
         private void SetupSkillSlotFrames()
         {
-            CreateFrameForIcon(skillE_Icon);
-            CreateFrameForIcon(skillQ_Icon);
+            AttachFrameToIcon(skillE_Icon);
+            AttachFrameToIcon(skillQ_Icon);
         }
 
-        private void CreateFrameForIcon(Image icon)
+        private void AttachFrameToIcon(Image icon)
         {
             if (icon == null) return;
 
-            var host = icon.transform.parent as RectTransform;
-            if (host == null) return;
-
-            var frame = UISlotFrame.Create(host);
+            var frame = UISlotFrame.AttachTo(icon);
             if (frame != null)
-                frame.SetColors(UIPalette.VoidSunk, UIPalette.RuneEdge, UIPalette.RuneGlow);
+                frame.SetColors(Color.white, UIPalette.RuneEdge, UIPalette.RuneGlow);
         }
 
         /// <summary>

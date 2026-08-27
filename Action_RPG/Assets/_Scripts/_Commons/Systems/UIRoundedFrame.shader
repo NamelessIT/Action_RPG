@@ -26,6 +26,12 @@ Shader "UI/RoundedFrame"
         _GlowWidth   ("Glow Width", Range(0, 0.3)) = 0.06
         _GlowPower   ("Glow Power", Range(0, 4)) = 1
 
+        [Header(Fill source)]
+        // 0 = to nen bang _FillColor (o trong).
+        // 1 = lay chinh sprite lam nen -> ICON duoc BO TRON theo khung.
+        //     Can cho o skill: icon lap kin o nen neu khung nam sau no thi bi che sach.
+        [Toggle] _TextureFill ("Fill from sprite", Float) = 0
+
         _StencilComp      ("Stencil Comparison", Float) = 8
         _Stencil          ("Stencil ID", Float) = 0
         _StencilOp        ("Stencil Operation", Float) = 0
@@ -104,6 +110,7 @@ Shader "UI/RoundedFrame"
             fixed4 _GlowColor;
             float  _GlowWidth;
             float  _GlowPower;
+            float  _TextureFill;
 
             v2f vert (appdata_t v)
             {
@@ -156,11 +163,14 @@ Shader "UI/RoundedFrame"
                     glow *= step(0.0, dist); // chỉ phía ngoài, trong đã có nền lo
                 }
 
+                // Nền: hoặc màu phẳng, hoặc chính sprite (icon bo tròn).
+                half4 tex   = tex2D(_MainTex, IN.texcoord) + _TextureSampleAdd;
+                half4 fillC = lerp(_FillColor, tex * _FillColor, _TextureFill);
+
                 half4 col = half4(0, 0, 0, 0);
 
-                // Nền
-                col.rgb  = _FillColor.rgb;
-                col.a    = _FillColor.a * inside;
+                col.rgb  = fillC.rgb;
+                col.a    = fillC.a * inside;
 
                 // Viền chồng lên nền
                 col.rgb  = lerp(col.rgb, _BorderColor.rgb, ring * _BorderColor.a);

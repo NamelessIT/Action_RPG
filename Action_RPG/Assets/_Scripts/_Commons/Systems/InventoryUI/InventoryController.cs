@@ -58,6 +58,11 @@ public class InventoryController : MonoBehaviour
         // Mặc định hiển thị trang Weapon
         ShowWeaponsTab();
 
+        // Nới khoảng cách TRƯỚC, khoác màu SAU — skinner đọc kích thước ô để tính góc bo,
+        // nên phải để layout ổn định trước rồi mới tính.
+        Systems.UILayoutTidy.Apply(gameObject);
+        Systems.UILayoutTidy.ApplyRows(gameObject);
+
         // Khoác tông arcane cho toàn bộ control mặc định trong panel (nút tab, dropdown,
         // thanh cuộn, chữ). Chạy sau BuildSlotViews để các ô vừa sinh cũng được tính.
         Systems.ArcaneUISkin.Apply(gameObject);

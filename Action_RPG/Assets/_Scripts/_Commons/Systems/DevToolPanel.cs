@@ -180,6 +180,7 @@ public class DevToolPanel : MonoBehaviour
 
         // Khoác lại giao diện SAU khi dropdown đã populate, để caption/item text mới sinh
         // cũng được tô. Đây là panel dev nên tiêu chí là DỄ ĐỌC, không phải đẹp.
+        Systems.UILayoutTidy.Apply(gameObject);
         Systems.ArcaneUISkin.Apply(gameObject);
     }
 
