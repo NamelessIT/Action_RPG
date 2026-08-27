@@ -384,6 +384,37 @@ Pham vi se duoc khoac (dem tren scene that):
 
 ---
 
+### T-UI-06 — Sua 3 loi UI user bao  (DA XONG, commit `76d3c68`)
+
+- [x] **Chu kho doc (loi cua minh).** `SkinLooseText` gan `TextDim` cho chu < 18pt, ma
+  `TextDim` do duoc **2.47-2.92** tren MOI nen — duoi xa 4.5. Bo han bac do; gio chi 2 bac:
+  `TextBright` (>=14.0) cho tieu de, `TextMuted` (>=5.62) cho phan con lai.
+  **Bai hoc:** skinner quet dai tra thi khong the biet chu nao la trang tri, nen bac thap
+  nhat BUOC PHAI doc duoc.
+- [x] **Border skill E ve vuong khi vao Play Mode (loi cua minh).** Khung dung thanh
+  GameObject rieng dat SAU icon, nhung icon lap kin dung 100x100 cua o nen che sach.
+  Sua: gan khung THANG len Image cua icon + them che do `_TextureFill` vao shader.
+- [x] **Bug lo ra trong luc sua:** `AddComponent` goi `Awake` NGAY LAP TUC, truoc khi ben
+  goi kip gan field -> moi co doc trong `Awake` deu la gia tri mac dinh. Bo field
+  `disableRaycast`, them `Refresh()`.
+- [x] **Layout di sat nhau.** Gan nhu moi layout group deu `spacing = 0`. Them `UILayoutTidy`.
+  Do thuc te: **52 group GIU NGUYEN** (DevTool 46, StatDetail 6), 42 group duoc noi.
+
+### T-UI-07 — Layout CON LAI (chua lam, can quyet dinh)
+
+`UILayoutTidy` chi noi KHE HO. Nhung khao sat cho thay co van de o KICH THUOC va CAU
+TRUC ma noi khe khong cuu duoc — va sua thi phai dong vao prefab:
+
+- [ ] `TopEquipDiv` rong **10px** nhung chua 7 o 35x35 + 2 slider 200x25 + Avatar 100x150.
+  No khong co layout group nao ca -> con dat tay va tran ra ngoai. Can them
+  layout group that hoac dat lai anchor.
+- [ ] Hang `StatRow_*` cao **15px** — qua chat de doc. Nang len ~28-32px se de hon nhieu,
+  nhung day la doi KICH THUOC nen minh khong tu y lam.
+- [ ] `Value` trong hang stat rong 200px trong khi `Attribute` chi 50px — so bi day xa
+  khoi nhan. Nen doi thanh `Attribute` gian no, `Value` co dinh hep, hoac can phai.
+
+---
+
 ### T-UI-02 — UI hien Debuff / CC dang chiu  (THUC RA LA LAM MOI, khong phai sua)
 - **Da kiem tra: hien khong co UI debuff nao ca.** Grep toan bo `.prefab` + `.unity` khong ra
   object nao ten Debuff/Buff/Status. Nghia la nguoi choi dang bi Stun/Root/Silence/Slow/Bleed/Burn
