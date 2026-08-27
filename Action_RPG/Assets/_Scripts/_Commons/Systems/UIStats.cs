@@ -22,10 +22,20 @@ namespace Systems
         public TextMeshProUGUI sinText;
 
         [Header("--- Shield Bar ---")]
-        [Tooltip("Image fill màu bạc — lấp đầy phần HP còn trống (fill từ trái sang phải)")]
+        [Tooltip("Image fill — lấp đầy phần HP còn trống (fill từ trái sang phải)")]
         public Image shieldFillImage;
-        [Tooltip("Image fill màu bạc mờ — đè lên HP bar khi shield vượt quá max HP (fill từ phải sang trái)")]
+        [Tooltip("Image fill mờ — đè lên HP bar khi shield vượt quá max HP (fill từ phải sang trái)")]
         public Image shieldOverlayImage;
+        [Tooltip("Chữ hiện lượng khiên, vd +120. Để trống nếu không muốn hiện.")]
+        public TextMeshProUGUI shieldText;
+        [Tooltip("Shader UI/ShieldBar. Để trống thì tự Shader.Find lúc chạy — nhưng khi BUILD phải thêm shader này vào Project Settings > Graphics > Always Included Shaders, nếu không Unity sẽ strip mất.")]
+        public Shader shieldBarShader;
+
+        // Material riêng cho từng Image (không dùng chung, vì _Fill/_EdgeSide khác nhau).
+        private Material _shieldFillMat;
+        private Material _shieldOverlayMat;
+        private float _lastShield = -1f;   // để bắt lúc lượng khiên đổi
+        private float _shieldPulse;        // 1 -> 0, tắt dần sau mỗi lần đổi
 
         [Header("--- Skill E (Normal Skill - No Cost) ---")]
         public GameObject skillE_Container;
@@ -68,6 +78,79 @@ namespace Systems
                     sinSlider.value = playerStats.currentSin;
                 }
             }
+
+            SetupShieldMaterials();
+            SetupSkillSlotFrames();
+        }
+
+        /// <summary>
+        /// Dựng khung bo tròn cho 2 ô skill lúc chạy.
+        ///
+        /// Trước đây không ô nào có phần tử viền: khung bo tròn ta thấy trong game là do art
+        /// của từng icon tự vẽ, nên skill nào art không có khung thì nhìn trần và không cách
+        /// nào đồng bộ. Khung dựng ở đây là phần tử UI thật nên mọi skill đều có như nhau.
+        ///
+        /// Gắn vào CHA CỦA ICON chứ không phải vào container, vì hai ô đang được gán lệch
+        /// cấp trong Inspector (xem chú thích ở skillQ_Container).
+        /// </summary>
+        private void SetupSkillSlotFrames()
+        {
+            CreateFrameForIcon(skillE_Icon);
+            CreateFrameForIcon(skillQ_Icon);
+        }
+
+        private void CreateFrameForIcon(Image icon)
+        {
+            if (icon == null) return;
+
+            var host = icon.transform.parent as RectTransform;
+            if (host == null) return;
+
+            var frame = UISlotFrame.Create(host);
+            if (frame != null)
+                frame.SetColors(UIPalette.VoidSunk, UIPalette.RuneEdge, UIPalette.RuneGlow);
+        }
+
+        /// <summary>
+        /// Dựng material riêng cho 2 Image khiên. Làm lúc chạy nên KHÔNG cần tạo asset material
+        /// hay sửa prefab bằng tay — chỉ cần 2 Image đã gán sẵn trong Inspector như trước.
+        /// </summary>
+        private void SetupShieldMaterials()
+        {
+            Shader sh = shieldBarShader != null ? shieldBarShader : Shader.Find("UI/ShieldBar");
+            if (sh == null)
+            {
+                Debug.LogWarning("[UIStats] Không tìm thấy shader UI/ShieldBar — thanh khiên sẽ hiển thị phẳng như cũ. Gán shader vào ô shieldBarShader để chắc chắn.");
+                return;
+            }
+
+            _shieldFillMat    = BuildShieldMaterial(sh, shieldFillImage,    true);
+            _shieldOverlayMat = BuildShieldMaterial(sh, shieldOverlayImage, false);
+        }
+
+        /// <summary>edgeFromLeft = true cho dải fill từ trái, false cho dải đè fill từ phải.</summary>
+        private Material BuildShieldMaterial(Shader sh, Image target, bool edgeFromLeft)
+        {
+            if (target == null) return null;
+
+            var mat = new Material(sh) { hideFlags = HideFlags.DontSave };
+
+            // Phần đè lên HP mờ hơn để còn thấy máu bên dưới.
+            mat.SetColor("_Color", edgeFromLeft ? UIPalette.BarShield : UIPalette.BarShieldOver);
+            mat.SetColor("_StripeColor", UIPalette.With(UIPalette.TextBright, 0.30f));
+            mat.SetColor("_EdgeColor", UIPalette.Lift(UIPalette.BarShield, 0.45f));
+            mat.SetFloat("_EdgeSide", edgeFromLeft ? 1f : -1f);
+
+            target.material = mat;
+            return mat;
+        }
+
+        private void OnDestroy()
+        {
+            // Material tạo bằng new Material() không tự thu hồi — phải huỷ tay, nếu không
+            // mỗi lần load lại scene sẽ rò thêm 2 material.
+            if (_shieldFillMat    != null) Destroy(_shieldFillMat);
+            if (_shieldOverlayMat != null) Destroy(_shieldOverlayMat);
         }
 
         void Update()
@@ -104,18 +187,41 @@ namespace Systems
         }
 
         // Shield bar dùng 2 Image chồng lên hp slider fill area:
-        // shieldFillImage    — fillOrigin=Left,  solid silver:   điền phần HP trống
-        // shieldOverlayImage — fillOrigin=Right, semi-transparent: đè lên phần HP đầy
+        // shieldFillImage    — fillOrigin=Left,  đặc: điền phần HP trống
+        // shieldOverlayImage — fillOrigin=Right, mờ:  đè lên phần HP đầy
         // Hierarchy Unity: shieldFillImage DƯỚI hpSlider, shieldOverlayImage TRÊN hpSlider
+        //
+        // Màu KHÔNG đủ để phân biệt khiên với máu (đo được tương phản 2.84 giữa BarShield và
+        // BarHp), nên phần nhận diện do shader UI/ShieldBar gánh: gạch chéo chạy + viền sáng
+        // ở mép dẫn + nhấp nháy khi lượng khiên đổi.
         void UpdateShieldBar()
         {
             float shield = playerStats.currentShield;
             float curHp  = playerStats.currentHp;
             float maxHp  = playerStats.maxHp;
 
+            // Nhấp nháy mỗi khi lượng khiên đổi (nhận thêm hoặc bị ăn mất).
+            if (!Mathf.Approximately(shield, _lastShield))
+            {
+                if (_lastShield >= 0f) _shieldPulse = 1f;
+                _lastShield = shield;
+            }
+            _shieldPulse = Mathf.MoveTowards(_shieldPulse, 0f, Time.unscaledDeltaTime * 3.2f);
+
             bool hasShield = shield > 0f && maxHp > 0f;
             if (shieldFillImage)    shieldFillImage.gameObject.SetActive(hasShield);
             if (shieldOverlayImage) shieldOverlayImage.gameObject.SetActive(hasShield);
+
+            if (shieldText)
+            {
+                shieldText.gameObject.SetActive(hasShield);
+                if (hasShield)
+                {
+                    shieldText.text  = "+" + Mathf.Ceil(shield);
+                    shieldText.color = UIPalette.Lift(UIPalette.BarShield, _shieldPulse * 0.6f);
+                }
+            }
+
             if (!hasShield) return;
 
             float emptySpace  = Mathf.Max(0f, maxHp - curHp);
@@ -123,12 +229,21 @@ namespace Systems
             float overlayPart = Mathf.Max(0f, shield - emptySpace);
 
             // Fill từ trái đến (curHp + fillPart)/maxHp; phần dưới hpSlider bị che, chỉ lộ shield
-            if (shieldFillImage)
-                shieldFillImage.fillAmount = (curHp + fillPart) / maxHp;
+            float fillAmount = (curHp + fillPart) / maxHp;
+            if (shieldFillImage) shieldFillImage.fillAmount = fillAmount;
+            PushShieldShaderState(_shieldFillMat, fillAmount);
 
-            // Fill từ phải sang trái, đè lên HP bar (bạc mờ, thấy máu đỏ bên dưới)
-            if (shieldOverlayImage)
-                shieldOverlayImage.fillAmount = overlayPart / maxHp;
+            // Fill từ phải sang trái, đè lên HP bar (thấy máu đỏ bên dưới)
+            float overlayAmount = overlayPart / maxHp;
+            if (shieldOverlayImage) shieldOverlayImage.fillAmount = overlayAmount;
+            PushShieldShaderState(_shieldOverlayMat, overlayAmount);
+        }
+
+        private void PushShieldShaderState(Material mat, float fillAmount)
+        {
+            if (mat == null) return;
+            mat.SetFloat("_Fill", fillAmount);
+            mat.SetFloat("_Pulse", _shieldPulse);
         }
 
         void UpdateSkills()
