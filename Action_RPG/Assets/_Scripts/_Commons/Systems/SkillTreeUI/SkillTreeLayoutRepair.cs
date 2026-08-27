@@ -31,7 +31,21 @@ namespace Systems
             if (detail != null) RepairDetailPanel((RectTransform)detail);
 
             Transform refund = panelRoot.transform.Find("BTN_Refund");
-            if (refund != null) AnchorToCorner((RectTransform)refund, new Vector2(1f, 0f), new Vector2(-CardMargin, CardMargin));
+            if (refund != null)
+            {
+                AnchorToCorner((RectTransform)refund, new Vector2(1f, 0f), new Vector2(-CardMargin, CardMargin));
+                RenameDefaultLabel(refund, "Hoàn điểm");
+            }
+        }
+
+        /// <summary>
+        /// Đổi nhãn còn nguyên chuỗi mặc định "Button" của Unity thành chữ có nghĩa.
+        /// CHỈ đổi khi nhãn đúng bằng "Button" — nếu ai đó đã đặt tên thật thì không đụng.
+        /// </summary>
+        private static void RenameDefaultLabel(Transform target, string label)
+        {
+            var tmp = target.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (tmp != null && tmp.text == "Button") tmp.text = label;
         }
 
         /// <summary>

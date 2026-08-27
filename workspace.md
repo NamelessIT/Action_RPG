@@ -311,6 +311,35 @@ Giong Inventory cua Player, co ca bang Stats de cong luon.
 
 ---
 
+## [!!] LUAT: KHONG BAO GIO TU DONG SAVE SCENE CUA USER
+
+**2026-08-27 — su co da xay ra va da khac phuc.** Ghi lai de khong lap lai.
+
+Claude chay `EditorSceneManager.SaveScene()` tu `execute_code` de ghi vinh vien cac sua
+doi bo cuc vao `OdoScene.unity`. Ket qua: scene **mat 8 GameObject va 13 MonoBehaviour**
+(4 VerticalLayoutGroup, 4 LayoutElement, 4 ContentSizeFitter, 1 TextMeshProUGUI) — deu la
+component duoc THEM vao con cua prefab instance `Canvas.prefab` nhu scene override.
+
+Da kiem chung: **0/10 tham chieu la mo coi** — toan bo deu neo duoc vao object co that
+trong `Canvas.prefab`. Nghia la KHONG phai don rac, ma la mat du lieu hop le.
+
+Nguyen nhan kha di nhat: luc save, Unity dang o trang thai suy giam sau chuoi domain
+reload (console co hang loat dong "The referenced script (Unknown) is missing"). Unity
+giu cac component do o dang null trong bo nho, va save ghi ra scene thieu chung.
+
+**Da khac phuc day du:** `git checkout` file scene, roi `EditorSceneManager.OpenScene()`
+nap lai tu dia. Xac nhan 19 GameObject / 25 MonoBehaviour, khop chinh xac HEAD; Unity
+khong con dirty; console sach. Ban hong luu o scratchpad de doi chieu.
+
+**Luat tu day:**
+- KHONG goi `SaveScene` / `SaveAssets` tren file user tu code. User tu bam Save.
+- Sua bo cuc thi lam o RUNTIME (`Awake`/`Start`), nhu `UILayoutTidy`,
+  `InventoryLayoutRepair`, `SkillTreeLayoutRepair` dang lam. Danh doi: Editor van hien
+  bo cuc cu, chi vao Play Mode moi thay — chap nhan duoc, doi lay an toan.
+- Neu that su can ghi vinh vien: bao user tu lam trong Inspector, dua so lieu cu the.
+
+---
+
 ## HANG DOI — UI / GIAO DIEN  (user them 2026-08-27)
 
 Muc tieu user dat ra: **toan bo UI hien dang la mac dinh Unity, lam bang tay** — can nang cap cho
