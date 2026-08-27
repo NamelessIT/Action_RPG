@@ -23,11 +23,15 @@ namespace Systems
         public const float CardHeight = 380f;
         public const float CardMargin = 20f;
 
-        /// <summary>Khoang cach tu day panel len nut Reset.</summary>
-        public const float BottomMargin = 24f;
-
         /// <summary>Nhan cua nut hoan diem ky nang.</summary>
-        public const string RefundLabel = "Reset Skill Point";
+        public const string RefundLabel = "Reset";
+
+        /// <summary>Chieu cao dai duoi cung danh RIENG cho nut Reset.
+        /// Vung cuon se bi cat bot dung bang nay de nut khong de len node skill.</summary>
+        public const float BottomStripHeight = 56f;
+
+        /// <summary>Le hai ben va le tren cua vung cuon so voi panel.</summary>
+        public const float ScrollInset = 25f;
 
         /// <summary>
         /// Nhan THANG hai doi tuong can sap, khong tra cuu theo ten.
@@ -45,11 +49,47 @@ namespace Systems
             if (refundButton != null)
             {
                 var rt = (RectTransform)refundButton.transform;
-                // GIUA DAY panel, co dinh: neo (0.5, 0) va pivot (0.5, 0) nen no bam day
-                // va tu can giua o moi do phan giai, khong can tinh lai toa do.
-                AnchorToCorner(rt, new Vector2(0.5f, 0f), new Vector2(0f, BottomMargin));
+                ReserveBottomStrip(rt.parent as RectTransform);
+
+                // Dat nut vao GIUA dai duoi cung. Neo (0.5, 0) + pivot (0.5, 0.5) nen no bam
+                // day panel va tu can giua o moi do phan giai, khong phai tinh lai toa do.
+                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.anchoredPosition = new Vector2(0f, BottomStripHeight * 0.5f);
+
                 SetLabel(rt, RefundLabel);
             }
+        }
+
+        /// <summary>
+        /// Cat bot day vung cuon de chua cho cho nut Reset.
+        ///
+        /// Vi sao phai lam: panel cao 450, Scroll View cao 400 nam giua -> chi con 25px duoi
+        /// day scroll, ma nut cao 30. Khong du cho. Neu chi neo nut vao day panel thi no se
+        /// DE LEN node skill cuoi cung. Phai chua han mot dai rieng.
+        ///
+        /// Tim Scroll View bang KIEU (ScrollRect) chu khong bang TEN — tim theo ten da mot lan
+        /// lam ca ham nay im lang khong chay.
+        ///
+        /// Idempotent: offset dat bang HANG SO tuyet doi, khong cong don theo trang thai hien
+        /// tai, nen chay bao nhieu lan cung ra cung ket qua.
+        /// </summary>
+        private static void ReserveBottomStrip(RectTransform panelRoot)
+        {
+            if (panelRoot == null) return;
+
+            var scroll = panelRoot.GetComponentInChildren<ScrollRect>(true);
+            if (scroll == null) return;
+
+            var srt = (RectTransform)scroll.transform;
+
+            // Gian kin panel roi thut vao: hai ben + tren giu nguyen le cu, rieng day chua
+            // dung BottomStripHeight cho nut.
+            srt.anchorMin = Vector2.zero;
+            srt.anchorMax = Vector2.one;
+            srt.pivot     = new Vector2(0.5f, 0.5f);
+            srt.offsetMin = new Vector2(ScrollInset, BottomStripHeight);
+            srt.offsetMax = new Vector2(-ScrollInset, -ScrollInset);
         }
 
         /// <summary>
