@@ -355,6 +355,35 @@ Tra loi cau hoi "sao skill Signature khong co border bo tron":
 - [ ] **M-10 — (tuy chon) gan `shieldText`.** Tao mot TMP nho canh thanh mau va keo vao
   o `shieldText` cua `UIStats` neu muon hien so luong khien.
 
+### T-UI-05 — ArcaneUISkin  (DA XONG, commit `b901d02`)
+
+Toan bo UI la control uGUI mac dinh, gan tay qua Inspector trong prefab. Thay vi sua
+tung cai (lau + chac chan lech nhau), viet skinner chay LUC RUNTIME.
+
+- [x] Phu Button (5 state + khung bo tron), TMP_Dropdown (ca template xo xuong),
+  Toggle, Scrollbar, va chu con lai phan vai theo co chu.
+- [x] Noi vao `DevToolPanel`, `InventoryController`, `StatDetailUI`.
+- [x] `StatAllocationPanel` (UI nang diem STR/DEX/INT/VIT/AGI) nam TRONG `InventoryPanel`
+  nen duoc phu luon. `Section_Attributes` nam trong `StatDetailPanel`.
+- [x] **Cache material dung chung** — moi Image mot material thi DevToolPanel sinh ~71
+  material, moi cai pha mot batch. Gop theo (aspect lam tron 2 so, radius, bo mau):
+  DevTool 6 nut -> 1 material, Inventory 19 -> 3, Stat 1 -> 1.
+
+Pham vi se duoc khoac (dem tren scene that):
+
+| Panel | Button | Dropdown | Toggle | Scrollbar | TMP |
+|---|---|---|---|---|---|
+| DevToolPanel | 55 | 16 | 16 | 22 | 103 |
+| InventoryPanel | 19 | 0 | 0 | 1 | 35 |
+| StatDetailPanel | 1 | 0 | 0 | 0 | 49 |
+
+**Con lai cho phan UI (chua lam):**
+- [ ] Bo cuc inventory — skinner chi doi MAU, khong doi bo cuc. Cac o van la luoi
+  o vuong deu. Neu muon dep hon that su thi phai sap xep lai layout, la viec khac.
+- [ ] O item trong inventory chua dung `UISlotFrame` (moi chi doi mau icon).
+
+---
+
 ### T-UI-02 — UI hien Debuff / CC dang chiu  (THUC RA LA LAM MOI, khong phai sua)
 - **Da kiem tra: hien khong co UI debuff nao ca.** Grep toan bo `.prefab` + `.unity` khong ra
   object nao ten Debuff/Buff/Status. Nghia la nguoi choi dang bi Stun/Root/Silence/Slow/Bleed/Burn
@@ -364,7 +393,7 @@ Tra loi cau hoi "sao skill Signature khong co border bo tron":
 - Can: hang icon trang thai + dem nguoc thoi gian + phan biet CC (khong hanh dong duoc)
   voi Debuff (mat mau theo thoi gian).
 
-### T-UI-03 — DevToolPanel
+### T-UI-03 — DevToolPanel  (DA XONG phan khoac giao dien, commit `b901d02`)
 - `DevToolPanel.cs` 915 dong, toan Button mac dinh cua Unity (anh chup man hinh cua user:
   "Take Damage (10)", "Heal Full", "Add EXP +100", "Force Level Up", "Toggle God Mode",
   tab COMBAT / SKILLS / EQUIPMENT / PLAYER / Companion Equipment).
