@@ -115,10 +115,14 @@ namespace Systems
         }
 
         /// <summary>
-        /// Dựng một khung phủ kín <paramref name="parent"/> và đặt xuống DƯỚI CÙNG thứ tự vẽ,
-        /// nên nó nằm sau icon. Trả về component vừa tạo, hoặc cái đã có nếu gọi lại.
+        /// Dựng một khung phủ kín <paramref name="parent"/>. Trả về component vừa tạo, hoặc
+        /// cái đã có nếu gọi lại.
+        ///
+        /// <paramref name="behind"/> = true: vẽ TRƯỚC mọi thứ, nên nằm sau icon — dùng cho ô
+        /// trống cần nền. false: vẽ SAU CÙNG, nằm trên — dùng cho panel đã có nền riêng, khi
+        /// đó nhớ để fill trong suốt (chỉ lấy viền + quầng sáng), nếu không sẽ che mất nội dung.
         /// </summary>
-        public static UISlotFrame Create(RectTransform parent, string name = "Frame_Auto")
+        public static UISlotFrame Create(RectTransform parent, string name = "Frame_Auto", bool behind = true)
         {
             if (parent == null) return null;
 
@@ -136,7 +140,8 @@ namespace Systems
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
 
-            rt.SetAsFirstSibling(); // vẽ trước => nằm sau icon
+            if (behind) rt.SetAsFirstSibling(); // vẽ trước => nằm sau icon
+            else        rt.SetAsLastSibling();  // vẽ sau  => viền nổi trên nền sẵn có
 
             return go.AddComponent<UISlotFrame>();
         }

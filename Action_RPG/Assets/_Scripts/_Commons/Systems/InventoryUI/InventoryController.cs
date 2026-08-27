@@ -57,6 +57,10 @@ public class InventoryController : MonoBehaviour
         BuildSlotViews();
         // Mặc định hiển thị trang Weapon
         ShowWeaponsTab();
+
+        // Khoác tông arcane cho toàn bộ control mặc định trong panel (nút tab, dropdown,
+        // thanh cuộn, chữ). Chạy sau BuildSlotViews để các ô vừa sinh cũng được tính.
+        Systems.ArcaneUISkin.Apply(gameObject);
     }
 
     private void OnEnable()

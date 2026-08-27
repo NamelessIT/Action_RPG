@@ -177,6 +177,10 @@ public class DevToolPanel : MonoBehaviour
         PopulateDropdowns();
         PopulateCompanionDropdowns();
         ShowTab(0);
+
+        // Khoác lại giao diện SAU khi dropdown đã populate, để caption/item text mới sinh
+        // cũng được tô. Đây là panel dev nên tiêu chí là DỄ ĐỌC, không phải đẹp.
+        Systems.ArcaneUISkin.Apply(gameObject);
     }
 
     // ============================================================

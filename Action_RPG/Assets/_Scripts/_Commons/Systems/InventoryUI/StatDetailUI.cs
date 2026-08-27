@@ -61,6 +61,9 @@ public class StatDetailUI : MonoBehaviour
             _playerStats = PlayerStats.Current;
         }
 
+        // Bảng nâng điểm toàn nút + / chữ số — khoác lại để đọc được trên nền tối.
+        Systems.ArcaneUISkin.Apply(gameObject);
+
         if (_closeButton != null)
         {
             _closeButton.onClick.AddListener(Hide);
