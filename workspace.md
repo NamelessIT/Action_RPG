@@ -400,18 +400,36 @@ Pham vi se duoc khoac (dem tren scene that):
 - [x] **Layout di sat nhau.** Gan nhu moi layout group deu `spacing = 0`. Them `UILayoutTidy`.
   Do thuc te: **52 group GIU NGUYEN** (DevTool 46, StatDetail 6), 42 group duoc noi.
 
-### T-UI-07 — Layout CON LAI (chua lam, can quyet dinh)
+### T-UI-07 — Bo cuc Inventory  (DA XONG, commit `865bc1b`)
 
-`UILayoutTidy` chi noi KHE HO. Nhung khao sat cho thay co van de o KICH THUOC va CAU
-TRUC ma noi khe khong cuu duoc — va sua thi phai dong vao prefab:
+- [x] **TopEquipDiv — KHONG sua, va de xuat truoc do cua minh la SAI.**
+  Minh tung noi no "rong 10px, khong layout group, tran ra ngoai" va de nghi them layout
+  group. Doc vi tri that thi day la **paper-doll co y**:
 
-- [ ] `TopEquipDiv` rong **10px** nhung chua 7 o 35x35 + 2 slider 200x25 + Avatar 100x150.
-  No khong co layout group nao ca -> con dat tay va tran ra ngoai. Can them
-  layout group that hoac dat lai anchor.
-- [ ] Hang `StatRow_*` cao **15px** — qua chat de doc. Nang len ~28-32px se de hon nhieu,
-  nhung day la doi KICH THUOC nen minh khong tu y lam.
-- [ ] `Value` trong hang stat rong 200px trong khi `Attribute` chi 50px — so bi day xa
-  khoi nhan. Nen doi thanh `Attribute` gian no, `Value` co dinh hep, hoac can phai.
+  ```
+          TDV1 (190, 120)              <- mu
+  TDV4 ( 80,  50)      TDV5 (300,  50)
+  TDV2 ( 80,   0)  [Avatar 190,0]  TDV3 (300,   0)
+  TDV7 ( 80, -50)      TDV6 (300, -50)
+  ```
+
+  Cac o dung anchor (0.5,0.5) nen container 10px khong cat gi, va khong co mask.
+  Nhet layout group vao se **pha** thiet ke. Da ghi chu ro trong code de sau khong ai sua nham.
+
+- [x] **Nhung do lai thi tim ra loi that o cho khac:** `Slider_HP` (y=-250) va
+  `Slider_Experience` (y=-270) deu cao 25px pivot 0.5 -> **chong nhau dung 5px**.
+  Da xep lai, cach 8px. Cong thuc tinh TU vi tri HP nen idempotent (chay 3 lan deu ra -283.0).
+
+- [x] **Chieu cao hang chi so 15 -> 30, co chu 8 -> 16.** Font 8pt moi la thu pham chinh
+  khien bang chi so khong doc duoc, khong phai mau. 15px ep chu xuong 8pt.
+
+- [x] **Can bang Attribute / Value.** Truoc: ca hai canh GIUA, Attribute minW 50 va Value
+  minW 200 -> con so troi giua hang. Sau: Attribute gian no + canh TRAI, Value hep + canh
+  PHAI. Nut "+" 15px -> 26px (15px nho hon vung bam toi thieu).
+
+**Bai hoc ghi lai:** lan do dau bi sai vi tim object theo TEN, ma scene co toi **3** object
+ten `Slider_HP` (CompanionHUD, TopEquipDiv, GameUI_MainLayout). Tim theo ten trong scene nay
+khong dang tin — phai gioi han trong cay con cu the.
 
 ---
 
