@@ -112,9 +112,22 @@ public class SkillTreeController : MonoBehaviour
         // Sap lai bo cuc: Icon/NameText/DescText/TypeText deu dang nam o (0,0) tuc chong
         // dung len nhau giua panel, va BTN_Refund cung o (0,0) -> chinh la chu "Button" troi
         // giua man hinh. Controller nay chi set sprite/text nen khong da nhau.
-        Systems.SkillTreeLayoutRepair.Apply(gameObject);
-        Systems.UILayoutTidy.Apply(gameObject);
-        Systems.ArcaneUISkin.Apply(gameObject);
+        //
+        // Truyen THANG tham chieu da serialize. Component nay nam tren GameUI_MainLayout chu
+        // KHONG phai tren SkillTreePanel, nen moi cach tim theo ten tu gameObject deu tra ve
+        // null va bo cuc se im lang khong duoc sua.
+        Systems.SkillTreeLayoutRepair.Apply(_detailPanel, _refundButton);
+
+        // Khoac giao dien cho DUNG panel skill tree (lay tu cha cua DetailPanel), khong phai
+        // cho GameUI_MainLayout ma component nay tinh co nam tren.
+        GameObject skillTreeRoot = _detailPanel != null && _detailPanel.transform.parent != null
+            ? _detailPanel.transform.parent.gameObject
+            : null;
+        if (skillTreeRoot != null)
+        {
+            Systems.UILayoutTidy.Apply(skillTreeRoot);
+            Systems.ArcaneUISkin.Apply(skillTreeRoot);
+        }
         SetPanelVisible(false);
     }
 

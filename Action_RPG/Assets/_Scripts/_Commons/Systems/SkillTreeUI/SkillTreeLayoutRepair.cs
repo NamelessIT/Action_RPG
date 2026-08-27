@@ -23,29 +23,49 @@ namespace Systems
         public const float CardHeight = 380f;
         public const float CardMargin = 20f;
 
-        public static void Apply(GameObject panelRoot)
+        /// <summary>Khoang cach tu day panel len nut Reset.</summary>
+        public const float BottomMargin = 24f;
+
+        /// <summary>Nhan cua nut hoan diem ky nang.</summary>
+        public const string RefundLabel = "Reset Skill Point";
+
+        /// <summary>
+        /// Nhan THANG hai doi tuong can sap, khong tra cuu theo ten.
+        ///
+        /// Ban dau ham nay nhan panelRoot roi goi Find("DetailPanel") / Find("BTN_Refund").
+        /// Sai: SkillTreeController KHONG nam tren SkillTreePanel ma nam tren
+        /// Canvas/GameUI_MainLayout, nen Find tra ve null va toan bo ham IM LANG khong lam gi.
+        /// Truyen thang tham chieu da serialize thi khong con phu thuoc vao cay phan cap.
+        /// </summary>
+        public static void Apply(GameObject detailPanel, Component refundButton)
         {
-            if (panelRoot == null) return;
+            if (detailPanel != null)
+                RepairDetailPanel((RectTransform)detailPanel.transform);
 
-            Transform detail = panelRoot.transform.Find("DetailPanel");
-            if (detail != null) RepairDetailPanel((RectTransform)detail);
-
-            Transform refund = panelRoot.transform.Find("BTN_Refund");
-            if (refund != null)
+            if (refundButton != null)
             {
-                AnchorToCorner((RectTransform)refund, new Vector2(1f, 0f), new Vector2(-CardMargin, CardMargin));
-                RenameDefaultLabel(refund, "Hoàn điểm");
+                var rt = (RectTransform)refundButton.transform;
+                // GIUA DAY panel, co dinh: neo (0.5, 0) va pivot (0.5, 0) nen no bam day
+                // va tu can giua o moi do phan giai, khong can tinh lai toa do.
+                AnchorToCorner(rt, new Vector2(0.5f, 0f), new Vector2(0f, BottomMargin));
+                SetLabel(rt, RefundLabel);
             }
         }
 
         /// <summary>
-        /// Đổi nhãn còn nguyên chuỗi mặc định "Button" của Unity thành chữ có nghĩa.
-        /// CHỈ đổi khi nhãn đúng bằng "Button" — nếu ai đó đã đặt tên thật thì không đụng.
+        /// Dat nhan cho nut. Khac ban truoc: dat VO DIEU KIEN chu khong chi khi nhan dang la
+        /// "Button" — vi nut nay luon la nut hoan diem, khong co truong hop nao no mang chu khac.
+        /// Chinh cai dieu kien do lam nhan van la "Button" khi ham chay sau mot lan da doi.
         /// </summary>
-        private static void RenameDefaultLabel(Transform target, string label)
+        private static void SetLabel(Transform target, string label)
         {
             var tmp = target.GetComponentInChildren<TextMeshProUGUI>(true);
-            if (tmp != null && tmp.text == "Button") tmp.text = label;
+            if (tmp == null) return;
+
+            tmp.text = label;
+            tmp.textWrappingMode = TextWrappingModes.NoWrap;
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.color = UIPalette.TextBright;
         }
 
         /// <summary>
