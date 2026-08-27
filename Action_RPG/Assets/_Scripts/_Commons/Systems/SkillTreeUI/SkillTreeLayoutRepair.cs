@@ -43,13 +43,25 @@ namespace Systems
         /// </summary>
         public static void Apply(GameObject detailPanel, Component refundButton)
         {
-            if (detailPanel != null)
-                RepairDetailPanel((RectTransform)detailPanel.transform);
+            RectTransform panelRoot = null;
 
-            if (refundButton != null)
+            if (detailPanel != null)
             {
-                var rt = (RectTransform)refundButton.transform;
-                ReserveBottomStrip(rt.parent as RectTransform);
+                panelRoot = detailPanel.transform.parent as RectTransform;
+                RepairDetailPanel((RectTransform)detailPanel.transform);
+            }
+
+            // O _refundButton trong Inspector hay bi bo TRONG (da gap that: no null nen ca
+            // khoi duoi day bi bo qua, nut giu nguyen anchor goc (0.5,0.5) tuc giua panel —
+            // ma panel stretch full man hinh nen nut "troi giua man hinh").
+            // Tu tim lay de khong phu thuoc vao viec ai do co keo dung o hay khong.
+            RectTransform rt = refundButton != null
+                ? (RectTransform)refundButton.transform
+                : FindRefundButton(panelRoot);
+
+            if (rt != null)
+            {
+                ReserveBottomStrip(panelRoot ?? rt.parent as RectTransform);
 
                 // Dat nut vao GIUA dai duoi cung. Neo (0.5, 0) + pivot (0.5, 0.5) nen no bam
                 // day panel va tu can giua o moi do phan giai, khong phai tinh lai toa do.
@@ -59,6 +71,24 @@ namespace Systems
 
                 SetLabel(rt, RefundLabel);
             }
+        }
+
+        /// <summary>
+        /// Tim nut Refund khi tham chieu serialize bi bo trong.
+        ///
+        /// Chi xet CON TRUC TIEP cua panel root, va bo qua nhanh Scroll View — moi Button ben
+        /// trong Scroll View la nut cua tung node skill (Unlock/Equip), khong phai nut Refund.
+        /// </summary>
+        private static RectTransform FindRefundButton(RectTransform panelRoot)
+        {
+            if (panelRoot == null) return null;
+
+            foreach (Transform child in panelRoot)
+            {
+                if (child.GetComponent<ScrollRect>() != null) continue;   // vung cuon -> bo qua
+                if (child.GetComponent<Button>() != null) return child as RectTransform;
+            }
+            return null;
         }
 
         /// <summary>
