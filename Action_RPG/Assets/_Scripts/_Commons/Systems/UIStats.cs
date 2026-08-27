@@ -32,14 +32,14 @@ namespace Systems
         public Image skillE_Icon;
         public Image skillE_CooldownFill;
         public TextMeshProUGUI skillE_CooldownText;
-        public Color notEnoughStaminaColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+        public Color notEnoughStaminaColor = new Color(0.404f, 0.376f, 0.478f, 1f); // UIPalette.IconDimmed
 
         [Header("--- Skill Q (Signature/Ult - Uses Sin) ---")]
         public GameObject skillQ_Container;
         public Image skillQ_Icon;
         public Image skillQ_CooldownFill;
         public TextMeshProUGUI skillQ_CooldownText;
-        public Color notEnoughSinColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+        public Color notEnoughSinColor = new Color(0.404f, 0.376f, 0.478f, 1f); // UIPalette.IconDimmed
 
         void Start()
         {
@@ -185,7 +185,7 @@ namespace Systems
 
                 // Ép Cooldown Overlay đầy 100% làm lớp màng xám che kín nút trống
                 cooldownOverlay.fillAmount = 1f;
-                cooldownOverlay.color = new Color(0.4f, 0.4f, 0.4f, 0.7f);
+                cooldownOverlay.color = UIPalette.CooldownVeil;
 
                 // KHÔNG hiện chữ gì (chỉ icon + số cooldown)
                 if (centerText) centerText.gameObject.SetActive(false);
@@ -196,7 +196,7 @@ namespace Systems
             // TRƯỜNG HỢP 2: ĐÃ CÓ SKILL
             // ============================================
             icon.enabled = true; // Bật Image trở lại
-            cooldownOverlay.color = new Color(0.4f, 0.4f, 0.4f, 0.7f); // lớp phủ XÁM khi đang hồi chiêu
+            cooldownOverlay.color = UIPalette.CooldownVeil; // lớp phủ tối khi đang hồi chiêu
 
             // Xử lý Icon
             if (activeSkillData.icon != null)
@@ -207,7 +207,7 @@ namespace Systems
             else
             {
                 icon.sprite = null;
-                icon.color = new Color(0.2f, 0.2f, 0.2f, 1f); // Không có icon thì để màu nền tối
+                icon.color = UIPalette.VoidSunk; // Không có icon thì để màu nền tối
             }
 
             // Xử lý Cooldown
@@ -237,7 +237,7 @@ namespace Systems
                 centerText.text = cooldownTimer.ToString("F1");
                 centerText.gameObject.SetActive(true);
 
-                icon.color = Color.gray; // Icon tối lại
+                icon.color = UIPalette.IconDimmed; // Icon tối lại
             }
             else
             {

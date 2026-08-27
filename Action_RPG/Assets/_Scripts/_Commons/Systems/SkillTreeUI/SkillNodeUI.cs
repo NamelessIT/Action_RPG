@@ -12,11 +12,13 @@ public class SkillNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
     [SerializeField] private TextMeshProUGUI    _nameText;
     [SerializeField] private TextMeshProUGUI    _costText;       // "1 SP"
 
+    // Mặc định lấy từ UIPalette. LƯU Ý: đây là [SerializeField] nên prefab/scene đã lưu giá trị
+    // cũ sẽ ĐÈ LÊN mặc định này — phải Reset component (hoặc sửa tay) trong Editor mới thấy đổi.
     [Header("State Colors")]
-    [SerializeField] private Color _lockedColor    = new Color(0.3f, 0.3f, 0.3f, 1f);
-    [SerializeField] private Color _availableColor = new Color(1f, 0.85f, 0f, 1f);
-    [SerializeField] private Color _unlockedColor  = new Color(0.2f, 0.8f, 0.2f, 1f);
-    [SerializeField] private Color _equippedColor  = new Color(0f, 0.6f, 1f, 1f);
+    [SerializeField] private Color _lockedColor    = new Color(0.290f, 0.267f, 0.353f, 1f); // UIPalette.StateLocked
+    [SerializeField] private Color _availableColor = new Color(1.000f, 0.780f, 0.180f, 1f); // UIPalette.StateWarn
+    [SerializeField] private Color _unlockedColor  = new Color(0.298f, 0.831f, 0.365f, 1f); // UIPalette.StateGood
+    [SerializeField] private Color _equippedColor  = new Color(0.545f, 0.361f, 0.965f, 1f); // UIPalette.ArcaneCore
 
     [Header("Buttons")]
     [SerializeField] private Button _unlockButton;
@@ -100,7 +102,7 @@ public class SkillNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
             // Có sprite → hiện; nếu vẫn null (chưa gán default) → ẩn để tránh ô vuông trắng.
             _iconImage.enabled = icon != null;
             // Locked: tint xám nhưng VẪN NHÌN THẤY (không trong suốt hẳn).
-            _iconImage.color   = isUnlocked ? Color.white : new Color(0.45f, 0.45f, 0.45f, 1f);
+            _iconImage.color   = isUnlocked ? Color.white : UIPalette.IconDimmed;
         }
 
         // ── Name ──────────────────────────────────────────────────

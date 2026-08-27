@@ -11,11 +11,11 @@ public class EquipmentSlotUI : MonoBehaviour, IDropHandler, IBeginDragHandler, I
     [SerializeField] private Image _slotBackground;    // (tuỳ chọn) nền đổi màu khi equipped
     [SerializeField] private CanvasGroup _slotCanvasGroup;
 
-    // Màu nền: xanh lá mờ khi đang trang bị, tối khi trống
-    private static readonly Color COLOR_EQUIPPED_BG = new Color(0.15f, 0.55f, 0.15f, 0.45f);
-    private static readonly Color COLOR_EMPTY_BG    = new Color(0.08f, 0.08f, 0.08f, 0.30f);
-    // Màu icon: vàng placeholder khi equipped nhưng không có sprite
-    private static readonly Color COLOR_ICON_NO_SPRITE = new Color(0.95f, 0.78f, 0.10f, 0.90f);
+    // Nền ô: tím nhạt khi đang trang bị, tối khi trống (xem UIPalette).
+    private static readonly Color COLOR_EQUIPPED_BG = UIPalette.SlotEquipped;
+    private static readonly Color COLOR_EMPTY_BG    = UIPalette.SlotEmpty;
+    // Icon placeholder khi equipped nhưng không có sprite.
+    private static readonly Color COLOR_ICON_NO_SPRITE = UIPalette.StateWarn;
 
     private RectTransform _ghostRect;
     private InventoryItemRecord _lastBoundItem;

@@ -21,11 +21,11 @@ public class UIBarPulse : MonoBehaviour
 
     [Header("Pulse on DECREASE (mất máu/tốn tài nguyên)")]
     [SerializeField] private bool  _pulseOnDecrease = true;
-    [SerializeField] private Color _decreaseColor   = new Color(1f, 0.3f, 0.3f, 1f);
+    [SerializeField] private Color _decreaseColor   = new Color(0.937f, 0.325f, 0.325f, 1f); // UIPalette.StateBad
 
     [Header("Pulse on INCREASE (hồi phục)")]
     [SerializeField] private bool  _pulseOnIncrease = false;
-    [SerializeField] private Color _increaseColor   = new Color(0.4f, 1f, 0.4f, 1f);
+    [SerializeField] private Color _increaseColor   = new Color(0.298f, 0.831f, 0.365f, 1f); // UIPalette.StateGood
 
     [Header("Animation")]
     [SerializeField] private float _pulseDuration = 0.25f;
