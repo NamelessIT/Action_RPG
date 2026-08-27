@@ -164,41 +164,132 @@ Bug chung can sua truoc: **Slow apply len Enemy** — trong Inspector chua thay 
 | Matrix | MTX_REG_T4_02 | Sua code, dung bien giai CC + giai Debuff moi |
 | Matrix | MTX_PHA_T4_02 | Sua code, dung bien Taunt moi |
 
-### T-CC-03 — Test khong che
+### T-CC-03 — Audit tinh CC  (DA XONG 2026-08-27 — doc code, CHUA vao Play Mode)
 
-Kiem tra CC cua tung muc duoi day.
+Ket qua: **17/26 dat**, **9/26 co van de**. Moi muc giu 1 dong rieng, khong gom.
+Cot "Code thuc te" ghi dung file:dong de mo thang.
 
-**Passive**
-- [ ] VanguardPassive — tu slow ban than
-- [ ] DuelistPassive — stun quai khi perfect parry
-- [ ] MagePassive — slow, stun
+#### Passive
 
-**Skill**
-- [ ] ChrisSkill — knockback
-- [ ] VanguardSkill — knockback
-- [ ] WarriorSkill — stun
-- [ ] BattleMageSkill — stun
-- [ ] DuelistSkill — stun
-- [ ] MageSkill — stun, slow
-- [ ] WardenSkill — knockback, stun
-- [ ] JuggernautSkill — stun
-- [ ] DarkInquisitorSkill — pull
-- [ ] SwordMasterSkill — stun
-- [ ] TricksterSkill — taunt, stun
-- [ ] InfiltratorSkill — stun
-- [ ] SpellbladeSkill — stun
-- [ ] TacticianSkill — taunt, stun
-- [ ] SpellbinderSkill — stun
+| | Muc | Spec doi | Code thuc te | Ket luan |
+|---|---|---|---|---|
+| [x] | VanguardPassive | tu slow ban than | `VanguardPassive.cs:81/107` — `bonusMoveSpeed -= 0.5`, co `_slowWasApplied` guard, gate `vanguardCM3_NoBlockSlow` | **DAT** (dung `bonusMoveSpeed` dung nhu spec, nhung ngoai pipeline CC) |
+| [x] | DuelistPassive | stun quai khi perfect parry | `DuelistPassive.cs:261` — `AddEffect(Stun 0.5s)` | **DAT** |
+| [x] | MagePassive | slow, stun | `MagePassive.cs:432` Slow(0.1, 3s) · `:515` `SkillForceFreeze` | **DAT** |
 
-**Signature**
-- [ ] ChrisSignature — knockback
-- [ ] LeoSignature — stun
-- [ ] VanguardLiteSignature — stun
-- [ ] WarriorLiteSignature — mien nhiem CC
-- [ ] BattleMageSignature — slow
-- [ ] MageLiteSignature — slow
-- [ ] MageSignature — slow
-- [ ] CatalystLiteSignature — fear
+#### Skill
+
+| | Muc | Spec doi | Code thuc te | Ket luan |
+|---|---|---|---|---|
+| [ ] | ChrisSkill | knockback | `ChrisSkill.cs:20` `knockbackForce=15f` **khong dung o dau**; `:178` truyen `applyStun:true` | **SAI** — ra Stun thay vi Knockback |
+| [ ] | VanguardSkill | knockback | `VanguardSkill.cs:175` `applyStun:true, stunTime:stunDuration` | **SAI** — ra Stun thay vi Knockback |
+| [x] | WarriorSkill | stun | `WarriorSkill.cs:115` | **DAT** |
+| [x] | BattleMageSkill | stun | `BattleMageSkill.cs:70` | **DAT** |
+| [ ] | DuelistSkill | stun | `DuelistSkill.cs:101` — `impactLvl:0`, `applyStun` mac dinh **false** | **THIEU** — khong co CC nao |
+| [ ] | MageSkill (huong S) | stun | `ArcaneEmpowerment.cs:305` — `if (magePassive != null) SkillForceFreeze(...)` | **THIEU co dieu kien** — stun nam TRONG MagePassive; khong co component do thi S chi gay damage. Dung nguyen nhan Trello ghi |
+| [x] | MageSkill (huong SW) | slow | `ArcaneEmpowerment.cs:315` — `ApplyEffect(Slow)` vo dieu kien | **DAT** — Trello ghi "chua slow" la da cu |
+| [ ] | WardenSkill | knockback + stun | `WardenSkill.cs:205` chi `AddEffect(Stun)` impact 2 | **THIEU Knockback** |
+| [x] | JuggernautSkill | stun | `JuggernautSkill.cs:202` Stun + `:204` Knockback | **DAT** (du them knockback) |
+| [ ] | DarkInquisitorSkill | pull | `DarkInquisitorSkill.cs:201` `PullEnemiesToCage` — `agent.Warp` moi frame, goi trong while loop `:142/:153` | **NGOAI PIPELINE** — chay dung nhung khong kiem `ccImmune`/khang |
+| [x] | SwordMasterSkill | stun | `SwordMasterSkill.cs:160` impact 2, kem `:52` `BreakCrowdControl` + `:53` `ClearDebuffs` | **DAT** |
+| [ ] | TricksterSkill | taunt + stun | Stun `:232` OK. Taunt `:222` = `agent.SetDestination(decoyPos)` **mot lan duy nhat** | **TAUNT HONG** — `EnemyAI:755/879` ghi de destination tick sau |
+| [x] | InfiltratorSkill | stun | `InfiltratorSkill.cs:207` `_effStunDur` | **DAT** |
+| [x] | SpellbladeSkill | stun | `SpellbladeSkill.cs:205` (`:168` don chinh khong stun) | **DAT** — chi nhanh phan don |
+| [ ] | TacticianSkill | taunt + stun | Taunt `:121` — aggro + `nearestTarget`, co refresh theo interval, co revert (ban tot nhat trong 3) | **STUN THIEU** — khong tim thay stun nao trong file |
+| [x] | SpellbinderSkill | stun | `SpellbinderSkill.cs:209` | **DAT** (taunt `:156` khong refresh/revert nhung spec khong doi taunt o day) |
+
+#### Signature
+
+| | Muc | Spec doi | Code thuc te | Ket luan |
+|---|---|---|---|---|
+| [x] | ChrisSignature | knockback | `ChrisSignature.cs:76` `AddEffect(Knockback)` | **DAT** |
+| [x] | LeoSignature | stun | `LeoSignature.cs:67` | **DAT** |
+| [x] | VanguardLiteSignature | stun | `VanguardLiteSignature.cs:120` — stun + knockback o hit thu 3 | **DAT** |
+| [x] | WarriorLiteSignature | mien nhiem CC | `:53` `BreakCrowdControl()` + `:72` `isSuperArmor=true, superArmorLevel=999`, restore tu bien luu | **DAT** — chay dung, nhung **khong counter-safe**, xem T-CC-04 |
+| [x] | BattleMageSignature | slow | `BattleMageSignature.cs:120` `ApplyEffect(Slow)` | **DAT** — Trello ghi "chua slow" la da cu |
+| [x] | MageLiteSignature | slow | `MageLiteSignature.cs:95` | **DAT** — nt |
+| [x] | MageSignature | slow | `MageSignature.cs:161` | **DAT** — nt |
+| [ ] | CatalystLiteSignature | fear | `CatalystLiteSignature.cs:78` `FearFleeRoutine` tu che | **HONG** — 4 loi, xem T-CC-04 |
+
+#### Cac muc T-CC-02 THUC RA DA XONG (dong lai, khong can lam)
+
+- [x] **"Bug chung: Slow khong giam `baseMoveSpeed` cua Enemy"** — **KHONG phai bug.** Slow la he so
+  nhan doc luc chay (`EffectiveSlowMultiplier`), co chu dich khong sua `baseMoveSpeed`, nen Inspector
+  khong bao gio doi. Da noi day du: Player (`PlayerController:245/840/1279`), Enemy (`EnemyAI:755`,
+  `EnemyCombat:199/510/720`), Companion (`CompanionAI:143/426/470`) — ca move lan attack cadence.
+- [x] BattleMageSignature / MageLiteSignature / MageSignature "chua slow" — deu da co `ApplyEffect(Slow)`.
+- [x] MageSkill "chua Slow huong SW" — da co (`ArcaneEmpowerment.cs:315`).
+- [x] PRT_SUP_T4_02 "chua slow" — da co `SlowEnemy(target, 0.10f, 5f)` (`ProtocolEffectManager.cs:205`).
+- [~] MTX_REG_T4_02 "dung bien giai CC + giai Debuff" — phan giai CC **da dung** (`BreakCrowdControl()`),
+  phan giai Debuff **hong** — xem T-CC-04.
+
+#### Chua audit (khong nam trong 26 muc user liet ke)
+
+Cac muc T-CC-02 con lai thuoc Weapon/Core Shield/Accessory/Protocol/Matrix chua soi tung cai:
+WPN_SW_T4_04, WPN_BW_T4_01, WPN_SW_T5_03, WPN_SP_T5_02, SHD_CS_T4_01, ACC_RM_T5_05,
+ACC_MS_T4_06 (tu stun ban than), ACC_PA_T5_03, PRT_SUP_T3_02 (test Silence), PRT_CAR_T4_01,
+MTX_DEF_T3_01, MTX_PHA_T4_02. Phan lon se tu het sau khi sua muc `isSuperArmor` o T-CC-04.
+
+
+### T-CC-04 — Loi he thong tim duoc trong luc audit (MOI, uu tien cao)
+
+Day la cac loi **khong nam trong Trello**, phat hien khi doc code. Sua nhung cai nay truoc
+thi phan lon T-CC-02 tu het.
+
+- [ ] **`isSuperArmor` bi ghi truc tiep tu 6 noi, khong counter-safe.** `superArmorLevel` duoc dung
+  nhu bo dem cong don (`+=99/-=99`, `+=50/-=50`, `+=2/-=2`) nhung `isSuperArmor` lai la bool doc lap.
+  Hai kieu hong nguoc nhau, ca hai deu that:
+  - `AccessoryEffectManager` 630/1521 va `WeaponEffectManager` 795 khi TAT chi tru level,
+    **khong bao gio set `isSuperArmor=false`** -> super armor ket vinh vien.
+  - `CoreShieldEffectManager.ForceTurnOff_T4_01` (438) set `isSuperArmor=false`
+    **vo dieu kien** -> **cuop mat** super armor cua nguon khac dang giu.
+  - **Cach sua:** bien `isSuperArmor` thanh property dan xuat (`superArmorLevel > 0` hoac counter
+    rieng), giong het cach `_ccImmuneCount` dang lam. Chi `MatrixEffectManager` (93/105) dung dung
+    `PushCrowdControlImmunity/Pop`.
+  - Muc T-CC-02 lien quan: WarriorLiteSignature, WPN_SW_T5_03, SHD_CS_T4_01, ACC_RM_T5_05, ACC_PA_T5_03, MTX_DEF_T3_01.
+
+- [ ] **`MatrixEffectManager.Cleanse()` giai Debuff la NO-OP.** No set `stats.isBleeding = false`
+  nhung `BleedRoutine` lap theo `bleedTimer` chu khong theo co `isBleeding` -> coroutine van tick
+  du sat thuong roi tu set lai co. Va no **khong dung Burn**.
+  `Stats.ClearDebuffs()` da lam dung ca hai (stop coroutine + reset timer). **Sua: goi `ClearDebuffs()`.**
+
+- [ ] **`CatalystLiteSignature.FearFleeRoutine` — 4 loi:**
+  1. `enemy.GetComponent<MonoBehaviour>()` lay **MonoBehaviour dau tien bat ky** tren object roi
+     `enabled = false`. Comment trong code tu thu nhan "Gia dinh la EnemyAI script". Co the tat
+     nham `Stats`/`EnemyCombat`. Thu tu component trong Inspector quyet dinh.
+  2. Neu (1) khong trung EnemyAI thi EnemyAI van chay -> ghi de `agent.speed` (EnemyAI 755 set
+     moi frame) va ghi de `SetDestination` -> **Fear khong lam gi ca**, chi pha mot component ngau nhien.
+  3. `agent.speed *= 0.75f` roi `/= 0.75f`: hai Fear chong nhau -> hong vinh vien. Spec ghi **50%**, code **75%**.
+  4. Quai chet giua Fear -> nhanh khoi phuc bi bo qua -> AI khong bat lai, speed khong tra ve.
+
+- [ ] **Taunt co 3 ban tu che, khong ban nao theo spec.** Spec: "bat buoc danh thuong vao muc tieu
+  Taunt, khong Skill, khong Dash". Ca 3 ban chi doi aggro, khong chan Skill/Dash:
+  `TricksterSkill` (SetDestination mot lan, vo hieu) < `SpellbinderSkill` (aggro, khong refresh,
+  khong revert) < `TacticianSkill` (aggro + refresh + revert).
+
+---
+
+### T-CC-05 — Viec con lai cua T-CC-01 sau audit
+
+Nhieu thu spec doi **da co san** trong `Stats.cs`, khong can viet lai:
+
+| Spec doi | Trang thai |
+|---|---|
+| Bien mien nhiem CC | DA CO — `IsCrowdControlImmune` + `Push/PopCrowdControlImmunity` (counter-safe) |
+| Trang thai giai het CC | DA CO — `BreakCrowdControl()` (dung rule: khong cleanse duoc khi Airborne) |
+| Trang thai giai het Debuff | DA CO — `ClearDebuffs()` (Bleed + Burn, stop dung coroutine) |
+| Bleed / Burn | DA CO — `ApplyBleed` / `ApplyBurn` |
+| `resistanceEffect` KHONG ap cho Knockback/Airborne | DA DUNG — Airborne dung raw `duration`, Knockback dung `knockbackResistance` rieng |
+| `knockbackResistance` chi giam luc knockback | DA DUNG — `ApplyKnockbackEffect` |
+| Slow: Enemy vao baseMoveSpeed, Player/Companion vao bonusMoveSpeed | Lam KHAC spec nhung **tot hon**: mot he so nhan chung `EffectiveSlowMultiplier` cho ca 3 phe. Khuyen nghi giu, sua spec thay vi sua code |
+
+**Con THIEU that su — day moi la viec can lam cho T-CC-01:**
+- [ ] Them `Taunt`, `Pull`, `Fear` vao enum `CombatEffectType` (hien chi co Stun/Knockback/Airborne/Root/Silence/Slow/Unknown).
+- [ ] Viet handler cho 3 loai do trong `Stats.ApplyCombatEffects()`, va cac gate hanh vi:
+      Taunt -> khoa Skill + Dash + ep muc tieu; Fear -> chay ra xa 50% toc do, khoa Skill + Dash;
+      Pull -> keo lien tuc ve diem chi dinh.
+- [ ] Them **mien nhiem Slow** (bool/counter rieng) — hien `ApplySlow` khong kiem gi ca.
+- [ ] `ResistedDuration` phai bo qua Pull (spec) khi Pull ra doi.
 
 ---
 
