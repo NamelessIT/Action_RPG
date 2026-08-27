@@ -236,7 +236,14 @@ MTX_DEF_T3_01, MTX_PHA_T4_02. Phan lon se tu het sau khi sua muc `isSuperArmor` 
 Day la cac loi **khong nam trong Trello**, phat hien khi doc code. Sua nhung cai nay truoc
 thi phan lon T-CC-02 tu het.
 
-- [ ] **`isSuperArmor` bi ghi truc tiep tu 6 noi, khong counter-safe.** `superArmorLevel` duoc dung
+- [x] **`isSuperArmor` bi ghi truc tiep tu 6 noi, khong counter-safe.** — DA SUA, commit `623b5a3`.
+  Tach 2 tang trong `Stats`: giu `isSuperArmor`/`superArmorLevel` lam NEN (Inspector / EnemyStats
+  theo monsterRank / PlayerStats theo characterId), them counter `PushSuperArmor`/`PopSuperArmor`
+  cho nguon tam thoi. `ApplyCombatEffects` doc qua `IsSuperArmor` / `EffectiveSuperArmorLevel`.
+  Da chuyen 10 call-site. Tim them 2 bug cung ho trong luc sua: `WPN_SW_T5_03` gan `= 99` roi `-= 99`
+  ma khong he bat co (cap 99 vo nghia), va Companion Aegis chi `+= 2` cung khong bat co (vo hieu
+  voi Leo). Ca hai nay het luon. Kiem chung 5 ca tren Unity, deu dung.
+  ~~Mo ta loi cu:~~ `superArmorLevel` duoc dung
   nhu bo dem cong don (`+=99/-=99`, `+=50/-=50`, `+=2/-=2`) nhung `isSuperArmor` lai la bool doc lap.
   Hai kieu hong nguoc nhau, ca hai deu that:
   - `AccessoryEffectManager` 630/1521 va `WeaponEffectManager` 795 khi TAT chi tru level,
@@ -301,6 +308,53 @@ Sua lai cho dep. Hien tai **chua hien**: Avatar, ProtocolType, MatrixType, Passi
 
 ### T-COMP-02 — Them Inventory cho Companion
 Giong Inventory cua Player, co ca bang Stats de cong luon.
+
+---
+
+## HANG DOI — UI / GIAO DIEN  (user them 2026-08-27)
+
+Muc tieu user dat ra: **toan bo UI hien dang la mac dinh Unity, lam bang tay** — can nang cap cho
+"xin xo, dam chat game RPG". Day la viec THIET KE, khong chi sua code, nen chia nho ra.
+
+### T-UI-01 — Thanh Shield tren HP bar  (uu tien cao, user bao "chua ro rang lam")
+- Hien tai: `UIStats.cs:24-28` dung **2 Image chong len HP slider**:
+  `Shield_Fill` (bac dac, fill trai->phai, lap phan HP trong) va
+  `Shield_Overlay` (bac mo, fill phai->trai, de len khi shield vuot max HP).
+  Ca hai deu co san trong `Canvas.prefab` (dong 23670 / 38694 / 42308 / 71120).
+- Van de user gap: mau trang de len thanh mau **khong doc duoc la shield**.
+- Huong: doi sang ngon ngu thi giac ro rang hon — vien sang + hoa tiet gach cheo, tach shield
+  ra khoi vung HP thay vi de chong, va them so hien thi. Chot huong voi user truoc khi lam.
+
+### T-UI-02 — UI hien Debuff / CC dang chiu  (THUC RA LA LAM MOI, khong phai sua)
+- **Da kiem tra: hien khong co UI debuff nao ca.** Grep toan bo `.prefab` + `.unity` khong ra
+  object nao ten Debuff/Buff/Status. Nghia la nguoi choi dang bi Stun/Root/Silence/Slow/Bleed/Burn
+  ma **khong co gi bao tren man hinh**.
+- Phu thuoc: nen lam SAU khi xong T-CC-01 (them Taunt/Pull/Fear vao enum), de khoi phai
+  ve lai icon lan hai.
+- Can: hang icon trang thai + dem nguoc thoi gian + phan biet CC (khong hanh dong duoc)
+  voi Debuff (mat mau theo thoi gian).
+
+### T-UI-03 — DevToolPanel
+- `DevToolPanel.cs` 915 dong, toan Button mac dinh cua Unity (anh chup man hinh cua user:
+  "Take Damage (10)", "Heal Full", "Add EXP +100", "Force Level Up", "Toggle God Mode",
+  tab COMBAT / SKILLS / EQUIPMENT / PLAYER / Companion Equipment).
+- Day la panel dev, khong phai UI nguoi choi -> **uu tien thap hon T-UI-01/02**, va tieu chi khac:
+  can DE DUNG va DE DOC, khong can dep kieu RPG.
+- Luu y: co lien quan toi **M-02** (gan nut game speed) va **buoc refactor 4 (gom time)**.
+  Lam UI DevTool truoc khi gom time thi se phai sua lai. Nen doi.
+
+### T-UI-04 — He thong thiet ke dung chung  (nen lam TRUOC 01-03)
+- Hien tai co **~254 gia tri mau viet cung** trong script (146 `new Color(...)` + 108 `Color.<ten>`)
+  — chinh la buoc refactor 3 con dang do.
+- Neu di thang vao ve lai tung panel ma khong co bang mau/typography chung thi se lai ra
+  mot mo gia tri roi rac nua. Lam `UIPalette` truoc, roi moi ve.
+- Da co san lam diem tua: `RarityColors` (da hop nhat, 5 bac xam/luc/lam/tim/cam).
+
+**Cau hoi can user chot truoc khi bat tay:**
+1. Tong the huong nao — dark fantasy (nau/vang dong, vien kim loai), hay arcane (tim/lam, phat sang)?
+   Bang mau rarity hien tai dang nghieng ve arcane.
+2. Co asset UI (sprite khung, icon) mua san khong, hay ve bang shader/9-slice?
+3. Uu tien: dep truoc hay ro rang truoc? (T-UI-01 va T-UI-02 la "ro rang", T-UI-03 la "de dung")
 
 ---
 
