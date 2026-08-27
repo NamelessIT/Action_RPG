@@ -63,6 +63,29 @@ public class SkillNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         Refresh();
     }
 
+    /// <summary>
+    /// Dat nhan mac dinh cho hai nut NGAY khi node ton tai.
+    ///
+    /// Vi sao can: ca hai nut trong Node.prefab deu ten "Button" va nhan mac dinh cung la
+    /// "Button". Refresh() co dat nhan that ("Unlock"/"Equip"), NHUNG no early-return ngay
+    /// dong dau khi _nodeData hoac _runtime con null. Node nao chua duoc Bind thi hai nut
+    /// giu nguyen chu "Button" — 2 nut x ~100 node = ~200 chu "Button" rai khap cay skill.
+    ///
+    /// Awake chay vo dieu kien nen bit duoc ca truong hop node khong bao gio duoc Bind.
+    /// </summary>
+    private void Awake()
+    {
+        SetButtonLabel(_unlockButton, "Unlock");
+        SetButtonLabel(_equipButton,  "Equip");
+    }
+
+    private static void SetButtonLabel(Button button, string label)
+    {
+        if (button == null) return;
+        var t = button.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (t != null) t.text = label;
+    }
+
     // ─────────────────────────────────────────────────────────────
     //  REFRESH
     // ─────────────────────────────────────────────────────────────
@@ -130,8 +153,7 @@ public class SkillNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
             _unlockButton.gameObject.SetActive(!isUnlocked);
             _unlockButton.interactable = canUnlock;
 
-            TextMeshProUGUI btnText = _unlockButton.GetComponentInChildren<TextMeshProUGUI>();
-            if (btnText != null) btnText.text = "Unlock";
+            SetButtonLabel(_unlockButton, "Unlock");
         }
 
         // ── Equip Button ─────────────────────────────────────────
@@ -155,13 +177,7 @@ public class SkillNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
             // Chỉ cho bấm trang bị nếu chưa được gán VÀ không nằm trong danh sách cấm
             _equipButton.interactable = !isEquipped && !isBanned;
 
-            TextMeshProUGUI btnText = _equipButton.GetComponentInChildren<TextMeshProUGUI>();
-            if (btnText != null)
-            {
-                if (isEquipped) btnText.text = "Equipped";
-                else if (isBanned) btnText.text = "Locked";
-                else btnText.text = "Equip";
-            }
+            SetButtonLabel(_equipButton, isEquipped ? "Equipped" : isBanned ? "Locked" : "Equip");
         }
     }
 

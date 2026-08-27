@@ -94,13 +94,33 @@ public class EnemyAI : MonoBehaviour
     // Tham chiếu skill
     private DuelistPassive parrySkill;
 
+    void Awake()
+    {
+        // Cache ref trong AWAKE chu khong phai Start.
+        //
+        // Start CHI chay khi component dang enabled, con Awake chay ca khi component bi
+        // disable (mien GameObject con active). Ma OnDamageTaken la API cong khai, EnemyStats
+        // goi vao bat ky luc nao — ke ca khi EnemyAI da bi tat. Truong hop that:
+        //   • Stats.Die() tat EnemyAI roi giu xac 3 giay -> danh tiep vao xac.
+        //   • Enemy vua spawn (vd DevTool) da bi chem ngay trong frame do.
+        // Truoc day mọi ref gan trong Start nen o hai truong hop tren `stats` van null
+        // -> NullReferenceException tai dong leash trong OnDamageTaken.
+        CacheComponentRefs();
+    }
+
+    /// <summary>Lay va giu cac component tren cung GameObject. Idempotent — chi lay cai con thieu.</summary>
+    private void CacheComponentRefs()
+    {
+        if (agent          == null) agent          = GetComponent<NavMeshAgent>();
+        if (stats          == null) stats          = GetComponent<EnemyStats>();
+        if (combat         == null) combat         = GetComponent<EnemyCombat>();
+        if (animator       == null) animator       = GetComponentInChildren<Animator>();
+        if (spriteRenderer == null) spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+    }
+
     void Start()
     {
-        agent = GetComponent<NavMeshAgent>();
-        stats = GetComponent<EnemyStats>();
-        combat = GetComponent<EnemyCombat>();
-        animator = GetComponentInChildren<Animator>();
-        spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        CacheComponentRefs();
 
         combat.Setup(stats, null, animator);
 
@@ -928,6 +948,10 @@ public class EnemyAI : MonoBehaviour
     {
         if (attacker == null) return;
 
+        // API cong khai -> co the bi goi truoc Start hoac khi component da disable.
+        CacheComponentRefs();
+        if (stats == null) return;
+
         // [MỚI] Không khóa mục tiêu nếu kẻ tấn công vô hình
         Stats attackerStats = attacker.GetComponent<Stats>();
         if (attackerStats != null && attackerStats.isInvisible) return;
@@ -938,7 +962,7 @@ public class EnemyAI : MonoBehaviour
 
         // Đánh thức AI
         isReturningHome = false;
-        if (agent.isOnNavMesh) agent.isStopped = false;
+        if (agent != null && agent.enabled && agent.isOnNavMesh) agent.isStopped = false;
 
         // --- LOGIC KHÓA MỤC TIÊU (STICKY AGGRO) ---
         if (nearestTarget == null)
