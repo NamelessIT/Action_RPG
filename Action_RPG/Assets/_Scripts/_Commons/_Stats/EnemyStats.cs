@@ -166,18 +166,14 @@ public class EnemyStats : Stats
                 if (duelist != null) duelist.OnParrySuccess(false, info.attacker);
 
                 // --- BẬT SUPER ARMOR BẢO VỆ ---
-                bool oldSuperArmor = this.isSuperArmor;
-                int oldArmorLevel = this.superArmorLevel;
-
-                this.isSuperArmor = true;
-                this.superArmorLevel = 99; // Chống mọi Stun/Knockback (trừ skill có Impact >= 100)
+                // Chống mọi Stun/Knockback (trừ skill có Impact >= 100) trong đúng cú parry.
+                PushSuperArmor(99);
 
                 // [QUAN TRỌNG NHẤT] Gọi TakeDamage GỐC ngay lúc Super Armor đang level 99
                 base.TakeDamage(info);
 
-                // Xử lý xong mới trả lại chỉ số giáp cũ
-                this.isSuperArmor = oldSuperArmor;
-                this.superArmorLevel = oldArmorLevel;
+                // Xử lý xong mới nhả nguồn super armor của parry
+                PopSuperArmor(99);
 
                 return; // Đã xử lý xong, KHÔNG chạy xuống dưới nữa
             }

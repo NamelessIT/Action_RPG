@@ -16,8 +16,6 @@ public class WarriorLiteSignature : SkillBehavior
 
     // Lưu lại các chỉ số gốc để hoàn trả sau 5s
     private float originalAttackRange;
-    private bool originalSuperArmor;
-    private int originalSuperArmorLevel;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
@@ -60,17 +58,15 @@ public class WarriorLiteSignature : SkillBehavior
 
         // 3. LƯU CHỈ SỐ GỐC VÀ CỘNG BUFF
         originalAttackRange = player.attackRange;
-        originalSuperArmor = stats.isSuperArmor;
-        originalSuperArmorLevel = stats.superArmorLevel;
 
         // Cấp Buff: Tốc chạy, Sát thương, Tầm đánh
         player.attackRange = originalAttackRange * attackRangeMultiplier;
         stats.bonusMoveSpeed += moveSpeedBuff;
         stats.bonusPhysicalAtk += physAtkBuff;
 
-        // Cấp Miễn nhiễm khống chế: Cấp Super Armor vĩnh cửu trong 5s (Level 999)
-        stats.isSuperArmor = true;
-        stats.superArmorLevel = 999;
+        // Cấp Miễn nhiễm khống chế trong 5s. Push/Pop nên KHÔNG đạp super armor của nguồn khác
+        // (trước đây gán thẳng 999 rồi khôi phục từ biến lưu → nguồn nào bật xen giữa sẽ bị mất).
+        stats.PushSuperArmor(999);
 
         // [QUAN TRỌNG] Gọi hàm tính toán lại chỉ số để áp dụng buff ngay lập tức
         if (stats is AllyStats ally)
@@ -94,9 +90,8 @@ public class WarriorLiteSignature : SkillBehavior
         stats.bonusMoveSpeed -= moveSpeedBuff;
         stats.bonusPhysicalAtk -= physAtkBuff;
 
-        // Trả lại cấp độ Super Armor ban đầu của Warrior
-        stats.isSuperArmor = originalSuperArmor;
-        stats.superArmorLevel = originalSuperArmorLevel;
+        // Nhả nguồn super armor của Rage Mode (nguồn khác vẫn giữ nguyên).
+        stats.PopSuperArmor(999);
 
         // Cập nhật lại logic hệ thống một lần nữa
         if (stats is AllyStats ally)

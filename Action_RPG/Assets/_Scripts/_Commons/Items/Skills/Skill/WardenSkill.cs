@@ -100,15 +100,13 @@ public class WardenSkill : SkillBehavior
         rb.useGravity = false;
         rb.linearVelocity = Vector3.zero;
 
-        bool oldIsSuperArmor = stats.isSuperArmor;
-        int oldSuperArmorLevel = stats.superArmorLevel;
         WaitForFixedUpdate waitFixed = new WaitForFixedUpdate();
+
+        // Không thể bị ngăn cản suốt skill. Push/Pop thay cho gán-rồi-khôi-phục để không đạp nguồn khác.
+        stats.PushSuperArmor(99);
 
         try
         {
-            stats.isSuperArmor = true;
-            stats.superArmorLevel = 99; // không thể bị ngăn cản suốt skill
-
             // ---------- PHASE 1: NHẢY + CẮM XUỐNG ----------
             stats.isInvincible = true;
             Debug.Log("<color=cyan>WARDEN: NHẢY LÊN CAO!</color>");
@@ -219,8 +217,7 @@ public class WardenSkill : SkillBehavior
             rb.angularVelocity = Vector3.zero;
 
             stats.isInvincible = false;
-            stats.isSuperArmor = oldIsSuperArmor;
-            stats.superArmorLevel = oldSuperArmorLevel;
+            stats.PopSuperArmor(99);
 
             player.isUsingSpecialSkill = false;
         }

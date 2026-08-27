@@ -91,8 +91,8 @@ public class CompanionBufferBehavior : CompanionSkillBehavior
                          () => { pl.bonusMagicAtk -= 0.20f; pl.bonusCdr -= 0.10f; pl.RecalculateStats(); }, 5f);
                 break;
             case CompanionProtocolType.Aegis:
-                TimedBuff(() => { pl.superArmorLevel += 2; pl.armor += pl.armor * 0.30f; pl.magicResist += pl.magicResist * 0.30f; },
-                         () => { pl.superArmorLevel -= 2; pl.armor /= 1.30f; pl.magicResist /= 1.30f; }, 5f);
+                TimedBuff(() => { pl.PushSuperArmor(2); pl.armor += pl.armor * 0.30f; pl.magicResist += pl.magicResist * 0.30f; },
+                         () => { pl.PopSuperArmor(2); pl.armor /= 1.30f; pl.magicResist /= 1.30f; }, 5f);
                 break;
             default: // Cơ bản
                 TimedBuff(() => pl.damageOutputMultiplier += 0.10f, () => pl.damageOutputMultiplier -= 0.10f, 5f);

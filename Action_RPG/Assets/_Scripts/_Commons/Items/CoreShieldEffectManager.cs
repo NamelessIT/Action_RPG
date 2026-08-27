@@ -317,8 +317,7 @@ public class CoreShieldEffectManager : MonoBehaviour
                 {
                     stats.armor += 50;
                     stats.magicResist += 50;
-                    stats.isSuperArmor = true;
-                    stats.superArmorLevel += 2;
+                    stats.PushSuperArmor(2);
                     SHD_CS_T4_01_HolyGround = true;
 
                     stats.RecalculateStats(); // Báo UI update
@@ -435,8 +434,7 @@ public class CoreShieldEffectManager : MonoBehaviour
     {
         stats.armor -= 50;
         stats.magicResist -= 50;
-        stats.isSuperArmor = false;
-        stats.superArmorLevel -= 2;
+        stats.PopSuperArmor(2);
         SHD_CS_T4_01_HolyGround = false;
         SHD_CS_T4_01_StandTimer = 0f;
         stats.RecalculateStats();

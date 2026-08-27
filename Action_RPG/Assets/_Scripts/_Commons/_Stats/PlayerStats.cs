@@ -72,10 +72,8 @@ public class PlayerStats : AllyStats
             {
                 // ... (Logic Parry cũ của bạn: Perfect/Normal, SuperArmor...) ...
 
-                bool oldSuperArmor = this.isSuperArmor;
-                int oldArmorLevel = this.superArmorLevel;
-                this.isSuperArmor = true;
-                this.superArmorLevel = 99;
+                // Super armor tạm trong đúng cú parry — Push/Pop để không đạp nguồn khác đang giữ.
+                PushSuperArmor(99);
 
                 DuelistPassive duelist = GetComponent<DuelistPassive>();
 
@@ -96,9 +94,8 @@ public class PlayerStats : AllyStats
                     if (duelist != null) duelist.OnParrySuccess(false, info.attacker);
                 }
                 // [FIX LỖI] Gọi base.TakeDamage Ở ĐÂY khi Super Armor đang bật
-                base.TakeDamage(info);  
-                this.isSuperArmor = oldSuperArmor;
-                this.superArmorLevel = oldArmorLevel;
+                base.TakeDamage(info);
+                PopSuperArmor(99);
                 return; // Thoát luôn
             }
             else

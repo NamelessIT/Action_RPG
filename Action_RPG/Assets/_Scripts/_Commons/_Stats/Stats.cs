@@ -324,10 +324,48 @@ public class Stats : MonoBehaviour
     /// <summary>Hệ số tốc độ do Slow (1 = bình thường, &lt;1 = bị chậm). Dùng chung cho move + attack cadence.</summary>
     public float EffectiveSlowMultiplier => 1f - CurrentSlowAmount;
 
-    // [MỚI] Super Armor (Siêu Giáp) - Không bị ngắt chiêu
-    [Header("--- Super Armor ---")]
+    // ─────────────────────────────────────────────────────────────
+    //  SUPER ARMOR — không bị ngắt chiêu.
+    //
+    //  Hai tầng TÁCH BẠCH, đừng trộn:
+    //   1. NỀN (2 field dưới) — cấu hình cố định của nhân vật: EnemyStats theo monsterRank,
+    //      PlayerStats theo characterId. Gán trong Inspector/Init, KHÔNG đụng lúc runtime.
+    //   2. TẠM THỜI (counter) — buff/trang bị bật tắt liên tục. Mỗi nguồn PushSuperArmor khi
+    //      bật, PopSuperArmor khi tắt, giống hệt _ccImmuneCount.
+    //
+    //  Trước đây mọi nguồn đều ghi thẳng vào 2 field nền, sinh ra ĐÚNG HAI kiểu hỏng ngược nhau:
+    //   • Accessory/Weapon khi tắt chỉ trừ level mà không hạ cờ → super armor kẹt vĩnh viễn.
+    //   • CoreShield ForceTurnOff_T4_01 hạ cờ VÔ ĐIỀU KIỆN → cướp super armor của nguồn khác.
+    //  Đọc hiệu lực qua IsSuperArmor / EffectiveSuperArmorLevel, đừng đọc 2 field nền.
+    // ─────────────────────────────────────────────────────────────
+    [Header("--- Super Armor (nền) ---")]
     public bool isSuperArmor = false;
-    public int superArmorLevel = 0; // Cấp độ giáp (0: Chống quái nhỏ, 1: Chống Elite...)
+    public int superArmorLevel = 0; // Cấp độ giáp nền (0: Chống quái nhỏ, 1: Chống Elite...)
+
+    private int _superArmorTokens = 0;      // số nguồn tạm thời đang giữ
+    private int _superArmorBonusLevel = 0;  // tổng cấp cộng thêm của các nguồn đó
+
+    /// <summary>Có super armor không — nền HOẶC ít nhất 1 nguồn tạm thời.</summary>
+    public bool IsSuperArmor => isSuperArmor || _superArmorTokens > 0;
+
+    /// <summary>Cấp super armor hiệu lực = nền + tổng cấp của mọi nguồn tạm thời.</summary>
+    public int EffectiveSuperArmorLevel => superArmorLevel + _superArmorBonusLevel;
+
+    /// <summary>Đăng ký 1 nguồn super armor tạm thời. Gọi cặp với <see cref="PopSuperArmor"/>
+    /// và truyền CÙNG bonusLevel cho cả hai.</summary>
+    public void PushSuperArmor(int bonusLevel = 0)
+    {
+        _superArmorTokens++;
+        _superArmorBonusLevel += Mathf.Max(0, bonusLevel);
+    }
+
+    /// <summary>Nhả 1 nguồn super armor tạm thời. Chặn pop dư (không xuống dưới 0) nên gọi
+    /// thừa vẫn an toàn — quan trọng vì nhiều nguồn nhả trong finally/OnDestroy.</summary>
+    public void PopSuperArmor(int bonusLevel = 0)
+    {
+        if (_superArmorTokens > 0) _superArmorTokens--;
+        _superArmorBonusLevel = Mathf.Max(0, _superArmorBonusLevel - Mathf.Max(0, bonusLevel));
+    }
 
     [Header("--- Tăng thời gian nhận Buff ---")]
     public float buffDurationBonus = 0f;
@@ -820,7 +858,7 @@ public class Stats : MonoBehaviour
             if (eff == null) continue;
 
             // [SUPER ARMOR] Per-effect: chỉ chặn effect có impactLevel ≤ cấp giáp; effect mạnh hơn vẫn xuyên.
-            if (isSuperArmor && eff.impactLevel <= superArmorLevel) continue;
+            if (IsSuperArmor && eff.impactLevel <= EffectiveSuperArmorLevel) continue;
 
             switch (eff.type)
             {

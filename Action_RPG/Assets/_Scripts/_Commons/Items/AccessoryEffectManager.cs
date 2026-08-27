@@ -499,8 +499,7 @@ public class AccessoryEffectManager : MonoBehaviour
         // PA_T5_03: miễn nhiễm khống chế (nâng superArmorLevel). ("không bị làm chậm" hiện chưa có nguồn slow lên player → no-op.)
         if (Has(PA_T5_03) && !pa_t5_03_applied)
         {
-            stats.isSuperArmor = true;
-            stats.superArmorLevel += 99;
+            stats.PushSuperArmor(99);
             pa_t5_03_applied = true;
         }
         // PA_T5_02: -30% bonusMoveSpeed.
@@ -611,7 +610,7 @@ public class AccessoryEffectManager : MonoBehaviour
         pa_t5_06_armed = false; pa_t5_06_standTimer = 0f;
 
         // Batch 4
-        if (pa_t5_03_applied) { stats.superArmorLevel -= 99; pa_t5_03_applied = false; }
+        if (pa_t5_03_applied) { stats.PopSuperArmor(99); pa_t5_03_applied = false; }
         if (ch_t4_05_dmgApplied) { stats.damageOutputMultiplier -= 0.20f; ch_t4_05_dmgApplied = false; }
         ms_t4_02_vulnUntil = -999f;
 
@@ -627,7 +626,7 @@ public class AccessoryEffectManager : MonoBehaviour
         UnbindCompanion();
 
         // Batch 7
-        if (rm_t5_05_ccApplied) { stats.superArmorLevel -= 99; rm_t5_05_ccApplied = false; }
+        if (rm_t5_05_ccApplied) { stats.PopSuperArmor(99); rm_t5_05_ccApplied = false; }
         if (pa_t5_07_applied) { stats.bonusCritChance -= 1.0f; pa_t5_07_applied = false; }
         if (ms_t5_08_stacks > 0)
         {
@@ -1517,8 +1516,8 @@ public class AccessoryEffectManager : MonoBehaviour
         if (Has(RM_T5_05))
         {
             bool high = stats.currentHp > stats.maxHp * 0.70f;
-            if (high && !rm_t5_05_ccApplied)  { stats.isSuperArmor = true; stats.superArmorLevel += 99; rm_t5_05_ccApplied = true; }
-            if (!high && rm_t5_05_ccApplied)  { stats.superArmorLevel -= 99; rm_t5_05_ccApplied = false; }
+            if (high && !rm_t5_05_ccApplied)  { stats.PushSuperArmor(99); rm_t5_05_ccApplied = true; }
+            if (!high && rm_t5_05_ccApplied)  { stats.PopSuperArmor(99); rm_t5_05_ccApplied = false; }
             if (high) stats.Heal(stats.maxHp * 0.01f * Time.deltaTime, false, false, HealSource.Regen);
         }
 

@@ -494,9 +494,9 @@ public class WeaponEffectManager : MonoBehaviour
                 {
                     stats.currentShield += granted;
                     sw_t5_03_currentShield += granted;
-                    stats.superArmorLevel = 99;
-
-                    if (sw_t5_03_coro != null) StopCoroutine(sw_t5_03_coro);
+                    // Chi Push khi CHUA co nguon nao dang giu, neu khong refresh lien tuc se leak token.
+                    if (sw_t5_03_coro == null) stats.PushSuperArmor(99);
+                    else StopCoroutine(sw_t5_03_coro);
                     sw_t5_03_coro = StartCoroutine(Reset_SW_T5_03_Shield());
 
                     // Visual Bubble bám theo nhân vật
@@ -520,7 +520,8 @@ public class WeaponEffectManager : MonoBehaviour
         yield return new WaitForSeconds(10f);
         stats.currentShield = Mathf.Max(0, stats.currentShield - sw_t5_03_currentShield);
         sw_t5_03_currentShield = 0f;
-        stats.superArmorLevel -= 99;
+        stats.PopSuperArmor(99);
+        sw_t5_03_coro = null;
         if (sw_t5_03_visualBubble != null) Destroy(sw_t5_03_visualBubble);
         Debug.Log("<color=cyan>[T5_03] Mất Giáp Overheal!</color>");
     }
@@ -791,8 +792,8 @@ public class WeaponEffectManager : MonoBehaviour
 
         // GS_T5_01: miễn nhiễm khống chế + khóa tốc đánh ở 0.6 (trừ giáp xử lý ở GS_T5_01_Hit).
         bool gs501 = wid == "WPN_GS_T5_01";
-        if (gs501 && !gs_t5_01_active) { stats.isSuperArmor = true; stats.superArmorLevel += 50; gs_t5_01_active = true; }
-        else if (!gs501 && gs_t5_01_active) { stats.superArmorLevel -= 50; gs_t5_01_active = false; }
+        if (gs501 && !gs_t5_01_active) { stats.PushSuperArmor(50); gs_t5_01_active = true; }
+        else if (!gs501 && gs_t5_01_active) { stats.PopSuperArmor(50); gs_t5_01_active = false; }
         if (gs501) stats.attackSpeed = 0.6f; // khóa tốc đánh (best-effort, ghi đè mỗi frame)
 
         // BW_T3_01: gồng bắn (HeavyAttack charge) không bị giảm tốc di chuyển.
