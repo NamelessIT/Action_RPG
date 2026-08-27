@@ -111,6 +111,10 @@ public class CoreShieldEffectManager : MonoBehaviour
                 companionStats.OnBeforeTakeDamage -= HandleCompanionDamageShare;
             }
         }
+
+        // Tat moi effect dong dang bat. Thieu buoc nay thi disable component giua luc
+        // SHD_CS_T4_01 dang bat se giu token super armor vinh vien.
+        ResetDynamicShieldEffects();
     }
 
     // ==========================================

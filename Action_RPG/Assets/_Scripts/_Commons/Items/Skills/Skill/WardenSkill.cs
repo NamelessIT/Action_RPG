@@ -62,7 +62,29 @@ public class WardenSkill : SkillBehavior
     }
 
     protected override void OnEquip() { }
-    protected override void OnUnequip() { }
+    // Cờ giữ nguồn super armor — để nhả được cả khi coroutine bị cắt ngang.
+    private bool _superArmorHeld;
+
+    private void HoldSuperArmor()
+    {
+        if (_superArmorHeld) return;
+        stats.PushSuperArmor(99);
+        _superArmorHeld = true;
+    }
+
+    private void ReleaseSuperArmor()
+    {
+        if (!_superArmorHeld) return;
+        stats.PopSuperArmor(99);
+        _superArmorHeld = false;
+    }
+
+    protected override void OnUnequip()
+    {
+        // Tháo skill giữa lúc chiêu đang chạy: finally của coroutine KHÔNG chắc chạy,
+        // nên nhả ở đây. Có cờ nên gọi hai lần cũng không trừ dư.
+        ReleaseSuperArmor();
+    }
 
     public override bool Use()
     {
@@ -103,7 +125,7 @@ public class WardenSkill : SkillBehavior
         WaitForFixedUpdate waitFixed = new WaitForFixedUpdate();
 
         // Không thể bị ngăn cản suốt skill. Push/Pop thay cho gán-rồi-khôi-phục để không đạp nguồn khác.
-        stats.PushSuperArmor(99);
+        HoldSuperArmor();
 
         try
         {
@@ -217,7 +239,7 @@ public class WardenSkill : SkillBehavior
             rb.angularVelocity = Vector3.zero;
 
             stats.isInvincible = false;
-            stats.PopSuperArmor(99);
+            ReleaseSuperArmor();
 
             player.isUsingSpecialSkill = false;
         }

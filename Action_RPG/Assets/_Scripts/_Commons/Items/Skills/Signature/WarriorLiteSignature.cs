@@ -38,8 +38,14 @@ public class WarriorLiteSignature : SkillBehavior
     {
         if (!base.Use()) return false;
 
-        // Nếu người chơi dùng chiêu liên tục (Reset cooldown), ta làm mới thời gian
-        if (rageCoroutine != null) StopCoroutine(rageCoroutine);
+        // Nếu người chơi dùng chiêu liên tục (Reset cooldown), ta làm mới thời gian.
+        // PHẢI gỡ buff cũ trước khi chạy lượt mới: trước đây chỉ StopCoroutine rồi Start lại,
+        // nên Push 2 lần mà chỉ Pop 1 lần (kẹt super armor), và moveSpeed/physAtk cộng dồn đôi.
+        if (rageCoroutine != null)
+        {
+            StopCoroutine(rageCoroutine);
+            RemoveRageBuffs();
+        }
 
         rageCoroutine = StartCoroutine(RageRoutine());
         return true;

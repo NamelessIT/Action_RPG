@@ -99,8 +99,17 @@ public abstract class CompanionSkillBehavior : MonoBehaviour
     private System.Collections.IEnumerator TimedBuffRoutine(System.Action apply, System.Action revert, float dur)
     {
         apply?.Invoke();
-        yield return new WaitForSeconds(dur);
-        revert?.Invoke();
+        try
+        {
+            yield return new WaitForSeconds(dur);
+        }
+        finally
+        {
+            // finally: Companion chet/bi disable giua chung thi buff VAN duoc go.
+            // Truoc day revert nam sau yield nen coroutine bi dung la buff ket vinh vien
+            // (nang nhat la Aegis: giu luon token super armor cua player).
+            revert?.Invoke();
+        }
     }
 
     protected int EnemyMask()

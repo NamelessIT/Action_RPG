@@ -202,6 +202,25 @@ public class WeaponEffectManager : MonoBehaviour
             stats.OnSinConsumed -= HandleOnSinConsumed;
             stats.OnBeforeTakeDamage -= HandleOnBeforeTakeDamage;
         }
+
+        ReleaseSuperArmorSources();
+    }
+
+    /// <summary>Nha moi nguon super armor file nay dang giu. Bat buoc goi khi disable:
+    /// khong co no thi token ket vinh vien, va rieng SW_T5_03 con ket luon co
+    /// sw_t5_03_coro != null khien lan bat lai KHONG Push nua (hong ca hai chieu).</summary>
+    private void ReleaseSuperArmorSources()
+    {
+        if (stats == null) return;
+
+        if (gs_t5_01_active) { stats.PopSuperArmor(50); gs_t5_01_active = false; }
+
+        if (sw_t5_03_coro != null)
+        {
+            StopCoroutine(sw_t5_03_coro);
+            sw_t5_03_coro = null;
+            stats.PopSuperArmor(99);
+        }
     }
 
     // ==========================================

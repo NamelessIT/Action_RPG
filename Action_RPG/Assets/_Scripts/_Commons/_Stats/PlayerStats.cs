@@ -93,9 +93,18 @@ public class PlayerStats : AllyStats
                     info.magicDamage *= 0.2f;
                     if (duelist != null) duelist.OnParrySuccess(false, info.attacker);
                 }
-                // [FIX LỖI] Gọi base.TakeDamage Ở ĐÂY khi Super Armor đang bật
-                base.TakeDamage(info);
-                PopSuperArmor(99);
+                // [FIX LỖI] Gọi base.TakeDamage Ở ĐÂY khi Super Armor đang bật.
+                // try/finally: TakeDamage fire nhiều event của bên thứ ba (OnBeforeTakeDamage,
+                // damageInterceptor, Die...). Một exception ở bất kỳ subscriber nào mà không có
+                // finally thì Pop không chạy → người chơi miễn nhiễm CC vĩnh viễn.
+                try
+                {
+                    base.TakeDamage(info);
+                }
+                finally
+                {
+                    PopSuperArmor(99);
+                }
                 return; // Thoát luôn
             }
             else

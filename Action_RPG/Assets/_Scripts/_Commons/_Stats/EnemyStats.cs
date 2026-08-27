@@ -169,11 +169,17 @@ public class EnemyStats : Stats
                 // Chống mọi Stun/Knockback (trừ skill có Impact >= 100) trong đúng cú parry.
                 PushSuperArmor(99);
 
-                // [QUAN TRỌNG NHẤT] Gọi TakeDamage GỐC ngay lúc Super Armor đang level 99
-                base.TakeDamage(info);
-
-                // Xử lý xong mới nhả nguồn super armor của parry
-                PopSuperArmor(99);
+                // [QUAN TRỌNG NHẤT] Gọi TakeDamage GỐC ngay lúc Super Armor đang level 99.
+                // try/finally vì lý do như PlayerStats: exception trong event của TakeDamage
+                // sẽ làm enemy miễn nhiễm CC vĩnh viễn nếu Pop nằm ngoài finally.
+                try
+                {
+                    base.TakeDamage(info);
+                }
+                finally
+                {
+                    PopSuperArmor(99);
+                }
 
                 return; // Đã xử lý xong, KHÔNG chạy xuống dưới nữa
             }
