@@ -29,11 +29,8 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
-        // Khởi tạo hệ thống quản lý state
-        stateManager = new PlayerStateManager(playerDB, weaponDB, checkpointDB, accessoryDB);
-
         // Tải player ID = 1
-        currentPlayerState = stateManager.RebuildRuntimeState(playerId: 1);
+        currentPlayerState = EnsureStateManager().RebuildRuntimeState(playerId: 1);
         inventoryRuntime = InventoryRuntime.Current;
 
         Debug.Log("[GameManager] ✅ Đã tải xong Player Runtime State!");
@@ -183,7 +180,7 @@ public class GameManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.F9))
         {
             // Tải lại runtime state
-            currentPlayerState = stateManager.RebuildRuntimeState(1);
+            currentPlayerState = EnsureStateManager().RebuildRuntimeState(1);
             AssignStatsToPlayer();
             Debug.Log("🎮 Đã tải lại game (F9)");
         }
@@ -219,6 +216,25 @@ public class GameManager : MonoBehaviour
         Debug.Log($"[GameManager] 🔄 Inventory synced → {currentPlayerState.inventoryItems.Count} items saved to state.");
     }
 
+    /// <summary>
+    /// Trả về <see cref="stateManager"/>, dựng lại nếu nó đã biến mất.
+    ///
+    /// TẠI SAO CẦN: <see cref="PlayerStateManager"/> là object C# thuần trong field private,
+    /// KHÔNG serialize được qua domain reload. Mỗi lần sửa script trong lúc đang Play Mode,
+    /// Unity reload domain và field này thành null — GameObject vẫn sống nhưng Awake không
+    /// chạy lại. Lúc thoát Play, SaveGame() gọi vào null và nổ NullReferenceException:
+    /// **việc lưu game hỏng âm thầm, người chơi mất tiến độ mà chỉ thấy một dòng lỗi**.
+    /// Dựng lại tại chỗ rẻ hơn nhiều so với mất save.
+    /// </summary>
+    private PlayerStateManager EnsureStateManager()
+    {
+        if (stateManager == null)
+        {
+            stateManager = new PlayerStateManager(playerDB, weaponDB, checkpointDB, accessoryDB);
+        }
+        return stateManager;
+    }
+
     private void SaveGame()
     {
         if (suppressNextSave)
@@ -235,7 +251,7 @@ public class GameManager : MonoBehaviour
             SyncRuntimeStateFromScene();
         }
 
-        stateManager.SaveGameState(currentPlayerState);
+        EnsureStateManager().SaveGameState(currentPlayerState);
         Debug.Log("[GameManager] 💾 Đã lưu game khi thoát.");
     }
 

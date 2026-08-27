@@ -108,6 +108,13 @@ public class SkillTreeController : MonoBehaviour
     private void Awake()
     {
         MakeDetailPanelNonBlocking();
+
+        // Sap lai bo cuc: Icon/NameText/DescText/TypeText deu dang nam o (0,0) tuc chong
+        // dung len nhau giua panel, va BTN_Refund cung o (0,0) -> chinh la chu "Button" troi
+        // giua man hinh. Controller nay chi set sprite/text nen khong da nhau.
+        Systems.SkillTreeLayoutRepair.Apply(gameObject);
+        Systems.UILayoutTidy.Apply(gameObject);
+        Systems.ArcaneUISkin.Apply(gameObject);
         SetPanelVisible(false);
     }
 

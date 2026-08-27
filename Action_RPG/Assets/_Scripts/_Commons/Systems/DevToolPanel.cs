@@ -180,8 +180,24 @@ public class DevToolPanel : MonoBehaviour
 
         // Khoác lại giao diện SAU khi dropdown đã populate, để caption/item text mới sinh
         // cũng được tô. Đây là panel dev nên tiêu chí là DỄ ĐỌC, không phải đẹp.
+        CenterOnScreen();
         Systems.UILayoutTidy.Apply(gameObject);
         Systems.ArcaneUISkin.Apply(gameObject);
+    }
+
+    /// <summary>
+    /// Panel dang neo vao GOC TREN-PHAI (anchor 1,1) voi offset co dinh (-350,-240), nen o
+    /// moi do phan giai no roi mot cho khac nhau va tren man 4K thi lech han khoi tam.
+    /// Doi sang neo TAM de luon nam giua, bat ke do phan giai.
+    /// </summary>
+    private void CenterOnScreen()
+    {
+        var rt = transform as RectTransform;
+        if (rt == null) return;
+
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot     = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
     }
 
     // ============================================================

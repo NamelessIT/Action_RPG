@@ -87,6 +87,15 @@ namespace Systems
                 }
             }
 
+            // THỨ TỰ QUAN TRỌNG: tô chữ TRƯỚC, rồi để các handler chuyên trách ghi đè nhãn
+            // của riêng chúng.
+            //
+            // Bản đầu làm ngược lại (chữ sau cùng) nên phải đánh dấu "text này đã xử lý rồi"
+            // bằng một marker component gắn lên TỪNG text — đo được 360 component chỉ để làm
+            // cờ. Đảo thứ tự cho ra đúng kết quả đó mà không cần marker nào.
+            if (doTexts)
+                foreach (var t in root.GetComponentsInChildren<TextMeshProUGUI>(true)) SkinLooseText(t);
+
             if (doButtons)
                 foreach (var b in root.GetComponentsInChildren<Button>(true)) SkinButton(b, radius);
 
@@ -98,11 +107,6 @@ namespace Systems
 
             if (doScrollbars)
                 foreach (var s in root.GetComponentsInChildren<Scrollbar>(true)) SkinScrollbar(s);
-
-            // Chữ làm SAU CÙNG: các hàm trên đã tự set nhãn của mình, bước này chỉ
-            // quét những chữ còn lại (tiêu đề, mô tả, số liệu).
-            if (doTexts)
-                foreach (var t in root.GetComponentsInChildren<TextMeshProUGUI>(true)) SkinLooseText(t);
         }
 
         // ── Nút ──────────────────────────────────────────────────────────────
@@ -131,7 +135,30 @@ namespace Systems
             foreach (var label in btn.GetComponentsInChildren<TextMeshProUGUI>(true))
             {
                 label.color = UIPalette.TextBright;
-                MarkSkinned(label);
+                FitLabel(label);
+            }
+        }
+
+        /// <summary>
+        /// Nhãn nút không được xuống dòng. Tab DevTool rộng 82px mà chữ "Companion Equipment"
+        /// 16pt thì TMP tự ngắt thành "Companio / n Equipmen / t" — đọc rất khó chịu.
+        /// Cách xử lý: cấm ngắt dòng rồi bật auto-size để chữ TỰ CO cho vừa bề ngang.
+        /// Nhãn ngắn giữ nguyên cỡ, chỉ nhãn dài mới nhỏ lại.
+        /// </summary>
+        private static void FitLabel(TextMeshProUGUI label)
+        {
+            if (label == null) return;
+
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode     = TextOverflowModes.Ellipsis;
+
+            // Chốt cỡ hiện tại làm TRẦN trước khi bật auto-size — sau khi bật,
+            // fontSize trở thành giá trị do TMP tính nên đọc sau sẽ không còn đúng.
+            if (!label.enableAutoSizing)
+            {
+                label.fontSizeMax     = label.fontSize;
+                label.fontSizeMin     = Mathf.Max(8f, label.fontSize * 0.55f);
+                label.enableAutoSizing = true;
             }
         }
 
@@ -147,8 +174,8 @@ namespace Systems
                 img.color = Color.white;
             }
 
-            if (dd.captionText != null) { dd.captionText.color = UIPalette.TextBright; MarkSkinned(dd.captionText); }
-            if (dd.itemText    != null) { dd.itemText.color    = UIPalette.TextBright; MarkSkinned(dd.itemText); }
+            if (dd.captionText != null) dd.captionText.color = UIPalette.TextBright;
+            if (dd.itemText    != null) dd.itemText.color    = UIPalette.TextBright;
 
             // Nền danh sách xổ xuống (template chỉ tồn tại khi dropdown mở, nên chỉnh cả template gốc).
             if (dd.template != null)
@@ -180,7 +207,6 @@ namespace Systems
             foreach (var label in tg.GetComponentsInChildren<TextMeshProUGUI>(true))
             {
                 label.color = UIPalette.TextMuted;
-                MarkSkinned(label);
             }
         }
 
@@ -202,7 +228,7 @@ namespace Systems
         // ── Chữ chưa được hàm nào phụ trách ──────────────────────────────────
         private static void SkinLooseText(TextMeshProUGUI t)
         {
-            if (t == null || IsSkinned(t)) return;
+            if (t == null) return;
 
             // Phân vai theo cỡ chữ. CHỈ hai bậc, và bậc thấp nhất vẫn phải đọc được.
             //
@@ -214,7 +240,6 @@ namespace Systems
             float size = t.fontSize;
             t.color = size >= 28f ? UIPalette.TextBright   // tương phản 15.5
                                   : UIPalette.TextMuted;   // tương phản 6.19
-            MarkSkinned(t);
         }
 
         // ── Hạ tầng ──────────────────────────────────────────────────────────
@@ -263,20 +288,5 @@ namespace Systems
         /// <summary>Số material khung đang dùng chung — để soi lúc gỡ lỗi hiệu năng.</summary>
         public static int SharedFrameMaterialCount => _frameMats.Count;
 
-        // Đánh dấu bằng marker component chứ KHÔNG bằng bảng static theo instance id:
-        // bảng static sẽ phình mãi và Unity tái dùng instance id sau khi load lại scene,
-        // sinh ra dương tính giả. Marker sống/chết cùng chính đối tượng đó.
-        private static void MarkSkinned(TMP_Text t)
-        {
-            if (t != null && t.GetComponent<UISkinnedMarker>() == null)
-                t.gameObject.AddComponent<UISkinnedMarker>();
-        }
-
-        private static bool IsSkinned(TMP_Text t)
-            => t != null && t.GetComponent<UISkinnedMarker>() != null;
     }
-
-    /// <summary>Cờ đánh dấu "chữ này đã được một hàm chuyên trách tô màu rồi, đừng quét đè".</summary>
-    [DisallowMultipleComponent]
-    public class UISkinnedMarker : MonoBehaviour { }
 }

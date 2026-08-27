@@ -30,6 +30,39 @@ namespace Systems
             if (panelRoot == null) return;
             RepairStatRows(panelRoot);
             RepairPaperDollSliders(panelRoot);
+            RepairAvatarPlaceholder(panelRoot);
+        }
+
+        /// <summary>
+        /// O Avatar co Image nhung sprite = NULL. Unity ve Image khong sprite thanh o VUONG
+        /// TRANG dac, nen giua bang chi so hien ra mot mang trang chuong mat — trong nhu loi.
+        ///
+        /// Chua co anh chan dung nhan vat thi khong the tu bia ra; nhung it nhat lam cho no
+        /// TRONG NHU MOT O CHO ANH: nen toi, vien bo tron. Gan sprite chan dung vao la
+        /// khung nay tu boc lay anh (fillFromSprite), khong phai sua gi them.
+        /// </summary>
+        private static void RepairAvatarPlaceholder(GameObject root)
+        {
+            Transform avatar = FindDescendant(root.transform, "Avatar");
+            if (avatar == null) return;
+
+            var img = avatar.GetComponent<Image>();
+            if (img == null) return;
+
+            var frame = UISlotFrame.AttachTo(img, 0.08f, 0.02f);
+            if (frame == null) return;
+
+            frame.glowWidth = 0.02f;
+            // Chua co sprite -> to nen toi. Co sprite roi -> lay chinh anh lam nen.
+            frame.fillFromSprite = img.sprite != null;
+            frame.SetColors(img.sprite != null ? Color.white : UIPalette.VoidSunk,
+                            UIPalette.RuneEdge,
+                            UIPalette.With(UIPalette.RuneGlow, 0.5f));
+            frame.Refresh();
+
+            // Image khong sprite mac dinh mau trang -> phai ha xuong, khong thi shader bi
+            // nhan voi trang va van sang truong.
+            if (img.sprite == null) img.color = Color.white;
         }
 
         /// <summary>
