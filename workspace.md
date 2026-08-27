@@ -28,6 +28,21 @@ Cap nhat lan cuoi: **2026-08-27**
   `WeaponData.Rarity`, `AccessoryData.Rarity`, `CoreShieldData.Rarity`, `CompanionRarity`.
 - [x] Xac minh 197 asset ScriptableObject giu nguyen gia tri (serialize la int).
 
+### Bug fix — Player roi xuyen dat vo han khi vao Play Mode
+- [x] **Nguyen nhan:** save file ghi `positionY = -2858.67`, `GameManager.AssignStatsToPlayer()`
+  nap lai nguyen xi -> player o duoi dat -> Rigidbody keo roi tiep -> thoat Play lai luu Y con
+  thap hon -> lan sau te hon. Vong lap tu nuoi.
+- [x] **Da loai tru:** scene khong co loi. Terrain co TerrainCollider enabled, phu kin vi tri
+  Player, raycast xuong trung Terrain tai y=0, Player scene pos y=1.402 (cao hon mat dat 1.4m).
+- [x] **Da loai tru:** khong phai do doi GameObject.Find -> FindGameObjectWithTag,
+  scene chi co dung 1 object mang tag Player.
+- [x] Sua save file hien tai (backup `.bak`), giu nguyen tien do level 3 / 296 exp / 15 diem.
+- [x] Them `GameManager.IsSavedPositionUsable()` — tu choi toa do NaN/Infinity hoac nam duoi
+  day the gioi (`Terrain.activeTerrain.y - 5`), roi dung vi tri spawn cua scene thay the.
+- **LUU Y cho tuong lai:** day la ca THU HAI cua cung mot kieu bug save->load. Ca thu nhat la
+  `[P2-DATA-FIX-02]` (baseHp cong don 20*level moi chu ky). Khi them field moi vao save,
+  luon hoi: gia tri nay co the tro thanh dau vao cua chinh no o lan load sau khong?
+
 ### Refactor buoc 2 — gom link
 - [x] Gom 14 duong dan `Resources.Load` viet cung vao `ResourcePaths`.
 - [x] Gom 15 cho `FindFirstObjectByType<CompanionAI>()` vao `CompanionAI.Current` (co cache).

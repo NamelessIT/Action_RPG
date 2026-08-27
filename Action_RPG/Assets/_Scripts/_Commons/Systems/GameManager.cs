@@ -127,14 +127,52 @@ public class GameManager : MonoBehaviour
             playerStats.maxStamina);
         playerStats.currentSin = Mathf.Clamp(currentPlayerState.currentSin, 0f, playerStats.maxSin);
 
-        Vector3 currentPosition = playerObject.transform.position;
-        playerObject.transform.position = new Vector3(currentPlayerState.position.x, currentPlayerState.position.y, currentPosition.z);
+        Vector3 spawnPosition = playerObject.transform.position;
+        Vector3 savedPosition = new Vector3(currentPlayerState.position.x, currentPlayerState.position.y, spawnPosition.z);
+
+        if (IsSavedPositionUsable(savedPosition))
+        {
+            playerObject.transform.position = savedPosition;
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"[GameManager] ⚠️ Vị trí trong save không hợp lệ ({savedPosition}) - giữ nguyên vị trí spawn " +
+                $"của scene ({spawnPosition}). Nguyên nhân thường gặp: player từng rơi khỏi map " +
+                "và toạ độ đó bị ghi vào save.");
+        }
 
         Debug.Log($"[GameManager] ✅ Đã gán stats cho Player:");
         Debug.Log($"  - HP: {playerStats.currentHp}/{playerStats.maxHp}");
         Debug.Log($"  - Level: {playerStats.level} | EXP: {playerStats.exp}/{playerStats.maxExpForCurrentLevel}");
         Debug.Log($"  - STR/DEX/INT/VIT/AGI: {playerStats.baseSTR}/{playerStats.baseDEX}/{playerStats.baseINT}/{playerStats.baseVIT}/{playerStats.baseAGI}");
     }
+
+    /// <summary>
+    /// Khoảng an toàn dưới đáy thế giới. Toạ độ Y thấp hơn mức này chắc chắn là dữ liệu hỏng.
+    /// </summary>
+    private const float k_WorldFloorMargin = 5f;
+
+    /// <summary>
+    /// Chặn vòng lặp "rơi khỏi map -> lưu toạ độ rơi -> nạp lại -> rơi tiếp -> lưu toạ độ còn thấp hơn".
+    /// Khi toạ độ trong save nằm dưới đáy thế giới (hoặc là NaN/Infinity), bỏ qua nó và
+    /// dùng vị trí spawn đã đặt sẵn trong scene.
+    /// </summary>
+    private bool IsSavedPositionUsable(Vector3 position)
+    {
+        if (float.IsNaN(position.x) || float.IsNaN(position.y) ||
+            float.IsInfinity(position.x) || float.IsInfinity(position.y))
+        {
+            return false;
+        }
+
+        float worldFloor = Terrain.activeTerrain != null
+            ? Terrain.activeTerrain.transform.position.y - k_WorldFloorMargin
+            : -k_WorldFloorMargin;
+
+        return position.y >= worldFloor;
+    }
+
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.F5))
