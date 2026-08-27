@@ -128,13 +128,29 @@ public class SkillNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
             _iconImage.color   = isUnlocked ? Color.white : UIPalette.IconDimmed;
         }
 
-        // ── Name ──────────────────────────────────────────────────
-        if (_nameText != null)
-            _nameText.text = _nodeData.nodeName;
+        // ── Name + Cost ──────────────────────────────
+        // Node.prefab chi co DUNG MOT label tu do ("Text (TMP)" o goc node); hai Text (TMP)
+        // con lai la nhan ben trong hai Button. Vi vay _nameText va _costText dang tro
+        // CUNG MOT doi tuong — ghi lan luot thi dong sau de len dong truoc, va TEN NODE
+        // KHONG BAO GIO HIEN, chi con lai chu cost.
+        //
+        // Day KHONG phai loi keo-tha: khong co o thu hai nao de keo _costText sang.
+        // Nen xu ly o code — phat hien tro trung thi GOP hai thong tin vao mot label.
+        string costLabel = isUnlocked ? string.Empty : $"{_nodeData.unlockCost} SP";
 
-        // ── Cost ──────────────────────────────────────────────────
-        if (_costText != null)
-            _costText.text = isUnlocked ? "" : $"{_nodeData.unlockCost} SP";
+        if (_nameText != null && ReferenceEquals(_nameText, _costText))
+        {
+            // Dung Environment.NewLine chu khong phai escape trong chuoi — tranh
+            // rui ro dau backslash bi nuot khi sinh code qua pipeline.
+            _nameText.text = string.IsNullOrEmpty(costLabel)
+                ? _nodeData.nodeName
+                : _nodeData.nodeName + System.Environment.NewLine + costLabel;
+        }
+        else
+        {
+            if (_nameText != null) _nameText.text = _nodeData.nodeName;
+            if (_costText != null) _costText.text = costLabel;
+        }
 
         // ── Frame Color ───────────────────────────────────────────
         if (_frameBorder != null)

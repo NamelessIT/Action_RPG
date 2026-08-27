@@ -24,9 +24,9 @@ namespace Systems
         public const float CardMargin = 20f;
 
         /// <summary>Nhan cua nut hoan diem ky nang.</summary>
-        public const string RefundLabel = "Reset";
+        public const string RefundLabel = "Refund";
 
-        /// <summary>Chieu cao dai duoi cung danh RIENG cho nut Reset.
+        /// <summary>Chieu cao dai duoi cung danh RIENG cho nut Refund.
         /// Vung cuon se bi cat bot dung bang nay de nut khong de len node skill.</summary>
         public const float BottomStripHeight = 56f;
 
@@ -62,7 +62,7 @@ namespace Systems
         }
 
         /// <summary>
-        /// Cat bot day vung cuon de chua cho cho nut Reset.
+        /// Cat bot day vung cuon de chua cho cho nut Refund.
         ///
         /// Vi sao phai lam: panel cao 450, Scroll View cao 400 nam giua -> chi con 25px duoi
         /// day scroll, ma nut cao 30. Khong du cho. Neu chi neo nut vao day panel thi no se
