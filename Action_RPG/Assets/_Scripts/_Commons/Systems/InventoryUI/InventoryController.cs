@@ -63,6 +63,11 @@ public class InventoryController : MonoBehaviour
         Systems.UILayoutTidy.Apply(gameObject);
         Systems.UILayoutTidy.ApplyRows(gameObject);
 
+        // Sua cac loi bo cuc DICH DANH da do duoc: hang chi so 15px/font 8pt, va hai
+        // slider HP/EXP chong nhau 5px. Chay sau UILayoutTidy vi no dat LayoutElement
+        // de len ket qua cua buoc chung.
+        Systems.InventoryLayoutRepair.Apply(gameObject);
+
         // Khoác tông arcane cho toàn bộ control mặc định trong panel (nút tab, dropdown,
         // thanh cuộn, chữ). Chạy sau BuildSlotViews để các ô vừa sinh cũng được tính.
         Systems.ArcaneUISkin.Apply(gameObject);
