@@ -311,32 +311,46 @@ Giong Inventory cua Player, co ca bang Stats de cong luon.
 
 ---
 
-## [!!] LUAT: KHONG BAO GIO TU DONG SAVE SCENE CUA USER
+## [!!] LUAT: KHONG BAO GIO TU DONG SAVE SCENE / PREFAB CUA USER
 
-**2026-08-27 — su co da xay ra va da khac phuc.** Ghi lai de khong lap lai.
+**2026-08-27 — su co da xay ra, da khac phuc hoan toan.** Ghi lai de khong lap lai.
 
 Claude chay `EditorSceneManager.SaveScene()` tu `execute_code` de ghi vinh vien cac sua
-doi bo cuc vao `OdoScene.unity`. Ket qua: scene **mat 8 GameObject va 13 MonoBehaviour**
-(4 VerticalLayoutGroup, 4 LayoutElement, 4 ContentSizeFitter, 1 TextMeshProUGUI) — deu la
-component duoc THEM vao con cua prefab instance `Canvas.prefab` nhu scene override.
+doi bo cuc. Hau qua LAN ROSNG HON nhieu so voi du kien — cham vao 3 file:
 
-Da kiem chung: **0/10 tham chieu la mo coi** — toan bo deu neo duoc vao object co that
-trong `Canvas.prefab`. Nghia la KHONG phai don rac, ma la mat du lieu hop le.
+**1. `OdoScene.unity`** — mat 8 GameObject + 13 MonoBehaviour (4 VerticalLayoutGroup,
+4 LayoutElement, 4 ContentSizeFitter, 1 TextMeshProUGUI).
 
-Nguyen nhan kha di nhat: luc save, Unity dang o trang thai suy giam sau chuoi domain
-reload (console co hang loat dong "The referenced script (Unknown) is missing"). Unity
-giu cac component do o dang null trong bo nho, va save ghi ra scene thieu chung.
+**2. `Canvas.prefab`** — +396 dong: DUNG 13 component + 1 GameObject do. Tuc la khong
+phai "mat du lieu" nhu ket luan dau tien cua Claude, ma la mot cu **"Apply to Prefab"
+ngoai y muon**: override cua scene bi day thang vao prefab. Neu chi revert scene ma
+khong revert prefab thi cac component se BI NHAN DOI (mot ban trong prefab, mot ban
+la override cua scene).
 
-**Da khac phuc day du:** `git checkout` file scene, roi `EditorSceneManager.OpenScene()`
-nap lai tu dia. Xac nhan 19 GameObject / 25 MonoBehaviour, khop chinh xac HEAD; Unity
-khong con dirty; console sach. Ban hong luu o scratchpad de doi chieu.
+**3. `Node.prefab`** — NANG NHAT: mat SACH 9 tham chieu serialize
+(`_iconImage`, `_frameBorder`, `_nameText`, `_costText`, `_unlockButton`, `_equipButton`,
+`_statNodeIcon`, `_coreNodeIcon`, `_skillNodeDefaultIcon`) — tat ca thanh `fileID: 0`.
+Prefab node cua ca cay skill coi nhu hong. Kha nang cao do luc do
+`Assembly-CSharp` dang loi bien dich (loi `TMP_Text` vs `TextMeshProUGUI`), MonoBehaviour
+khong bind duoc, va lan ghi lai prefab da xoa sach tham chieu.
+
+**Da khac phuc, xac minh tung file:**
+- `git checkout` ca 3 file, roi bat Unity nap lai tu dia
+  (`EditorSceneManager.OpenScene` cho scene, `AssetDatabase.ImportAsset(ForceUpdate)`
+  cho prefab) — vi Unity van giu ban hong trong bo nho, user bam Save la hong lai.
+- Xac minh: scene 19 GameObject / 25 MonoBehaviour khop HEAD; 9/9 tham chieu cua
+  `Node.prefab` da co lai; ca 3 file `git diff` sach.
+- Ban hong luu o scratchpad (`OdoScene.after-my-save.unity`, `broken-prefabs/`).
 
 **Luat tu day:**
-- KHONG goi `SaveScene` / `SaveAssets` tren file user tu code. User tu bam Save.
-- Sua bo cuc thi lam o RUNTIME (`Awake`/`Start`), nhu `UILayoutTidy`,
-  `InventoryLayoutRepair`, `SkillTreeLayoutRepair` dang lam. Danh doi: Editor van hien
-  bo cuc cu, chi vao Play Mode moi thay — chap nhan duoc, doi lay an toan.
+- KHONG goi `SaveScene` / `SaveAssets` / `PrefabUtility.ApplyPrefabInstance` tren file
+  user tu code. User tu bam Save.
+- Sua bo cuc thi lam o RUNTIME (`Awake`/`Start`) nhu `UILayoutTidy`,
+  `InventoryLayoutRepair`, `SkillTreeLayoutRepair`. Danh doi: Editor van hien bo cuc cu,
+  chi vao Play Mode moi thay — chap nhan duoc, doi lay an toan.
 - Neu that su can ghi vinh vien: bao user tu lam trong Inspector, dua so lieu cu the.
+- Sau BAT KY thao tac nao co the cham asset: chay `git status` va kiem TUNG file, dung
+  chi kiem file minh dinh sua. Lan nay Claude chi revert scene va bo sot 2 prefab.
 
 ---
 
