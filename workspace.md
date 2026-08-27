@@ -316,14 +316,44 @@ Giong Inventory cua Player, co ca bang Stats de cong luon.
 Muc tieu user dat ra: **toan bo UI hien dang la mac dinh Unity, lam bang tay** — can nang cap cho
 "xin xo, dam chat game RPG". Day la viec THIET KE, khong chi sua code, nen chia nho ra.
 
-### T-UI-01 — Thanh Shield tren HP bar  (uu tien cao, user bao "chua ro rang lam")
-- Hien tai: `UIStats.cs:24-28` dung **2 Image chong len HP slider**:
-  `Shield_Fill` (bac dac, fill trai->phai, lap phan HP trong) va
-  `Shield_Overlay` (bac mo, fill phai->trai, de len khi shield vuot max HP).
-  Ca hai deu co san trong `Canvas.prefab` (dong 23670 / 38694 / 42308 / 71120).
-- Van de user gap: mau trang de len thanh mau **khong doc duoc la shield**.
-- Huong: doi sang ngon ngu thi giac ro rang hon — vien sang + hoa tiet gach cheo, tach shield
-  ra khoi vung HP thay vi de chong, va them so hien thi. Chot huong voi user truoc khi lam.
+### T-UI-01 — Thanh Shield  (DA XONG, commit `4d399b1`)
+
+- [x] **So lieu quyet dinh huong giai:** do tren Unity, tuong phan `BarShield` tren `BarHp`
+  chi **2.84** — duoi xa nguong 4.5. Ket luan: DOI MAU KHONG CUU DUOC. Phai giai bang
+  thu mat bat tot hon sac do.
+- [x] Shader `UI/ShieldBar`: gach cheo DANG CHAY + vien sang o mep dan + nhap nhay khi
+  luong khien doi. Them chu `+N` (o `shieldText`, tuy chon, chua gan).
+- [x] Material dung LUC CHAY trong `UIStats` -> khong phai tao asset material, khong phai
+  sua prefab. Hai Image khien van gan nhu cu. Co `OnDestroy` huy material.
+
+### T-UI-01b — Khung o skill  (DA XONG, cung commit)
+
+Tra loi cau hoi "sao skill Signature khong co border bo tron":
+- [x] **Kiem tra scene: ca hai o KHONG he co phan tu vien nao.** Cau truc giong het nhau —
+  `Skill_E_Slot` / `Skill_Q_Slot ` > `Background` > (`icon`, `CooldownOverlay`), va
+  `Background` khong co Image. Nghia la "border bo tron" nhin thay trong game la do
+  **art cua tung icon tu ve**. Skill nao art khong co khung thi nhin tran.
+- [x] Shader `UI/RoundedFrame` (SDF hop bo tron, khu rang cua theo `fwidth`) + component
+  `UISlotFrame`. Dung khung THAT luc chay cho ca 2 o -> moi skill deu co khung nhu nhau.
+
+**Hai diem lech trong prefab da ghi nhan (KHONG phai bug):**
+- `skillQ_Container` gan vao `Background`, trong khi `skillE_Container` gan vao
+  `Skill_E_Slot` — lech mot cap. Vo hai vi container chi dung de `SetActive(true)`.
+  Vi the khung duoc dung vao CHA CUA ICON chu khong dua vao container.
+- GameObject `Skill_Q_Slot ` co **dau cach thua** o cuoi ten.
+
+### [!] VIEC USER PHAI LAM TRONG EDITOR
+
+- [ ] **M-08 — Them 2 shader vao Always Included Shaders.**
+  `Project Settings > Graphics > Always Included Shaders` -> them `UI/ShieldBar` va
+  `UI/RoundedFrame`. Hai shader nay tim qua `Shader.Find` nen KHI BUILD se bi strip neu
+  khong khai bao. Trong Editor thi van chay binh thuong.
+  (Cach khac: gan thang shader vao o `shieldBarShader` / `frameShader` trong Inspector.)
+- [ ] **M-09 — Reset component de thay mau moi.** `SkillNodeUI` va `UIBarPulse` dung
+  `[SerializeField]` nen prefab/scene da luu gia tri cu VAN DE LEN mac dinh moi.
+  Reset component trong Inspector moi thay doi.
+- [ ] **M-10 — (tuy chon) gan `shieldText`.** Tao mot TMP nho canh thanh mau va keo vao
+  o `shieldText` cua `UIStats` neu muon hien so luong khien.
 
 ### T-UI-02 — UI hien Debuff / CC dang chiu  (THUC RA LA LAM MOI, khong phai sua)
 - **Da kiem tra: hien khong co UI debuff nao ca.** Grep toan bo `.prefab` + `.unity` khong ra
@@ -343,7 +373,7 @@ Muc tieu user dat ra: **toan bo UI hien dang la mac dinh Unity, lam bang tay** �
 - Luu y: co lien quan toi **M-02** (gan nut game speed) va **buoc refactor 4 (gom time)**.
   Lam UI DevTool truoc khi gom time thi se phai sua lai. Nen doi.
 
-### T-UI-04 — He thong thiet ke dung chung  (nen lam TRUOC 01-03)
+### T-UI-04 — He thong thiet ke dung chung  (DA XONG, commit `2f6ed7d`)
 - Hien tai co **~254 gia tri mau viet cung** trong script (146 `new Color(...)` + 108 `Color.<ten>`)
   — chinh la buoc refactor 3 con dang do.
 - Neu di thang vao ve lai tung panel ma khong co bang mau/typography chung thi se lai ra
