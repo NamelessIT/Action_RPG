@@ -31,23 +31,14 @@ public class DroppedItemBehaviour : MonoBehaviour
     }
 
     /// <summary>
-    /// Returns a colour representing the rarity of the weapon in the entry.
-    /// Falls back to white if no weapon data is present.
+    /// Màu rarity của item rơi, lấy từ bảng dùng chung <see cref="RarityColors"/>
+    /// (không tự giữ bảng màu riêng nữa — trước đây hai bảng lệch nhau ở bậc Stained).
+    /// Trắng nếu entry không mang data có rarity.
     /// </summary>
     private Color GetRarityColor(LootEntry entry)
     {
-        if (entry.weaponData != null)
-        {
-            switch (entry.weaponData.rarity)
-            {
-                case Rarity.Residual_1:  return new Color(0.70f, 0.70f, 0.70f); // grey
-                case Rarity.Stained_2:   return new Color(0.30f, 0.80f, 0.30f); // green
-                case Rarity.Corrupted_3: return new Color(0.30f, 0.50f, 1.00f); // blue
-                case Rarity.Condemned_4: return new Color(0.60f, 0.20f, 0.90f); // purple
-                case Rarity.Anomalous_5: return new Color(1.00f, 0.50f, 0.10f); // orange
-                default:                            return Color.white;
-            }
-        }
+        if (entry.weaponData != null)    return RarityColors.Get(entry.weaponData.rarity);
+        if (entry.accessoryData != null) return RarityColors.Get(entry.accessoryData.rarity);
 
         return Color.white;
     }

@@ -59,12 +59,31 @@ Cap nhat lan cuoi: **2026-08-27**
 
 ---
 
+### Refactor buoc 3a — gom style: hop nhat bang mau rarity
+
+- [x] **Quyet dinh:** giu `RarityColors` lam NGUON DUY NHAT. Ly do: no da la bang dung chung,
+  danh theo tier nen dung duoc cho ca module companion, va co san ca `Get()` lan `Hex()`.
+- [x] Doi bac 1 Stained tu `#BFE6BF` (xanh nhat, chim tren nen dat) sang `#4CCC4C` cua bang
+  item roi. 4 bac con lai giu theo bang UI (lech khong dang ke).
+- [x] Xoa bang mau rieng trong `DroppedItemBehaviour.GetRarityColor()`, tro ve goi `RarityColors`.
+- [x] Them overload `Get(Rarity)` / `Hex(Rarity)` de khoi phai ep `(int)` o cho goi.
+- [x] **Tien the sua mot bug:** `GetRarityColor()` chi doc `entry.weaponData`, nen moi item roi
+  la accessory deu ra mau TRANG. Nay doc ca `accessoryData`.
+- Bang mau chot (da chay kiem tra tren Unity, khong can vao Play Mode):
+
+  | Tier | Enum | RGB | Hex |
+  |---|---|---|---|
+  | 0 | Residual_1 | (0.62, 0.62, 0.62) | `#9E9E9E` xam |
+  | 1 | Stained_2 | (0.30, 0.80, 0.30) | `#4CCC4C` luc |
+  | 2 | Corrupted_3 | (0.30, 0.60, 1.00) | `#4C99FF` lam |
+  | 3 | Condemned_4 | (0.70, 0.35, 1.00) | `#B259FF` tim |
+  | 4 | Anomalous_5 | (1.00, 0.55, 0.10) | `#FF8C1A` cam |
+
+---
+
 ## DANG CHO QUYET DINH
 
-- [ ] **Hop nhat 2 bang mau rarity.** `RarityColors.Get(tier)` (UI inventory) va
-  `DroppedItemBehaviour.GetRarityColor()` (item roi duoi dat) mo ta cung mot khai niem
-  nhung mau khac nhau. Lech lon nhat o bac 1 Stained: `#BFE6BF` vs `#4DCC4D`.
-  Hop nhat se **doi dien mao item roi trong game** -> can user chon giu bang nao.
+_Khong con muc nao._
 
 ---
 
@@ -72,8 +91,9 @@ Cap nhat lan cuoi: **2026-08-27**
 
 1. [x] Gom enum
 2. [x] Gom link
-3. [ ] **Gom style** — bat dau bang hop nhat bang mau rarity o tren, roi den ~254 gia tri mau
-   viet cung trong script (146 `new Color(...)` + 108 `Color.<ten>`) -> `UIPalette`.
+3. [~] **Gom style** — bang mau rarity DA hop nhat (xem buoc 3a ben tren).
+   Con lai: ~254 gia tri mau viet cung trong script (146 `new Color(...)` + 108 `Color.<ten>`)
+   -> `UIPalette`.
 4. [ ] **Gom time** — 12 cho ghi `Time.timeScale` (DevTool speed vs UI pause dang da nhau)
    va 78 so ma thuat trong `WaitForSeconds`. Day la buoc DUY NHAT doi hanh vi runtime,
    phai test theo ma tran M-06 ben duoi.
