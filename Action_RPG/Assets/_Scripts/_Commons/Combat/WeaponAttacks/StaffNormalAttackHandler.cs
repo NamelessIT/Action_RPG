@@ -16,9 +16,12 @@ public class StaffNormalAttackHandler : IWeaponAttackHandler
     {
         // ANIMATOR: // ctx.Animator.SetTrigger("StaffStrike");
 
-        Stats target = RangedAttackHandler.FindNearestTarget(ctx, SEEK_ANGLE);
+        // Phase E2.1: dưới Taunt, Staff không được target-seek sang enemy gần hơn; primary target là Taunter.
+        Stats target = ctx.HasForcedPrimaryTarget
+            ? ctx.ForcedPrimaryTargetStats
+            : RangedAttackHandler.FindNearestTarget(ctx, SEEK_ANGLE);
 
-        if (target != null && ctx.TryAddHitTarget(target.transform))
+        if (target != null && !target.isDead && ctx.TryAddHitTarget(target.transform))
         {
             ctx.ApplyDamage(target, ctx.IsHeavy, ctx.ComboStep);
             ctx.OnHitEvent?.Invoke(ctx.ComboStep, ctx.IsHeavy);

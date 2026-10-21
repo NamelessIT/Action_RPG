@@ -39,14 +39,15 @@ public class MageSignature : SkillBehavior
     // BỘ QUẢN LÝ DEBUFF (CHỐNG CỘNG DỒN)
     // ==========================================
 
-    // Class lưu trữ lượng giáp đã trừ để trả lại cho đúng
+    // F2F: giữ snapshot amount + handle để registry sở hữu lifecycle nhưng vẫn bảo toàn
+    // semantics cũ: amount chỉ snapshot ở lần apply đầu, các pulse sau chỉ refresh duration.
     private class SunderData
     {
-        public float timer;
         public float armorShredded;
         public float mrShredded;
+        public EffectHandle handle;
     }
-    private Dictionary<Stats, SunderData> activeSunders = new Dictionary<Stats, SunderData>();
+    private readonly Dictionary<Stats, SunderData> activeSunders = new Dictionary<Stats, SunderData>();
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
@@ -63,33 +64,7 @@ public class MageSignature : SkillBehavior
         CleanUpAllDebuffs();
     }
 
-    // ==========================================
-    // VÒNG LẶP KIỂM TRA & GỠ DEBUFF MỖI FRAME
-    // ==========================================
-    void Update()
-    {
-        // 1. Slow giờ qua effect system (tự hết hạn, strongest-wins) → không quản lý dict ở đây.
-
-        // 2. Quản lý Giảm thủ (Sunder)
-        if (activeSunders.Count > 0)
-        {
-            List<Stats> expiredSunders = new List<Stats>();
-            foreach (var enemy in activeSunders.Keys.ToList())
-            {
-                activeSunders[enemy].timer -= Time.deltaTime;
-                if (activeSunders[enemy].timer <= 0) expiredSunders.Add(enemy);
-            }
-            foreach (var enemy in expiredSunders)
-            {
-                if (enemy != null)
-                {
-                    enemy.armor += activeSunders[enemy].armorShredded;
-                    enemy.magicResist += activeSunders[enemy].mrShredded;
-                }
-                activeSunders.Remove(enemy);
-            }
-        }
-    }
+    // F2F: Sunder expiry/cleanse do StatusEffectController quản lý; không còn timer/revert mỗi frame ở producer.
 
     public override bool Use()
     {
@@ -151,37 +126,55 @@ public class MageSignature : SkillBehavior
             if (enemyStats != null && enemyStats.currentHp > 0)
             {
                 // A. GÂY SÁT THƯƠNG HỖN HỢP
-                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 0, true, 0.2f, sourceType: DamageSourceType.DoT);
+                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 0, sourceType: DamageSourceType.DoT);
 
                 // B. REFRESH DEBUFF (LỬA)
                 float burnDps = stats.magicAtk * burnDamagePercent;
-                enemyStats.ApplyBurn(burnDps, burnDuration);
+                enemyStats.ApplyBurn(burnDps, burnDuration, stats);
 
                 // C. REFRESH DEBUFF (BĂNG - Làm chậm) — qua effect system (strongest-wins, mỗi pulse refresh).
                 enemyStats.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, chillDuration) { magnitude = slowPercent }, stats);
 
-                // D. REFRESH DEBUFF (ĐẤT - Giảm giáp)
-                if (!activeSunders.ContainsKey(enemyStats))
-                {
-                    float armorToReduce = enemyStats.armor * defReductionPercent;
-                    float mrToReduce = enemyStats.magicResist * defReductionPercent;
-
-                    enemyStats.armor -= armorToReduce;
-                    enemyStats.magicResist -= mrToReduce;
-
-                    // Lưu lại lượng đã trừ để trả cho đúng
-                    activeSunders[enemyStats] = new SunderData
-                    {
-                        timer = sunderDuration,
-                        armorShredded = armorToReduce,
-                        mrShredded = mrToReduce
-                    };
-                }
-                else
-                {
-                    activeSunders[enemyStats].timer = sunderDuration; // Làm mới thời gian
-                }
+                // D. REFRESH DEBUFF (ĐẤT - Sunder Armor/MR)
+                ApplyOrRefreshSunder(enemyStats);
             }
+        }
+    }
+
+    private void ApplyOrRefreshSunder(Stats enemyStats)
+    {
+        if (enemyStats == null || enemyStats.currentHp <= 0) return;
+
+        const string effectId = "MageSignature.Storm.Sunder";
+        string sourceKey = $"{effectId}:{GetInstanceID()}";
+
+        if (!activeSunders.TryGetValue(enemyStats, out SunderData data))
+        {
+            // Source hiện tại snapshot raw Armor/MR ở lần apply đầu; refresh không recalc amount.
+            data = new SunderData
+            {
+                armorShredded = Mathf.Max(0f, enemyStats.armor * defReductionPercent),
+                mrShredded = Mathf.Max(0f, enemyStats.magicResist * defReductionPercent),
+                handle = EffectHandle.Invalid
+            };
+            activeSunders[enemyStats] = data;
+        }
+
+        EffectApplyResult result = enemyStats.ApplyArmorMagicResistDown(
+            effectId, data.armorShredded, data.mrShredded, sunderDuration, stats, sourceKey,
+            EffectStackPolicy.RefreshSameSource, 1, defReductionPercent,
+            "Mage Signature Earth Sunder 25% Armor/MR snapshot + refresh",
+            (snapshot, reason) =>
+            {
+                if (activeSunders.TryGetValue(enemyStats, out SunderData current)
+                    && current.handle.Equals(snapshot.handle))
+                    activeSunders.Remove(enemyStats);
+            });
+
+        if (result.Accepted)
+        {
+            data.handle = result.handle;
+            activeSunders[enemyStats] = data;
         }
     }
 
@@ -202,15 +195,13 @@ public class MageSignature : SkillBehavior
 
     private void CleanUpAllDebuffs()
     {
-        // Slow tự hết hạn qua effect system → không cần restore baseMoveSpeed ở cleanup.
-
-        foreach (var kvp in activeSunders)
+        // Slow tự hết hạn qua effect system. Sunder do registry sở hữu, nhưng legacy OnUnequip
+        // gỡ Sunder ngay nên giữ behavior bằng cách remove các handle do signature này tạo.
+        var snapshot = activeSunders.ToList();
+        foreach (var kvp in snapshot)
         {
-            if (kvp.Key != null)
-            {
-                kvp.Key.armor += kvp.Value.armorShredded;
-                kvp.Key.magicResist += kvp.Value.mrShredded;
-            }
+            if (kvp.Key != null && kvp.Key.StatusEffects != null && kvp.Value.handle.IsValid)
+                kvp.Key.StatusEffects.RemoveEffect(kvp.Value.handle, EffectRemoveReason.Manual);
         }
         activeSunders.Clear();
     }

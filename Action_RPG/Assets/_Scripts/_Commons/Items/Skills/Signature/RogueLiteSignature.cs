@@ -21,6 +21,7 @@ public class RogueLiteSignature : SkillBehavior
 
     private EquipmentManager equipmentManager;
     private SpriteRenderer spriteRenderer;
+    private int bleedApplicationSerial = 0;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
@@ -113,8 +114,8 @@ public class RogueLiteSignature : SkillBehavior
         // Player đã đứng sau lưng địch; isGuaranteedCrit = true (đâm lén chí mạng)
         DamageHelper.ApplyStandardDamage(stats, furthestEnemy, transform, data.skillPhysicalMultiplier, data, currentWpn, 0, false, 0f, true);
 
-        // 5. GÂY CHẢY MÁU ĐỘC LẬP (Không dùng hàm của Stats.cs)
-        StartCoroutine(IndependentBleedRoutine(furthestEnemy, targetRadius));
+        // 5. GÂY CHẢY MÁU ĐỘC LẬP — lifecycle do managed Debuff Registry sở hữu.
+        ApplyIndependentBleed(furthestEnemy);
 
         Debug.Log($"<color=red>Rogue: Đâm lén chí mạng {furthestEnemy.name}!</color>");
 
@@ -124,40 +125,18 @@ public class RogueLiteSignature : SkillBehavior
         player.isAttacking = false;
     }
 
-    // --- COROUTINE RÚT MÁU ĐỘC LẬP ---
-    private IEnumerator IndependentBleedRoutine(Stats target, float targetRadius)
+    // --- MANAGED BLEED ---
+    private void ApplyIndependentBleed(Stats target)
     {
-        float timer = 0f;
+        if (target == null || target.currentHp <= 0) return;
 
-        // Tính toán sát thương chuẩn: 2% Max HP
+        // Legacy semantics: snapshot 2% Max HP tại thời điểm Signature trúng mục tiêu.
         float tickDamage = target.maxHp * bleedPercentPerSec;
 
-        // Sinh VFX chảy máu
-        //GameObject bleedVfx = null;
-        //if (bleedVfxPrefab)
-        //{
-        //    bleedVfx = Instantiate(bleedVfxPrefab, target.transform);
-        //    bleedVfx.transform.localPosition = Vector3.up * targetRadius;
-        //}
-
-        // Vòng lặp rút máu
-        while (timer < bleedDuration && target != null && target.currentHp > 0)
-        {
-            yield return new WaitForSeconds(1.0f);
-            timer += 1.0f;
-
-            // Truyền trực tiếp sát thương vào hệ thống
-            DamageInfo bleedInfo = new DamageInfo();
-            bleedInfo.sourcePosition = target.transform.position;
-            bleedInfo.physDamage = tickDamage;
-            bleedInfo.attacker = stats;
-            bleedInfo.sourceType = DamageSourceType.DoT;
-
-            target.TakeDamage(bleedInfo);
-            Debug.Log($"<color=red>Ám sát (Rút máu):</color> {target.name} mất {tickDamage} HP.");
-        }
-
-        //if (bleedVfx != null) Destroy(bleedVfx);
+        // Legacy coroutine cho phép mỗi lần cast tồn tại độc lập. Dùng sourceKey riêng cho từng
+        // application để registry không merge hai lần cast của cùng Rogue thành một instance.
+        string sourceKey = $"RogueLiteSignature.Bleed:{GetInstanceID()}:{++bleedApplicationSerial}";
+        target.ApplyBleed(tickDamage, bleedDuration, stats, sourceKey);
     }
 
     void OnDrawGizmosSelected()

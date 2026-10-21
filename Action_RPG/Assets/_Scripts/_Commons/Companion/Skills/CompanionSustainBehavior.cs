@@ -13,6 +13,9 @@ public class CompanionSustainBehavior : CompanionSkillBehavior
     public override float SignatureCooldown => 16f;
     public override float SignatureSinCost => 120f;
 
+    public override SkillControlPolicy GetSignatureControlPolicy(CompanionProtocolType? protocol)
+        => protocol == CompanionProtocolType.Suppression ? SkillControlPolicy.Cleanse : SkillControlPolicy.Normal;
+
     // ── Passive [Tiếp Tế Sinh Học]: mỗi 10s rơi 1 Lõi Hồi Phục (4s) quanh Companion 2f, Player nhặt → +5% maxHp +10 Stamina ──
     private float _nextCore = 0f;
     private void Update()
@@ -126,7 +129,7 @@ public class CompanionSustainBehavior : CompanionSkillBehavior
         System.Action<DamageInfo> handler = info =>
         {
             if (used || info == null) return;
-            float dmgToHp = info.TotalRawDamage * pl.damageTakenMultiplier - pl.currentShield;
+            float dmgToHp = info.TotalRawDamage * pl.EffectiveDamageTakenMultiplier - pl.currentShield;
             if (dmgToHp >= pl.currentHp)
             {
                 used = true;

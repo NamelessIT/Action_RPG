@@ -82,7 +82,9 @@ public class CompanionControllerBehavior : CompanionSkillBehavior
         float t = 0f;
         while (t < dur)
         {
-            foreach (var e in EnemiesInRadius(center, radius)) PullToward(e, center, pullSpeed);
+            float remaining = Mathf.Max(0f, dur - t);
+            foreach (var e in EnemiesInRadius(center, radius))
+                PullToward(e, center, pullSpeed, remaining, "COMP_CONTROLLER_SKILL_SUPPRESSION_PULL");
             VisualDebugHelper.DrawSphere(center, radius, new Color(0.3f, 0f, 0.5f, 0.4f), 0.1f);
             t += Time.deltaTime;
             yield return null;
@@ -165,7 +167,9 @@ public class CompanionControllerBehavior : CompanionSkillBehavior
             if (focus != null && focus.currentHp > 0) center = focus.transform.position;
             else { focus = CurrentTargetStats(); if (focus != null) center = focus.transform.position; }
 
-            foreach (var e in EnemiesInRadius(center, radius)) PullToward(e, center, pullSpeed);
+            float remaining = Mathf.Max(0f, dur - t);
+            foreach (var e in EnemiesInRadius(center, radius))
+                PullToward(e, center, pullSpeed, remaining, "COMP_CONTROLLER_SIG_SUPPRESSION_PULL");
             VisualDebugHelper.DrawSphere(center, radius, new Color(0.4f, 0f, 0.7f, 0.4f), 0.1f);
             t += Time.deltaTime;
             yield return null;

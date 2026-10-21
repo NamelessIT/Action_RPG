@@ -48,6 +48,18 @@ public class DamageInfo
     // ─────────────────────────────────────────────────────────────
     public List<CombatEffectInfo> effects;
 
+    // Phase F: Debuff attached đi song song với CC nhưng có registry/lifecycle riêng.
+    public List<DebuffRequest> debuffs;
+
+    /// <summary>Thêm Debuff attached vào hit; target resolve sau damage cùng source với DamageInfo.attacker.</summary>
+    public DamageInfo AddDebuff(DebuffRequest debuff)
+    {
+        if (debuff == null) return this;
+        debuffs ??= new List<DebuffRequest>();
+        debuffs.Add(debuff);
+        return this;
+    }
+
     /// <summary>Thêm 1 hiệu ứng vào đòn đánh (tự khởi tạo list nếu cần).</summary>
     public DamageInfo AddEffect(CombatEffectInfo effect)
     {

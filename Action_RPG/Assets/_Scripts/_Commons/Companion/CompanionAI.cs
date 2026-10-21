@@ -31,6 +31,13 @@ public class CompanionAI : MonoBehaviour
     private AllyStats stats;
     private Animator animator;
     private SpriteRenderer spriteRenderer;
+
+    // Phase E3B: shared forced-control consumer (Taunt / Fear).
+    private ForcedControlRunner _forcedControlRunner;
+    private bool _wasForcedControlled = false;
+    private Coroutine _attackCoroutine;
+    private Coroutine _dodgeCoroutine;
+    private bool _dodgeAgentWasEnabled = false;
     
     // [003-E] Vision system integration
     private CompanionVisionManager _visionManager;
@@ -88,6 +95,7 @@ public class CompanionAI : MonoBehaviour
         animator = GetComponentInChildren<Animator>();
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
         _equipment = GetComponent<CompanionEquipmentManager>(); // optional
+        _forcedControlRunner = stats.ForcedControl;
 
         // [COMPANION SKILL] Tự gắn bộ điều phối kỹ năng (Passive/Skill/Signature theo nguyên mẫu).
         if (GetComponent<CompanionSkillController>() == null)
@@ -95,7 +103,7 @@ public class CompanionAI : MonoBehaviour
 
         agent.updateRotation = false;
         agent.updateUpAxis = false;
-        agent.speed = stats.baseMoveSpeed > 0 ? stats.baseMoveSpeed : 5f;
+        agent.speed = stats.EffectiveMoveSpeed > 0f ? stats.EffectiveMoveSpeed : 5f;
 
         if (player == null)
         {
@@ -112,6 +120,8 @@ public class CompanionAI : MonoBehaviour
 
         // Matrix dodge: né đòn định hướng của địch (không đụng damageInterceptor để khỏi xung đột skill).
         stats.OnBeforeTakeDamage += HandleMatrixDodge;
+        // CC interrupt: Taunt/Fear/Stun/Displacement không được để basic attack / Matrix dash cũ tiếp tục giành movement.
+        stats.OnInterruptedContext += HandleCrowdControlInterrupted;
 
         currentVisualDir = Vector3.back;
         
@@ -131,16 +141,25 @@ public class CompanionAI : MonoBehaviour
 
     void Update()
     {
-        if (stats.isDead || stats.isStunned || player == null)
+        StatusControlSnapshot control = stats.ControlState;
+        if (stats.isDead || player == null || control.mode == ControlMode.Stunned || control.mode == ControlMode.Displaced)
         {
-            if (agent.isOnNavMesh) agent.isStopped = true;
+            if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
             return;
         }
 
-        // [SLOW] Companion di chuyển theo baseMoveSpeed × EffectiveSlowMultiplier (cập nhật mỗi frame; 1 nếu không Slow).
-        // Giữ fallback 5f như lúc init (tránh agent.speed=0 nếu baseMoveSpeed chưa set).
+        // Phase B: Companion dùng đúng final Ally movement, gồm bonusMoveSpeed và Slow-as-negative-bonus.
         if (agent.enabled && agent.isOnNavMesh)
-            agent.speed = (stats.baseMoveSpeed > 0 ? stats.baseMoveSpeed : 5f) * stats.EffectiveSlowMultiplier;
+            agent.speed = stats.EffectiveMoveSpeed > 0f ? stats.EffectiveMoveSpeed : 5f;
+
+        // Phase E3B: forced control chiếm quyền TRƯỚC ForceWait / Matrix dodge / target scan / follow.
+        // Root vẫn nằm dưới Taunt/Fear: runner sẽ chặn forced movement nhưng Taunt vẫn được basic attack nếu đã trong range.
+        if (ForcedControlRunner.IsForcedMode(control.mode))
+        {
+            HandleForcedControl(control);
+            return;
+        }
+        if (_wasForcedControlled) ExitForcedControl();
 
         // [MỚI THÊM] NẾU ĐANG BỊ ÉP ĐỨNG YÊN THÌ KHÔNG LÀM GÌ CẢ
         if (forceWaitTimer > 0)
@@ -192,7 +211,8 @@ public class CompanionAI : MonoBehaviour
         float distToPlayer = Vector3.Distance(transform.position, player.position);
 
         // -- KIỂM TRA DỊCH CHUYỂN --
-        if (distToPlayer > teleportDistance)
+        // Root/other movement locks không được bypass bằng teleport follow.
+        if (control.canMove && distToPlayer > teleportDistance)
         {
             TeleportToPlayer();
             return;
@@ -203,8 +223,8 @@ public class CompanionAI : MonoBehaviour
         {
             HandleCombat(); // HandleCombat tự xử lý Root: đứng yên, chỉ đánh nếu địch đã trong tầm.
         }
-        // [ROOT] Không có mục tiêu mà đang bị trói chân → đứng yên hoàn toàn, KHÔNG follow/wander/pathfind.
-        else if (stats.IsRooted)
+        // Movement lock không có mục tiêu → đứng yên hoàn toàn, KHÔNG follow/wander/pathfind.
+        else if (!control.canMove)
         {
             if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; agent.ResetPath(); }
             isWandering = false;
@@ -247,6 +267,199 @@ public class CompanionAI : MonoBehaviour
         }
 
         HandleVisuals();
+    }
+
+    /// <summary>
+    /// Phase E3B — Companion consumer cho Taunt/Fear. Forced target chỉ là runtime override;
+    /// currentTarget/markedTargets không bị ghi đè nên AI bình thường resume nguyên trạng khi CC hết.
+    /// </summary>
+    private void HandleForcedControl(StatusControlSnapshot control)
+    {
+        _wasForcedControlled = true;
+        if (_forcedControlRunner == null) _forcedControlRunner = stats.ForcedControl;
+
+        // Forced control không cho Matrix dash cũ tiếp tục giữ transform/agent.
+        CancelMatrixDodgeForForcedControl();
+
+        if (_forcedControlRunner == null || !_forcedControlRunner.TryBuildIntent(out ForcedControlIntent intent))
+        {
+            StopForcedMovement();
+            return;
+        }
+
+        Transform anchor = intent.targetTransform;
+        if (anchor == null)
+        {
+            StopForcedMovement();
+            return;
+        }
+
+        // Một forced basic attack đã commit thì để routine chạy. Fear/hard-CC mới sẽ cắt qua interrupt event.
+        if (isAttacking)
+        {
+            StopForcedMovement(resetPath: false);
+            SetForcedFacing(anchor.position - transform.position);
+            return;
+        }
+
+        if (intent.mode == ControlMode.Feared)
+        {
+            if (!intent.canMove || intent.direction.sqrMagnitude <= 0.0001f)
+            {
+                StopForcedMovement();
+                SetForcedFacing(intent.direction);
+                return;
+            }
+
+            SetForcedAgentSpeed(intent.speedMultiplier); // canonical Fear = 50% final normal move speed.
+            if (agent.enabled && agent.isOnNavMesh)
+            {
+                agent.stoppingDistance = 0f;
+                Vector3 desired = transform.position + intent.direction * 5f;
+                if (NavMesh.SamplePosition(desired, out NavMeshHit fearHit, 5f, NavMesh.AllAreas))
+                {
+                    agent.isStopped = false;
+                    agent.SetDestination(fearHit.position);
+                }
+                else
+                {
+                    agent.isStopped = true;
+                    agent.velocity = Vector3.zero;
+                }
+            }
+            SetForcedFacing(intent.direction);
+            return;
+        }
+
+        // Taunt: bỏ normal PickTarget/kite/follow; dùng đúng AttackRange của Protocol hiện tại.
+        Vector3 toAnchor = anchor.position - transform.position;
+        toAnchor.y = 0f;
+        float distance = toAnchor.magnitude;
+        CompanionAttackBehavior behavior = Behavior;
+        float attackRange = Mathf.Max(0.05f, behavior != null ? behavior.AttackRange : FALLBACK_RANGE);
+
+        // Giữ LoS rule của đòn ranged. Bị tường chắn thì chase/reposition, không bắn xuyên tường chỉ vì Taunt.
+        bool hasLoS = true;
+        if (behavior != null && behavior.IsRanged && obstacleMask.value != 0)
+        {
+            Vector3 fromP = transform.position + Vector3.up * 0.3f;
+            Vector3 toP = anchor.position; toP.y = fromP.y;
+            if (Physics.Linecast(fromP, toP, obstacleMask)) hasLoS = false;
+        }
+
+        if (distance <= attackRange && hasLoS && intent.canBasicAttack)
+        {
+            StopForcedMovement();
+            SetForcedFacing(toAnchor);
+            float speed = Mathf.Max(0.01f, stats.EffectiveAttackSpeed);
+            if (Time.time >= lastAttackTime + (1.0f / speed))
+                StartAttackRoutine(speed, anchor);
+            stats.EnterCombat();
+            return;
+        }
+
+        if (!intent.canMove)
+        {
+            StopForcedMovement();
+            SetForcedFacing(toAnchor);
+            return;
+        }
+
+        SetForcedAgentSpeed(intent.speedMultiplier);
+        if (agent.enabled && agent.isOnNavMesh)
+        {
+            agent.stoppingDistance = attackRange * 0.8f;
+            agent.isStopped = false;
+            if (!agent.hasPath || Vector3.Distance(agent.destination, anchor.position) > 1f)
+                agent.SetDestination(anchor.position);
+        }
+        SetForcedFacing(toAnchor);
+        stats.EnterCombat();
+    }
+
+    private void ExitForcedControl()
+    {
+        _wasForcedControlled = false;
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            agent.speed = stats.EffectiveMoveSpeed > 0f ? stats.EffectiveMoveSpeed : 5f;
+            agent.velocity = Vector3.zero;
+            agent.isStopped = true;
+        }
+    }
+
+    private void SetForcedAgentSpeed(float multiplier)
+    {
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh) return;
+        float baseSpeed = stats.EffectiveMoveSpeed > 0f ? stats.EffectiveMoveSpeed : 5f;
+        agent.speed = baseSpeed * Mathf.Max(0f, multiplier);
+    }
+
+    private void StopForcedMovement(bool resetPath = true)
+    {
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+            if (resetPath && agent.hasPath) agent.ResetPath();
+        }
+        if (animator != null) animator.SetBool("IsWalking", false);
+    }
+
+    private void SetForcedFacing(Vector3 dir)
+    {
+        dir.y = 0f;
+        if (dir.sqrMagnitude <= 0.0001f) return;
+        currentVisualDir = dir.normalized;
+        stats.facingDirection = currentVisualDir;
+        UpdateAnimationDirection(currentVisualDir);
+    }
+
+    private void HandleCrowdControlInterrupted(InterruptContext ctx)
+    {
+        if (!ctx.interruptCurrentAction) return;
+        CancelCurrentBasicAttack();
+        CancelMatrixDodgeForForcedControl();
+    }
+
+    private void CancelCurrentBasicAttack()
+    {
+        if (_attackCoroutine != null)
+        {
+            StopCoroutine(_attackCoroutine);
+            _attackCoroutine = null;
+        }
+        isAttacking = false;
+        if (animator != null)
+        {
+            animator.ResetTrigger("Attack");
+            animator.SetBool("IsWalking", false);
+        }
+    }
+
+    private void CancelMatrixDodgeForForcedControl()
+    {
+        if (_dodgeCoroutine != null)
+        {
+            StopCoroutine(_dodgeCoroutine);
+            _dodgeCoroutine = null;
+        }
+        if (!isDodging) return;
+
+        isDodging = false;
+        if (agent != null && _dodgeAgentWasEnabled && !agent.enabled)
+        {
+            if (NavMesh.SamplePosition(transform.position, out NavMeshHit restoreHit, 2f, NavMesh.AllAreas))
+                transform.position = restoreHit.position;
+            agent.enabled = true;
+        }
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            agent.velocity = Vector3.zero;
+            agent.isStopped = true;
+            agent.ResetPath();
+        }
+        _dodgeAgentWasEnabled = false;
     }
 
     void HandleWander()
@@ -415,16 +628,16 @@ public class CompanionAI : MonoBehaviour
     {
         float distToTarget = Vector3.Distance(transform.position, currentTarget.position);
 
-        // [ROOT] Bị trói chân → KHÔNG di chuyển/kite; nhưng nếu mục tiêu đã trong tầm thì vẫn đánh.
-        if (stats.IsRooted)
+        StatusControlSnapshot control = stats.ControlState;
+        // Movement lock (vd Root) → không di chuyển/kite; vẫn basic attack nếu capability cho phép.
+        if (!control.canMove)
         {
             if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
             float effRangeR = Behavior != null ? Behavior.AttackRange : FALLBACK_RANGE;
             if (distToTarget <= effRangeR)
             {
-                float spd = stats.attackSpeed > 0 ? stats.attackSpeed : 1.0f;
-                spd = Mathf.Max(0.01f, spd * stats.EffectiveSlowMultiplier); // [SLOW] giảm cadence đánh
-                if (Time.time >= lastAttackTime + (1.0f / spd)) StartCoroutine(AttackRoutine(spd));
+                float spd = Mathf.Max(0.01f, stats.EffectiveAttackSpeed);
+                if (control.canBasicAttack && Time.time >= lastAttackTime + (1.0f / spd)) StartAttackRoutine(spd);
                 Vector3 d = (currentTarget.position - transform.position).normalized; d.y = 0; currentVisualDir = d;
             }
             return;
@@ -465,12 +678,11 @@ public class CompanionAI : MonoBehaviour
         if (distToTarget <= effRange && hasLoS)
         {
             agent.isStopped = true;
-            // Cooldown theo tốc độ đánh (baseAttackSpeed đã được Protocol cộng vào stats).
-            float speed = stats.attackSpeed > 0 ? stats.attackSpeed : 1.0f;
-            speed = Mathf.Max(0.01f, speed * stats.EffectiveSlowMultiplier); // [SLOW] giảm cadence đánh
+            // Phase B: một đường EffectiveAttackSpeed; Slow không làm chậm cadence đánh.
+            float speed = Mathf.Max(0.01f, stats.EffectiveAttackSpeed);
             if (Time.time >= lastAttackTime + (1.0f / speed))
             {
-                StartCoroutine(AttackRoutine(speed));
+                StartAttackRoutine(speed);
             }
 
             Vector3 dir = (currentTarget.position - transform.position).normalized;
@@ -490,7 +702,13 @@ public class CompanionAI : MonoBehaviour
         }
     }
 
-    IEnumerator AttackRoutine(float currentAttackSpeed)
+    private void StartAttackRoutine(float currentAttackSpeed, Transform forcedTarget = null)
+    {
+        if (isAttacking) return;
+        _attackCoroutine = StartCoroutine(AttackRoutine(currentAttackSpeed, forcedTarget));
+    }
+
+    IEnumerator AttackRoutine(float currentAttackSpeed, Transform forcedTarget = null)
     {
         isAttacking = true;
         lastAttackTime = Time.time;
@@ -512,18 +730,21 @@ public class CompanionAI : MonoBehaviour
 
         yield return new WaitForSeconds(timeToHit);
 
-        ExecuteProtocolAttack();
+        ExecuteProtocolAttack(forcedTarget);
 
         // Đợi nốt phần animation còn lại thu tay về
         yield return new WaitForSeconds(timeToRecover);
 
         isAttacking = false;
+        _attackCoroutine = null;
     }
 
     // Thực thi đòn đánh theo Protocol (Slot 1): Artillery/Suppression bắn đạn, Carnage/Aegis quét AoE.
-    private void ExecuteProtocolAttack()
+    // forcedTarget chỉ dùng trong Taunt để ép PRIMARY TARGET mà không ghi đè currentTarget/target-memory nền.
+    private void ExecuteProtocolAttack(Transform forcedTarget = null)
     {
-        if (currentTarget == null) return;
+        Transform attackTarget = forcedTarget != null ? forcedTarget : currentTarget;
+        if (attackTarget == null) return;
 
         var behavior = Behavior;
         var protocol = _equipment != null ? _equipment.Protocol : null;
@@ -536,7 +757,7 @@ public class CompanionAI : MonoBehaviour
         {
             if (behavior.ProtocolType == CompanionProtocolType.Artillery)
             {
-                Stats tgt = currentTarget.GetComponentInParent<Stats>();
+                Stats tgt = attackTarget.GetComponentInParent<Stats>();
                 if (tgt == null || tgt.isDead) return;
                 var go = new GameObject("Companion_Artillery");
                 go.transform.position = spawn;
@@ -545,7 +766,7 @@ public class CompanionAI : MonoBehaviour
             }
             else // Suppression — đạn KHOÁ MỤC TIÊU (homing) nhưng bị địch khác/tường chặn, nổ AoE
             {
-                Stats tgt = currentTarget.GetComponentInParent<Stats>();
+                Stats tgt = attackTarget.GetComponentInParent<Stats>();
                 if (tgt == null || tgt.isDead) return;
                 var go = new GameObject("Companion_Suppression");
                 go.transform.position = spawn;
@@ -577,6 +798,7 @@ public class CompanionAI : MonoBehaviour
     private void HandleMatrixDodge(DamageInfo info)
     {
         if (info == null || stats.isDead) return;
+        if (!stats.ControlState.canDash) return; // Root/Stun/Displacement không được Matrix dash né.
         if (info.attacker == null || !info.attacker.CompareTag("Enemy")) return; // chỉ né đòn của địch
         if (isDodging) return; // đang né rồi
 
@@ -595,7 +817,7 @@ public class CompanionAI : MonoBehaviour
         Vector3 dest = transform.position + away * dodgeDistance;
         if (NavMesh.SamplePosition(dest, out NavMeshHit nh, 2f, NavMesh.AllAreas)) dest = nh.position;
 
-        StartCoroutine(DashDodgeRoutine(dest)); // luôn né bằng DASH (lerp mượt, không dịch chuyển tức thời)
+        _dodgeCoroutine = StartCoroutine(DashDodgeRoutine(dest)); // track để forced-control có thể interrupt sạch
         Debug.Log("<color=cyan>[Companion] NÉ ĐÒN!</color>");
     }
 
@@ -604,6 +826,7 @@ public class CompanionAI : MonoBehaviour
     {
         isDodging = true;
         bool agentWas = agent != null && agent.enabled;
+        _dodgeAgentWasEnabled = agentWas;
         if (agentWas) { agent.isStopped = true; agent.enabled = false; }
 
         Vector3 start = transform.position;
@@ -627,13 +850,19 @@ public class CompanionAI : MonoBehaviour
             agent.isStopped = false;
         }
         isDodging = false;
+        _dodgeCoroutine = null;
+        _dodgeAgentWasEnabled = false;
     }
 
     private void OnDestroy()
     {
         if (_current == this) _current = null;
 
-        if (stats != null) stats.OnBeforeTakeDamage -= HandleMatrixDodge;
+        if (stats != null)
+        {
+            stats.OnBeforeTakeDamage -= HandleMatrixDodge;
+            stats.OnInterruptedContext -= HandleCrowdControlInterrupted;
+        }
     }
 
     void HandleVisuals()
@@ -703,7 +932,7 @@ public class CompanionAI : MonoBehaviour
         {
             agent.ResetPath();
             // [ROOT] Đang trói chân → KHÔNG bật agent chạy tới target (chỉ đổi target để đánh nếu đã trong tầm).
-            agent.isStopped = stats.IsRooted;
+            agent.isStopped = !stats.ControlState.canMove;
         }
 
         // 2. Cấp Buff an toàn (Chống cộng dồn)

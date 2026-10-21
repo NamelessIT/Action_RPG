@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -29,11 +29,15 @@ public class ProtocolEffectManager : CompanionEffectManagerBase
 
     private bool _supT5Buff;            // PRT_SUP_T5_01 — 5s sau Signature, mọi đòn stun 1s
 
-    private readonly HashSet<Stats> _noStack = new HashSet<Stats>();              // ART_T3_02 / SUP_T3_01 / AEG_T4_02
     private readonly Dictionary<Stats, int> _stacks = new Dictionary<Stats, int>();      // CAR_T4_01 / SUP_T4_02
     private readonly Dictionary<Stats, float> _maxStackSince = new Dictionary<Stats, float>(); // SUP_T4_02
-    private readonly Dictionary<Stats, int> _infection = new Dictionary<Stats, int>();   // CAR_T5_01
-    private readonly Dictionary<Stats, float> _infectionTime = new Dictionary<Stats, float>();
+    private readonly Dictionary<Stats, EffectHandle> _supT4SlowHandles = new Dictionary<Stats, EffectHandle>();
+    // F3C: Infection lifecycle is owned by the Debuff Registry. We keep only the accepted handle per target
+    // so changing Protocol can remove this producer's live Infection immediately, matching the legacy reset.
+    private readonly Dictionary<Stats, EffectHandle> _infectionHandles = new Dictionary<Stats, EffectHandle>();   // CAR_T5_01
+    private int _carT4ArmorStackSerial;
+    private int _carT4SlowStackSerial;
+    private int _protocolDebuffSerial;
 
     protected override void Awake()
     {
@@ -61,7 +65,8 @@ public class ProtocolEffectManager : CompanionEffectManagerBase
         _carAtkSpeedStacks = 0;
         _charged = false;
         _chargeTimer = 0f;
-        _noStack.Clear(); _stacks.Clear(); _maxStackSince.Clear(); _infection.Clear(); _infectionTime.Clear();
+        ClearOwnedInfection();
+        _stacks.Clear(); _maxStackSince.Clear(); _supT4SlowHandles.Clear();
     }
 
     private bool Active => _module != null && _module.HasEffect;
@@ -78,17 +83,44 @@ public class ProtocolEffectManager : CompanionEffectManagerBase
             if (_chargeTimer >= interval) { _charged = true; _chargeTimer = 0f; }
         }
 
-        // ── PRT_SUP_T4_02: max stack 5s → stun 2s, reset ──
+        // ── PRT_SUP_T4_02: phải giữ max Slow stack LIÊN TỤC 5s → Stun 2s → reset sau khi Stun hết. ──
         if (_module.id == "PRT_SUP_T4_02" && _maxStackSince.Count > 0)
         {
             Stats toStun = null;
+            var stale = new List<Stats>();
             foreach (var kv in _maxStackSince)
-                if (kv.Key != null && Time.time - kv.Value >= 5f) { toStun = kv.Key; break; }
+            {
+                Stats target = kv.Key;
+                if (target == null || !_supT4SlowHandles.TryGetValue(target, out EffectHandle slowHandle)
+                    || !slowHandle.IsValid || !target.StatusEffects.IsEffectActive(slowHandle))
+                {
+                    stale.Add(target);
+                    continue;
+                }
+
+                if (Time.time - kv.Value >= 5f)
+                {
+                    toStun = target;
+                    break;
+                }
+            }
+
+            foreach (Stats target in stale) ResetSuppressionT4State(target, removeSlow: false);
+
             if (toStun != null)
             {
-                StunEnemy(toStun, 2f);
-                _stacks[toStun] = 0;
                 _maxStackSince.Remove(toStun);
+                EffectApplyResult stunResult = toStun.ApplyEffectWithResult(
+                    new CombatEffectInfo(CombatEffectType.Stun, 2f)
+                    {
+                        effectId = "PRT_SUP_T4_02.MaxStackStun",
+                        sourcePosition = transform.position,
+                        note = "Frostbite Matrix: max Slow stack held continuously for 5s"
+                    },
+                    stats, $"PRT_SUP_T4_02.MaxStackStun:{GetInstanceID()}");
+
+                float resetDelay = stunResult.Accepted ? Mathf.Max(0f, stunResult.resolvedDuration) : 0f;
+                StartCoroutine(ResetSuppressionT4AfterStun(toStun, resetDelay));
             }
         }
     }
@@ -131,11 +163,11 @@ public class ProtocolEffectManager : CompanionEffectManagerBase
         {
             // ───── ARTILLERY ─────
             case "PRT_ART_T3_01": // 20% Bleed 10% physAtk/s 3s
-                if (Random.value < 0.20f) target.ApplyBleed(phys * 0.10f, 3f);
+                if (Random.value < 0.20f) target.ApplyBleed(phys * 0.10f, 3f, stats, $"PRT_ART_T3_01.Bleed:{GetInstanceID()}");
                 break;
 
-            case "PRT_ART_T3_02": // -10% Giáp 3s, không cộng dồn
-                NoStackArmorMr(target, target.armor * 0.10f, 0f, 3f);
+            case "PRT_ART_T3_02": // -10% Giáp 3s, không cộng dồn / không refresh khi đang active
+                ApplyProtocolArmorMrNoRefresh(target, "PRT_ART_T3_02.ArmorDown", target.armor * 0.10f, 0f, 3f);
                 break;
 
             case "PRT_ART_T4_01": // đòn thứ 3 → choáng 1.5s
@@ -151,8 +183,8 @@ public class ProtocolEffectManager : CompanionEffectManagerBase
                 break;
 
             // ───── CARNAGE ─────
-            case "PRT_CAR_T3_01": // 10% Nhiễu loạn (-10% dmg địch) 3s
-                if (Random.value < 0.10f) WeakenEnemyDamage(target, 0.10f, 3f);
+            case "PRT_CAR_T3_01": // 10% Nhiễu loạn (-10% dmg địch) 3s; legacy proc có thể overlap độc lập
+                if (Random.value < 0.10f) ApplyProtocolWeakenIndependent(target, "PRT_CAR_T3_01.Weaken", 0.10f, 3f);
                 break;
 
             case "PRT_CAR_T3_02": // +2% atk speed Companion, tối đa 10 stack
@@ -164,15 +196,13 @@ public class ProtocolEffectManager : CompanionEffectManagerBase
                 }
                 break;
 
-            case "PRT_CAR_T4_01": // slow + -10% giáp, stack tối đa 3, 3s
+            case "PRT_CAR_T4_01": // slow + -10% giáp, stack tối đa 3, mỗi stack 3s độc lập
                 {
                     int s = GetStack(target);
                     if (s < 3)
                     {
-                        SetStack(target, s + 1);
-                        SlowEnemy(target, 0.10f, 3f);
-                        ReduceArmorMR(target, target.armor * 0.10f, 0f, 3f);
-                        StartCoroutine(DecayStackAfter(target, 3f));
+                        ApplyCarnageT4SlowStack(target);
+                        ApplyCarnageT4ArmorStack(target);
                     }
                 }
                 break;
@@ -186,8 +216,8 @@ public class ProtocolEffectManager : CompanionEffectManagerBase
                 break;
 
             // ───── SUPPRESSION ─────
-            case "PRT_SUP_T3_01": // -10% Kháng phép 3s, không cộng dồn
-                NoStackArmorMr(target, 0f, target.magicResist * 0.10f, 3f);
+            case "PRT_SUP_T3_01": // -10% Kháng phép 3s, không cộng dồn / không refresh khi đang active
+                ApplyProtocolArmorMrNoRefresh(target, "PRT_SUP_T3_01.MagicResistDown", 0f, target.magicResist * 0.10f, 3f);
                 break;
 
             case "PRT_SUP_T3_02": // mỗi 10s → đòn kế tiếp tạo vùng Trầm Mặc r1.5f 3s
@@ -198,17 +228,8 @@ public class ProtocolEffectManager : CompanionEffectManagerBase
                 if (_hitCount % 3 == 0) SpawnBlackHole(target.transform.position, 1f, 1f);
                 break;
 
-            case "PRT_SUP_T4_02": // slow 10% stack max3; ở max 5s → stun 2s reset
-                {
-                    int s = GetStack(target);
-                    SlowEnemy(target, 0.10f, 5f);
-                    if (s < 3)
-                    {
-                        s++;
-                        SetStack(target, s);
-                        if (s == 3 && !_maxStackSince.ContainsKey(target)) _maxStackSince[target] = Time.time;
-                    }
-                }
+            case "PRT_SUP_T4_02": // Slow 10% additive max3; giữ max liên tục 5s → Stun 2s → reset sau Stun
+                ApplySuppressionT4Slow(target);
                 break;
 
             case "PRT_SUP_T5_01": // buff xử lý ở _supT5Buff (đã stun ở trên)
@@ -232,29 +253,35 @@ public class ProtocolEffectManager : CompanionEffectManagerBase
                 }
                 break;
 
-            case "PRT_AEG_T4_01": // mỗi 5s → đòn kế tiếp ép địch đang target Player sang Companion
+            case "PRT_AEG_T4_01": // mỗi 5s → đòn kế tiếp chuyển Aggro của địch đang target Player sang Companion
                 if (_charged)
                 {
                     _charged = false;
-                    // Không đọc được "địch đang target ai" từ EnemyCombat (target private) → taunt toàn bộ quanh (xấp xỉ).
-                    foreach (var e in EnemiesInRadius(transform.position, 8f)) TauntToCompanion(e);
+                    // Source asset ghi rõ: chỉ những enemy ĐANG target Player mới bị chuyển Aggro.
+                    // Giữ bán kính 8f theo implementation hiện hữu; đây là aggro mechanic, KHÔNG phải Taunt CC.
+                    foreach (var e in EnemiesInRadius(transform.position, 8f))
+                    {
+                        EnemyAI enemyAI = e.GetComponent<EnemyAI>();
+                        if (enemyAI != null && playerTf != null && enemyAI.nearestTarget == playerTf)
+                            RedirectAggroToCompanion(e);
+                    }
                     VisualDebugHelper.DrawSphere(transform.position, 8f, Color.blue, 0.3f);
                 }
                 break;
 
-            case "PRT_AEG_T4_02": // -15% dmg địch 3s, không cộng dồn
-                NoStackWeaken(target, 0.15f, 3f);
+            case "PRT_AEG_T4_02": // -15% dmg địch 3s, không cộng dồn / không refresh khi đang active
+                ApplyProtocolWeakenNoRefresh(target, "PRT_AEG_T4_02.Weaken", 0.15f, 3f);
                 break;
 
-            case "PRT_AEG_T5_01": // mỗi 10s → đòn kế tiếp sóng xung kích r5: dmg + taunt + -30% dmg địch 4s
+            case "PRT_AEG_T5_01": // mỗi 10s → đòn kế tiếp sóng xung kích r5: dmg + chuyển Aggro + -30% dmg địch 4s
                 if (_charged)
                 {
                     _charged = false;
                     foreach (var e in EnemiesInRadius(transform.position, 5f))
                     {
                         DealByProtocol(e, 1.0f);
-                        TauntToCompanion(e);
-                        WeakenEnemyDamage(e, 0.30f, 4f);
+                        RedirectAggroToCompanion(e);
+                        ApplyProtocolWeakenIndependent(e, "PRT_AEG_T5_01.Weaken", 0.30f, 4f);
                     }
                     VisualDebugHelper.DrawSphere(transform.position, 5f, Color.yellow, 0.5f);
                 }
@@ -265,49 +292,217 @@ public class ProtocolEffectManager : CompanionEffectManagerBase
     // ── Helpers ──
     private int GetStack(Stats s) { _stacks.TryGetValue(s, out int v); return v; }
     private void SetStack(Stats s, int v) { _stacks[s] = v; }
-    private IEnumerator DecayStackAfter(Stats s, float dur)
+
+    /// <summary>
+    /// Closure fix: PRT_SUP_T4_02 Frostbite Matrix. Mỗi hit +10% Slow, shared refresh 5s, max 3 stack.
+    /// Khi giữ 3 stack liên tục đủ 5s thì Stun; stack chỉ reset SAU khi Stun kết thúc theo asset description.
+    /// </summary>
+    private void ApplySuppressionT4Slow(Stats target)
     {
-        yield return new WaitForSeconds(dur);
-        if (s != null && _stacks.ContainsKey(s)) _stacks[s] = Mathf.Max(0, _stacks[s] - 1);
+        if (target == null || target.currentHp <= 0) return;
+
+        int current = GetStack(target);
+        if (_supT4SlowHandles.TryGetValue(target, out EffectHandle tracked)
+            && (!tracked.IsValid || !target.StatusEffects.IsEffectActive(tracked)))
+        {
+            ResetSuppressionT4State(target, removeSlow: false);
+            current = 0;
+        }
+
+        const string effectId = "PRT_SUP_T4_02.Slow";
+        var slow = new CombatEffectInfo(CombatEffectType.Slow, 5f)
+        {
+            effectId = effectId,
+            magnitude = 0.10f,
+            stackPolicy = EffectStackPolicy.AdditiveStacks,
+            maxStacks = 3,
+            note = "Frostbite Matrix +10% Slow stack, shared 5s refresh"
+        };
+
+        EffectApplyResult result = target.ApplyEffectWithResult(
+            slow, stats, $"{effectId}:{GetInstanceID()}");
+        if (!result.Accepted) return;
+
+        _supT4SlowHandles[target] = result.handle;
+        if (current < 3)
+        {
+            current++;
+            SetStack(target, current);
+            if (current == 3) _maxStackSince[target] = Time.time;
+        }
     }
 
-    private void NoStackArmorMr(Stats t, float armorAmt, float mrAmt, float dur)
+    private IEnumerator ResetSuppressionT4AfterStun(Stats target, float delay)
     {
-        if (_noStack.Contains(t)) return;
-        _noStack.Add(t);
-        ReduceArmorMR(t, armorAmt, mrAmt, dur);
-        StartCoroutine(ClearNoStack(t, dur));
+        if (delay > 0f) yield return new WaitForSeconds(delay);
+        ResetSuppressionT4State(target, removeSlow: true);
     }
-    private void NoStackWeaken(Stats t, float pct, float dur)
+
+    private void ResetSuppressionT4State(Stats target, bool removeSlow)
     {
-        if (_noStack.Contains(t)) return;
-        _noStack.Add(t);
-        WeakenEnemyDamage(t, pct, dur);
-        StartCoroutine(ClearNoStack(t, dur));
+        if (removeSlow && target != null
+            && _supT4SlowHandles.TryGetValue(target, out EffectHandle slowHandle) && slowHandle.IsValid)
+            target.StatusEffects.RemoveEffect(slowHandle, EffectRemoveReason.Manual);
+
+        _supT4SlowHandles.Remove(target);
+        _maxStackSince.Remove(target);
+        _stacks.Remove(target);
     }
-    private IEnumerator ClearNoStack(Stats t, float dur)
+
+    /// <summary>
+    /// F2E FIX2: PRT_CAR_T4_01 Slow là additive stack nhưng mỗi stack giữ timer 3s độc lập.
+    /// Mỗi instance dùng sourceKey riêng; StatusEffectController cộng các Additive Slow cùng effect + source
+    /// trước khi cạnh tranh theo strongest-wins với Slow khác.
+    /// </summary>
+    private void ApplyCarnageT4SlowStack(Stats target)
     {
-        yield return new WaitForSeconds(dur);
-        if (t != null) _noStack.Remove(t);
+        if (target == null || target.currentHp <= 0) return;
+
+        const string effectId = "PRT_CAR_T4_01.Slow";
+        string sourceKey = $"{effectId}:{GetInstanceID()}:{++_carT4SlowStackSerial}";
+        var slow = new CombatEffectInfo(CombatEffectType.Slow, 3f)
+        {
+            effectId = effectId,
+            magnitude = 0.10f,
+            stackPolicy = EffectStackPolicy.AdditiveStacks,
+            maxStacks = 3,
+            note = "PRT_CAR_T4_01 independent additive Slow stack"
+        };
+        target.ApplyEffectWithResult(slow, stats, sourceKey);
+    }
+
+    /// <summary>
+    /// F2E: PRT_CAR_T4_01 ArmorDown dùng 3 Debuff instance độc lập để giữ đúng legacy per-stack expiry.
+    /// Mỗi hit snapshot 10% EffectiveArmor hiện tại; cleanse/expiry giải phóng stack ngay qua onRemove.
+    /// </summary>
+    private void ApplyCarnageT4ArmorStack(Stats target)
+    {
+        if (target == null || target.currentHp <= 0) return;
+
+        int current = GetStack(target);
+        if (current >= 3) return;
+
+        float armorAmount = Mathf.Max(0f, target.EffectiveArmor * 0.10f);
+
+        const string effectId = "PRT_CAR_T4_01.ArmorDown";
+        string sourceKey = $"{effectId}:{GetInstanceID()}:{++_carT4ArmorStackSerial}";
+        var request = new DebuffRequest
+        {
+            effectId = effectId,
+            duration = 3f,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.IndependentPerSource,
+            maxStacks = 1,
+            potency = armorAmount,
+            note = "PRT_CAR_T4_01 independent 10% current-Armor stack"
+        };
+        request.statModifiers.Add(new RuntimeStatModifierSpec(
+            RuntimeStatKey.Armor, RuntimeModifierOperation.Flat, -armorAmount));
+        request.onRemove = (snapshot, reason) =>
+        {
+            if (target == null || !_stacks.TryGetValue(target, out int stacks)) return;
+            stacks = Mathf.Max(0, stacks - 1);
+            if (stacks == 0) _stacks.Remove(target);
+            else _stacks[target] = stacks;
+        };
+
+        EffectApplyResult result = target.ApplyDebuff(request, stats, sourceKey);
+        if (result.Accepted)
+            SetStack(target, current + 1);
+    }
+
+    /// <summary>
+    /// F2F: các Protocol ghi "không cộng dồn" đang có implementation no-refresh trong thời gian active.
+    /// Registry là source of truth: nếu effectId còn tồn tại thì bỏ qua hit mới; Cleanse/expiry xóa effect
+    /// nên lần hit sau có thể apply lại ngay mà không cần guard timer/coroutine riêng.
+    /// </summary>
+    private void ApplyProtocolArmorMrNoRefresh(Stats target, string effectId, float armorAmount, float mrAmount, float duration)
+    {
+        if (target == null || target.currentHp <= 0 || target.StatusEffects == null) return;
+        if (target.StatusEffects.HasDebuff(effectId)) return;
+
+        target.ApplyArmorMagicResistDown(
+            effectId, armorAmount, mrAmount, duration, stats,
+            $"{effectId}:{GetInstanceID()}", EffectStackPolicy.RefreshSameSource, 1,
+            Mathf.Max(armorAmount, mrAmount), $"{effectId} Protocol no-stack/no-refresh");
+    }
+
+    private void ApplyProtocolWeakenNoRefresh(Stats target, string effectId, float magnitude, float duration)
+    {
+        if (target == null || target.currentHp <= 0 || target.StatusEffects == null) return;
+        if (target.StatusEffects.HasDebuff(effectId)) return;
+
+        target.ApplyDamageOutputDown(
+            effectId, magnitude, duration, stats, $"{effectId}:{GetInstanceID()}",
+            EffectStackPolicy.RefreshSameSource, 1, magnitude, $"{effectId} Protocol no-stack/no-refresh");
+    }
+
+    private void ApplyProtocolWeakenIndependent(Stats target, string effectId, float magnitude, float duration)
+    {
+        if (target == null || target.currentHp <= 0) return;
+        target.ApplyDamageOutputDown(
+            effectId, magnitude, duration, stats,
+            $"{effectId}:{GetInstanceID()}:{++_protocolDebuffSerial}",
+            EffectStackPolicy.IndependentPerSource, 1, magnitude, $"{effectId} Protocol independent proc");
     }
 
     private void HandleInfection(Stats target, float phys)
     {
-        _infection.TryGetValue(target, out int n);
-        _infectionTime.TryGetValue(target, out float last);
-        if (last > 0f && Time.time - last > 5f) n = 0; // quá 5s không đánh → mất hết
-        n++;
-        if (n >= 10)
+        if (target == null || target.currentHp <= 0) return;
+
+        const string effectId = "PRT_CAR_T5_01.Infection";
+        string sourceKey = $"{effectId}:{GetInstanceID()}";
+
+        var request = new DebuffRequest
         {
-            DealTrue(target, phys * 5.0f);
-            VisualDebugHelper.DrawSphere(target.transform.position, 1f, Color.magenta, 0.4f);
-            _infection[target] = 0;
-            _infectionTime[target] = 0f;
-        }
-        else
+            effectId = effectId,
+            duration = 5f,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.AdditiveStacks,
+            maxStacks = 10,
+            potency = 1f,
+            note = "Infection: 1 stack/hit, shared 5s refresh; stack 10 explodes for 500% Companion physicalAtk True Damage"
+        };
+
+        request.onApply = snapshot =>
         {
-            _infection[target] = n;
-            _infectionTime[target] = Time.time;
+            if (snapshot.target != null) _infectionHandles[snapshot.target] = snapshot.handle;
+        };
+        request.onRefreshOrStack = snapshot =>
+        {
+            if (snapshot.target != null) _infectionHandles[snapshot.target] = snapshot.handle;
+            if (snapshot.stackCount < 10 || snapshot.target == null || snapshot.target.currentHp <= 0) return;
+
+            // Preserve legacy semantics: explosion uses the physicalAtk snapshot supplied by the hit
+            // that reaches stack 10, then Infection is consumed immediately.
+            DealTrue(snapshot.target, phys * 5.0f);
+            VisualDebugHelper.DrawSphere(snapshot.target.transform.position, 1f, Color.magenta, 0.4f);
+            snapshot.target.StatusEffects.RemoveEffect(snapshot.handle, EffectRemoveReason.Manual);
+        };
+        request.onRemove = (snapshot, reason) =>
+        {
+            if (snapshot.target != null
+                && _infectionHandles.TryGetValue(snapshot.target, out EffectHandle tracked)
+                && tracked.Equals(snapshot.handle))
+                _infectionHandles.Remove(snapshot.target);
+        };
+
+        EffectApplyResult result = target.ApplyDebuff(request, stats, sourceKey);
+        if (result.Accepted && result.handle.IsValid && target.StatusEffects.IsEffectActive(result.handle))
+            _infectionHandles[target] = result.handle;
+    }
+
+    private void ClearOwnedInfection()
+    {
+        if (_infectionHandles.Count == 0) return;
+        var entries = new List<KeyValuePair<Stats, EffectHandle>>(_infectionHandles);
+        _infectionHandles.Clear();
+        for (int i = 0; i < entries.Count; i++)
+        {
+            Stats target = entries[i].Key;
+            EffectHandle handle = entries[i].Value;
+            if (target != null && handle.IsValid)
+                target.StatusEffects.RemoveEffect(handle, EffectRemoveReason.Manual);
         }
     }
 
@@ -320,15 +515,45 @@ public class ProtocolEffectManager : CompanionEffectManagerBase
             new Color(0.5f, 0.5f, 1f, 0.4f));
     }
 
+    // G7B: Gravity Well is a non-CC Suction Field, same mechanic as the G3B weapon fields.
+    // Each third-hit well owns an independent source key so simultaneous wells add suction vectors;
+    // the MovementInfluenceController automatically uses the strongest field Move Speed penalty.
+    private int _supT4BlackHoleSerial;
     private void SpawnBlackHole(Vector3 center, float radius, float dur)
     {
-        SpawnGroundZone(center, radius, dur, 0.05f, e =>
+        string fieldKey = $"PRT_SUP_T4_01.BlackHole:{GetInstanceID()}:{++_supT4BlackHoleSerial}";
+        StartCoroutine(SupT4BlackHoleField(center, radius, dur, fieldKey));
+    }
+
+    private IEnumerator SupT4BlackHoleField(Vector3 center, float radius, float dur, string fieldKey)
+    {
+        const float suctionSpeed = 2f;
+        const float moveSpeedPenalty = 0.20f; // G7B initial tuning, not a universal rule.
+        const float visualInterval = 0.05f;
+        Color visualColor = new Color(0.4f, 0f, 0.6f, 0.5f);
+        float elapsed = 0f;
+        float nextVisualTick = 0f;
+
+        while (elapsed < dur)
         {
-            Vector3 next = Vector3.MoveTowards(e.transform.position, center, 2f * Time.deltaTime);
-            var agent = e.GetComponentInParent<UnityEngine.AI.NavMeshAgent>();
-            if (agent != null && agent.enabled && agent.isOnNavMesh) agent.Warp(next);
-            else e.transform.position = next;
-        }, new Color(0.4f, 0f, 0.6f, 0.5f));
+            // Keep normal AI, attacks and skills. No CombatEffectType.Pull/Slow, Warp,
+            // ControlState mutation or CC immunity/resistance/Super Armor checks.
+            foreach (Stats enemy in EnemiesInRadius(center, radius))
+            {
+                MovementInfluenceController.GetOrAdd(enemy)?.ApplyOrRefresh(
+                    fieldKey, center, suctionSpeed, moveSpeedPenalty);
+            }
+
+            if (elapsed + 0.0001f >= nextVisualTick)
+            {
+                VisualDebugHelper.DrawSphere(center, radius, visualColor, visualInterval);
+                nextVisualTick += visualInterval;
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        // Field contributions expire automatically when no longer refreshed this frame.
     }
 
 }

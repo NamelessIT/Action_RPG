@@ -83,9 +83,12 @@ public class CompanionSkillController : MonoBehaviour
     public void CommandSkill()
     {
         if (currentBehavior == null || stats.isDead) return;
+        CompanionProtocolType? protocol = CurrentProtocol();
+        SkillControlPolicy policy = currentBehavior.GetSkillControlPolicy(protocol);
+        if (!stats.CanCastSkill(policy)) { Debug.Log($"[CompanionSkill] Skill bị CC chặn (policy={policy}, mode={stats.ControlState.mode})."); return; }
         if (Time.time < skillReadyTime) { Debug.Log("[CompanionSkill] Skill đang hồi."); return; }
         skillReadyTime = Time.time + currentBehavior.SkillCooldown;
-        currentBehavior.ExecuteSkill(CurrentProtocol());
+        currentBehavior.ExecuteSkill(protocol);
         OnCompanionSkillUsed?.Invoke(); // ACC_RM_T5_07
         Debug.Log($"<color=cyan>[Companion]</color> Skill ({currentBehavior.Archetype} / {(CurrentProtocol()?.ToString() ?? "Basic")})");
     }
@@ -94,11 +97,14 @@ public class CompanionSkillController : MonoBehaviour
     public void CommandSignature()
     {
         if (currentBehavior == null || stats.isDead) return;
+        CompanionProtocolType? protocol = CurrentProtocol();
+        SkillControlPolicy policy = currentBehavior.GetSignatureControlPolicy(protocol);
+        if (!stats.CanCastSkill(policy)) { Debug.Log($"[CompanionSkill] Signature bị CC chặn (policy={policy}, mode={stats.ControlState.mode})."); return; }
         if (Time.time < sigReadyTime) { Debug.Log("[CompanionSkill] Signature đang hồi."); return; }
         if (stats.currentSin < currentBehavior.SignatureSinCost) { Debug.Log("[CompanionSkill] Không đủ Sin."); return; }
         stats.currentSin -= currentBehavior.SignatureSinCost;
         sigReadyTime = Time.time + currentBehavior.SignatureCooldown;
-        currentBehavior.ExecuteSignature(CurrentProtocol());
+        currentBehavior.ExecuteSignature(protocol);
         OnCompanionSignatureUsed?.Invoke(); // PRT_SUP_T5_01
         Debug.Log($"<color=magenta>[Companion]</color> Signature ({currentBehavior.Archetype} / {(CurrentProtocol()?.ToString() ?? "Basic")})");
     }

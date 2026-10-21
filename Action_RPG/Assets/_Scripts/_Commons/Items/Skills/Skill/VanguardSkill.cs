@@ -10,6 +10,8 @@ public class VanguardSkill : SkillBehavior
     public float hitRadius = 0.3f;        // Bán kính hút/ủi quái
     public float hitOffsetY = 0f;       // Có thể Nâng tâm lên ngang bụng (0.5)
     public float pushOffsetDistance = 1.5f; // Đẩy quái ra trước mặt 1.5m
+    [Tooltip("Impact level của Driven Knockback khi Shield Charge. Mặc định 2 để khớp impact hiện tại của cú Slam cuối charge.")]
+    public int drivenKnockbackImpactLevel = 2;
 
     [Header("Slam Settings (End of Dash)")]
     public float slamRadius = 2.5f;       // Tầm nổ đập đất
@@ -22,12 +24,15 @@ public class VanguardSkill : SkillBehavior
 
     private Rigidbody rb;
     private EquipmentManager equipmentManager;
+    private DrivenKnockbackSourceController drivenKnockback;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
         base.Initialize(myStats, myData, myPlayer);
         rb = myPlayer.GetComponent<Rigidbody>();
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
+        drivenKnockback = myPlayer.GetComponent<DrivenKnockbackSourceController>();
+        if (drivenKnockback == null) drivenKnockback = myPlayer.gameObject.AddComponent<DrivenKnockbackSourceController>();
     }
 
     protected override void OnEquip() { }
@@ -71,6 +76,7 @@ public class VanguardSkill : SkillBehavior
 
         // Danh sách lưu quái đã bị hút để tiện cấp hiệu ứng
         List<Stats> draggedEnemies = new List<Stats>();
+        drivenKnockback.BeginSession(stats, $"VANGUARD_CHARGE_{GetInstanceID()}", dashDir, pushOffsetDistance, dashDuration + 0.5f);
 
         try
         {
@@ -80,33 +86,36 @@ public class VanguardSkill : SkillBehavior
             while (timer < dashDuration)
             {
                 float dt = Time.fixedDeltaTime;
+                drivenKnockback.PruneInvalidTargets();
 
-                // Ép tốc độ lao tới
-                rb.linearVelocity = dashDir * dashSpeed;
-                rb.angularVelocity = Vector3.zero;
-
+                // Detect trước khi tính velocity để resistance làm chậm ngay từ tick va chạm.
                 Vector3 centerPoint = transform.position + Vector3.up * hitOffsetY;
                 Collider[] hits = Physics.OverlapSphere(centerPoint, hitRadius, player.dangerLayer);
-                Vector3 nextFramePos = rb.position + (dashDir * dashSpeed * dt);
 
                 foreach (var hit in hits)
                 {
-                    Stats enemyStats = hit.GetComponent<Stats>();
-                    if (enemyStats != null && enemyStats.currentHp > 0)
-                    {
-                        // Kéo quái theo (Không gây sát thương lúc này)
-                        HandleContinuousPush(hit.gameObject, dashDir, nextFramePos);
+                    Stats enemyStats = hit.GetComponentInParent<Stats>();
+                    if (enemyStats == null || enemyStats.currentHp <= 0) continue;
 
-                        if (!draggedEnemies.Contains(enemyStats))
-                            draggedEnemies.Add(enemyStats);
-                    }
+                    drivenKnockback.TryCapture(enemyStats, Mathf.Max(0, drivenKnockbackImpactLevel));
+
+                    if (!draggedEnemies.Contains(enemyStats))
+                        draggedEnemies.Add(enemyStats);
                 }
+
+                float effectiveDashSpeed = dashSpeed * drivenKnockback.CurrentSpeedMultiplier;
+                Vector3 nextFramePos = rb.position + (dashDir * effectiveDashSpeed * dt);
+                drivenKnockback.SetPredictedAnchor(nextFramePos, dashDir);
+
+                rb.linearVelocity = dashDir * effectiveDashSpeed;
+                rb.angularVelocity = Vector3.zero;
 
                 timer += dt;
                 yield return waitFixed;
             }
 
-            // Dừng xe lại sau khi lướt xong
+            // Dừng charge => release Driven Knockback ngay; target không bị giữ Displaced sang phase Slam.
+            drivenKnockback.EndSession();
             rb.linearVelocity = Vector3.zero;
 
             // --- 3. GIAI ĐOẠN 2: ĐẬP ĐẤT (SLAM) ---
@@ -129,6 +138,7 @@ public class VanguardSkill : SkillBehavior
         finally
         {
             // --- 4. CLEANUP (An toàn vật lý) ---
+            drivenKnockback?.EndSession();
             rb.useGravity = originalUseGravity;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
@@ -139,20 +149,6 @@ public class VanguardSkill : SkillBehavior
         // Chờ thêm 1 nhịp nhẹ để xả đòn đập xong mới cho đi bộ lại
         yield return new WaitForSeconds(0.3f);
         player.isUsingSpecialSkill = false;
-    }
-
-    // --- HÀM KÉO QUÁI ĐI THEO ---
-    private void HandleContinuousPush(GameObject enemyObj, Vector3 dashDir, Vector3 playerNextPos)
-    {
-        Rigidbody enemyRb = enemyObj.GetComponent<Rigidbody>();
-        if (enemyRb != null)
-        {
-            Vector3 idealPos = playerNextPos + (dashDir * pushOffsetDistance);
-            idealPos.y = enemyRb.position.y;
-            enemyRb.MovePosition(idealPos);
-
-            if (!enemyRb.isKinematic) enemyRb.linearVelocity = Vector3.zero;
-        }
     }
 
     // --- HÀM ĐẬP ĐẤT GÂY SÁT THƯƠNG VÀ CHOÁNG ---

@@ -24,6 +24,8 @@ public class WardenSkill : SkillBehavior
     public float dashDuration = 0.35f;    // thời gian lướt theo
     public float pushHitRadius = 2.2f;    // bán kính bắt địch để ủi
     public float pushStandoff = 1.2f;     // giữ địch cách trước mặt khoảng này khi ủi
+    [Tooltip("Impact level của Driven Knockback trong phase ủi. Mặc định 1 để khớp strength đòn chém đầu sau charge.")]
+    public int drivenKnockbackImpactLevel = 1;
 
     [Header("Vùng chém (về phía trước)")]
     public float slashWidth = 2.0f;       // bề rộng
@@ -53,11 +55,14 @@ public class WardenSkill : SkillBehavior
 
     private Rigidbody rb;
     private EquipmentManager equipmentManager;
+    private DrivenKnockbackSourceController drivenKnockback;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
         rb = myPlayer.GetComponent<Rigidbody>();
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
+        drivenKnockback = myPlayer.GetComponent<DrivenKnockbackSourceController>();
+        if (drivenKnockback == null) drivenKnockback = myPlayer.gameObject.AddComponent<DrivenKnockbackSourceController>();
         base.Initialize(myStats, myData, myPlayer);
     }
 
@@ -159,14 +164,21 @@ public class WardenSkill : SkillBehavior
             // Lướt về phía trước bám theo, giữ kẻ địch ngay trước mặt (không bị bỏ lại xa) rồi mới chém.
             Debug.Log("<color=orange>WARDEN: LƯỚT THEO ỦI ĐỊCH!</color>");
             float dashTimer = 0f;
+            drivenKnockback.BeginSession(stats, $"WARDEN_CHARGE_{GetInstanceID()}", forward, pushStandoff, dashDuration + 0.5f);
             while (dashTimer < dashDuration)
             {
-                Vector3 nextPos = rb.position + forward * dashSpeed * Time.fixedDeltaTime;
+                drivenKnockback.PruneInvalidTargets();
+                CaptureDrivenEnemies(rb.position, forward);
+
+                float effectiveDashSpeed = dashSpeed * drivenKnockback.CurrentSpeedMultiplier;
+                Vector3 nextPos = rb.position + forward * effectiveDashSpeed * Time.fixedDeltaTime;
+                drivenKnockback.SetPredictedAnchor(nextPos, forward);
                 rb.MovePosition(nextPos);
-                DragEnemiesForward(nextPos, forward);
+
                 dashTimer += Time.fixedDeltaTime;
                 yield return waitFixed;
             }
+            drivenKnockback.EndSession();
             rb.linearVelocity = Vector3.zero;
 
             if (slash1VfxPrefab) Instantiate(slash1VfxPrefab, transform.position + forward * (slashRange * 0.5f), rot);
@@ -234,6 +246,7 @@ public class WardenSkill : SkillBehavior
         }
         finally
         {
+            drivenKnockback?.EndSession();
             rb.useGravity = originalUseGravity;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
@@ -265,9 +278,9 @@ public class WardenSkill : SkillBehavior
         return min;
     }
 
-    // Ủi kẻ địch ĐI THEO trước mặt: giữ địch cách player ~pushStandoff về phía trước,
-    // để player lướt tới đâu địch bị đẩy tới đó (không bị bỏ lại xa).
-    private void DragEnemiesForward(Vector3 playerPos, Vector3 forward)
+    // Quét target trong vùng ủi rồi xin Driven Knockback qua CC gateway.
+    // Player speed sẽ do max knockbackResistance của các target đã được accept quyết định.
+    private void CaptureDrivenEnemies(Vector3 playerPos, Vector3 forward)
     {
         Collider[] hits = Physics.OverlapSphere(playerPos + Vector3.up * 0.5f, pushHitRadius, player.dangerLayer);
         HashSet<Stats> done = new HashSet<Stats>();
@@ -276,23 +289,11 @@ public class WardenSkill : SkillBehavior
             Stats e = col.GetComponentInParent<Stats>();
             if (e == null || e.currentHp <= 0 || !done.Add(e)) continue;
 
-            // Chỉ ủi kẻ địch ở phía trước (không kéo kẻ ở sau lưng).
-            Vector3 to = e.transform.position - playerPos; to.y = 0f;
+            Vector3 to = e.transform.position - playerPos;
+            to.y = 0f;
             if (Vector3.Dot(to, forward) < -0.2f) continue;
 
-            Vector3 ideal = playerPos + forward * pushStandoff;
-            ideal.y = e.transform.position.y;
-
-            NavMeshAgent agent = e.GetComponentInParent<NavMeshAgent>();
-            if (agent != null && agent.enabled && agent.isOnNavMesh)
-            {
-                agent.velocity = Vector3.zero;
-                agent.Warp(ideal);
-            }
-            else
-            {
-                e.transform.position = ideal;
-            }
+            drivenKnockback.TryCapture(e, Mathf.Max(0, drivenKnockbackImpactLevel));
         }
     }
 

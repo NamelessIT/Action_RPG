@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -336,7 +336,7 @@ public class WeaponEffectManager : MonoBehaviour
         if (Time.time > sw_t3_03_empowerUntil) return; // hết 3s → không kích
         sw_t3_03_empowerUntil = -1f;
         DamageHelper.ApplyQuickProcDamage(stats, target, 0.5f, 0f, transform);
-        StartCoroutine(ReduceArmorRoutine(target, 0.15f, 3f));
+        ApplyWeaponArmorDown(target, "WPN_SW_T3_03.ArmorDown", target.armor * 0.15f, 3f, true);
         VisualDebugHelper.DrawSphere(target.transform.position, 1.5f, new Color(0, 0, 1, 0.5f), 0.5f); // Sóng xanh lam
     }
 
@@ -369,7 +369,7 @@ public class WeaponEffectManager : MonoBehaviour
         if (UnityEngine.Random.value <= 0.25f)
         {
             float dps = (stats.armor + stats.magicResist) * 0.3f;
-            target.ApplyBurn(dps, 3f);
+            target.ApplyBurn(dps, 3f, stats);
         }
     }
 
@@ -604,38 +604,16 @@ public class WeaponEffectManager : MonoBehaviour
         }
     }
 
-    // [ĐÃ SỬA]: Refresh Timer thay vì bỏ qua nếu dính Crit lúc đang bị debuff
-    private Dictionary<Stats, float> dg_t3_02_timers = new Dictionary<Stats, float>();
+    // Phase F2D: Crit gây ArmorDown 20% / 4s, hit mới chỉ refresh duration chứ không cộng thêm stack.
     private void Effect_WPN_DG_T3_02(Stats target, int step, bool isH, bool isC)
     {
-        if (isC)
-        {
-            if (!dg_t3_02_timers.ContainsKey(target))
-            {
-                float amount = target.armor * 0.20f;
-                target.armor -= amount;
-                dg_t3_02_timers[target] = Time.time + 4f;
-                StartCoroutine(DG_T3_02_RestoreRoutine(target, amount));
-            }
-            else
-            {
-                // Refresh lại thời gian
-                dg_t3_02_timers[target] = Time.time + 4f;
-            }
-        }
-    }
-    private IEnumerator DG_T3_02_RestoreRoutine(Stats target, float amount)
-    {
-        // Chờ chừng nào thời gian hiện tại còn nhỏ hơn hạn chót của mục tiêu đó
-        while (target != null && Time.time < dg_t3_02_timers[target])
-        {
-            yield return null;
-        }
-        if (target != null)
-        {
-            target.armor += amount;
-            dg_t3_02_timers.Remove(target);
-        }
+        if (!isC || target == null) return;
+        target.ApplyArmorMagicResistDown(
+            "WPN_DG_T3_02.ArmorDown",
+            target.armor * 0.20f, 0f, 4f, stats,
+            $"WPN_DG_T3_02.ArmorDown:{GetInstanceID()}",
+            EffectStackPolicy.RefreshSameSource, 1, 0.20f,
+            "WPN_DG_T3_02 crit ArmorDown 20% / refresh 4s");
     }
 
     private void Effect_WPN_DG_T3_03(Stats target, int step, bool isH, bool isC)
@@ -672,14 +650,44 @@ public class WeaponEffectManager : MonoBehaviour
     private IEnumerator RemoveInvisRoutine(float delay) { yield return new WaitForSeconds(delay); stats.isInvisible = false; }
 
     private Dictionary<Stats, int> dg_t4_03_stacks = new Dictionary<Stats, int>();
+    private int dg_t4_03_stackSerial = 0;
     private void Effect_WPN_DG_T4_03(Stats target, int step, bool isH, bool isC)
     {
-        if (!dg_t4_03_stacks.ContainsKey(target)) dg_t4_03_stacks[target] = 0;
-        if (dg_t4_03_stacks[target] < 5)
+        if (target == null || target.currentHp <= 0) return;
+
+        dg_t4_03_stacks.TryGetValue(target, out int currentStacks);
+        if (currentStacks >= 5) return;
+
+        // Legacy semantics: mỗi stack lấy 5% Armor HIỆN TẠI và tự hết sau 3s.
+        // Dùng EffectiveArmor để các Debuff ledger khác vẫn tham gia đúng vào snapshot hiện tại.
+        float armorAmount = Mathf.Max(0f, target.EffectiveArmor * 0.05f);
+
+        string effectId = "WPN_DG_T4_03.ArmorDown";
+        string sourceKey = $"{effectId}:{GetInstanceID()}:{++dg_t4_03_stackSerial}";
+        var request = new DebuffRequest
         {
-            dg_t4_03_stacks[target]++;
-            StartCoroutine(ReduceArmorRoutine(target, 0.05f, 3f, () => { dg_t4_03_stacks[target]--; }));
-        }
+            effectId = effectId,
+            duration = 3f,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.IndependentPerSource,
+            maxStacks = 1,
+            potency = armorAmount,
+            note = "WPN_DG_T4_03 independent 5% current-Armor stack"
+        };
+        request.statModifiers.Add(new RuntimeStatModifierSpec(
+            RuntimeStatKey.Armor, RuntimeModifierOperation.Flat, -armorAmount));
+        request.onRemove = (snapshot, reason) =>
+        {
+            if (target == null) return;
+            if (!dg_t4_03_stacks.TryGetValue(target, out int stacks)) return;
+            stacks = Mathf.Max(0, stacks - 1);
+            if (stacks == 0) dg_t4_03_stacks.Remove(target);
+            else dg_t4_03_stacks[target] = stacks;
+        };
+
+        EffectApplyResult result = target.ApplyDebuff(request, stats, sourceKey);
+        if (result.Accepted)
+            dg_t4_03_stacks[target] = currentStacks + 1;
     }
 
     private bool dg_t4_04_teleportReady = false;
@@ -1014,31 +1022,53 @@ public class WeaponEffectManager : MonoBehaviour
     }
     private IEnumerator SP_T4_03_Clear() { yield return new WaitForSeconds(3f); nextHitArmorPenCrit = false; sp_t4_03_coro = null; }
 
-    // SP_T4_04: Heavy Attack → luồng gió 3s, 30% physAtk/s AoE 2f + gom quái. CD 5s.
+    // SP_T4_04: Heavy Attack → luồng gió 3s, 30% physAtk/s AoE 2f + Suction Field. CD 5s.
+    // Phase G3B: suction là movement-field mechanic, KHÔNG phải Pull/CC. Enemy vẫn giữ normal AI;
+    // field chỉ cộng vector hút nhẹ + strongest move-speed penalty trong lúc còn đứng trong vùng.
     private float sp_t4_04_lastProc = -100f;
+    private int sp_t4_04_fieldSerial = 0;
     private void SP_T4_04_Heavy()
     {
         if (Time.time - sp_t4_04_lastProc < 5f) return;
         sp_t4_04_lastProc = Time.time;
-        StartCoroutine(SP_T4_04_Wind(transform.position + stats.facingDirection * 2f));
+        StartCoroutine(SP_T4_04_Wind(
+            transform.position + stats.facingDirection * 2f,
+            $"WPN_SP_T4_04.Wind:{GetInstanceID()}:{++sp_t4_04_fieldSerial}"));
     }
-    private IEnumerator SP_T4_04_Wind(Vector3 center)
+    private IEnumerator SP_T4_04_Wind(Vector3 center, string fieldKey)
     {
-        float t = 0f;
-        while (t < 3f)
+        const float duration = 3f;
+        const float radius = 2f;
+        const float suctionSpeed = 1.5f;      // preserve legacy authored pull speed as initial suction tuning
+        const float moveSpeedPenalty = 0.20f; // Phase G3B pilot tuning; mechanic rule is not tied to Slow CC
+        const float damageInterval = 0.5f;
+
+        float elapsed = 0f;
+        float nextDamageTick = 0f;
+        while (elapsed < duration)
         {
-            Collider[] hits = Physics.OverlapSphere(center, 2f, player.dangerLayer);
+            bool dealDamageThisFrame = elapsed + 0.0001f >= nextDamageTick;
+            if (dealDamageThisFrame) nextDamageTick += damageInterval;
+
+            Collider[] hits = Physics.OverlapSphere(center, radius, player.dangerLayer);
             HashSet<Stats> seen = new HashSet<Stats>();
             foreach (var h in hits)
             {
                 Stats e = h.GetComponentInParent<Stats>();
                 if (e == null || e.currentHp <= 0 || !seen.Add(e)) continue;
-                DamageHelper.ApplyQuickProcDamage(stats, e, 0.15f, 0f, transform); // 0.15 mỗi 0.5s = 30%/s
-                PullEnemyTo(e, center, 1.5f);
+
+                MovementInfluenceController.GetOrAdd(e)?.ApplyOrRefresh(
+                    fieldKey, center, suctionSpeed, moveSpeedPenalty);
+
+                if (dealDamageThisFrame)
+                    DamageHelper.ApplyQuickProcDamage(stats, e, 0.15f, 0f, transform); // 0.15 mỗi 0.5s = 30%/s
             }
-            VisualDebugHelper.DrawSphere(center, 2f, new Color(0.5f, 1f, 1f, 0.2f), 0.5f);
-            yield return new WaitForSeconds(0.5f);
-            t += 0.5f;
+
+            if (dealDamageThisFrame)
+                VisualDebugHelper.DrawSphere(center, radius, new Color(0.5f, 1f, 1f, 0.2f), damageInterval);
+
+            elapsed += Time.deltaTime;
+            yield return null;
         }
     }
 
@@ -1059,25 +1089,59 @@ public class WeaponEffectManager : MonoBehaviour
         sp_t4_05_count = Mathf.Max(0, sp_t4_05_count - 1);
     }
 
-    // SP_T5_02: dùng kỹ năng → Vòi Rồng Nước trước mặt 3f, hút + làm Chìm Đuối (-50% moveSpeed & attackSpeed) 3s.
-    private void SP_T5_02_Skill() { StartCoroutine(SP_T5_02_Tornado(transform.position + stats.facingDirection * 3f)); }
-    private IEnumerator SP_T5_02_Tornado(Vector3 center)
+    // SP_T5_02: dùng kỹ năng → Vòi Rồng Nước trước mặt 3f, Suction Field + Chìm Đuối.
+    // Phase G3B: movement reduction is a non-CC field penalty (30%), NOT CombatEffectType.Slow.
+    // AttackSpeedDown 50% remains a managed Debuff and keeps its existing short refresh cadence.
+    private string sp_t5_02_attackSpeedDownSourceKey;
+    private int sp_t5_02_fieldSerial = 0;
+    private void SP_T5_02_Skill()
     {
-        float t = 0f;
-        while (t < 3f)
+        StartCoroutine(SP_T5_02_Tornado(
+            transform.position + stats.facingDirection * 3f,
+            $"WPN_SP_T5_02.Tornado:{GetInstanceID()}:{++sp_t5_02_fieldSerial}"));
+    }
+    private IEnumerator SP_T5_02_Tornado(Vector3 center, string fieldKey)
+    {
+        if (string.IsNullOrEmpty(sp_t5_02_attackSpeedDownSourceKey))
+            sp_t5_02_attackSpeedDownSourceKey = $"WPN_SP_T5_02.ChimDuoi.AttackSpeedDown:{GetInstanceID()}";
+
+        const float duration = 3f;
+        const float radius = 3f;
+        const float suctionSpeed = 2f;
+        const float moveSpeedPenalty = 0.30f;
+        const float debuffRefreshInterval = 0.5f;
+        const float attackSpeedDownRefreshDuration = 0.7f;
+
+        float elapsed = 0f;
+        float nextDebuffRefresh = 0f;
+        while (elapsed < duration)
         {
-            Collider[] hits = Physics.OverlapSphere(center, 3f, player.dangerLayer);
+            bool refreshAttackSpeedDown = elapsed + 0.0001f >= nextDebuffRefresh;
+            if (refreshAttackSpeedDown) nextDebuffRefresh += debuffRefreshInterval;
+
+            Collider[] hits = Physics.OverlapSphere(center, radius, player.dangerLayer);
+            HashSet<Stats> seen = new HashSet<Stats>();
             foreach (var h in hits)
             {
                 Stats e = h.GetComponentInParent<Stats>();
-                if (e == null || e.currentHp <= 0) continue;
-                PullEnemyTo(e, center, 2f);
-                // [SLOW] Chìm Đuối -50% move+attack: refresh effect ngắn mỗi tick (strongest-wins, không đụng base stat).
-                e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, 0.7f) { magnitude = 0.5f }, stats);
+                if (e == null || e.currentHp <= 0 || !seen.Add(e)) continue;
+
+                MovementInfluenceController.GetOrAdd(e)?.ApplyOrRefresh(
+                    fieldKey, center, suctionSpeed, moveSpeedPenalty);
+
+                if (refreshAttackSpeedDown)
+                {
+                    e.ApplyAttackSpeedDown(
+                        0.5f, attackSpeedDownRefreshDuration, stats, sp_t5_02_attackSpeedDownSourceKey,
+                        "WPN_SP_T5_02 Chìm Đuối - AttackSpeedDown 50%");
+                }
             }
-            VisualDebugHelper.DrawSphere(center, 3f, new Color(0f, 0.5f, 1f, 0.2f), 0.5f);
-            yield return new WaitForSeconds(0.5f);
-            t += 0.5f;
+
+            if (refreshAttackSpeedDown)
+                VisualDebugHelper.DrawSphere(center, radius, new Color(0f, 0.5f, 1f, 0.2f), debuffRefreshInterval);
+
+            elapsed += Time.deltaTime;
+            yield return null;
         }
     }
 
@@ -1207,21 +1271,19 @@ public class WeaponEffectManager : MonoBehaviour
         if (Time.time <= gs_t4_03_buffUntil) gs_t4_03_buffUntil = -1f; // tiêu hao sau 1 đòn
     }
 
-    // GS_T5_01: mỗi đòn đánh → trừ 100% Armor của địch trong 5s. (CC-immune & khóa tốc đánh xử lý trong Update)
-    private Dictionary<Stats, Coroutine> gs_t5_01_shred = new Dictionary<Stats, Coroutine>();
+    // Phase F2D — GS_T5_01: mỗi đòn đánh áp ArmorBreak 100% / 5s.
+    // Legacy semantics: nếu effect đang active thì hit mới KHÔNG refresh duration.
     private void GS_T5_01_Hit(Stats target, int step, bool isH, bool isC)
     {
         if (target == null) return;
-        if (gs_t5_01_shred.TryGetValue(target, out var c) && c != null) return; // đang bị trừ rồi → để routine cũ tự khôi phục/refresh
-        gs_t5_01_shred[target] = StartCoroutine(GS_T5_01_ArmorBreak(target));
-    }
-    private IEnumerator GS_T5_01_ArmorBreak(Stats target)
-    {
-        float removed = target.armor;
-        target.armor -= removed; // -100% armor
-        yield return new WaitForSeconds(5f);
-        if (target != null) target.armor += removed;
-        gs_t5_01_shred.Remove(target);
+        const string effectId = "WPN_GS_T5_01.ArmorBreak";
+        if (target.StatusEffects != null && target.StatusEffects.HasDebuff(effectId)) return;
+
+        target.ApplyArmorMagicResistDown(
+            effectId, target.armor, 0f, 5f, stats,
+            $"{effectId}:{GetInstanceID()}",
+            EffectStackPolicy.RefreshSameSource, 1, 1f,
+            "WPN_GS_T5_01 ArmorBreak 100% / no refresh while active");
     }
 
     // GS_T5_02: Khi máu xuống dưới 1 → khóa HP=1, bất tử 6s, +200% dmg & +200% atkSpd. CD 90s.
@@ -1254,12 +1316,20 @@ public class WeaponEffectManager : MonoBehaviour
         gs_t5_02_active = false;
     }
 
-    // GS_T5_03: Heavy → Hố Đen hút địch vào tâm + 100% magicAtk/giây trong 4s. Cùng lúc chỉ 1 hố đen (Heavy mới xóa cái cũ).
+    // GS_T5_03: Heavy → Hố Đen 4s, 100% magicAtk/giây + non-CC Suction Field.
+    // Phase G3B: giữ suction authored 4 u/s, thêm 10% field move-speed penalty.
+    // Enemy vẫn giữ normal AI/Skill/Attack; CC immunity/resistance/Super Armor không chặn mechanic này.
     private const float GS_T5_03_RADIUS = 1.5f;
+    private const float GS_T5_03_SUCTION_SPEED = 4f;
+    private const float GS_T5_03_MOVE_SPEED_PENALTY = 0.10f;
     private Coroutine gs_t5_03_active;
+    private string gs_t5_03_fieldKey;
     private void GS_T5_03_Heavy()
     {
         if (gs_t5_03_active != null) StopCoroutine(gs_t5_03_active);
+        if (string.IsNullOrEmpty(gs_t5_03_fieldKey))
+            gs_t5_03_fieldKey = $"WPN_GS_T5_03.BlackHole:{GetInstanceID()}";
+
         Vector3 fwd = stats.facingDirection != Vector3.zero ? stats.facingDirection : transform.forward;
         Vector3 center = transform.position + fwd * 3f;
         gs_t5_03_active = StartCoroutine(GS_T5_03_BlackHole(center));
@@ -1269,12 +1339,16 @@ public class WeaponEffectManager : MonoBehaviour
         float elapsed = 0f, dmgTimer = 0f;
         while (elapsed < 4f)
         {
-            // Hút địch vào tâm mỗi frame.
+            // Continuous non-CC movement influence. Stable key is intentional because only one Black Hole
+            // from this WeaponEffectManager may exist at a time; recasting moves the same field ownership.
+            HashSet<Stats> influenced = new HashSet<Stats>();
             foreach (var h in Physics.OverlapSphere(center, GS_T5_03_RADIUS, player.dangerLayer))
             {
                 Stats e = h.GetComponentInParent<Stats>();
-                if (e == null || e.currentHp <= 0) continue;
-                PullEnemyTo(e, center, 4f);
+                if (e == null || e.currentHp <= 0 || !influenced.Add(e)) continue;
+
+                MovementInfluenceController.GetOrAdd(e)?.ApplyOrRefresh(
+                    gs_t5_03_fieldKey, center, GS_T5_03_SUCTION_SPEED, GS_T5_03_MOVE_SPEED_PENALTY);
             }
             VisualDebugHelper.DrawSphere(center, GS_T5_03_RADIUS, new Color(0.5f, 0f, 0.8f, 0.4f), 0.1f);
 
@@ -1455,34 +1529,88 @@ public class WeaponEffectManager : MonoBehaviour
         }
     }
 
-    // ST_T5_03: đánh trúng địch ở < 2f → Lưỡi Hái Hư Không: thêm sát thương vật lý = 30% magicAtk + đánh cắp 5% Armor & MR (tối đa 3 lần).
+    // ST_T5_03: đánh trúng địch ở < 2f → Lưỡi Hái Hư Không: thêm sát thương vật lý = 30% magicAtk
+    // + đánh cắp 5% Armor & MR (tối đa 3 stack, mỗi stack 5s độc lập).
+    // Phase F3E: target-side Armor/MR Down là managed Debuff; source-side stolen buff dùng RuntimeStatModifierLedger
+    // và được link lifecycle với đúng target Debuff instance. Cleanse/expire target stack → buff tương ứng trên source mất ngay.
     private Dictionary<Stats, int> st_t5_03_stacks = new Dictionary<Stats, int>();
+    private int st_t5_03_stackSerial = 0;
     private void ST_T5_03_Hit(Stats target, int step, bool isH, bool isC)
     {
-        if (target == null) return;
+        if (target == null || target.currentHp <= 0) return;
         if (Vector3.Distance(transform.position, target.transform.position) >= 2f) return;
 
-        target.TakeDamage(new DamageInfo { physDamage = stats.magicAtk * 0.3f, attacker = stats, sourcePosition = transform.position, sourceType = DamageSourceType.Melee });
+        // Giữ thứ tự legacy: bonus hit xảy ra trước khi steal stat của hit hiện tại được apply.
+        target.TakeDamage(new DamageInfo
+        {
+            physDamage = stats.magicAtk * 0.3f,
+            attacker = stats,
+            sourcePosition = transform.position,
+            sourceType = DamageSourceType.Melee
+        });
 
-        if (!st_t5_03_stacks.TryGetValue(target, out int cur)) cur = 0;
-        if (cur >= 3) return;
-        st_t5_03_stacks[target] = cur + 1;
+        st_t5_03_stacks.TryGetValue(target, out int currentStacks);
+        if (currentStacks >= 3) return;
 
-        float a = target.armor * 0.05f;
-        float m = target.magicResist * 0.05f;
-        target.armor -= a; target.magicResist -= m;
-        stats.armor += a; stats.magicResist += m; // đánh cắp về cho mình
-        stats.RecalculateStats();
-        StartCoroutine(ST_T5_03_Restore(target, a, m, 5f));
-    }
-    private IEnumerator ST_T5_03_Restore(Stats target, float a, float m, float dur)
-    {
-        yield return new WaitForSeconds(dur);
-        if (target != null) { target.armor += a; target.magicResist += m; }
-        stats.armor -= a; stats.magicResist -= m;
-        stats.RecalculateStats();
-        if (target != null && st_t5_03_stacks.ContainsKey(target))
-            st_t5_03_stacks[target] = Mathf.Max(0, st_t5_03_stacks[target] - 1);
+        // Snapshot 5% effective defensive stat tại thời điểm hit. Những stack sau sẽ giảm dần tự nhiên,
+        // tương đương legacy raw-mutation khi không có modifier khác và vẫn tương tác đúng với ledger mới.
+        float armorAmount = Mathf.Max(0f, target.EffectiveArmor * 0.05f);
+        float mrAmount = Mathf.Max(0f, target.EffectiveMagicResist * 0.05f);
+        if (armorAmount <= 0f && mrAmount <= 0f) return;
+
+        const string effectId = "WPN_ST_T5_03.ArmorMRSteal";
+        string sourceKey = $"{effectId}:{GetInstanceID()}:{++st_t5_03_stackSerial}";
+
+        // Buff source dùng exact ModifierHandle để tránh collision EffectHandle giữa hai StatusEffectController khác nhau.
+        ModifierHandle sourceArmorBuff = ModifierHandle.Invalid;
+        ModifierHandle sourceMrBuff = ModifierHandle.Invalid;
+
+        var request = new DebuffRequest
+        {
+            effectId = effectId,
+            duration = 5f,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.IndependentPerSource,
+            maxStacks = 1,
+            potency = Mathf.Max(armorAmount, mrAmount),
+            note = "WPN_ST_T5_03 linked 5% Armor/MR steal stack"
+        };
+
+        if (armorAmount > 0f)
+            request.statModifiers.Add(new RuntimeStatModifierSpec(
+                RuntimeStatKey.Armor, RuntimeModifierOperation.Flat, -armorAmount));
+        if (mrAmount > 0f)
+            request.statModifiers.Add(new RuntimeStatModifierSpec(
+                RuntimeStatKey.MagicResist, RuntimeModifierOperation.Flat, -mrAmount));
+
+        request.onApply = snapshot =>
+        {
+            if (stats == null || stats.RuntimeModifiers == null) return;
+            if (armorAmount > 0f)
+                sourceArmorBuff = stats.RuntimeModifiers.Add(EffectHandle.Invalid,
+                    new RuntimeStatModifierSpec(RuntimeStatKey.Armor, RuntimeModifierOperation.Flat, armorAmount));
+            if (mrAmount > 0f)
+                sourceMrBuff = stats.RuntimeModifiers.Add(EffectHandle.Invalid,
+                    new RuntimeStatModifierSpec(RuntimeStatKey.MagicResist, RuntimeModifierOperation.Flat, mrAmount));
+        };
+
+        request.onRemove = (snapshot, reason) =>
+        {
+            if (stats != null && stats.RuntimeModifiers != null)
+            {
+                if (sourceArmorBuff.IsValid) stats.RuntimeModifiers.Remove(sourceArmorBuff);
+                if (sourceMrBuff.IsValid) stats.RuntimeModifiers.Remove(sourceMrBuff);
+            }
+
+            if (target == null || !st_t5_03_stacks.TryGetValue(target, out int stacks)) return;
+            stacks = Mathf.Max(0, stacks - 1);
+            if (stacks == 0) st_t5_03_stacks.Remove(target);
+            else st_t5_03_stacks[target] = stacks;
+        };
+
+        EffectApplyResult result = target.ApplyDebuff(request, stats, sourceKey);
+        if (result.Accepted)
+            st_t5_03_stacks[target] = currentStacks + 1;
     }
 
     // ----- Router sự kiện "kỹ năng trúng đích" -----
@@ -1665,15 +1793,12 @@ public class WeaponEffectManager : MonoBehaviour
         VisualDebugHelper.DrawSphere(center, 3f, new Color(0.6f, 0.2f, 1f, 0.45f), 0.5f);
     }
 
-    // GR_T5_01: hạ địch → triệu hồi Ác Quỷ Bóng Tối (tối đa 5 cùng lúc).
-    private readonly List<GameObject> gr_t5_01_demons = new List<GameObject>();
+    // GR_T5_01: hạ địch → triệu hồi Ác Quỷ Bóng Tối.
+    // Max 5/owner + lifecycle registry nằm trong DarkDemonAI để cả gameplay spawn lẫn DEV spawn dùng chung một source-of-truth.
     private void GR_T5_01_Kill(Stats victim, bool isBackstab)
     {
-        gr_t5_01_demons.RemoveAll(d => d == null);
-        if (gr_t5_01_demons.Count >= 5) return;
         Vector3 pos = (victim != null) ? victim.transform.position : transform.position;
-        DarkDemonAI demon = DarkDemonAI.Spawn(pos, stats);
-        if (demon != null) gr_t5_01_demons.Add(demon.gameObject);
+        DarkDemonAI.Spawn(pos, stats);
     }
 
     private float gr_t3_02_added = 0f;
@@ -1683,18 +1808,24 @@ public class WeaponEffectManager : MonoBehaviour
     // =========================================================================================
     #region [ TIỆN ÍCH DÙNG CHUNG CỦA MANAGER ]
 
-    private IEnumerator ReduceArmorRoutine(Stats target, float percent, float duration, Action onComplete = null)
-    {
-        if (target != null)
-        {
-            float amount = target.armor * percent;
-            target.armor -= amount;
-            yield return new WaitForSeconds(duration);
-            if (target != null) target.armor += amount;
-            onComplete?.Invoke();
-        }
-    }
+    private int weaponArmorDebuffSerial = 0;
 
+    /// <summary>
+    /// Phase F2D helper cho weapon ArmorDown dạng flat snapshot.
+    /// independentApplication=true dùng sourceKey riêng cho từng proc để giữ behavior legacy có thể overlap độc lập.
+    /// </summary>
+    private EffectApplyResult ApplyWeaponArmorDown(Stats target, string effectId, float armorAmount, float duration, bool independentApplication)
+    {
+        if (target == null) return EffectApplyResult.Reject(EffectApplyStatus.Invalid);
+        string sourceKey = independentApplication
+            ? $"{effectId}:{GetInstanceID()}:{++weaponArmorDebuffSerial}"
+            : $"{effectId}:{GetInstanceID()}";
+
+        return target.ApplyArmorMagicResistDown(
+            effectId, armorAmount, 0f, duration, stats, sourceKey,
+            independentApplication ? EffectStackPolicy.IndependentPerSource : EffectStackPolicy.RefreshSameSource,
+            1, armorAmount, $"{effectId} (WeaponEffectManager)");
+    }
     private IEnumerator BuffMoveSpeedRoutine(float amount, float duration)
     {
         stats.bonusMoveSpeed += amount;
@@ -1719,15 +1850,6 @@ public class WeaponEffectManager : MonoBehaviour
         return best;
     }
 
-    // Kéo nhẹ kẻ địch về phía 'center' (gom quái). Dùng NavMeshAgent.Warp nếu có để khỏi giật.
-    private void PullEnemyTo(Stats enemy, Vector3 center, float pullSpeed)
-    {
-        if (enemy == null) return;
-        Vector3 next = Vector3.MoveTowards(enemy.transform.position, center, pullSpeed * Time.deltaTime);
-        var agent = enemy.GetComponentInParent<UnityEngine.AI.NavMeshAgent>();
-        if (agent != null && agent.enabled && agent.isOnNavMesh) agent.Warp(next);
-        else enemy.transform.position = next;
-    }
     #endregion
 }
 

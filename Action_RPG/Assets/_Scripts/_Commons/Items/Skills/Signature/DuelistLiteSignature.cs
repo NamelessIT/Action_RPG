@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -23,16 +23,17 @@ public class DuelistLiteSignature : SkillBehavior
     private GameObject currentAuraVfx;
     private bool isBuffActive = false;
 
-    // --- LỚP LƯU TRỮ DỮ LIỆU TRỪ GIÁP ---
+    // --- LỚP LƯU TRỮ DỮ LIỆU SUNDER MANAGED ---
     private class ShredData
     {
+        public Stats target;
         public int stacks;
-        public float totalArmorShredded;
-        public Coroutine timerCoroutine;
+        public float armorPerStack;
+        public EffectHandle handle;
         public GameObject vfxInstance;
     }
 
-    // Từ điển theo dõi lượng giáp đã trừ của từng kẻ địch
+    // F2E: gameplay stack count/VFX local; lifecycle/stat ownership nằm trong Debuff Registry.
     private Dictionary<Stats, ShredData> activeSunders = new Dictionary<Stats, ShredData>();
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
@@ -117,79 +118,88 @@ public class DuelistLiteSignature : SkillBehavior
     }
 
     // ==========================================================
-    // LOGIC TRỪ GIÁP (ĐƯỢC GỌI MỖI KHI ĐÁNH TRÚNG ĐỊCH)
+    // LOGIC SUNDER MANAGED (ĐƯỢC GỌI MỖI KHI ĐÁNH TRÚNG ĐỊCH)
     // ==========================================================
     private void HandleOnHitEnemy(Stats enemy, int stepIndex, bool isHeavy, bool isCrit)
     {
         if (enemy == null || enemy.currentHp <= 0) return;
 
-        // Nếu kẻ địch chưa bị trừ giáp bao giờ, tạo hồ sơ mới cho nó
-        if (!activeSunders.ContainsKey(enemy))
+        if (!activeSunders.TryGetValue(enemy, out ShredData data))
         {
-            activeSunders[enemy] = new ShredData { stacks = 0, totalArmorShredded = 0f };
-
-            if (shredVfxPrefab != null)
-                activeSunders[enemy].vfxInstance = Instantiate(shredVfxPrefab, enemy.transform);
-        }
-
-        ShredData data = activeSunders[enemy];
-
-        // 1. Dừng đồng hồ đếm ngược cũ
-        if (data.timerCoroutine != null) StopCoroutine(data.timerCoroutine);
-
-        // 2. Tính toán cộng dồn trừ giáp (Tối đa 10 stacks)
-        if (data.stacks < maxStacks)
-        {
-            // [QUAN TRỌNG] Lấy lượng Giáp gốc của quái (trước khi bị chiêu này trừ) để tính 5%
-            float baseArmor = enemy.armor + data.totalArmorShredded;
-            float amountToShred = baseArmor * shredPercentPerStack;
-
-            enemy.armor -= amountToShred;
-            data.totalArmorShredded += amountToShred;
-            data.stacks++;
-
-            Debug.Log($"<color=orange>Phá Giáp!</color> {enemy.name} bị trừ {amountToShred} Giáp (Stack {data.stacks}/{maxStacks}).");
-        }
-        else
-        {
-            Debug.Log($"<color=orange>Phá Giáp!</color> {enemy.name} đã max 50% trừ giáp. Làm mới thời gian!");
-        }
-
-        // 3. Khởi động lại đồng hồ 3 giây
-        data.timerCoroutine = StartCoroutine(RestoreArmorRoutine(enemy, shredDuration));
-    }
-
-    // ==========================================================
-    // COROUTINE TRẢ LẠI GIÁP CHO QUÁI
-    // ==========================================================
-    private IEnumerator RestoreArmorRoutine(Stats enemy, float duration)
-    {
-        yield return new WaitForSeconds(duration);
-
-        if (activeSunders.ContainsKey(enemy))
-        {
-            ShredData data = activeSunders[enemy];
-
-            // Trả lại đúng lượng giáp đã lấy đi
-            if (enemy != null && enemy.currentHp > 0)
+            // Legacy intent: mỗi stack = 5% "giáp gốc trước khi bị chính Sunder này trừ".
+            // Snapshot tại stack đầu để 10 stack = đúng 50% snapshot base và không destructive-mutate raw Armor.
+            data = new ShredData
             {
-                enemy.armor += data.totalArmorShredded;
-                Debug.Log($"<color=gray>{enemy.name} đã khôi phục lại {data.totalArmorShredded} Giáp.</color>");
-            }
-
-            if (data.vfxInstance != null) Destroy(data.vfxInstance);
-            activeSunders.Remove(enemy);
+                target = enemy,
+                stacks = 0,
+                armorPerStack = Mathf.Max(0f, enemy.EffectiveArmor * shredPercentPerStack),
+                handle = EffectHandle.Invalid
+            };
+            activeSunders[enemy] = data;
         }
+
+        var request = new DebuffRequest
+        {
+            effectId = "DuelistLiteSignature.Sunder",
+            duration = shredDuration,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.AdditiveStacks,
+            maxStacks = Mathf.Max(1, maxStacks),
+            potency = data.armorPerStack,
+            note = "DuelistLiteSignature Sunder: shared 3s refresh, 5% snapshot Armor per stack"
+        };
+        request.statModifiers.Add(new RuntimeStatModifierSpec(
+            RuntimeStatKey.Armor, RuntimeModifierOperation.Flat, -data.armorPerStack));
+        request.onRemove = (snapshot, reason) => HandleSunderRemoved(enemy);
+
+        EffectApplyResult result = enemy.ApplyDebuff(
+            request,
+            stats,
+            $"DuelistLiteSignature.Sunder:{GetInstanceID()}");
+
+        if (!result.Accepted)
+        {
+            if (data.stacks == 0) activeSunders.Remove(enemy);
+            return;
+        }
+
+        data.handle = result.handle;
+        data.stacks = Mathf.Min(Mathf.Max(1, maxStacks), data.stacks + 1);
+
+        if (data.vfxInstance == null && shredVfxPrefab != null)
+            data.vfxInstance = Instantiate(shredVfxPrefab, enemy.transform);
+
+        if (data.stacks < maxStacks)
+            Debug.Log($"<color=orange>Phá Giáp!</color> {enemy.name} bị Sunder (Stack {data.stacks}/{maxStacks}).");
+        else
+            Debug.Log($"<color=orange>Phá Giáp!</color> {enemy.name} đạt {maxStacks} stack; hit tiếp theo chỉ refresh {shredDuration:0.##}s.");
     }
 
-    // Đề phòng trường hợp chuyển map hoặc tháo skill đột ngột
+    private void HandleSunderRemoved(Stats enemy)
+    {
+        if (enemy == null || !activeSunders.TryGetValue(enemy, out ShredData data)) return;
+        if (data.vfxInstance != null) Destroy(data.vfxInstance);
+        activeSunders.Remove(enemy);
+    }
+
+    // Đề phòng trường hợp chuyển map hoặc tháo skill đột ngột: chỉ remove effect do skill này sở hữu.
     private void CleanUpAllShreds()
     {
-        foreach (var kvp in activeSunders)
-        {
-            if (kvp.Key != null) kvp.Key.armor += kvp.Value.totalArmorShredded;
-            if (kvp.Value.vfxInstance != null) Destroy(kvp.Value.vfxInstance);
-        }
+        if (activeSunders.Count == 0) return;
+
+        var snapshot = new List<ShredData>(activeSunders.Values);
         activeSunders.Clear();
+
+        foreach (ShredData data in snapshot)
+        {
+            if (data == null) continue;
+            if (data.vfxInstance != null) Destroy(data.vfxInstance);
+            if (data.target == null || !data.handle.IsValid) continue;
+
+            StatusEffectController controller = data.target.GetComponent<StatusEffectController>();
+            if (controller != null)
+                controller.RemoveEffect(data.handle, EffectRemoveReason.Manual);
+        }
     }
+
 }

@@ -26,6 +26,8 @@ public class WeaponAttackDispatcher : MonoBehaviour
 
     private bool     _isChanneledActive;
     private Coroutine _channeledCoroutine;
+    private IWeaponAttackHandler _activeChanneledHandler;
+    private bool _forcedBasicChannelActive;
 
     // ─────────────────────────────────────────────────────────────
     //  PROPERTIES
@@ -33,6 +35,8 @@ public class WeaponAttackDispatcher : MonoBehaviour
 
     /// <summary>True khi Staff spin đang chạy.</summary>
     public bool IsChanneledActive => _isChanneledActive;
+    public bool IsForcedBasicChanneledActive => _forcedBasicChannelActive;
+    public WeaponData CurrentWeapon => _weapon;
 
     /// <summary>
     /// True nếu vũ khí hiện tại có heavy channeled (Staff).
@@ -40,6 +44,10 @@ public class WeaponAttackDispatcher : MonoBehaviour
     /// </summary>
     public bool CurrentHeavyIsChanneled =>
         _heavyHandler != null && _heavyHandler.IsChanneled;
+
+    /// <summary>True nếu basic/normal attack hiện tại là channeled (hiện dùng cho WPN_SW_T5_02).</summary>
+    public bool CurrentNormalIsChanneled =>
+        _normalHandler != null && _normalHandler.IsChanneled;
 
     // ─────────────────────────────────────────────────────────────
     //  INIT
@@ -160,10 +168,38 @@ public class WeaponAttackDispatcher : MonoBehaviour
     public bool TryStartChanneled(WeaponAttackContext ctx)
     {
         if (!CurrentHeavyIsChanneled || _isChanneledActive) return false;
+        return StartChanneledInternal(_heavyHandler, ctx, forcedBasic: false);
+    }
 
-        _isChanneledActive  = true;
-        _channeledCoroutine = _heavyHandler.StartChanneled(ctx, this);
-        return true;
+    /// <summary>
+    /// Phase E2.1: bắt đầu NORMAL/basic channeled do Taunt cưỡng chế.
+    /// Hiện WPN_SW_T5_02 dùng ChainsawAttackHandler cho normal attack.
+    /// </summary>
+    public bool TryStartForcedBasicChanneled(WeaponAttackContext ctx)
+    {
+        if (!CurrentNormalIsChanneled || _isChanneledActive) return false;
+        return StartChanneledInternal(_normalHandler, ctx, forcedBasic: true);
+    }
+
+    private bool StartChanneledInternal(IWeaponAttackHandler handler, WeaponAttackContext ctx, bool forcedBasic)
+    {
+        if (handler == null || !handler.IsChanneled || _isChanneledActive) return false;
+        _activeChanneledHandler = handler;
+        _forcedBasicChannelActive = forcedBasic;
+        _isChanneledActive = true;
+        _channeledCoroutine = handler.StartChanneled(ctx, this);
+        if (_channeledCoroutine != null) return true;
+
+        // Defensive rollback nếu handler khai IsChanneled nhưng không trả coroutine hợp lệ.
+        _activeChanneledHandler = null;
+        _forcedBasicChannelActive = false;
+        _isChanneledActive = false;
+        return false;
+    }
+
+    public void StopForcedBasicChanneled()
+    {
+        if (_forcedBasicChannelActive) StopChanneled();
     }
 
     /// <summary>Dừng channeled attack.</summary>
@@ -171,20 +207,53 @@ public class WeaponAttackDispatcher : MonoBehaviour
     {
         if (!_isChanneledActive) return;
 
-        _heavyHandler?.StopChanneled();   // Báo handler dừng vòng lặp (set _isSpinning=false)
+        _activeChanneledHandler?.StopChanneled();
 
-        // Force-kill coroutine. Sau khi StopCoroutine, phần cleanup cuối SpinRoutine
-        // (ctx.Player.isAttacking = false) sẽ KHÔNG chạy → phải reset thủ công ở đây.
+        // Force-kill coroutine. Sau khi StopCoroutine, cleanup cuối routine không chạy nên reset tại đây.
         if (_channeledCoroutine != null) StopCoroutine(_channeledCoroutine);
         _channeledCoroutine = null;
+        _activeChanneledHandler = null;
+        _forcedBasicChannelActive = false;
         _isChanneledActive  = false;
 
-        // Reset để player di chuyển được ngay sau khi thả chuột
         if (_pc != null)
         {
             _pc.isAttacking     = false;
             _pc.isStaffSpinning = false;
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  FORCED BASIC TARGETING (TAUNT)
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Target đã nằm trong reach để bắt đầu basic attack hay chưa. Đây chỉ là CHASE GATE;
+    /// không guarantee hit. Hit thật vẫn do handler geometry/projectile/collision quyết định.
+    /// </summary>
+    public bool CanForcedBasicAttackTarget(Transform target)
+    {
+        if (_pc == null || target == null || !target.gameObject.activeInHierarchy) return false;
+
+        Stats targetStats = target.GetComponent<Stats>() ?? target.GetComponentInParent<Stats>();
+        if (targetStats != null && targetStats.isDead) return false;
+
+        string id = _weapon != null && !string.IsNullOrEmpty(_weapon.id) ? _weapon.id.Trim() : string.Empty;
+
+        // WPN_SP_T5_01: basic attack là đường xuyên 50m/bẻ góc; gameplay spec coi reach là vô hạn
+        // nên Taunt KHÔNG chase. Handler sẽ aim đoạn đầu thẳng vào Taunter rồi mới bẻ góc như bình thường.
+        if (id == "WPN_SP_T5_01") return true;
+
+        float reach = Mathf.Max(0.1f, _pc.attackRange);
+        // WPN_SW_T5_02 chainsaw hitbox dài đúng 2m phía trước. Asset hiện cũng attackRange=2,
+        // giữ explicit để behavior forced không phụ thuộc một future inspector edit vô tình lệch hitbox.
+        if (id == "WPN_SW_T5_02") reach = 2f;
+
+        Collider col = target.GetComponentInChildren<Collider>();
+        Vector3 targetPoint = col != null ? col.ClosestPoint(_pc.transform.position) : target.position;
+        Vector3 a = _pc.transform.position;
+        a.y = targetPoint.y;
+        return Vector3.Distance(a, targetPoint) <= reach;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -200,7 +269,8 @@ public class WeaponAttackDispatcher : MonoBehaviour
         System.Collections.Generic.List<Transform> hitTargets,
         LayerMask dangerLayer,
         System.Action<Stats, bool, int> applyDamage,
-        System.Action<int, bool> onHitEvent)
+        System.Action<int, bool> onHitEvent,
+        Transform forcedPrimaryTarget = null)
     {
         return new WeaponAttackContext
         {
@@ -213,6 +283,10 @@ public class WeaponAttackDispatcher : MonoBehaviour
             SwingDuration = swingDuration,
             ComboStep     = comboStep,
             IsHeavy       = isHeavy,
+            ForcedPrimaryTarget = forcedPrimaryTarget,
+            ForcedPrimaryTargetStats = forcedPrimaryTarget != null
+                ? (forcedPrimaryTarget.GetComponent<Stats>() ?? forcedPrimaryTarget.GetComponentInParent<Stats>())
+                : null,
             ApplyDamage   = applyDamage,
             OnHitEvent    = onHitEvent,
         };

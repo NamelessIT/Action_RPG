@@ -21,6 +21,7 @@ MonoBehaviour:
     30% bonusPhysicalAttack, 50% attackRange, v\xE0 mi\u1EC5n nhi\u1EC5m kh\u1ED1ng
     ch\u1EBF trong 5 gi\xE2y."
   skillType: 3
+  controlPolicy: 1
   skillPhysicalMultiplier: 0
   skillMagicMultiplier: 0
   cooldown: 16

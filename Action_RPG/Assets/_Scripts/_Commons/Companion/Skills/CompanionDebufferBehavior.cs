@@ -27,8 +27,7 @@ public class CompanionDebufferBehavior : CompanionSkillBehavior
             Stats e = NearestEnemy(transform.position, SCAN_RADIUS);
             if (e != null && CompanionWeaknessSystem.CanScan(e))
             {
-                CompanionWeaknessSystem.RevealRandom(e, 5f);
-                VisualDebugHelper.DrawSphere(e.transform.position + Vector3.up * 2f, 0.3f, Color.yellow, 0.4f);
+                CompanionWeaknessSystem.RevealRandom(e, 5f, stats);
             }
         }
     }
@@ -57,7 +56,8 @@ public class CompanionDebufferBehavior : CompanionSkillBehavior
             foreach (var e in EnemiesInRadius(pos, 1f))
             {
                 DealPhysical(e, 1.5f);
-                ReduceArmorMR(e, e.armor * 0.15f, e.magicResist * 0.15f, 5f);
+                ReduceArmorMR(e, e.EffectiveArmor * 0.15f, e.EffectiveMagicResist * 0.15f, 5f,
+                    "CompanionDebuffer.Skill.Basic.ArmorMRDown");
             }
             VisualDebugHelper.DrawSphere(pos, 1f, new Color(0.6f, 1f, 0.2f, 0.4f), 0.4f);
         }, new Color(0.6f, 1f, 0.2f, 1f));
@@ -69,8 +69,13 @@ public class CompanionDebufferBehavior : CompanionSkillBehavior
         Stats tgt = CurrentTargetStats() ?? NearestEnemy(transform.position + FacingDir() * 7f, 8f);
         if (tgt == null) return;
         DealPhysical(tgt, 2.0f);
-        ReduceArmor(tgt, tgt.armor * 0.30f, 8f);
-        DoT(tgt, stats.physicalAtk * 0.10f, 8f, false);
+        ReduceArmor(tgt, tgt.EffectiveArmor * 0.30f, 8f,
+            "CompanionDebuffer.Skill.Artillery.ArmorDown");
+        tgt.ApplyBleed(
+            stats.physicalAtk * 0.10f,
+            8f,
+            stats,
+            $"CompanionDebuffer.Skill.Artillery.Bleed:{GetInstanceID()}");
     }
 
     // Carnage: xoay cưa AoE 2f = 150% physAtk + "Rỉ Sét" (-20% sát thương & -20% Armor 5s).
@@ -93,7 +98,8 @@ public class CompanionDebufferBehavior : CompanionSkillBehavior
         {
             DealMagic(e, 0.5f);
             SlowEnemy(e, 0.30f, 1.1f);
-            if (mrReduced.Add(e)) ReduceArmorMR(e, 0f, e.magicResist * 0.40f, 4f);
+            if (mrReduced.Add(e)) ReduceArmorMR(e, 0f, e.EffectiveMagicResist * 0.40f, 4f,
+                "CompanionDebuffer.Skill.Suppression.MagicResistDown");
         }, new Color(0.3f, 1f, 0.2f, 0.35f));
     }
 
@@ -104,7 +110,7 @@ public class CompanionDebufferBehavior : CompanionSkillBehavior
         if (tgt == null) return;
         tgt.currentShield = 0f; // Shatter
         DealByAegisType(tgt, 1.5f);
-        CompanionWeaknessSystem.RevealAll(tgt, 3f);
+        CompanionWeaknessSystem.RevealAll(tgt, 3f, stats);
     }
 
     // ───────────────────────── SIGNATURE [Khởi Động Hủy Diệt] ─────────────────────────
@@ -134,7 +140,8 @@ public class CompanionDebufferBehavior : CompanionSkillBehavior
         Stats tgt = CurrentTargetStats() ?? NearestEnemy(transform.position + FacingDir() * 7f, 15f);
         if (tgt == null) return;
         DealTrue(tgt, stats.physicalAtk * 2.5f);
-        ReduceArmor(tgt, tgt.armor, 5f); // -100% armor
+        ReduceArmor(tgt, tgt.EffectiveArmor, 5f,
+            "CompanionDebuffer.Signature.Artillery.ArmorBreak"); // -100% armor
     }
 
     // Carnage: chém địch nhiều máu nhất trong 3f, 10 nhát/3s, mỗi nhát 20% physAtk + giảm vĩnh viễn 0.5% maxHp.
@@ -162,7 +169,7 @@ public class CompanionDebufferBehavior : CompanionSkillBehavior
         HashSet<Stats> marked = new HashSet<Stats>();
         SpawnGroundZone(transform.position, 4f, 6f, 1f, e =>
         {
-            if (marked.Add(e)) StartCoroutine(VulnRoutine(e, 0.20f, 6f));
+            if (marked.Add(e)) ApplyVulnerability(e, 0.20f, 6f);
         }, new Color(0.4f, 0.8f, 0.2f, 0.3f));
     }
 
@@ -181,7 +188,8 @@ public class CompanionDebufferBehavior : CompanionSkillBehavior
             foreach (var e in EnemiesInRadius(transform.position, 5f))
             {
                 DealTrue(e, stats.armor * 0.5f + stats.magicResist * 0.5f);
-                if (reduced.Add(e)) ReduceArmorMR(e, e.armor * 0.5f, e.magicResist * 0.5f, 5f);
+                if (reduced.Add(e)) ReduceArmorMR(e, e.EffectiveArmor * 0.5f, e.EffectiveMagicResist * 0.5f, 5f,
+                    "CompanionDebuffer.Signature.Aegis.ArmorMRDown");
             }
             VisualDebugHelper.DrawSphere(transform.position, 5f, new Color(1f, 0.95f, 0.4f, 0.3f), 1f);
             t += 1f;
@@ -199,22 +207,47 @@ public class CompanionDebufferBehavior : CompanionSkillBehavior
         return best;
     }
 
-    // "Rỉ Sét": -20% sát thương địch gây ra (damageOutputMultiplier) + -20% Armor.
-    private void ApplyRust(Stats e, float dur) => StartCoroutine(RustRoutine(e, dur));
-    private IEnumerator RustRoutine(Stats e, float dur)
+    // "Rỉ Sét": -20% sát thương địch gây ra + -20% Armor. Một Debuff package, cleanse/remove cùng lifecycle.
+    private void ApplyRust(Stats e, float dur)
     {
-        if (e == null) yield break;
-        float armorCut = e.armor * 0.20f;
-        e.damageOutputMultiplier -= 0.20f; e.armor -= armorCut;
-        yield return new WaitForSeconds(dur);
-        if (e != null) { e.damageOutputMultiplier += 0.20f; e.armor += armorCut; }
+        if (e == null || dur <= 0f) return;
+
+        var request = new DebuffRequest
+        {
+            effectId = "CompanionDebuffer.Skill.Carnage.Rust",
+            duration = dur,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.RefreshSameSource,
+            maxStacks = 1,
+            potency = 0.20f,
+            note = "Rust: ArmorDown 20% snapshot + DamageOutputDown 20%"
+        };
+        request.statModifiers.Add(new RuntimeStatModifierSpec(
+            RuntimeStatKey.Armor, RuntimeModifierOperation.Flat, -Mathf.Max(0f, e.EffectiveArmor * 0.20f)));
+        request.statModifiers.Add(new RuntimeStatModifierSpec(
+            RuntimeStatKey.DamageOutputMultiplier, RuntimeModifierOperation.Flat, -0.20f));
+
+        e.ApplyDebuff(request, stats, $"CompanionDebuffer.Skill.Carnage.Rust:{GetInstanceID()}");
     }
 
-    private IEnumerator VulnRoutine(Stats e, float pct, float dur)
+    private void ApplyVulnerability(Stats e, float pct, float dur)
     {
-        if (e == null) yield break;
-        e.damageTakenMultiplier += pct;
-        yield return new WaitForSeconds(dur);
-        if (e != null) e.damageTakenMultiplier -= pct;
+        if (e == null || pct <= 0f || dur <= 0f) return;
+
+        var request = new DebuffRequest
+        {
+            effectId = "CompanionDebuffer.Signature.Suppression.Vulnerability",
+            duration = dur,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.RefreshSameSource,
+            maxStacks = 1,
+            potency = pct,
+            note = "Suppression Signature: DamageTakenUp"
+        };
+        request.statModifiers.Add(new RuntimeStatModifierSpec(
+            RuntimeStatKey.DamageTakenMultiplier, RuntimeModifierOperation.Flat, pct));
+
+        e.ApplyDebuff(request, stats,
+            $"CompanionDebuffer.Signature.Suppression.Vulnerability:{GetInstanceID()}");
     }
 }

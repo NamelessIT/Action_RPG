@@ -15,7 +15,7 @@ public class TacticianSkill : SkillBehavior
     [Header("Phase 1: Mồi nhử & Khiêu khích")]
     public float tauntRadius = 15.0f;
     public float trapDuration = 5.0f;
-    public float tauntRefreshInterval = 0.3f; // chu kỳ ép lại target để giữ khiêu khích
+    public float tauntRefreshInterval = 0.3f; // chu kỳ scan để bắt enemy MỚI bước vào vùng; không refresh Taunt đã apply
     public float triggerRange = 2.0f;         // địch tới gần Companion cỡ này coi như "ra đòn"
 
     [Header("Phase 2: Player phản đòn")]
@@ -34,7 +34,9 @@ public class TacticianSkill : SkillBehavior
 
     private bool isTrapTriggered = false;
     private Stats triggeredAttacker;
-    private readonly List<EnemyAI> tauntedEnemies = new List<EnemyAI>();
+    private readonly List<EnemyAI> tauntedEnemies = new List<EnemyAI>(); // accepted true-Taunt only
+    private readonly HashSet<EnemyAI> tauntAttemptedEnemies = new HashSet<EnemyAI>();
+    private readonly Dictionary<EnemyAI, EffectHandle> tauntHandles = new Dictionary<EnemyAI, EffectHandle>();
 
     private float _effStunDur;
     private float _effDmgMult;
@@ -46,7 +48,15 @@ public class TacticianSkill : SkillBehavior
     }
 
     protected override void OnEquip() { }
-    protected override void OnUnequip() { CleanUpTrap(true); }
+    protected override void OnUnequip()
+    {
+        if (trapCoroutine != null)
+        {
+            StopCoroutine(trapCoroutine);
+            trapCoroutine = null;
+        }
+        CleanUpTrap(true);
+    }
 
     public override bool Use()
     {
@@ -70,7 +80,14 @@ public class TacticianSkill : SkillBehavior
 
         companionStats = companion.GetComponent<Stats>();
 
-        if (trapCoroutine != null) StopCoroutine(trapCoroutine);
+        // Defensive lifecycle: nếu content/runtime gọi Use lại khi trap cũ còn sống,
+        // phải gỡ interceptor + đúng EffectHandle của Taunt cũ trước khi tạo trap mới.
+        if (trapCoroutine != null)
+        {
+            StopCoroutine(trapCoroutine);
+            trapCoroutine = null;
+            CleanUpTrap(true);
+        }
         trapCoroutine = StartCoroutine(TacticianRoutine());
         return true;
     }
@@ -80,10 +97,12 @@ public class TacticianSkill : SkillBehavior
         isTrapTriggered = false;
         triggeredAttacker = null;
         tauntedEnemies.Clear();
+        tauntAttemptedEnemies.Clear();
+        tauntHandles.Clear();
 
         // ---------- 1. GẮN MỒI NHỬ LÊN COMPANION ----------
         Debug.Log("<color=cyan>TACTICIAN: GẮN MỒI NHỬ LÊN COMPANION!</color>");
-        if (baitVfxPrefab) Instantiate(baitVfxPrefab, companion.transform);
+        if (baitVfxPrefab) debugBaitAura = Instantiate(baitVfxPrefab, companion.transform);
         else { debugBaitAura = MageVfxHelper.AttachSphere(companion.transform, 1.2f, new Color(1f, 0.85f, 0.1f, 0.35f)); debugBaitAura.transform.localPosition = Vector3.up; }
 
         // ---------- 2. ĐẶT CỔNG CHẶN SÁT THƯƠNG TRÊN COMPANION ----------
@@ -92,55 +111,91 @@ public class TacticianSkill : SkillBehavior
         // ---------- 3. KHIÊU KHÍCH + GIỮ TARGET TRÊN COMPANION ----------
         float timer = 0f;
         float refresh = 0f;
-        ForceTauntToCompanion();
+        ForceTauntToCompanion(trapDuration);
         while (timer < trapDuration && !isTrapTriggered)
         {
             timer += Time.deltaTime;
             refresh += Time.deltaTime;
-            if (refresh >= tauntRefreshInterval) { refresh = 0f; ForceTauntToCompanion(); }
+            if (refresh >= tauntRefreshInterval)
+            {
+                refresh = 0f;
+                ForceTauntToCompanion(Mathf.Max(0.1f, trapDuration - timer));
+            }
             CheckProximityTrigger(); // địch áp sát Companion → kích hoạt phản đòn
             yield return null;
         }
 
         // ---------- 4. KẾT QUẢ ----------
         if (isTrapTriggered && triggeredAttacker != null)
-        {
             ExecutePlayerCounter(triggeredAttacker);
+
+        // Gỡ đúng Taunt của Intervention trước. Sau đó mới làm legacy target redirect nếu target
+        // thực sự đã trở về normal control; không được stomp một Fear/Taunt khác đang còn hiệu lực.
+        CleanUpTrap(false);
+
+        if (isTrapTriggered && triggeredAttacker != null)
+        {
+            EnemyAI triggeredAI = triggeredAttacker.GetComponent<EnemyAI>() ?? triggeredAttacker.GetComponentInParent<EnemyAI>();
+            RedirectToPlayerIfUnforced(triggeredAI);
         }
         else
         {
-            // Hết giờ không ai ra đòn → trả target về Player.
             RevertTauntToPlayer();
             Debug.Log("<color=gray>Tactician: Hết khiêu khích, địch quay về Player.</color>");
         }
 
-        CleanUpTrap(false);
+        trapCoroutine = null;
     }
 
-    // Ép mọi kẻ địch trong tầm nhắm Companion (đánh thức AI + ép giữ mục tiêu).
-    private void ForceTauntToCompanion()
+    // Phase E: scan lặp chỉ để bắt enemy MỚI bước vào vùng. Mỗi enemy chỉ apply Taunt 1 lần,
+    // tránh refresh liên tục làm vô hiệu resistanceEffect.
+    private void ForceTauntToCompanion(float remainingTrapTime)
     {
+        if (companionStats == null || companionStats.isDead) return;
+
         Collider[] hits = Physics.OverlapSphere(transform.position, tauntRadius, player.dangerLayer);
         HashSet<EnemyAI> seen = new HashSet<EnemyAI>();
         foreach (var hit in hits)
         {
             EnemyAI ai = hit.GetComponentInParent<EnemyAI>();
-            if (ai == null || !seen.Add(ai)) continue;
+            if (ai == null || !seen.Add(ai) || tauntAttemptedEnemies.Contains(ai)) continue;
+            tauntAttemptedEnemies.Add(ai);
 
-            ai.OnDamageTaken(companion.transform); // đánh thức AI + chuyển aggro sang Companion
-            ai.nearestTarget = companion.transform; // ép giữ mục tiêu (chống ScanForTarget đổi lại)
-            if (!tauntedEnemies.Contains(ai)) tauntedEnemies.Add(ai);
+            Stats enemyStats = ai.GetComponent<Stats>() ?? ai.GetComponentInParent<Stats>();
+            if (enemyStats == null || enemyStats.isDead) continue;
+
+            EffectApplyResult result = enemyStats.ApplyEffectWithResult(
+                new CombatEffectInfo(CombatEffectType.Taunt, Mathf.Max(0.1f, remainingTrapTime))
+                {
+                    effectId = "Tactician.Intervention.Taunt",
+                    impactLevel = 0,
+                    stackPolicy = EffectStackPolicy.RefreshSameSource,
+                    interruptCurrentAction = true,
+                    note = "Tactician Intervention"
+                },
+                companionStats);
+
+            if (!result.Accepted) continue;
+            tauntedEnemies.Add(ai);
+            tauntHandles[ai] = result.handle;
         }
     }
 
     private void RevertTauntToPlayer()
     {
         foreach (var ai in tauntedEnemies)
-        {
-            if (ai == null) continue;
-            ai.OnDamageTaken(player.transform);
-            ai.nearestTarget = player.transform;
-        }
+            RedirectToPlayerIfUnforced(ai);
+    }
+
+    private void RedirectToPlayerIfUnforced(EnemyAI ai)
+    {
+        if (ai == null || player == null) return;
+        Stats es = ai.GetComponent<Stats>() ?? ai.GetComponentInParent<Stats>();
+        if (es == null || es.isDead) return;
+        if (ForcedControlRunner.IsForcedMode(es.ControlState.mode)) return;
+
+        ai.OnDamageTaken(player.transform);
+        ai.nearestTarget = player.transform;
     }
 
     // Nếu có kẻ địch bị khiêu khích áp sát Companion → coi như nó "ra đòn", kích hoạt phản đòn.
@@ -152,6 +207,9 @@ public class TacticianSkill : SkillBehavior
             if (ai == null) continue;
             Stats es = ai.GetComponent<Stats>() ?? ai.GetComponentInParent<Stats>();
             if (es == null || es.currentHp <= 0) continue;
+            if (!tauntHandles.TryGetValue(ai, out EffectHandle handle)
+                || es.StatusEffects == null
+                || !es.StatusEffects.IsEffectActive(handle)) continue;
 
             if (Vector3.Distance(ai.transform.position, companion.transform.position) <= triggerRange)
             {
@@ -211,21 +269,37 @@ public class TacticianSkill : SkillBehavior
         EnemyCombat enemyCombat = enemy.GetComponent<EnemyCombat>() ?? enemy.GetComponentInParent<EnemyCombat>();
         if (enemyCombat != null) enemyCombat.CancelAttack();
 
-        // Kẻ địch chuyển sang nhắm Player.
-        EnemyAI enemyAI = enemy.GetComponent<EnemyAI>() ?? enemy.GetComponentInParent<EnemyAI>();
-        if (enemyAI != null) enemyAI.nearestTarget = player.transform;
-
+        // Target redirect sang Player được thực hiện SAU khi gỡ Taunt của Intervention,
+        // để không ghi đè một forced-control khác đang chiếm quyền.
         Debug.Log("<color=red>TACTICIAN: Player phản đòn 400% + choáng!</color>");
     }
 
     private void CleanUpTrap(bool revertOnForce)
     {
-        if (debugBaitAura) Destroy(debugBaitAura);
+        if (debugBaitAura)
+        {
+            Destroy(debugBaitAura);
+            debugBaitAura = null;
+        }
 
         if (companionStats != null && companionStats.damageInterceptor == HandleCompanionIntercept)
             companionStats.damageInterceptor = null;
 
+        ReleaseAllTaunts();
         if (revertOnForce) RevertTauntToPlayer();
+    }
+
+    private void ReleaseAllTaunts()
+    {
+        foreach (var pair in tauntHandles)
+        {
+            EnemyAI ai = pair.Key;
+            if (ai == null) continue;
+            Stats es = ai.GetComponent<Stats>() ?? ai.GetComponentInParent<Stats>();
+            if (es != null && es.StatusEffects != null)
+                es.StatusEffects.RemoveEffect(pair.Value, EffectRemoveReason.Manual);
+        }
+        tauntHandles.Clear();
     }
 
     void OnDrawGizmosSelected()

@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -17,6 +17,7 @@ public class CompanionDamageDealerBehavior : CompanionSkillBehavior
     // ── Passive [Tích Tụ Động Năng]: đòn thứ 3 +50% dmg + bỏ qua 50% Armor/MR ──
     // Xấp xỉ: cứ đòn thứ 3 trúng địch → cộng thêm 1 phát = 50% physAtk dạng TRUE (mô phỏng "bỏ giáp").
     private int _hitCount = 0;
+    private int _artilleryVulnerabilitySequence = 0;
     protected override void OnPassiveEnable()  { if (stats != null) stats.OnHitEnemy += OnCompHit; }
     protected override void OnPassiveDisable() { if (stats != null) stats.OnHitEnemy -= OnCompHit; }
     private void OnCompHit(Stats v, float t, bool crit)
@@ -53,7 +54,11 @@ public class CompanionDamageDealerBehavior : CompanionSkillBehavior
         Stats tgt = CurrentTargetStats() ?? NearestEnemy(transform.position + FacingDir() * 7f, 15f);
         if (tgt == null) return;
         DealPhysical(tgt, 3.0f);
-        StartCoroutine(VulnRoutine(tgt, 0.20f, 5f));
+        string sourceKey = $"CompanionDamageDealer.Skill.Artillery.Vulnerability:{GetInstanceID()}:{++_artilleryVulnerabilitySequence}";
+        tgt.ApplyDamageTakenUp(
+            "CompanionDamageDealer.Skill.Artillery.Vulnerability", 0.20f, 5f, stats, sourceKey,
+            EffectStackPolicy.IndependentPerSource, 1, 0.20f,
+            "Damage Dealer Artillery +20% damage taken / independent 5s");
     }
 
     // Carnage: xoay vũ khí r=2f 3s, 50% physAtk mỗi 0.5s; Companion hồi 20% sát thương gây ra (xấp xỉ).
@@ -226,11 +231,4 @@ public class CompanionDamageDealerBehavior : CompanionSkillBehavior
         return best;
     }
 
-    private IEnumerator VulnRoutine(Stats e, float pct, float dur)
-    {
-        if (e == null) yield break;
-        e.damageTakenMultiplier += pct;
-        yield return new WaitForSeconds(dur);
-        if (e != null) e.damageTakenMultiplier -= pct;
-    }
 }

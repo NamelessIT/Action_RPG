@@ -108,6 +108,8 @@ public class SkillTreeController : MonoBehaviour
     private void Awake()
     {
         MakeDetailPanelNonBlocking();
+        ResolveRefundButtonReference();
+        ApplyCompactRuntimeLayoutProfile();
 
         // Sap lai bo cuc: Icon/NameText/DescText/TypeText deu dang nam o (0,0) tuc chong
         // dung len nhau giua panel, va BTN_Refund cung o (0,0) -> chinh la chu "Button" troi
@@ -148,6 +150,45 @@ public class SkillTreeController : MonoBehaviour
         // Tắt raycastTarget cho toàn bộ Graphic con (Image/Text) để panel "trong suốt" với chuột.
         foreach (var g in _detailPanel.GetComponentsInChildren<UnityEngine.UI.Graphic>(true))
             g.raycastTarget = false;
+    }
+
+    /// <summary>
+    /// BTN_Refund trong Canvas prefab hiện không được kéo vào field serialize. LayoutRepair trước đây
+    /// vẫn tìm được nút để đặt vị trí/label, nhưng Start() không bind onClick vì _refundButton == null.
+    /// Resolve theo tên một lần ở runtime để visual và behavior dùng cùng đúng Button.
+    /// </summary>
+    private void ResolveRefundButtonReference()
+    {
+        if (_refundButton != null || _skillTreePanel == null) return;
+
+        foreach (var button in _skillTreePanel.GetComponentsInChildren<Button>(true))
+        {
+            if (button != null && button.gameObject.name == "BTN_Refund")
+            {
+                _refundButton = button;
+                break;
+            }
+        }
+
+        if (_refundButton == null)
+            Debug.LogWarning("[SkillTreeController] Không tìm thấy BTN_Refund để bind OnRefundClicked().");
+    }
+
+    /// <summary>
+    /// Giữ nguyên topology hiện tại (T1 dọc, 4 class columns, T4 grid 3x5) nhưng chặn các giá trị
+    /// serialized cũ quá lớn làm cây dài/rộng gấp nhiều lần cần thiết. Chỉ compact spacing/padding;
+    /// không đổi node order, dependency hay cấu trúc tier.
+    /// </summary>
+    private void ApplyCompactRuntimeLayoutProfile()
+    {
+        _gapAfterCommonNodes  = Mathf.Min(_gapAfterCommonNodes, 95f);
+        _nodeSpacingY         = Mathf.Min(_nodeSpacingY, 70f);
+        _gapBetweenClassTiers = Mathf.Min(_gapBetweenClassTiers, 70f);
+        _classTierSpacingY    = Mathf.Min(_classTierSpacingY, 350f);
+        _classColumnSpacingX  = Mathf.Min(_classColumnSpacingX, 240f);
+        _t4SubColSpacingX     = Mathf.Min(_t4SubColSpacingX, 62f);
+        _contentPadding.x     = Mathf.Min(_contentPadding.x, 90f);
+        _contentPadding.y     = Mathf.Min(_contentPadding.y, 90f);
     }
 
     private void Start()

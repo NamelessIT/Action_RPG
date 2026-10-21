@@ -522,11 +522,59 @@ public class SkillTreeRuntime : MonoBehaviour
     private ClassCoreMechanicBase FindCoreMechanicHandler(string className)
     {
         if (string.IsNullOrEmpty(className)) return null;
+
+        // CoreMechanic handlers are intentionally resolved from the Player root.
+        // The current Player prefab does not serialize these handler components, so relying only on
+        // GetComponents<ClassCoreMechanicBase>() makes every T4 Core Mechanic silently no-op.
+        // Resolve an existing handler first; otherwise lazily attach the exact class handler when
+        // the Skill Tree actually needs it. This keeps the prefab lean and also works for saved
+        // trees being re-applied through LoadAndReapply().
         var handlers = GetComponents<ClassCoreMechanicBase>();
         foreach (var h in handlers)
-            if (string.Equals(h.ClassName, className, System.StringComparison.OrdinalIgnoreCase))
+        {
+            if (h != null && string.Equals(h.ClassName, className, System.StringComparison.OrdinalIgnoreCase))
                 return h;
-        return null;
+        }
+
+        ClassCoreMechanicBase created = null;
+        switch (className.Trim().ToLowerInvariant())
+        {
+            case "warrior":
+                created = gameObject.AddComponent<WarriorCoreMechanic>();
+                break;
+            case "rogue":
+                created = gameObject.AddComponent<RogueCoreMechanic>();
+                break;
+            case "duelist":
+                created = gameObject.AddComponent<DuelistCoreMechanic>();
+                break;
+            case "vanguard":
+                created = gameObject.AddComponent<VanguardCoreMechanic>();
+                break;
+            case "mage":
+                created = gameObject.AddComponent<MageCoreMechanic>();
+                break;
+            case "battlemage":
+                created = gameObject.AddComponent<BattleMageCoreMechanic>();
+                break;
+            case "bloodreaver":
+                created = gameObject.AddComponent<BloodReaverCoreMechanic>();
+                break;
+            case "catalyst":
+                created = gameObject.AddComponent<CatalystCoreMechanic>();
+                break;
+        }
+
+        if (created != null)
+        {
+            Debug.Log($"[SkillTreeRuntime] Auto-attached {created.GetType().Name} for class '{className}'.");
+        }
+        else
+        {
+            Debug.LogWarning($"[SkillTreeRuntime] No CoreMechanic handler mapping for class '{className}'.");
+        }
+
+        return created;
     }
 
     // ─────────────────────────────────────────────────────────────

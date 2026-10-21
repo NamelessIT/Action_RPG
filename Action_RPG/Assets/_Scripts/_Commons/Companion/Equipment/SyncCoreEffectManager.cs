@@ -20,6 +20,8 @@ public class SyncCoreEffectManager : CompanionEffectManagerBase
 
     private float _cd1;
     private float _tetherTick;
+    // G9A fix: refresh the 1s Bleed before it expires; the managed DoT still ticks every 1s.
+    private const float SYNC_T4_04_BLEED_REFRESH_INTERVAL = 0.5f;
     private readonly Dictionary<Stats, float> _markUntil = new Dictionary<Stats, float>();        // SYNC_T3_01
     private readonly Dictionary<Stats, float> _playerHitTime = new Dictionary<Stats, float>();     // SYNC_T5_02
 
@@ -86,11 +88,11 @@ public class SyncCoreEffectManager : CompanionEffectManagerBase
             {
                 _tetherTick += Time.deltaTime;
                 VisualDebugHelper.DrawSphere((playerTf.position + transform.position) * 0.5f, 0.3f, new Color(0.2f, 0.8f, 1f, 0.3f), 0.1f);
-                if (_tetherTick >= 1f)
+                if (_tetherTick >= SYNC_T4_04_BLEED_REFRESH_INTERVAL)
                 {
-                    _tetherTick = 0f;
+                    _tetherTick -= SYNC_T4_04_BLEED_REFRESH_INTERVAL;
                     foreach (var e in EnemiesOnTether(playerTf.position, transform.position, 1f))
-                        e.ApplyBleed(stats.physicalAtk * 0.10f, 1f);
+                        e.ApplyBleed(stats.physicalAtk * 0.10f, 1f, stats, $"SYNC_T4_04.Bleed:{GetInstanceID()}");
                 }
             }
         }

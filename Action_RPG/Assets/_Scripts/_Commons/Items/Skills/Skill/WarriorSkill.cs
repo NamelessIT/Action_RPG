@@ -19,8 +19,9 @@ public class WarriorSkill : SkillBehavior
     private Rigidbody rb;
     private EquipmentManager equipmentManager;
 
-    // Dictionary để quản lý việc giảm giáp (Theo code của bạn)
-    private Dictionary<Stats, Coroutine> activeDefReductionCoroutines = new Dictionary<Stats, Coroutine>();
+    // F2-09: registry owns ArmorBreak lifecycle; dictionary only tracks this Skill's active handle per target
+    // to preserve legacy no-stack / no-refresh behavior and immediate OnUnequip cleanup.
+    private readonly Dictionary<Stats, EffectHandle> activeArmorBreaks = new Dictionary<Stats, EffectHandle>();
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
@@ -31,29 +32,19 @@ public class WarriorSkill : SkillBehavior
 
     protected override void OnEquip()
     {
-        // Khởi tạo lại list nếu cần
-        activeDefReductionCoroutines.Clear();
+        activeArmorBreaks.Clear();
     }
 
     protected override void OnUnequip()
     {
-        // [QUAN TRỌNG] Khi tháo skill, phải trả lại giáp ngay cho những đứa đang bị trừ
-        // Nếu không chúng sẽ bị yếu vĩnh viễn
-        List<Stats> keys = new List<Stats>(activeDefReductionCoroutines.Keys);
-        foreach (Stats target in keys)
+        // Preserve legacy behavior: unequip immediately removes ArmorBreaks created by this Skill.
+        var snapshot = new List<KeyValuePair<Stats, EffectHandle>>(activeArmorBreaks);
+        activeArmorBreaks.Clear();
+        foreach (var kv in snapshot)
         {
-            if (target != null && activeDefReductionCoroutines.ContainsKey(target))
-            {
-                // Dừng coroutine đang chạy
-                StopCoroutine(activeDefReductionCoroutines[target]);
-
-                // Vì không lưu originalArmor vào Dictionary nên ta không biết chính xác số cũ là bao nhiêu
-                // Nhưng ta biết công thức giảm là: current = original * (1 - percent)
-                // => original = current / (1 - percent)
-                target.armor = target.armor / (1f - armorBreakPercent);
-            }
+            if (kv.Key != null && kv.Value.IsValid)
+                kv.Key.StatusEffects.RemoveEffect(kv.Value, EffectRemoveReason.Manual);
         }
-        activeDefReductionCoroutines.Clear();
     }
 
     public override bool Use()
@@ -118,32 +109,36 @@ public class WarriorSkill : SkillBehavior
         ApplyDefenseReduction(enemyStats, armorBreakPercent, armorBreakDuration);
     }
 
-    // --- LOGIC CỦA BẠN (Đã tích hợp) ---
+    // --- F2-09: MANAGED ARMOR BREAK ---
     private void ApplyDefenseReduction(Stats target, float reductionPercent, float duration)
     {
-        // Chỉ trừ nếu chưa bị trừ (để tránh cộng dồn sai)
-        if (!activeDefReductionCoroutines.ContainsKey(target))
+        if (target == null || target.currentHp <= 0) return;
+
+        if (activeArmorBreaks.TryGetValue(target, out EffectHandle activeHandle))
         {
-            float originalArmor = target.armor;
-            target.armor *= (1f - reductionPercent);
-
-            Debug.Log($"<color=orange>{target.name} bị Phá Giáp! Armor: {originalArmor} -> {target.armor}</color>");
-
-            Coroutine coro = StartCoroutine(RevertDefenseAfterDelay(target, originalArmor, duration));
-            activeDefReductionCoroutines[target] = coro;
+            // Legacy semantics: while active, another Slam does NOT stack and does NOT refresh.
+            if (activeHandle.IsValid && target.StatusEffects.IsEffectActive(activeHandle)) return;
+            activeArmorBreaks.Remove(target);
         }
-    }
 
-    private IEnumerator RevertDefenseAfterDelay(Stats target, float originalValue, float delay)
-    {
-        yield return new WaitForSeconds(delay);
+        float armorAmount = Mathf.Max(0f, target.EffectiveArmor * Mathf.Clamp01(reductionPercent));
+        if (armorAmount <= 0f) return;
 
-        // Kiểm tra điều kiện an toàn trước khi trả
-        if (target != null && activeDefReductionCoroutines.ContainsKey(target))
+        const string effectId = "WarriorSkill.Slam.ArmorBreak";
+        string sourceKey = $"{effectId}:{GetInstanceID()}";
+        EffectApplyResult result = target.ApplyArmorMagicResistDown(
+            effectId, armorAmount, 0f, duration, stats, sourceKey,
+            EffectStackPolicy.RefreshSameSource, 1, reductionPercent,
+            "Warrior Slam ArmorBreak 50% / legacy no-stack no-refresh",
+            (snapshot, reason) =>
+            {
+                if (target != null) activeArmorBreaks.Remove(target);
+            });
+
+        if (result.Accepted)
         {
-            target.armor = originalValue;
-            activeDefReductionCoroutines.Remove(target);
-            Debug.Log($"[Warrior] 🛡️ Defense reverted for {target.name}");
+            activeArmorBreaks[target] = result.handle;
+            Debug.Log($"<color=orange>{target.name} bị Phá Giáp! Effective Armor -{armorAmount:0.##} trong {duration:0.##}s.</color>");
         }
     }
     // -----------------------------------

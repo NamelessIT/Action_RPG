@@ -108,8 +108,8 @@ public class EnemyStats : Stats
 
     void SetupResistances()
     {
-        // resistanceEffect giảm THỜI LƯỢNG Stun/Root/Silence/Slow; knockbackResistance chỉ giảm lực đẩy.
-        // rank1: resistanceEffect=0.5 để BẢO TOÀN balance Stun cũ (xưa Stun dùng knockbackResistance=0.5).
+        // resistanceEffect giảm THỜI LƯỢNG CC cleanseable; knockbackResistance chỉ giảm lực Knockback.
+        // Lưu ý rule Super Armor mới: superArmorLevel=0 không block CC nào; data rank/prefab sẽ được audit ở phase migration content.
         // Lưu ý: nay rank1 cũng giảm 50% Root/Silence/Slow (đồng nhất qua resistanceEffect).
         if (monsterRank == 0) { isSuperArmor = false; knockbackResistance = 0.1f; resistanceEffect = 0f; }
         else if (monsterRank == 1) { isSuperArmor = true; superArmorLevel = 0; knockbackResistance = 0.5f; resistanceEffect = 0.5f; }

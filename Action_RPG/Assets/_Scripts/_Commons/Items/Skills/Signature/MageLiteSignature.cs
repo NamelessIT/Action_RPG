@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -30,6 +30,7 @@ public class MageLiteSignature : SkillBehavior
     public GameObject elementalBeamVfxPrefab; // Hiệu ứng 4 chùm tia bắn ra
 
     private EquipmentManager equipmentManager;
+    private int _sunderSequence = 0;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
@@ -89,13 +90,14 @@ public class MageLiteSignature : SkillBehavior
                 // --- Gây 4 loại Debuff Nguyên Tố ---
                 // A. Lửa (Thiêu Đốt - Sử dụng hàm thiêu đốt chuẩn)
                 float burnDps = stats.magicAtk * burnDamagePercent;
-                enemyStats.ApplyBurn(burnDps, burnDuration);
+                enemyStats.ApplyBurn(burnDps, burnDuration, stats);
 
                 // B. Băng (Làm Chậm) — qua effect system (strongest-wins, expiry-safe).
                 enemyStats.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, chillDuration) { magnitude = slowPercent }, stats);
 
-                // C. Đất (Giảm song thủ: Armor & MagicResist)
-                StartCoroutine(TempSunderRoutine(enemyStats, defReductionPercent, sunderDuration));
+                // C. Đất (Giảm song thủ: Armor & MagicResist) — managed Debuff.
+                // Legacy coroutine có thể overlap độc lập; snapshot amount trên stat hiệu lực tại lúc apply.
+                ApplyManagedSunder(enemyStats);
             }
         }
 
@@ -112,24 +114,20 @@ public class MageLiteSignature : SkillBehavior
     // ==========================================================
 
 
-    private IEnumerator TempSunderRoutine(Stats enemy, float percent, float duration)
+    private void ApplyManagedSunder(Stats enemy)
     {
-        if (enemy != null && enemy.currentHp > 0)
-        {
-            float armorToReduce = enemy.armor * percent;
-            float mrToReduce = enemy.magicResist * percent;
+        if (enemy == null || enemy.currentHp <= 0) return;
 
-            enemy.armor -= armorToReduce;
-            enemy.magicResist -= mrToReduce;
+        float armorToReduce = Mathf.Max(0f, enemy.EffectiveArmor * defReductionPercent);
+        float mrToReduce = Mathf.Max(0f, enemy.EffectiveMagicResist * defReductionPercent);
+        if (armorToReduce <= 0f && mrToReduce <= 0f) return;
 
-            yield return new WaitForSeconds(duration);
-
-            if (enemy != null && enemy.currentHp > 0)
-            {
-                enemy.armor += armorToReduce;
-                enemy.magicResist += mrToReduce;
-            }
-        }
+        const string effectId = "MageLiteSignature.ElementalConvergence.Sunder";
+        string sourceKey = $"{effectId}:{GetInstanceID()}:{++_sunderSequence}";
+        enemy.ApplyArmorMagicResistDown(
+            effectId, armorToReduce, mrToReduce, sunderDuration, stats, sourceKey,
+            EffectStackPolicy.IndependentPerSource, 1, defReductionPercent,
+            "Mage Lite Elemental Convergence Sunder 25% Armor/MR independent snapshot");
     }
 
     private IEnumerator SelfHasteRoutine(float percent, float duration)
@@ -137,15 +135,24 @@ public class MageLiteSignature : SkillBehavior
         stats.bonusMoveSpeed += percent;
         stats.bonusAttackSpeed += percent;
 
-        // Gọi hàm cập nhật lại chỉ số di chuyển
-        if (stats is AllyStats ally) ally.CalculateMoveSpeedOnly();
+        // Recalculate cả movement lẫn combat stats để attackSpeed compatibility field
+        // không che mất bonusAttackSpeed mới trong EffectiveAttackSpeed.
+        if (stats is AllyStats ally)
+        {
+            ally.CalculateMoveSpeedOnly();
+            ally.CalculateCombatStatsOnly();
+        }
 
         yield return new WaitForSeconds(duration);
 
         stats.bonusMoveSpeed -= percent;
         stats.bonusAttackSpeed -= percent;
 
-        if (stats is AllyStats allyRevert) allyRevert.CalculateMoveSpeedOnly();
+        if (stats is AllyStats allyRevert)
+        {
+            allyRevert.CalculateMoveSpeedOnly();
+            allyRevert.CalculateCombatStatsOnly();
+        }
     }
 
     // ==========================================================
