@@ -1,0 +1,187 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+/// <summary>
+/// Lớp nền dùng chung cho 3 EffectManager của Companion (Protocol / Matrix / Sync Core).
+/// Cung cấp tham chiếu (Companion stats / AI / Equip / Player) + các tiện ích sát thương & khống chế,
+/// dùng lại đúng pipeline của CompanionSkillBehavior (DamageHelper.ApplyStandardDamage + CompanionCombat).
+///
+/// GHI CHÚ THIẾT KẾ (theo 3 file "Tổng hợp Effect ..."):
+///  • Chỉ xử lý module Rarity 3+ (CompanionModuleData.HasEffect).
+///  • True Damage không bị giảm trừ và không ăn modifier (Global Rule 4).
+///  • "Mất máu" = chạm currentHp (Global Rule 3) — các effect liên quan dùng OnDamageTakenHp.
+/// </summary>
+[RequireComponent(typeof(AllyStats))]
+public abstract class CompanionEffectManagerBase : MonoBehaviour
+{
+    protected AllyStats stats;                       // stats của Companion
+    protected CompanionAI ai;                        // để biết currentTarget
+    protected CompanionEquipmentManager equip;       // để biết Protocol atkType
+
+    protected Transform playerTf;
+    protected AllyStats playerStats;
+    protected PlayerController playerController;
+
+    protected virtual void Awake()
+    {
+        stats = GetComponent<AllyStats>();
+        ai = GetComponent<CompanionAI>();
+        equip = GetComponent<CompanionEquipmentManager>();
+        ResolvePlayer();
+    }
+
+    protected void ResolvePlayer()
+    {
+        GameObject p = GameObject.FindGameObjectWithTag("Player");
+        if (p == null) return;
+        playerTf = p.transform;
+        playerStats = p.GetComponent<AllyStats>();
+        playerController = p.GetComponent<PlayerController>();
+    }
+
+    // ───────────────────────── TÌM ĐỊCH ─────────────────────────
+    protected int EnemyMask()
+    {
+        var pc = playerController != null ? playerController : (playerTf != null ? playerTf.GetComponent<PlayerController>() : null);
+        return pc != null ? pc.dangerLayer.value : ~0;
+    }
+
+    protected List<Stats> EnemiesInRadius(Vector3 center, float radius)
+    {
+        var list = new List<Stats>();
+        var seen = new HashSet<Stats>();
+        foreach (var h in Physics.OverlapSphere(center, radius, EnemyMask()))
+        {
+            Stats e = CompanionCombat.GetEnemy(h);
+            if (e != null && e.currentHp > 0 && seen.Add(e)) list.Add(e);
+        }
+        return list;
+    }
+
+    protected Stats NearestEnemy(Vector3 center, float radius)
+    {
+        Stats best = null; float min = float.MaxValue;
+        foreach (var e in EnemiesInRadius(center, radius))
+        {
+            float d = Vector3.SqrMagnitude(e.transform.position - center);
+            if (d < min) { min = d; best = e; }
+        }
+        return best;
+    }
+
+    protected Stats HighestHpEnemy(Vector3 center, float radius)
+    {
+        Stats best = null; float max = -1f;
+        foreach (var e in EnemiesInRadius(center, radius))
+            if (e.currentHp > max) { max = e.currentHp; best = e; }
+        return best;
+    }
+
+    protected Stats CurrentTargetStats()
+    {
+        if (ai != null && ai.currentTarget != null)
+        {
+            Stats s = ai.currentTarget.GetComponentInParent<Stats>();
+            if (s != null && s.currentHp > 0) return s;
+        }
+        return null;
+    }
+
+    // ───────────────────────── SÁT THƯƠNG ─────────────────────────
+    protected void DealPhysical(Stats target, float mult, int impact = 0, bool stun = false, float stunTime = 0f, bool knockback = false, float kbForce = 0f)
+    {
+        if (target == null || target.currentHp <= 0) return;
+        DamageHelper.ApplyStandardDamage(stats, target, transform, mult, null, null, impact, stun, stunTime, knockback, kbForce, sourceType: DamageSourceType.Ranged);
+    }
+
+    protected void DealMagic(Stats target, float mult, int impact = 0, bool stun = false, float stunTime = 0f, bool knockback = false, float kbForce = 0f)
+    {
+        if (target == null || target.currentHp <= 0) return;
+        DamageHelper.ApplyStandardDamage(stats, target, transform, mult, null, CompanionCombat.MagicProxy, impact, stun, stunTime, knockback, kbForce, sourceType: DamageSourceType.Ranged);
+    }
+
+    /// <summary>Sát thương theo atkType của Protocol đang trang bị (mặc định vật lý).</summary>
+    protected void DealByProtocol(Stats target, float mult, int impact = 0, bool stun = false, float stunTime = 0f)
+    {
+        bool magic = equip != null && equip.Protocol != null && equip.Protocol.atkType == CompanionAtkType.Magic;
+        if (magic) DealMagic(target, mult, impact, stun, stunTime);
+        else DealPhysical(target, mult, impact, stun, stunTime);
+    }
+
+    protected void DealTrue(Stats target, float amount, bool stun = false, float stunTime = 0f)
+    {
+        if (target == null || target.currentHp <= 0 || amount <= 0f) return;
+        var info = new DamageInfo { trueDamage = amount, attacker = stats, sourcePosition = transform.position, sourceType = DamageSourceType.Other };
+        if (stun && stunTime > 0f)
+            info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, stunTime) { sourcePosition = transform.position });
+        target.TakeDamage(info);
+    }
+
+    // ───────────────────────── KHỐNG CHẾ / DEBUFF ─────────────────────────
+    protected void StunEnemy(Stats e, float dur, int impact = 0)
+    {
+        if (e == null || e.currentHp <= 0) return;
+        var info = new DamageInfo { attacker = stats, sourcePosition = transform.position, impactLevel = impact };
+        info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, dur) { impactLevel = impact, sourcePosition = transform.position });
+        e.TakeDamage(info);
+    }
+
+    protected void SlowEnemy(Stats target, float percent, float dur)
+    {
+        if (target == null || percent <= 0f) return;
+        // [SLOW] qua effect system (strongest-wins, expiry-safe) — KHÔNG mutate baseMoveSpeed nữa.
+        target.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, dur) { magnitude = percent }, stats);
+    }
+
+    /// <summary>
+    /// Aggro redirect: chuyển TARGET NỀN của Enemy sang Companion. Đây KHÔNG phải Taunt CC:
+    /// không chịu resistanceEffect / CC Immunity / Super Armor và không có CC duration.
+    /// Nếu Enemy đang bị Taunt/Fear thật, forced-control vẫn chiếm quyền cho tới khi CC đó kết thúc.
+    /// </summary>
+    protected void RedirectAggroToCompanion(Stats enemy)
+    {
+        if (enemy == null) return;
+
+        EnemyAI enemyAI = enemy.GetComponent<EnemyAI>();
+        if (enemyAI != null)
+        {
+            enemyAI.RedirectAggroTo(transform);
+            return;
+        }
+
+        // Fallback cho target có EnemyCombat nhưng không dùng EnemyAI.
+        EnemyCombat ec = enemy.GetComponent<EnemyCombat>();
+        if (ec != null && !ForcedControlRunner.IsForcedMode(enemy.ControlState.mode))
+            ec.SetTarget(transform);
+
+        EnemyStats es = enemy as EnemyStats;
+        if (es != null) es.AddAggro(es.maxAggro);
+    }
+
+    // ───────────────────────── VÙNG / BUFF TẠM ─────────────────────────
+    protected void SpawnGroundZone(Vector3 center, float radius, float duration, float tickInterval, System.Action<Stats> onTick, Color color)
+    {
+        StartCoroutine(ZoneRoutine(center, radius, duration, tickInterval, onTick, color));
+    }
+    private IEnumerator ZoneRoutine(Vector3 center, float radius, float duration, float tickInterval, System.Action<Stats> onTick, Color color)
+    {
+        float t = 0f;
+        while (t < duration)
+        {
+            foreach (var e in EnemiesInRadius(center, radius)) onTick?.Invoke(e);
+            VisualDebugHelper.DrawSphere(center, radius, color, tickInterval);
+            t += tickInterval;
+            yield return new WaitForSeconds(tickInterval);
+        }
+    }
+
+    protected void TimedBuff(System.Action apply, System.Action revert, float dur)
+        => StartCoroutine(TimedBuffRoutine(apply, revert, dur));
+    private IEnumerator TimedBuffRoutine(System.Action apply, System.Action revert, float dur)
+    {
+        apply?.Invoke();
+        yield return new WaitForSeconds(dur);
+        revert?.Invoke();
+    }
+}

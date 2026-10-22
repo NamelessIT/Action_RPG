@@ -90,7 +90,9 @@ public class MageSkill : SkillBehavior, IEmpoweredAttackProvider
     {
         // Ưu tiên trạng thái của nội tại (đã tính bypass); fallback theo weaponType.
         if (magePassive != null) isGrimoireEquipped = magePassive.IsGrimoireActive;
-        else isGrimoireEquipped = (weapon != null && weapon.weaponType == WeaponData.WeaponType.Grimoire);
+        // WPN_GR_T4_04: tính như vũ khí khác Grimoire → không kích hoạt MageSkill.
+        else isGrimoireEquipped = (weapon != null && weapon.weaponType == WeaponData.WeaponType.Grimoire
+                                   && (weapon.id == null || weapon.id.Trim() != "WPN_GR_T4_04"));
     }
 
     // ==========================================================

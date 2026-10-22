@@ -103,7 +103,7 @@ public class BattleMageLiteSignature : SkillBehavior
             totalHealPercent = Mathf.Min(totalHealPercent, maxHealPercent); // Giới hạn hồi máu
 
             float healAmount = stats.maxHp * totalHealPercent;
-            stats.Heal(healAmount); // Sử dụng hàm Heal có sẵn trong Stats.cs chặn hồi máu nếu dính debuff
+            stats.Heal(healAmount, true, false, HealSource.Skill); // Heal có sẵn (tự chặn nếu dính debuff)
 
             Debug.Log($"<color=green>Hồi phục:</color> {healAmount} HP ({totalHealPercent * 100}%).");
         }
@@ -120,7 +120,7 @@ public class BattleMageLiteSignature : SkillBehavior
     private void ApplyDamage(Stats enemyStats, float multiplier)
     {
         stats.EnterCombat();
-        DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, multiplier, data, equipmentManager.currentWeapon, 0);
+        DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, multiplier, data, equipmentManager.currentWeapon, 0, sourceType: DamageSourceType.Ranged);
     }
 
     void OnDrawGizmosSelected()

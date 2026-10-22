@@ -1,8 +1,23 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 public class EquipmentManager : MonoBehaviour
 {
+    private static EquipmentManager _current;
+
+    /// <summary>
+    /// EquipmentManager của Player (duy nhất trong scene). Companion dùng
+    /// CompanionEquipmentManager riêng nên không đụng nhau.
+    /// </summary>
+    public static EquipmentManager Current
+    {
+        get
+        {
+            if (_current == null) _current = FindFirstObjectByType<EquipmentManager>();
+            return _current;
+        }
+    }
+
     private AllyStats allyStats;
     //Weapon
     [Header("Weapon")]
@@ -45,10 +60,7 @@ public class EquipmentManager : MonoBehaviour
     // 1. Tự động load vũ khí mặc định từ Resources
     void InitializeBaseWeapon()
     {
-        // Đường dẫn file trong thư mục Resources (bỏ đuôi .asset)
-        // Ví dụ: Assets/Resources/Weapons/WPN_H_T1_01.asset -> Load "Weapons/WPN_H_T1_01"
-        // Bạn hãy điều chỉnh pathString cho đúng với project của bạn
-        string path = "Datas/Weapons/Hand/Tier 1/WPN_H_T1_01";
+        string path = ResourcePaths.DefaultBaseWeapon;
 
         baseWeapon = Resources.Load<WeaponData>(path);
 
@@ -189,7 +201,7 @@ public class EquipmentManager : MonoBehaviour
             allyStats.flatMagicAtk += newWeapon.baseAtk;
         }
 
-        allyStats.baseAttackSpeed = newWeapon.baseAttackSpeed;
+        allyStats.SetBaseAttackSpeed(newWeapon.baseAttackSpeed);
         allyStats.moveFlexibility = newWeapon.moveFlexibility;
         allyStats.defenseValue += newWeapon.defenseValue;
         allyStats.bonusCritChance += newWeapon.bonusCritChance;
@@ -322,8 +334,9 @@ public class EquipmentManager : MonoBehaviour
         // SHD_CS_T5_02: Tăng tốc độ hồi máu tự nhiên lên gấp 5 lần (+400%)
         if (id == "SHD_CS_T5_02") allyStats.bonusHpGain += 4.0f;
 
-        // SHD_CS_T5_04: Tăng tốc độ hồi SinCharge lên 100%
-        if (id == "SHD_CS_T5_04") allyStats.bonusSinGain += 1.0f;
+        // SHD_CS_T5_04: Tăng tốc độ hồi SinCharge lên 100% + bỏ cooldown Dash.
+        // (Việc Dash tốn 10% Sin / hành động khác tốn Sin được xử lý trong Stats.TryConsumeStamina.)
+        if (id == "SHD_CS_T5_04") { allyStats.bonusSinGain += 1.0f; allyStats.dashNoCooldown = true; }
     }
 
     private void RemoveCoreShieldEffectStats(CoreShieldData shield)
@@ -336,7 +349,7 @@ public class EquipmentManager : MonoBehaviour
         if (id == "SHD_CS_T3_02") allyStats.bonusSinGain -= 0.15f;
         if (id == "SHD_CS_T3_04") allyStats.bonusMoveSpeed -= 0.10f;
         if (id == "SHD_CS_T5_02") allyStats.bonusHpGain -= 4.0f;
-        if (id == "SHD_CS_T5_04") allyStats.bonusSinGain -= 1.0f;
+        if (id == "SHD_CS_T5_04") { allyStats.bonusSinGain -= 1.0f; allyStats.dashNoCooldown = false; }
     }
     // --------------- ACCESSORY (5 SLOTS) ---------------
     // 1. Trang bị Accessory (Tự động nhận diện slot dựa trên Type)
@@ -519,7 +532,7 @@ public class EquipmentManager : MonoBehaviour
             case StatModifier.StatType.PhysicalLifeSteal: allyStats.physicalLifeSteal += value; break;
             case StatModifier.StatType.MagicLifeSteal: allyStats.magicLifeSteal += value; break;
 
-            case StatModifier.StatType.KnockBackRes: allyStats.resistanceKnockBack += value; break;
+            case StatModifier.StatType.KnockBackRes: allyStats.knockbackResistance += value; break;
             case StatModifier.StatType.EffectRes: allyStats.resistanceEffect += value; break;
 
             case StatModifier.StatType.FlatHpGain: allyStats.flatHpGain += value; break;

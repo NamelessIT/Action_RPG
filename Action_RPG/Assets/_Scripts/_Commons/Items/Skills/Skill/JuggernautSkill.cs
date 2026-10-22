@@ -169,7 +169,7 @@ public class JuggernautSkill : SkillBehavior
         if (totalDamageDealt > 0f)
         {
             float healAmount = Mathf.Min(totalDamageDealt * healRatio, stats.maxHp * healCapPercent);
-            stats.Heal(healAmount);
+            stats.Heal(healAmount, true, false, HealSource.Skill);
             Debug.Log($"<color=green>Juggernaut hồi: {healAmount:F0} HP</color>");
         }
 
@@ -190,18 +190,20 @@ public class JuggernautSkill : SkillBehavior
         float total = dmg.phys + dmg.magic + bonus;
 
         float hpBefore = e.currentHp;
-        e.TakeDamage(new DamageInfo
+        var info = new DamageInfo
         {
             physDamage = total,
             attacker = stats,
             sourcePosition = transform.position,
             isCrit = crit,
-            impactLevel = counterImpactLevel,
-            isStun = true,
-            stunDuration = stunDuration,
-            isKnockback = true,
-            knockbackForce = knockbackForce
-        });
+            impactLevel = counterImpactLevel
+        };
+        // [CC] 1 Stun + 1 Knockback qua effect system (cả hai impact = counterImpactLevel để phá siêu giáp).
+        info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, stunDuration)
+        { impactLevel = counterImpactLevel, sourcePosition = transform.position });
+        info.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f)
+        { force = knockbackForce, impactLevel = counterImpactLevel, sourcePosition = transform.position, respectEffectResistance = false });
+        e.TakeDamage(info);
         return Mathf.Max(0f, hpBefore - e.currentHp);
     }
 

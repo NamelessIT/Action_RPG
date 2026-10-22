@@ -25,7 +25,7 @@ public class PlayerStatsUI : MonoBehaviour
     {
         if (_playerStats == null)
         {
-            _playerStats = FindFirstObjectByType<PlayerStats>();
+            _playerStats = PlayerStats.Current;
         }
     }
 

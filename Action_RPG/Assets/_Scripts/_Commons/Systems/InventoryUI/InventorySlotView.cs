@@ -65,7 +65,7 @@ public class InventorySlotView : MonoBehaviour,
             _iconImage.enabled = true;
             _iconImage.sprite  = hasIcon ? slot.Item.Icon : null;
             _iconImage.color   = hasItem
-                ? (hasIcon ? Color.white : new Color(0.55f, 0.55f, 0.55f, 0.6f))
+                ? (hasIcon ? Color.white : UIPalette.With(UIPalette.IconDimmed, 0.6f))
                 : Color.clear;
         }
 
@@ -230,7 +230,7 @@ public class InventorySlotView : MonoBehaviour,
         img.sprite              = icon;
         img.preserveAspect      = true;
         img.raycastTarget       = false;
-        img.color               = icon != null ? Color.white : new Color(0.6f, 0.6f, 0.6f, 0.8f);
+        img.color               = icon != null ? Color.white : UIPalette.With(UIPalette.IconDimmed, 0.8f);
 
         CanvasGroup cg          = g.GetComponent<CanvasGroup>();
         cg.alpha                = 0.85f;

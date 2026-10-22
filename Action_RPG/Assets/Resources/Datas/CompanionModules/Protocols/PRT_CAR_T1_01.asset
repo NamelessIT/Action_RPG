@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e40770cb45e9ce4c9d849e90913ad92, type: 3}
+  m_Name: PRT_CAR_T1_01
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionProtocolData
+  id: PRT_CAR_T1_01
+  description: Removes safety limiters on melee output.
+  icon: {fileID: 0}
+  rarity: 0
+  effectType: 0
+  effectCondition: 
+  effectDescription: 
+  protocolName: Rusted Servo Motor
+  protocolType: 1
+  atkType: 0
+  baseAtk: 7
+  defenseValue: 30
+  bonusCritChance: 0
+  baseAttackSpeed: 1.3
+  attackRange: 2
+  isRange: 0

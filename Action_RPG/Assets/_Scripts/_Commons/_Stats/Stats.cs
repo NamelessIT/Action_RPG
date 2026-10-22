@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections; // Để dùng Coroutine
+using System.Collections.Generic; // List<> cho Slow sources
 using Unity.VisualScripting.Antlr3.Runtime.Misc;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Serialization; // FormerlySerializedAs (giữ data khi đổi tên field)
 using static UnityEngine.AdaptivePerformance.Provider.AdaptivePerformanceSubsystemDescriptor;
+
+/// <summary>Nguồn hồi máu — để effect phân biệt máu hồi từ đâu (skill, potion, hút máu, regen...).</summary>
+public enum HealSource { Other, Skill, Potion, Lifesteal, Regen, Drain }
 
 public class Stats : MonoBehaviour
 {
@@ -75,6 +80,7 @@ public class Stats : MonoBehaviour
 
     [Header("--- Modifiers ---")]
     public float damageOutputMultiplier = 1.0f; // % sát thương gây ra, default là 100%
+    public float damageTakenMultiplier = 1.0f;  // % sát thương NHẬN vào (1 = 100%; >1 dễ tổn thương; <1 giảm nhận)
 
     [Header("--- LifeSteal ---")]
     public float physicalLifeSteal;
@@ -112,14 +118,101 @@ public class Stats : MonoBehaviour
     public float moveThresholdAngle = 45f;
     public float moveFlexibility=1f;
 
+    // ─────────────────────────────────────────────────────────────
+    //  [P2-DATA-01B] BASE STAT WRITE API — source-of-truth boundary.
+    //  Gameplay code KHÔNG ghi thẳng base* / initialBaseHp / maxStamina /
+    //  maxSin / baseAttackSpeed / baseMoveSpeed nữa; đi qua các API dưới đây.
+    //  Phase này CHƯA đổi serialized shape: storage vẫn là public field ở root
+    //  (Unity không migrate được root → nested; xem P2-DATA-01C).
+    //  API không tự gọi RecalculateStats() — caller giữ nguyên thứ tự recalc cũ.
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>Năm chỉ số gốc phân phối được. Tách riêng khỏi StatModifier.StatType (enum đó gồm cả bonus/flat).</summary>
+    public enum BaseAttribute { STR, DEX, INT, VIT, AGI }
+
+    /// <summary>Snapshot base stats dùng để load/save. Là DTO thuần, KHÔNG serialize trên Stats.</summary>
+    [System.Serializable]
+    public struct BaseStatSnapshot
+    {
+        public float initialBaseHp;
+        public float baseHp;
+        public float maxStamina;
+        public float baseSTR, baseDEX, baseINT, baseVIT, baseAGI;
+    }
+
+    public float GetBaseAttribute(BaseAttribute a)
+    {
+        switch (a)
+        {
+            case BaseAttribute.STR: return baseSTR;
+            case BaseAttribute.DEX: return baseDEX;
+            case BaseAttribute.INT: return baseINT;
+            case BaseAttribute.VIT: return baseVIT;
+            case BaseAttribute.AGI: return baseAGI;
+            default: return 0f;
+        }
+    }
+
+    public void SetBaseAttribute(BaseAttribute a, float value)
+    {
+        switch (a)
+        {
+            case BaseAttribute.STR: baseSTR = value; break;
+            case BaseAttribute.DEX: baseDEX = value; break;
+            case BaseAttribute.INT: baseINT = value; break;
+            case BaseAttribute.VIT: baseVIT = value; break;
+            case BaseAttribute.AGI: baseAGI = value; break;
+        }
+    }
+
+    public void AddBaseAttribute(BaseAttribute a, float amount)
+        => SetBaseAttribute(a, GetBaseAttribute(a) + amount);
+
+    public float InitialBaseHp => initialBaseHp;
+    public void SetInitialBaseHp(float value) => initialBaseHp = value;
+    public void AddInitialBaseHp(float amount) => initialBaseHp += amount;
+
+    public void SetMaxStamina(float value) => maxStamina = value;
+    public void SetMaxSin(float value) => maxSin = value;
+
+    public void SetBaseAttackSpeed(float value) => baseAttackSpeed = value;
+    public void AddBaseAttackSpeed(float amount) => baseAttackSpeed += amount;
+    /// <summary>Nhân baseAttackSpeed (buff/debuff tạm). Caller phải gọi lại với nghịch đảo để revert — không tự track.</summary>
+    public void MultiplyBaseAttackSpeed(float factor) { if (factor > 0f) baseAttackSpeed *= factor; }
+
+    public void SetBaseMoveSpeed(float value) => baseMoveSpeed = value;
+
+    /// <summary>Nạp base stats từ save/data. Giá trị ≤0 trong snapshot vẫn được ghi — caller tự lo fallback.</summary>
+    public void ApplyBaseRuntimeStats(BaseStatSnapshot src, bool resetCurrentVitals)
+    {
+        initialBaseHp = src.initialBaseHp;
+        maxStamina    = src.maxStamina;
+        baseSTR = src.baseSTR; baseDEX = src.baseDEX; baseINT = src.baseINT;
+        baseVIT = src.baseVIT; baseAGI = src.baseAGI;
+        if (resetCurrentVitals) { currentHp = maxHp; currentStamina = maxStamina; }
+    }
+
+    /// <summary>Đọc base stats ra DTO để save. `baseHp` là giá trị DẪN XUẤT (initialBaseHp + 20*level).</summary>
+    public BaseStatSnapshot CaptureRuntimeStats() => new BaseStatSnapshot
+    {
+        initialBaseHp = initialBaseHp,
+        baseHp        = baseHp,
+        maxStamina    = maxStamina,
+        baseSTR = baseSTR, baseDEX = baseDEX, baseINT = baseINT,
+        baseVIT = baseVIT, baseAGI = baseAGI,
+    };
+
     [Header("--- Rotation Dynamic ---")]
     public float turnDuration = 0.1f;
     private float idleTurnDuration = 0.1f;
     public float combatTurnDuration;
 
     [Header("--- Knockback & Effect Res ---")]
-    public float resistanceKnockBack = 0.1f; 
-    public float resistanceEffect = 0f; //giảm thời gian debuff
+    [Tooltip("CHỈ giảm LỰC đẩy lùi (Knockback). KHÔNG còn ảnh hưởng Stun/Root/Silence/Slow/Taunt/Fear — dùng resistanceEffect.")]
+    [FormerlySerializedAs("resistanceKnockBack")]
+    public float knockbackResistance = 0.1f;
+    [Tooltip("Giảm THỜI LƯỢNG CC Stun/Root/Silence/Slow/Taunt/Fear. Airborne/Knockback/Pull bỏ qua.")]
+    public float resistanceEffect = 0f;
 
     [Header("--- Status ---")]
     public bool isDead = false; // [MỚI] Kiểm tra đã chết chưa
@@ -147,17 +240,308 @@ public class Stats : MonoBehaviour
     // [MỚI] Cổng cho phép các Kỹ năng can thiệp trước khi nhận sát thương (DuelistSignature)
     public Func<DamageInfo, bool> damageInterceptor;
 
-    private float stunEndTime = 0f;
+    /// <summary>Phase D: mọi Airborne/Knockback/Pull đều do DisplacementController sở hữu.</summary>
+    public bool IsDisplaced
+    {
+        get
+        {
+            EnsureStatusInfrastructure();
+            return _displacementController != null && _displacementController.IsActive;
+        }
+    }
+    public bool IsKnockbackActive
+    {
+        get
+        {
+            EnsureStatusInfrastructure();
+            return _displacementController != null && _displacementController.ActiveKind == DisplacementKind.Knockback;
+        }
+    }
+    public bool IsPullActive
+    {
+        get
+        {
+            EnsureStatusInfrastructure();
+            return _displacementController != null && _displacementController.ActiveKind == DisplacementKind.Pull;
+        }
+    }
 
-    private Coroutine currentStunCoroutine;
+    // [COMPANION MTX_DEF_T3_01] Miễn nhiễm mọi khống chế — COUNTER source-safe (nhiều nguồn cùng giữ).
+    // Mỗi nguồn Push khi bật, Pop khi tắt; chỉ hết miễn nhiễm khi mọi nguồn đã nhả (count==0).
+    private int _ccImmuneCount = 0;
+    private int _slowImmuneCount = 0;
+    internal bool LegacyCrowdControlImmune => _ccImmuneCount > 0;
+    internal bool LegacySlowImmune => _slowImmuneCount > 0;
 
-    // [MỚI] Trạng thái bị khống chế
+    /// <summary>True nếu có ít nhất 1 nguồn miễn nhiễm CC (legacy counter hoặc gateway mới).</summary>
+    public bool IsCrowdControlImmune => _statusEffects != null ? _statusEffects.HasCrowdControlImmunity : LegacyCrowdControlImmune;
+    /// <summary>True nếu có ít nhất 1 nguồn miễn nhiễm Slow.</summary>
+    public bool IsSlowImmune => _statusEffects != null ? _statusEffects.HasSlowImmunity : LegacySlowImmune;
+    /// <summary>Backward-compat đọc-only.</summary>
+    public bool ccImmune => IsCrowdControlImmune;
+
+    /// <summary>Bật CC immunity: lần đầu bật sẽ cleanse CC được phép cleanse trước.</summary>
+    public void PushCrowdControlImmunity()
+    {
+        if (_ccImmuneCount == 0)
+        {
+            EnsureStatusInfrastructure();
+            if (_statusEffects != null) _statusEffects.CleanseCrowdControl();
+            else ExecuteLegacyCrowdControlCleanse();
+        }
+        _ccImmuneCount++;
+    }
+
+    public void PopCrowdControlImmunity() { if (_ccImmuneCount > 0) _ccImmuneCount--; }
+
+    /// <summary>Bật Slow immunity: cleanse toàn bộ Slow hiện tại trước rồi chặn Slow mới.</summary>
+    public void PushSlowImmunity()
+    {
+        if (_slowImmuneCount == 0)
+        {
+            EnsureStatusInfrastructure();
+            if (_statusEffects != null) _statusEffects.CleanseSlow();
+            else ExecuteLegacySlowCleanse();
+        }
+        _slowImmuneCount++;
+    }
+
+    public void PopSlowImmunity() { if (_slowImmuneCount > 0) _slowImmuneCount--; }
+
+    // [LEGACY COMPAT] Field cũ giữ lại vì asset/code cũ có thể đọc trực tiếp.
+    // Phase C runtime Silence chính nằm trong StatusEffectController.
+    public bool isSilenced = false;
+    private int _silenceTokens = 0; // legacy token bridge; hiện không còn producer trực tiếp.
+
+    // ─────────────────────────────────────────────────────────────
+    //  [PHASE D] CONTROL STATE BRIDGE
+    //  Slow / Stun / Root / Silence source-of-truth: StatusEffectController.
+    //  Airborne / Knockback / Pull source-of-truth: DisplacementController.
+    // ─────────────────────────────────────────────────────────────
+    public bool IsAirborne
+    {
+        get
+        {
+            EnsureStatusInfrastructure();
+            return _displacementController != null && _displacementController.ActiveKind == DisplacementKind.Airborne;
+        }
+    }
+    /// <summary>Stun cleanseable do StatusEffectController quản; không đồng nhất với displacement.</summary>
+    public bool IsStunned
+    {
+        get
+        {
+            EnsureStatusInfrastructure();
+            return _statusEffects != null && _statusEffects.IsStunned;
+        }
+    }
+    /// <summary>Root source-aware do StatusEffectController quản.</summary>
+    public bool IsRooted
+    {
+        get
+        {
+            EnsureStatusInfrastructure();
+            return _statusEffects != null && _statusEffects.IsRooted;
+        }
+    }
+    /// <summary>Silence source-aware; legacy flag/token được OR để không phá compatibility.</summary>
+    public bool IsSilenced
+    {
+        get
+        {
+            EnsureStatusInfrastructure();
+            bool managed = _statusEffects != null && _statusEffects.IsSilenced;
+            return managed || isSilenced || _silenceTokens > 0;
+        }
+    }
+
+    /// <summary>Legacy read field được sync để các call-site cũ như AccessoryEffectManager không vỡ.</summary>
     public bool isStunned = false;
 
-    // [MỚI] Super Armor (Siêu Giáp) - Không bị ngắt chiêu
-    [Header("--- Super Armor ---")]
+    private bool IsForcedControlled
+    {
+        get
+        {
+            EnsureStatusInfrastructure();
+            return _statusEffects != null && (_statusEffects.IsTaunted || _statusEffects.IsFeared);
+        }
+    }
+
+    public bool IsActionLocked => isDead || IsDisplaced || IsStunned || IsForcedControlled;
+    public bool IsMovementLocked => isDead || IsDisplaced || IsStunned || IsRooted || IsForcedControlled;
+    public bool IsSkillLocked => isDead || IsDisplaced || IsStunned || IsSilenced || IsForcedControlled;
+    public bool IsItemLocked => isDead || IsDisplaced || IsStunned;
+
+    /// <summary>Legacy API wrapper: direct Slow caller vẫn đi qua gateway chuẩn Phase C.</summary>
+    public void ApplySlow(float magnitude, float duration)
+    {
+        magnitude = Mathf.Clamp01(magnitude);
+        if (magnitude <= 0f || duration <= 0f) return;
+        ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, duration)
+        {
+            magnitude = magnitude,
+            effectId = "LEGACY_APPLY_SLOW"
+        });
+    }
+
+    public float CurrentSlowAmount
+    {
+        get
+        {
+            EnsureStatusInfrastructure();
+            return _statusEffects != null ? _statusEffects.CurrentSlowAmount : 0f;
+        }
+    }
+
+    public float EffectiveSlowMultiplier => 1f - CurrentSlowAmount;
+
+    /// <summary>
+    /// Tốc độ di chuyển runtime thống nhất. Với Stats/Enemy: Slow nhân vào baseMoveSpeed.
+    /// AllyStats override để Slow đóng vai trò bonusMoveSpeed âm đúng game-design.
+    /// </summary>
+    public virtual float EffectiveMoveSpeed
+    {
+        get
+        {
+            EnsureStatusInfrastructure();
+            float additive = _runtimeModifiers != null
+                ? _runtimeModifiers.GetAdditivePercent(RuntimeStatKey.BaseMoveSpeedMultiplier)
+                : 0f;
+            float multiplicative = _runtimeModifiers != null
+                ? _runtimeModifiers.GetMultiplicativeFactor(RuntimeStatKey.BaseMoveSpeedMultiplier)
+                : 1f;
+            float baseWithRuntime = baseMoveSpeed * Mathf.Max(0f, 1f + additive) * multiplicative;
+            return Mathf.Max(0f, baseWithRuntime * EffectiveSlowMultiplier);
+        }
+    }
+
+    /// <summary>Hệ số move runtime so với baseMoveSpeed, dùng cho dash/movement đặc biệt muốn tôn trọng Slow.</summary>
+    public float EffectiveMoveSpeedMultiplier
+        => baseMoveSpeed > 0.0001f ? EffectiveMoveSpeed / baseMoveSpeed : 1f;
+
+    /// <summary>
+    /// Tốc độ đánh runtime thống nhất. Slow KHÔNG tác động lên giá trị này.
+    /// AttackSpeedDown ở phase Debuff sẽ đi qua RuntimeStatModifierLedger.
+    /// </summary>
+    public virtual float EffectiveAttackSpeed
+    {
+        get
+        {
+            EnsureStatusInfrastructure();
+            float additive = _runtimeModifiers != null
+                ? _runtimeModifiers.GetAdditivePercent(RuntimeStatKey.BaseAttackSpeedMultiplier)
+                : 0f;
+            float multiplicative = _runtimeModifiers != null
+                ? _runtimeModifiers.GetMultiplicativeFactor(RuntimeStatKey.BaseAttackSpeedMultiplier)
+                : 1f;
+            return Mathf.Max(0.01f, baseAttackSpeed * Mathf.Max(0f, 1f + additive) * multiplicative);
+        }
+    }
+
+    // Phase F2 consumer path: raw serialized fields remain the base/source values.
+    // Managed Debuff modifiers live in RuntimeStatModifierLedger and are read through these
+    // effective properties so producer migration never has to destructively mutate base stats.
+    private float ResolveRuntimeModifiedStat(float baseValue, RuntimeStatKey stat)
+    {
+        EnsureStatusInfrastructure();
+        if (_runtimeModifiers == null) return baseValue;
+
+        float flat = _runtimeModifiers.GetFlat(stat);
+        float additive = _runtimeModifiers.GetAdditivePercent(stat);
+        float multiplicative = _runtimeModifiers.GetMultiplicativeFactor(stat);
+        return (baseValue + flat) * (1f + additive) * multiplicative;
+    }
+
+    public float EffectiveArmor => ResolveRuntimeModifiedStat(armor, RuntimeStatKey.Armor);
+    public float EffectiveMagicResist => ResolveRuntimeModifiedStat(magicResist, RuntimeStatKey.MagicResist);
+    public float EffectiveDefenseValue => ResolveRuntimeModifiedStat(defenseValue, RuntimeStatKey.DefenseValue);
+    public float EffectiveDamageOutputMultiplier
+        => ResolveRuntimeModifiedStat(damageOutputMultiplier, RuntimeStatKey.DamageOutputMultiplier);
+    public float EffectiveDamageTakenMultiplier
+        => ResolveRuntimeModifiedStat(damageTakenMultiplier, RuntimeStatKey.DamageTakenMultiplier);
+
+    /// <summary>
+    /// Sync field legacy `isStunned` với managed Stun + authoritative displacement state.
+    /// StatusEffectController gọi mỗi khi active managed CC thay đổi.
+    /// </summary>
+    internal void SynchronizeManagedCrowdControlState()
+    {
+        bool managedStun = _statusEffects != null && _statusEffects.IsStunned;
+        bool displaced = _displacementController != null && _displacementController.IsActive;
+        isStunned = managedStun || displaced; // legacy read field: all hard displacement still looks action-locked.
+
+        // Chỉ hard movement lock mới được Stats-level dừng NavMeshAgent.
+        // Taunt/Fear KHÔNG phải hard stop: manual control bị khóa nhưng ForcedControl consumer
+        // (EnemyAI/CompanionAI/DarkDemonAI) vẫn phải được quyền lái actor chase/flee.
+        // Nếu coi forced-control là movementControlLocked ở đây thì BẤT KỲ managed-effect refresh nào
+        // (vd Catalyst aura refresh Slow mỗi frame) cũng set isStopped=true sau AI Update, khiến Fear
+        // chỉ quay mặt nhưng đứng yên. Root vẫn phải hard-stop forced movement theo canonical rule.
+        bool rooted = _statusEffects != null && _statusEffects.IsRooted;
+        bool hardMovementLocked = managedStun || displaced || rooted;
+        if (hardMovementLocked && agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+        }
+    }
+
+    /// <summary>Phase F compatibility bridge cho code cũ đọc isBleeding/isBurning.</summary>
+    internal void SynchronizeManagedDebuffState(bool bleeding, bool burning, bool resonated, bool challenged)
+    {
+        isBleeding = bleeding;
+        isBurning = burning;
+        isResonated = resonated;
+        isChallenged = challenged;
+    }
+
+    internal void NotifyManagedCrowdControlInterrupt(CombatEffectInfo eff, Stats source)
+    {
+        if (eff == null || !eff.interruptCurrentAction) return;
+        RaiseInterrupted(InterruptContext.FromEffect(eff, source));
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  SUPER ARMOR — không bị ngắt chiêu.
+    //
+    //  Hai tầng TÁCH BẠCH, đừng trộn:
+    //   1. NỀN (2 field dưới) — cấu hình cố định của nhân vật: EnemyStats theo monsterRank,
+    //      PlayerStats theo characterId. Gán trong Inspector/Init, KHÔNG đụng lúc runtime.
+    //   2. TẠM THỜI (counter) — buff/trang bị bật tắt liên tục. Mỗi nguồn PushSuperArmor khi
+    //      bật, PopSuperArmor khi tắt, giống hệt _ccImmuneCount.
+    //
+    //  Trước đây mọi nguồn đều ghi thẳng vào 2 field nền, sinh ra ĐÚNG HAI kiểu hỏng ngược nhau:
+    //   • Accessory/Weapon khi tắt chỉ trừ level mà không hạ cờ → super armor kẹt vĩnh viễn.
+    //   • CoreShield ForceTurnOff_T4_01 hạ cờ VÔ ĐIỀU KIỆN → cướp super armor của nguồn khác.
+    //  Đọc hiệu lực qua IsSuperArmor / EffectiveSuperArmorLevel, đừng đọc 2 field nền.
+    // ─────────────────────────────────────────────────────────────
+    [Header("--- Super Armor (nền) ---")]
     public bool isSuperArmor = false;
-    public int superArmorLevel = 0; // Cấp độ giáp (0: Chống quái nhỏ, 1: Chống Elite...)
+    public int superArmorLevel = 0; // Rule mới: armorLevel=0 KHÔNG chặn CC; CC chỉ bị block khi impactLevel < armorLevel.
+
+    private int _superArmorTokens = 0;      // số nguồn tạm thời đang giữ
+    private int _superArmorBonusLevel = 0;  // tổng cấp cộng thêm của các nguồn đó
+
+    /// <summary>Có super armor không — nền HOẶC ít nhất 1 nguồn tạm thời.</summary>
+    public bool IsSuperArmor => isSuperArmor || _superArmorTokens > 0;
+
+    /// <summary>Cấp super armor hiệu lực = nền + tổng cấp của mọi nguồn tạm thời.</summary>
+    public int EffectiveSuperArmorLevel => superArmorLevel + _superArmorBonusLevel;
+
+    /// <summary>Đăng ký 1 nguồn super armor tạm thời. Gọi cặp với <see cref="PopSuperArmor"/>
+    /// và truyền CÙNG bonusLevel cho cả hai.</summary>
+    public void PushSuperArmor(int bonusLevel = 0)
+    {
+        _superArmorTokens++;
+        _superArmorBonusLevel += Mathf.Max(0, bonusLevel);
+    }
+
+    /// <summary>Nhả 1 nguồn super armor tạm thời. Chặn pop dư (không xuống dưới 0) nên gọi
+    /// thừa vẫn an toàn — quan trọng vì nhiều nguồn nhả trong finally/OnDestroy.</summary>
+    public void PopSuperArmor(int bonusLevel = 0)
+    {
+        if (_superArmorTokens > 0) _superArmorTokens--;
+        _superArmorBonusLevel = Mathf.Max(0, _superArmorBonusLevel - Mathf.Max(0, bonusLevel));
+    }
 
     [Header("--- Tăng thời gian nhận Buff ---")]
     public float buffDurationBonus = 0f;
@@ -170,19 +554,13 @@ public class Stats : MonoBehaviour
     // [MỚI] Cờ báo hiệu trạng thái Tàng Hình
     public bool isInvisible = false;
 
-    // --- HIỆU ỨNG CHẢY MÁU (BLEED) ---
+    // --- DEBUFF COMPATIBILITY FLAGS ---
+    // Phase F: lifecycle Bleed/Burn thuộc StatusEffectController. Hai field public này chỉ còn là read-compatible
+    // bridge cho content cũ (vd BloodReaverSkill), KHÔNG còn sở hữu timer/coroutine riêng.
     [Header("--- Bleed ---")]
     public bool isBleeding = false;
-    private Coroutine bleedCoroutine;
-    private float bleedTimer = 0f; // Bộ đếm thời gian còn lại của Bleed
-    private float currentBleedDamage = 0f; // Lưu damage để nếu đánh tiếp thì cập nhật damage mới
-
-    // --- HIỆU ỨNG THIÊU ĐỐT (BURN) (magic damage)---
     [Header("--- Burn ---")]
     public bool isBurning = false;
-    private Coroutine burnCoroutine;
-    private float burnTimer = 0f; // Bộ đếm thời gian còn lại của Burn
-    private float currentBurnDamage = 0f; // Lưu damage để nếu đánh tiếp thì cập nhật damage mới
     [Header ("--- Mark ---")]
     [Tooltip("Bị đánh dấu")]
     public bool IsMarked=false;
@@ -192,16 +570,35 @@ public class Stats : MonoBehaviour
     public bool isPerfectParryWindow = false; // Đang trong "khung giờ vàng"
     [Range(0, 360)] public float parryAngle = 120f;
 
+    public const string ChallengeMarkDebuffId = "DuelistSkill.ChallengeMark";
+    public const string ResonanceMarkDebuffId = "CatalystPassive.Resonance";
+
     [Header("--- Duelist Challenge ---")]
-    public bool isChallenged = false; // Cờ báo hiệu bị thách đấu
-    private Coroutine challengeCoroutine;
+    [Tooltip("Compatibility read flag. Lifecycle thuộc Debuff Registry từ Phase F3D.")]
+    public bool isChallenged = false;
 
     [Header("--- Resonance Mark (Catalyst) ---")]
+    [Tooltip("Compatibility read flag. Lifecycle thuộc Debuff Registry từ Phase F3D.")]
     public bool isResonated = false;
-    private Coroutine resonanceCoroutine;
 
     public Action<DamageInfo> OnBeforeTakeDamage;
+
+    // [CC INTERRUPT] Bắn khi bị STUN hoặc KNOCKBACK bắt đầu → người nghe (PlayerController / EnemyCombat)
+    // tự hủy đòn đánh / skill đang thực hiện. Stun/knockback "ngắt hành động" — chuẩn ARPG.
+    public event Action OnInterrupted;
+    /// <summary>[INT-01A] Event ngắt hành động CÓ ngữ cảnh (type/flags/source). Consumer mới (SkillManager/
+    /// EnemyCombat) nên nghe cái này để quyết cooldown/cost; legacy OnInterrupted vẫn fire song song.</summary>
+    public event Action<InterruptContext> OnInterruptedContext;
+    /// <summary>Báo các hệ điều khiển hủy hành động hiện tại (do CC) — fire CẢ event context + legacy.</summary>
+    protected void RaiseInterrupted(InterruptContext ctx)
+    {
+        OnInterruptedContext?.Invoke(ctx);
+        OnInterrupted?.Invoke();
+    }
+    /// <summary>Overload legacy (không ngữ cảnh) — dùng context Unknown. Giữ cho call-site cũ không vỡ.</summary>
+    protected void RaiseInterrupted() => RaiseInterrupted(new InterruptContext(CombatEffectType.Unknown));
     public event Action<float, float> OnHealReceived; // <lượng hồi, lượng dư>
+    public event Action<float, float, HealSource> OnHealDetailed; // <lượng hồi, dư, nguồn>
 
     // [ACCESSORY] Bắn KHI VÀ CHỈ KHI sát thương chạm máu thật (Global Rule 3) — kèm DamageInfo
     // để effect biết hướng đánh (info.attacker/sourcePosition) và loại damage (phys/magic/true).
@@ -209,12 +606,68 @@ public class Stats : MonoBehaviour
     // [ACCESSORY] Bắn khi lớp giáp ảo (Shield) vừa bị đòn đánh phá vỡ về 0.
     public event Action OnShieldBroken;
 
+    // ─────────────────────────────────────────────────────────────
+    //  [STATUS EFFECT PHASE A] Core runtime components.
+    //  Stats vẫn là compatibility façade; lifecycle sẽ được migrate dần sang các component này.
+    // ─────────────────────────────────────────────────────────────
+    private StatusEffectController _statusEffects;
+    private RuntimeStatModifierLedger _runtimeModifiers;
+    private DisplacementController _displacementController;
+    private StatusControlResolver _controlResolver;
+    private ForcedControlRunner _forcedControlRunner;
+
+    public StatusEffectController StatusEffects { get { EnsureStatusInfrastructure(); return _statusEffects; } }
+    public RuntimeStatModifierLedger RuntimeModifiers { get { EnsureStatusInfrastructure(); return _runtimeModifiers; } }
+    public DisplacementController Displacement { get { EnsureStatusInfrastructure(); return _displacementController; } }
+    public StatusControlResolver ControlResolver { get { EnsureStatusInfrastructure(); return _controlResolver; } }
+    public ForcedControlRunner ForcedControl { get { EnsureStatusInfrastructure(); return _forcedControlRunner; } }
+
+    /// <summary>Snapshot quyền điều khiển thống nhất cho Player / Enemy / Companion.</summary>
+    public StatusControlSnapshot ControlState
+    {
+        get
+        {
+            EnsureStatusInfrastructure();
+            return _controlResolver != null ? _controlResolver.RebuildFromCurrentState() : StatusControlSnapshot.Normal;
+        }
+    }
+
+    public bool CanCastSkill(SkillControlPolicy policy)
+    {
+        EnsureStatusInfrastructure();
+        return _controlResolver != null && _controlResolver.CanCastSkill(policy);
+    }
+
     private NavMeshAgent agent;
     private Rigidbody rb;
     protected Animator animator;
 
+    // [HURT ANIM] Chống spam: chỉ cho phép trigger Hurt mỗi hurtAnimCooldown giây.
+    [Header("--- Hurt Reaction ---")]
+    [Tooltip("Khoảng cách tối thiểu giữa 2 lần chạy animation Hurt (giây). Tránh giật liên tục khi bị đánh dồn.")]
+    public float hurtAnimCooldown = 0.4f;
+    private float _lastHurtTime = -999f;
+    private EnemyCombat _enemyCombatCache; // null nếu không phải enemy → check rẻ
+
+    private T GetOrAddStatusComponent<T>() where T : Component
+    {
+        T component = GetComponent<T>();
+        if (component == null) component = gameObject.AddComponent<T>();
+        return component;
+    }
+
+    private void EnsureStatusInfrastructure()
+    {
+        if (_runtimeModifiers == null) _runtimeModifiers = GetOrAddStatusComponent<RuntimeStatModifierLedger>();
+        if (_displacementController == null) _displacementController = GetOrAddStatusComponent<DisplacementController>();
+        if (_controlResolver == null) _controlResolver = GetOrAddStatusComponent<StatusControlResolver>();
+        if (_statusEffects == null) _statusEffects = GetOrAddStatusComponent<StatusEffectController>();
+        if (_forcedControlRunner == null) _forcedControlRunner = GetOrAddStatusComponent<ForcedControlRunner>();
+    }
+
     public virtual void Start()
     {
+        EnsureStatusInfrastructure();
         maxHp = baseHp;
         currentHp = maxHp;
         currentStamina = maxStamina;
@@ -275,117 +728,298 @@ public class Stats : MonoBehaviour
         combatTimer = 0f;
     }
 
-    public void ApplyBleed(float damagePerTick, float duration)
+    /// <summary>
+    /// Compatibility wrapper Phase F: Bleed là registered Debuff source-aware.
+    /// Caller mới nên truyền source/sourceKey; caller cũ không truyền vẫn giữ behavior refresh một legacy source chung.
+    /// </summary>
+    public EffectApplyResult ApplyBleed(float damagePerTick, float duration, Stats source = null, string sourceKey = null)
     {
-        // 1. Cập nhật thông số mới nhất
-        currentBleedDamage = damagePerTick; // Có thể làm logic: Lấy damage cao nhất hoặc cộng dồn
+        EnsureStatusInfrastructure();
+        if (_statusEffects == null || damagePerTick <= 0f || duration <= 0f)
+            return EffectApplyResult.Reject(EffectApplyStatus.Invalid);
 
-        // 2. Gia hạn thời gian (Reset lại đồng hồ đếm ngược)
-        bleedTimer = duration;
-
-        // Đánh dấu kẻ địch đang bị Bleed
-        isBleeding = true;
-        // 3. Chỉ Start Coroutine nếu nó chưa chạy
-        if (bleedCoroutine == null)
+        var request = new DebuffRequest
         {
-            bleedCoroutine = StartCoroutine(BleedRoutine());
-        }
+            effectId = "Bleed",
+            duration = duration,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.IndependentPerSource,
+            maxStacks = 1,
+            potency = damagePerTick,
+            dot = new DebuffDotSpec
+            {
+                enabled = true,
+                tickInterval = 1f,
+                tickImmediately = false,
+                physDamage = damagePerTick
+            },
+            note = "Stats.ApplyBleed compatibility wrapper"
+        };
+        return ApplyDebuff(request, source, sourceKey);
     }
 
-    private IEnumerator BleedRoutine()
+    /// <summary>Compatibility wrapper Phase F: Burn là registered magic DoT Debuff source-aware.</summary>
+    public EffectApplyResult ApplyBurn(float damagePerTick, float duration, Stats source = null, string sourceKey = null)
     {
-        // Vòng lặp chạy chừng nào còn thời gian
-        while (bleedTimer > 0)
+        EnsureStatusInfrastructure();
+        if (_statusEffects == null || damagePerTick <= 0f || duration <= 0f)
+            return EffectApplyResult.Reject(EffectApplyStatus.Invalid);
+
+        var request = new DebuffRequest
         {
-            // Chờ 1 giây
-            yield return new WaitForSeconds(1.0f);
-
-            // Trừ thời gian
-            bleedTimer -= 1.0f;
-
-            // Gây sát thương
-            TakeDamage(currentBleedDamage);
-            Debug.Log($"<color=red>{gameObject.name} đang chảy máu: -{currentBleedDamage} HP (Còn {bleedTimer}s)</color>");
-        }
-
-        // Hết giờ -> Xóa Coroutine để lần sau Start lại được
-        isBleeding = false;
-        bleedCoroutine = null;
+            effectId = "Burn",
+            duration = duration,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.IndependentPerSource,
+            maxStacks = 1,
+            potency = damagePerTick,
+            dot = new DebuffDotSpec
+            {
+                enabled = true,
+                tickInterval = 1f,
+                tickImmediately = false,
+                magicDamage = damagePerTick
+            },
+            note = "Stats.ApplyBurn compatibility wrapper"
+        };
+        return ApplyDebuff(request, source, sourceKey);
     }
-    public void ApplyBurn(float damagePerTick, float duration)
+
+    /// <summary>
+    /// Phase F2 normalized AttackSpeedDown Debuff.
+    /// Player/Companion: negative bonusAttackSpeed contribution.
+    /// Enemy/other Stats: percentage reduction on effective base attack speed.
+    /// Slow remains movement-only and must not be used to reduce attack cadence.
+    /// </summary>
+    public EffectApplyResult ApplyAttackSpeedDown(float magnitude, float duration, Stats source = null,
+                                                   string sourceKey = null, string note = null)
     {
-        // 1. Cập nhật thông số mới nhất
-        currentBurnDamage = damagePerTick; // Có thể làm logic: Lấy damage cao nhất hoặc cộng dồn
+        EnsureStatusInfrastructure();
+        magnitude = Mathf.Clamp01(magnitude);
+        if (_statusEffects == null || magnitude <= 0f || duration <= 0f)
+            return EffectApplyResult.Reject(EffectApplyStatus.Invalid);
 
-        // 2. Gia hạn thời gian (Reset lại đồng hồ đếm ngược)
-        burnTimer = duration;
+        RuntimeStatModifierSpec modifier = this is AllyStats
+            ? new RuntimeStatModifierSpec(
+                RuntimeStatKey.BonusAttackSpeed,
+                RuntimeModifierOperation.AdditivePercent,
+                -magnitude)
+            : new RuntimeStatModifierSpec(
+                RuntimeStatKey.BaseAttackSpeedMultiplier,
+                RuntimeModifierOperation.Multiplicative,
+                1f - magnitude);
 
-        // Đánh dấu kẻ địch đang bị Burn
-        isBurning = true;
-        // 3. Chỉ Start Coroutine nếu nó chưa chạy
-        if (burnCoroutine == null)
+        var request = new DebuffRequest
         {
-            burnCoroutine = StartCoroutine(BurnRoutine());
-        }
+            effectId = "AttackSpeedDown",
+            duration = duration,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.Strongest,
+            maxStacks = 1,
+            potency = magnitude,
+            note = string.IsNullOrEmpty(note) ? "Stats.ApplyAttackSpeedDown" : note
+        };
+        request.statModifiers.Add(modifier);
+        return ApplyDebuff(request, source, sourceKey);
     }
 
-    private IEnumerator BurnRoutine()
+    /// <summary>
+    /// Phase F2 normalized Armor/MagicResist Down Debuff.
+    /// Caller truyền lượng flat đã snapshot theo semantics của producer hiện tại; registry chỉ sở hữu lifecycle/cleanse.
+    /// </summary>
+    public EffectApplyResult ApplyArmorMagicResistDown(string effectId, float armorAmount, float magicResistAmount,
+                                                        float duration, Stats source = null, string sourceKey = null,
+                                                        EffectStackPolicy stackPolicy = EffectStackPolicy.RefreshSameSource,
+                                                        int maxStacks = 1, float potency = 0f, string note = null,
+                                                        Action<DebuffRuntimeSnapshot, EffectRemoveReason> onRemove = null)
     {
-        // Vòng lặp chạy chừng nào còn thời gian
-        while (burnTimer > 0)
+        EnsureStatusInfrastructure();
+        armorAmount = Mathf.Max(0f, armorAmount);
+        magicResistAmount = Mathf.Max(0f, magicResistAmount);
+        if (_statusEffects == null || string.IsNullOrWhiteSpace(effectId) || duration <= 0f
+            || (armorAmount <= 0f && magicResistAmount <= 0f))
+            return EffectApplyResult.Reject(EffectApplyStatus.Invalid);
+
+        var request = new DebuffRequest
         {
-            // Chờ 1 giây
-            yield return new WaitForSeconds(1.0f);
+            effectId = effectId.Trim(),
+            duration = duration,
+            cleanseable = true,
+            stackPolicy = stackPolicy,
+            maxStacks = Mathf.Max(1, maxStacks),
+            potency = potency > 0f ? potency : Mathf.Max(armorAmount, magicResistAmount),
+            note = string.IsNullOrEmpty(note) ? "Stats.ApplyArmorMagicResistDown" : note
+        };
 
-            // Trừ thời gian
-            burnTimer -= 1.0f;
+        if (armorAmount > 0f)
+            request.statModifiers.Add(new RuntimeStatModifierSpec(
+                RuntimeStatKey.Armor, RuntimeModifierOperation.Flat, -armorAmount));
+        if (magicResistAmount > 0f)
+            request.statModifiers.Add(new RuntimeStatModifierSpec(
+                RuntimeStatKey.MagicResist, RuntimeModifierOperation.Flat, -magicResistAmount));
+        request.onRemove = onRemove;
 
-            // Gây sát thương
-            TakeDamage(new DamageInfo { magicDamage = currentBurnDamage });
-            Debug.Log($"<color=red>{gameObject.name} đang bị thiêu đốt: -{currentBurnDamage} HP (Còn {burnTimer}s)</color>");
-        }
-
-        // Hết giờ -> Xóa Coroutine để lần sau Start lại được
-        isBurning = false;
-        burnCoroutine = null;
+        return ApplyDebuff(request, source, sourceKey);
     }
 
-    // Hàm gắn ấn thách đấu
-    public void ApplyChallengeMark(float duration)
+    /// <summary>
+    /// Phase F2 normalized DamageOutputDown / Weaken Debuff.
+    /// magnitude là delta âm trên EffectiveDamageOutputMultiplier theo semantics legacy hiện tại.
+    /// </summary>
+    public EffectApplyResult ApplyDamageOutputDown(string effectId, float magnitude, float duration, Stats source = null,
+                                                    string sourceKey = null,
+                                                    EffectStackPolicy stackPolicy = EffectStackPolicy.RefreshSameSource,
+                                                    int maxStacks = 1, float potency = 0f, string note = null,
+                                                    Action<DebuffRuntimeSnapshot, EffectRemoveReason> onRemove = null,
+                                                    DebuffTimeMode timeMode = DebuffTimeMode.Scaled)
     {
-        isChallenged = true;
+        EnsureStatusInfrastructure();
+        magnitude = Mathf.Max(0f, magnitude);
+        if (_statusEffects == null || string.IsNullOrWhiteSpace(effectId) || magnitude <= 0f || duration <= 0f)
+            return EffectApplyResult.Reject(EffectApplyStatus.Invalid);
 
-        // Nếu đang có ấn rồi thì đập đi tính lại thời gian mới
-        if (challengeCoroutine != null) StopCoroutine(challengeCoroutine);
-        challengeCoroutine = StartCoroutine(ChallengeRoutine(duration));
+        var request = new DebuffRequest
+        {
+            effectId = effectId.Trim(),
+            duration = duration,
+            cleanseable = true,
+            timeMode = timeMode,
+            stackPolicy = stackPolicy,
+            maxStacks = Mathf.Max(1, maxStacks),
+            potency = potency > 0f ? potency : magnitude,
+            note = string.IsNullOrEmpty(note) ? "Stats.ApplyDamageOutputDown" : note,
+            onRemove = onRemove
+        };
+        request.statModifiers.Add(new RuntimeStatModifierSpec(
+            RuntimeStatKey.DamageOutputMultiplier, RuntimeModifierOperation.Flat, -magnitude));
+        return ApplyDebuff(request, source, sourceKey);
     }
 
-    private IEnumerator ChallengeRoutine(float duration)
+    /// <summary>
+    /// Phase F2 normalized DefenseValueDown Debuff.
+    /// amount là lượng flat bị trừ khỏi EffectiveDefenseValue; raw defenseValue không bị mutate.
+    /// </summary>
+    public EffectApplyResult ApplyDefenseValueDown(string effectId, float amount, float duration, Stats source = null,
+                                                    string sourceKey = null,
+                                                    EffectStackPolicy stackPolicy = EffectStackPolicy.RefreshSameSource,
+                                                    int maxStacks = 1, float potency = 0f, string note = null,
+                                                    Action<DebuffRuntimeSnapshot, EffectRemoveReason> onRemove = null)
     {
-        yield return new WaitForSeconds(duration);
-        isChallenged = false;
-        challengeCoroutine = null;
+        EnsureStatusInfrastructure();
+        amount = Mathf.Max(0f, amount);
+        if (_statusEffects == null || string.IsNullOrWhiteSpace(effectId) || amount <= 0f || duration <= 0f)
+            return EffectApplyResult.Reject(EffectApplyStatus.Invalid);
+
+        var request = new DebuffRequest
+        {
+            effectId = effectId.Trim(),
+            duration = duration,
+            cleanseable = true,
+            stackPolicy = stackPolicy,
+            maxStacks = Mathf.Max(1, maxStacks),
+            potency = potency > 0f ? potency : amount,
+            note = string.IsNullOrEmpty(note) ? "Stats.ApplyDefenseValueDown" : note,
+            onRemove = onRemove
+        };
+        request.statModifiers.Add(new RuntimeStatModifierSpec(
+            RuntimeStatKey.DefenseValue, RuntimeModifierOperation.Flat, -amount));
+        return ApplyDebuff(request, source, sourceKey);
     }
 
-    // [MỚI] Hàm dùng để gắn dấu ấn Cộng Hưởng
-    public void ApplyResonanceMark(float duration)
+    /// <summary>
+    /// Phase F2 normalized DamageTakenUp / Vulnerability Debuff.
+    /// magnitude là delta dương trên EffectiveDamageTakenMultiplier; raw damageTakenMultiplier không bị mutate.
+    /// </summary>
+    public EffectApplyResult ApplyDamageTakenUp(string effectId, float magnitude, float duration, Stats source = null,
+                                                string sourceKey = null,
+                                                EffectStackPolicy stackPolicy = EffectStackPolicy.RefreshSameSource,
+                                                int maxStacks = 1, float potency = 0f, string note = null,
+                                                Action<DebuffRuntimeSnapshot, EffectRemoveReason> onRemove = null)
     {
-        isResonated = true;
+        EnsureStatusInfrastructure();
+        magnitude = Mathf.Max(0f, magnitude);
+        if (_statusEffects == null || string.IsNullOrWhiteSpace(effectId) || magnitude <= 0f || duration <= 0f)
+            return EffectApplyResult.Reject(EffectApplyStatus.Invalid);
 
-        // Nếu đang có dấu ấn rồi thì reset lại thời gian
-        if (resonanceCoroutine != null) StopCoroutine(resonanceCoroutine);
-        resonanceCoroutine = StartCoroutine(ResonanceRoutine(duration));
+        var request = new DebuffRequest
+        {
+            effectId = effectId.Trim(),
+            duration = duration,
+            cleanseable = true,
+            stackPolicy = stackPolicy,
+            maxStacks = Mathf.Max(1, maxStacks),
+            potency = potency > 0f ? potency : magnitude,
+            note = string.IsNullOrEmpty(note) ? "Stats.ApplyDamageTakenUp" : note,
+            onRemove = onRemove
+        };
+        request.statModifiers.Add(new RuntimeStatModifierSpec(
+            RuntimeStatKey.DamageTakenMultiplier, RuntimeModifierOperation.Flat, magnitude));
+        return ApplyDebuff(request, source, sourceKey);
     }
 
-    private IEnumerator ResonanceRoutine(float duration)
+    /// <summary>
+    /// Phase F3D: Challenge Mark là cleanseable Debuff mark. Re-apply từ cùng Duelist chỉ refresh duration.
+    /// Mark bị consume khi Duelist parry đúng target qua ConsumeChallengeMark().
+    /// </summary>
+    public EffectApplyResult ApplyChallengeMark(float duration, Stats source = null)
     {
-        yield return new WaitForSeconds(duration);
-        isResonated = false;
-        resonanceCoroutine = null;
+        if (duration <= 0f) return EffectApplyResult.Reject(EffectApplyStatus.Invalid);
+
+        var request = new DebuffRequest
+        {
+            effectId = ChallengeMarkDebuffId,
+            duration = duration,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.RefreshSameSource,
+            maxStacks = 1,
+            potency = 1f,
+            note = "Duelist Skill Challenge Mark"
+        };
+        return ApplyDebuff(request, source);
+    }
+
+    public bool HasChallengeMark()
+    {
+        EnsureStatusInfrastructure();
+        return _statusEffects != null && _statusEffects.HasDebuff(ChallengeMarkDebuffId);
+    }
+
+    /// <summary>Consume Challenge Mark của đúng Duelist source; source null dùng compatibility fallback consume mọi mark.</summary>
+    public bool ConsumeChallengeMark(Stats source = null)
+    {
+        EnsureStatusInfrastructure();
+        return _statusEffects != null
+            && _statusEffects.RemoveDebuffsByEffectId(ChallengeMarkDebuffId, EffectRemoveReason.Manual, source) > 0;
+    }
+
+    /// <summary>
+    /// Phase F3D: Resonance là cleanseable mark. Player hit refresh 5s; Companion damage đọc mark nhưng không consume.
+    /// </summary>
+    public EffectApplyResult ApplyResonanceMark(float duration, Stats source = null)
+    {
+        if (duration <= 0f) return EffectApplyResult.Reject(EffectApplyStatus.Invalid);
+
+        var request = new DebuffRequest
+        {
+            effectId = ResonanceMarkDebuffId,
+            duration = duration,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.RefreshSameSource,
+            maxStacks = 1,
+            potency = 1f,
+            note = "Catalyst Passive Resonance Mark"
+        };
+        return ApplyDebuff(request, source);
+    }
+
+    public bool HasResonanceMark()
+    {
+        EnsureStatusInfrastructure();
+        return _statusEffects != null && _statusEffects.HasDebuff(ResonanceMarkDebuffId);
     }
 
     // [CẬP NHẬT] Hàm tiêu hao thể lực dùng chung cho Dash và Run
-    public bool TryConsumeStamina(float amount, bool isDash = false)
+    public bool TryConsumeStamina(float amount, bool isDash = false, bool isMovement = false)
     {
         EquipmentManager eq = GetComponent<EquipmentManager>();
         string shieldId = (eq != null && eq.currentCoreShield != null) ? eq.currentCoreShield.id : "";
@@ -402,10 +1036,13 @@ public class Stats : MonoBehaviour
             return false;
         }
 
-        // SHD_CS_T5_04: Dash tốn 10% Sin, không tốn Stamina
+        // SHD_CS_T5_04: tiêu Sin thay Stamina.
+        //  • Dash (isDash): tốn cố định 10% maxSin.
+        //  • Hành động khác (chạy nhanh/HeavyAttack...): tốn Sin BẰNG ĐÚNG lượng Stamina (1:1)
+        //    → giữ tốc độ tiêu hao khi sprint giống hệt khi dùng Stamina (không cạn Sin tức thì).
         if (shieldId == "SHD_CS_T5_04")
         {
-            float sinCost = maxSin * 0.1f;
+            float sinCost = isDash ? maxSin * 0.1f : amount;
             if (currentSin >= sinCost)
             {
                 currentSin -= sinCost;
@@ -420,41 +1057,79 @@ public class Stats : MonoBehaviour
             amount *= 0.9f; // Giảm 10%
         }
 
+        // [ACCESSORY] Hook tiêu hao Stamina.
+        AllyStats accAlly = this as AllyStats;
+        // ACC_CH_T4_04: dash/chạy nhanh KHÔNG cập nhật mốc tiêu Stamina → không gián đoạn hồi tự nhiên.
+        bool noStaminaInterrupt = false;
+        if (accAlly != null)
+        {
+            // ACC_CH_T5_04: HP > 80% → Stamina không bao giờ giảm.
+            if (accAlly.accStaminaFreeWhileHighHp && currentHp > maxHp * 0.80f) return true;
+            // ACC_RM_T5_02: giảm % Stamina tiêu hao.
+            amount *= accAlly.accStaminaConsumeMult;
+            noStaminaInterrupt = accAlly.accDashSprintNoRegenInterrupt && (isDash || isMovement);
+        }
+
         // Logic mặc định
         if (currentStamina >= amount)
         {
             currentStamina -= amount;
-            lastStaminaConsumeTime = Time.time;
+            if (!noStaminaInterrupt) lastStaminaConsumeTime = Time.time;
+            // ACC_CH_T5_05: tiêu Stamina → nhận Sin = % lượng Stamina tiêu hao.
+            if (accAlly != null && accAlly.accStaminaToSinGain > 0f)
+                currentSin = Mathf.Min(maxSin, currentSin + amount * accAlly.accStaminaToSinGain);
             return true;
+        }
+
+        // ACC_CH_T5_02: thiếu Stamina → trả phần thiếu bằng Máu (giữ tối thiểu 1 HP).
+        if (accAlly != null && accAlly.accHpPerStaminaOverride > 0f)
+        {
+            float missing = amount - currentStamina;
+            float hpCost = missing * accAlly.accHpPerStaminaOverride;
+            if (currentHp - hpCost >= 1f)
+            {
+                currentHp -= hpCost;
+                currentStamina = 0f;
+                if (!noStaminaInterrupt) lastStaminaConsumeTime = Time.time;
+                return true;
+            }
         }
         return false;
     }
 
     public virtual void TakeDamage(DamageInfo info)
     {
-        if (isInvincible || isDead) return;
+        if (info == null || isDead) return;
         // [MỚI] Cho phép các Khiên can thiệp trước khi tính toán sát thương (Giảm/Phản DMG/Cứu tử)
         OnBeforeTakeDamage?.Invoke(info);
         // [MỚI] Cho phép Signature chặn sát thương
         if (damageInterceptor != null && damageInterceptor.Invoke(info))
         {
-            return; // Nếu Interceptor trả về true -> Kẻ địch đã sập bẫy, HỦY việc mất máu!
+            return; // Interceptor là mechanic riêng: nếu nó consume toàn bộ hit thì giữ behavior legacy.
         }
 
+        // Invincible = không nhận damage (cả Shield lẫn HP), NHƯNG hit vẫn resolve CC/Debuff.
+        bool negateDamage = isInvincible;
         EnterCombat();
         // 1. TÍNH TOÁN DAMAGE VÀ SHIELD
-        float damageToTake = info.TotalRawDamage;
+        float damageToTake = negateDamage ? 0f : info.TotalRawDamage * EffectiveDamageTakenMultiplier; // invincible giữ hit nhưng damage = 0
+
+        // Keep the popup aligned with the target-side damage actually entering the Shield/HP pipeline.
+        // Previously the HP path used EffectiveDamageTakenMultiplier but DamageNumberManager still received
+        // the unscaled DamageInfo, making Vulnerability look like it had no gameplay effect.
+        float damageBeforeShieldForPopup = damageToTake;
 
         // [MỚI] KIỂM TRA CỘNG HƯỞNG TỪ COMPANION
         // Giả sử Companion của bạn có tag là "Companion" và khi đánh có truyền info.attacker = stats của nó
-        if (isResonated && info.attacker != null && info.attacker.CompareTag("Ally"))
+        if (HasResonanceMark() && info.attacker != null && info.attacker.CompareTag("Ally"))
         {
             damageToTake *= 1.30f; // Tăng 30% sát thương
             Debug.Log($"<color=orange>Cộng Hưởng!</color> Sát thương từ Companion tăng lên: {damageToTake}");
         }
+        damageBeforeShieldForPopup = damageToTake;
 
         // [MỚI] Trừ vào Shield trước (Nếu có)
-        if (currentShield > 0)
+        if (!negateDamage && currentShield > 0)
         {
             if (damageToTake == 0)
             {
@@ -482,11 +1157,31 @@ public class Stats : MonoBehaviour
             OnDamageTakenHp?.Invoke(info, damageToTake);
         }
 
-        // Hiển thị số sát thương nổi lên màn hình (cả bị chặn lẫn xuyên qua Shield)
-        DamageNumberManager.Show(info, transform.position);
+        // Hiển thị số sát thương nổi lên màn hình (cả bị chặn lẫn xuyên qua Shield).
+        // DamageInfo stores the post-CombatMath components but not target-side Vulnerability/Resonance.
+        // Scale a display-only copy so the popup matches the actual incoming damage before Shield.
+        if (!negateDamage)
+        {
+            float rawTotal = info.TotalRawDamage;
+            float popupScale = rawTotal > 0f ? damageBeforeShieldForPopup / rawTotal : 1f;
+            DamageInfo popupInfo = new DamageInfo
+            {
+                physDamage = info.physDamage * popupScale,
+                magicDamage = info.magicDamage * popupScale,
+                trueDamage = info.trueDamage * popupScale,
+                isCrit = info.isCrit
+            };
+            DamageNumberManager.Show(popupInfo, transform.position);
+        }
 
-        // 3. XỬ LÝ HIỆU ỨNG (CC)
+        // [HURT ANIM] Phản ứng giật mình khi MẤT MÁU THẬT và chưa chết — safe-set + có điều kiện.
+        // Player animator không có "Hurt" nên tự bỏ qua; SlimeAnimator (enemy) có thì chạy.
+        if (animator != null && damageToTake > 0f && currentHp > 0f && HasParameter(animator, "Hurt"))
+            TryPlayHurt();
+
+        // 3. XỬ LÝ STATUS ATTACHED: CC + Debuff đều resolve dù Invincible đã zero damage.
         ApplyCrowdControl(info);
+        ApplyAttachedDebuffs(info);
 
         // 4. KIỂM TRA CHẾT
         if (currentHp <= 0)
@@ -513,11 +1208,21 @@ public class Stats : MonoBehaviour
     // isLifesteal=true: hồi máu từ HÚT MÁU (PhysicalLifeSteal/MagicLifeSteal) — KHÔNG bị
     //   healing-block chặn (GDD: MS_T5_02 "không nhận hồi máu từ skill/potion, CHỈ hút máu";
     //   MS_T4_01 "vô hiệu mọi hồi máu" áp cho heal thường). Các nguồn skill/potion để mặc định false.
-    public virtual void Heal(float amount, bool showPopup = true, bool isLifesteal = false)
+    public virtual void Heal(float amount, bool showPopup = true, bool isLifesteal = false, HealSource source = HealSource.Other)
     {
         if (isDead) return;
+        if (isLifesteal) source = HealSource.Lifesteal;
         // Healing-block: chặn mọi hồi máu TRỪ hút máu.
         if (isHealingBlocked && !isLifesteal) return;
+
+        // [ACC_MS_T5_02] Chỉ nhận hồi máu từ Hút máu; và Hút máu x3 khi HP<50%.
+        AllyStats accHealAlly = this as AllyStats;
+        if (accHealAlly != null)
+        {
+            if (accHealAlly.accOnlyLifestealHeal && source != HealSource.Lifesteal) return;
+            if (accHealAlly.accLifestealTripleLowHp && source == HealSource.Lifesteal && currentHp < maxHp * 0.5f)
+                amount *= 3f;
+        }
 
         float excess = (currentHp + amount) - maxHp;
         if (excess < 0) excess = 0;
@@ -526,6 +1231,7 @@ public class Stats : MonoBehaviour
         if (currentHp > maxHp) currentHp = maxHp;
 
         OnHealReceived?.Invoke(amount, excess);
+        OnHealDetailed?.Invoke(amount, excess, source);
         if (showPopup && amount > 0f)
             DamageNumberManager.ShowHeal(amount, transform.position);
     }
@@ -548,154 +1254,117 @@ public class Stats : MonoBehaviour
     }
 
     // --- LOGIC STUN & KNOCKBACK ---
-    void ApplyCrowdControl(DamageInfo info)
+    // Giữ tên cũ làm wrapper để mọi call-site cũ không vỡ; nội bộ chuyển sang ApplyCombatEffects.
+    void ApplyCrowdControl(DamageInfo info) => ApplyCombatEffects(info);
+
+    /// <summary>
+    /// Entry point compatibility xử lý CC của một hit qua StatusEffectController.
+    /// Gateway mới chịu trách nhiệm immunity, Super Armor (impact &lt; armor mới block) và resistance theo type;
+    /// Stats chỉ còn bridge legacy payload; runtime CC/displacement ownership nằm ở status components.
+    /// </summary>
+    public void ApplyCombatEffects(DamageInfo info)
     {
-        if (isSuperArmor && info.impactLevel <= superArmorLevel)
+        if (info == null) return;
+        EnsureStatusInfrastructure();
+
+        // Gộp legacy bool vào effects list trước khi đi qua gateway mới.
+        info.BridgeLegacyEffects();
+        if (info.effects == null || _statusEffects == null) return;
+
+        Stats source = info.attacker;
+        for (int i = 0; i < info.effects.Count; i++)
         {
-            // Có thể thêm hiệu ứng visual (ví dụ: người lóe sáng trắng chịu đòn)
-             //Debug.Log("Super Armor Blocked CC!");
+            CombatEffectInfo eff = info.effects[i];
+            if (eff == null) continue;
+
+            // Clone trước khi bổ sung runtime payload để không mutate asset/shared request.
+            CombatEffectInfo request = eff.CreateRuntimeCopy();
+            if (request.sourcePosition == Vector3.zero)
+                request.sourcePosition = info.sourcePosition != Vector3.zero
+                    ? info.sourcePosition
+                    : (source != null ? source.transform.position : transform.position);
+
+            _statusEffects.ApplyCrowdControl(request, new StatusEffectContext(source, this));
+        }
+    }
+
+    private void ApplyAttachedDebuffs(DamageInfo info)
+    {
+        if (info == null || info.debuffs == null || info.debuffs.Count == 0) return;
+        EnsureStatusInfrastructure();
+        if (_statusEffects == null) return;
+
+        Stats source = info.attacker;
+        for (int i = 0; i < info.debuffs.Count; i++)
+        {
+            DebuffRequest request = info.debuffs[i];
+            if (request == null) continue;
+            _statusEffects.ApplyDebuff(request, new StatusEffectContext(source, this));
+        }
+    }
+
+    /// <summary>
+    /// Áp 1 CC thuần qua StatusEffectController. SourcePosition được bổ sung runtime nếu content chưa set.
+    /// </summary>
+    public void ApplyEffect(CombatEffectInfo effect, Stats source = null)
+    {
+        ApplyEffectWithResult(effect, source);
+    }
+
+    /// <summary>
+    /// Phase E+ API cho producer cần giữ EffectHandle (vd Taunt trap phải release sớm khi skill kết thúc).
+    /// Legacy caller vẫn dùng ApplyEffect(void) bình thường.
+    /// </summary>
+    public EffectApplyResult ApplyEffectWithResult(CombatEffectInfo effect, Stats source = null, string sourceKey = null)
+    {
+        if (effect == null) return EffectApplyResult.Reject(EffectApplyStatus.Invalid);
+        EnsureStatusInfrastructure();
+        if (_statusEffects == null) return EffectApplyResult.Reject(EffectApplyStatus.Unsupported);
+
+        CombatEffectInfo request = effect.CreateRuntimeCopy();
+        if (request.sourcePosition == Vector3.zero)
+            request.sourcePosition = source != null ? source.transform.position : transform.position;
+
+        return _statusEffects.ApplyCrowdControl(request, new StatusEffectContext(source, this, sourceKey));
+    }
+
+    /// <summary>Phase F gateway cho registered Debuff. Debuff không đi qua Super Armor/resistanceEffect của CC.</summary>
+    public EffectApplyResult ApplyDebuff(DebuffRequest request, Stats source = null, string sourceKey = null)
+    {
+        if (request == null) return EffectApplyResult.Reject(EffectApplyStatus.Invalid);
+        EnsureStatusInfrastructure();
+        if (_statusEffects == null) return EffectApplyResult.Reject(EffectApplyStatus.Unsupported);
+        return _statusEffects.ApplyDebuff(request, new StatusEffectContext(source, this, sourceKey));
+    }
+
+    /// <summary>
+    /// Chạy animation Hurt CÓ ĐIỀU KIỆN:
+    ///  1. Cooldown: không spam khi bị đánh dồn (mỗi hurtAnimCooldown giây 1 lần).
+    ///  2. KHÔNG cắt ngang đòn đánh: nếu enemy đang attack/telegraph thì bỏ qua hurt
+    ///     → đòn đánh của enemy "lì", player vẫn gây damage + nháy đỏ nhưng không khóa cứng được nó.
+    /// (Player không có EnemyCombat nên _enemyCombatCache=null → chỉ áp cooldown.)
+    /// </summary>
+    private void TryPlayHurt()
+    {
+        // Cooldown chống spam
+        if (Time.time < _lastHurtTime + hurtAnimCooldown) return;
+
+        // Đang đánh/gồng → không cho hurt cắt ngang
+        if (_enemyCombatCache == null) _enemyCombatCache = GetComponent<EnemyCombat>();
+        if (_enemyCombatCache != null && (_enemyCombatCache.isAttacking || _enemyCombatCache.isTelegraphing))
             return;
-        }
 
-        // 1. Xử lý KNOCKBACK
-        if (info.isKnockback)
-        {
-            // Tính lực đẩy lùi thực tế sau khi trừ Kháng
-            // Ví dụ: Force 10, Res 0.2 -> Thực nhận 8
-            float finalForce = info.knockbackForce * (1.0f - resistanceKnockBack);
-            Debug.Log("finalForce: " + finalForce + " info.knockbackForce: "+ info.knockbackForce + " resistanceKnockBack: "+ resistanceKnockBack);
-
-            // Nếu lực vẫn > 0 thì đẩy
-            if (finalForce > 0)
-            {
-                Vector3 knockbackDir = (transform.position - info.sourcePosition).normalized;
-                knockbackDir.y = 0; // Giữ thăng bằng mặt đất
-                StartCoroutine(KnockbackRoutine(knockbackDir, finalForce));
-            }
-        }
-
-        // 2. Xử lý STUN (Nâng cấp)
-        if (info.isStun)
-        {
-            float finalDuration = info.stunDuration * (1.0f - resistanceKnockBack);
-            Debug.Log($"Stun: {finalDuration}");
-            // [SỬA] Bỏ hàm Mathf.Max(0.1f). Nếu thời gian < 0.1s coi như kháng hoàn toàn
-            if (finalDuration >= 0.1f)
-            {
-                float proposedEndTime = Time.time + finalDuration;
-                if (proposedEndTime > stunEndTime)
-                {
-                    stunEndTime = proposedEndTime;
-                    if (currentStunCoroutine != null) StopCoroutine(currentStunCoroutine);
-                    currentStunCoroutine = StartCoroutine(StunRoutine(finalDuration));
-                }
-            }
-        }
+        _lastHurtTime = Time.time;
+        animator.SetTrigger("Hurt");
     }
 
-    public IEnumerator KnockbackRoutine(Vector3 dir, float force)
+    /// <summary>True nếu Animator có parameter tên paramName — tránh spam warning khi set vào param không tồn tại.</summary>
+    protected static bool HasParameter(Animator anim, string paramName)
     {
-        isStunned = true;
-
-        bool wasKinematic = false;
-        bool hasAgent = (agent != null);
-
-        // [MỚI] Biến lưu trạng thái Root Motion
-        bool wasRootMotion = false;
-
-        // 1. TẮT HẲN NAVMESH AGENT (Biện pháp mạnh)
-        // isStopped đôi khi không đủ với Humanoid, tắt luôn Component cho chắc
-        if (hasAgent)
-        {
-            //Debug.Log("hasAgent: lấy thành công");
-            agent.velocity = Vector3.zero;
-            agent.enabled = false; // <--- TẮT HẲN
-        }
-
-        // 2. TẠM DỪNG ROOT MOTION
-        if (animator != null)
-        {
-            //Debug.Log("animator: Lấy thành công " );
-            wasRootMotion = animator.applyRootMotion;
-            animator.applyRootMotion = false; // Tắt Root Motion để Physics hoạt động
-        }
-
-        // 3. XỬ LÝ RIGIDBODY (Đẩy Lùi)
-        if (rb != null)
-        {
-            wasKinematic = rb.isKinematic;
-            rb.isKinematic = false; // Bật Physics
-
-            //Debug.Log("rb.isKinematic: " + rb.isKinematic);
-
-            // Reset vận tốc cũ
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-
-            // Debug xem lực có được add không
-            // Debug.Log($"Add Force: {force} theo hướng {dir}");
-
-            // Thêm lực đẩy (Dùng Impulse cho dứt khoát)
-            rb.AddForce(dir * force, ForceMode.Impulse);
-        }
-
-        // 4. CHỜ THỜI GIAN BAY
-        yield return new WaitForSeconds(0.2f);
-
-        // 5. KHÔI PHỤC TRẠNG THÁI
-        if (rb != null)
-        {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-            rb.isKinematic = wasKinematic;
-        }
-
-        // Khôi phục Root Motion
-        if (animator != null)
-        {
-            animator.applyRootMotion = wasRootMotion;
-        }
-
-        // Khôi phục Agent
-        if (hasAgent)
-        {
-            agent.enabled = true; // <--- BẬT LẠI
-            if (agent.isOnNavMesh)
-            {
-                agent.isStopped = true; // Vẫn giữ stop vì đang Stun
-                agent.ResetPath();      // Xóa đường đi cũ cho sạch
-            }
-        }
-
-        // 6. CHECK STUN TIẾP
-        yield return new WaitForSeconds(0.1f);
-
-        if (Time.time >= stunEndTime)
-        {
-            isStunned = false;
-        }
-    }
-
-    IEnumerator StunRoutine(float duration)
-    {
-        isStunned = true;
-        Debug.Log($"{gameObject.name} bị STUN!");
-
-        if (agent != null && agent.isOnNavMesh)
-        {
-            agent.isStopped = true;
-            agent.velocity = Vector3.zero;
-        }
-
-        // Thay vì WaitForSeconds cố định, ta chờ đến đúng thời điểm stunEndTime
-        // Điều này giúp việc "ghi đè" thời gian trở nên mượt mà (chỉ cần update stunEndTime)
-        while (Time.time < stunEndTime)
-        {
-            yield return null;
-        }
-
-        isStunned = false;
-        // Debug.Log($"{gameObject.name} hết STUN");
+        if (anim == null || string.IsNullOrEmpty(paramName)) return false;
+        foreach (var p in anim.parameters)
+            if (p.name == paramName) return true;
+        return false;
     }
 
     protected virtual void Die()
@@ -719,21 +1388,18 @@ public class Stats : MonoBehaviour
         // 3. Tắt AI Agent (Nếu là Enemy)
         if (agent != null)
         {
-            agent.isStopped = true;
-            agent.enabled = false;
+            // Displacement có thể đang tạm disable Agent; tránh gọi isStopped trên Agent invalid/off-mesh.
+            if (agent.enabled && agent.isOnNavMesh) agent.isStopped = true;
+            if (agent.enabled) agent.enabled = false;
         }
 
-        // 4. Play Animation Die
-        // [CHƯA CÓ CLIP] Death animation: code đã sẵn sàng, tạm comment animator.Set, chỉ log.
-        // → Khi đã thêm parameter "Die"(Trigger)/"IsDead"(Bool) vào Animator Controller + clip,
-        //   bỏ comment 2 dòng animator.Set bên dưới là chạy.
+        // 4. Play Animation Die — safe-set: chỉ set nếu Animator CÓ parameter tương ứng
+        // (player animator không có Die/IsDead nên sẽ tự bỏ qua, không spam warning).
         if (animator != null)
         {
-            // animator.SetTrigger("Die");
-            Debug.Log($"[Stats] {gameObject.name} → Death anim (comment) animator.SetTrigger(\"Die\")");
-            // Đảm bảo animator không chuyển sang state khác
-            // animator.SetBool("IsDead", true);
-            Debug.Log($"[Stats] {gameObject.name} → Death anim (comment) animator.SetBool(\"IsDead\", true)");
+            if (HasParameter(animator, "Die"))    animator.SetTrigger("Die");
+            // IsDead = true để giữ ở state chết, không chuyển sang state khác
+            if (HasParameter(animator, "IsDead")) animator.SetBool("IsDead", true);
         }
 
         // 5. Vô hiệu hóa Script điều khiển
@@ -787,45 +1453,69 @@ public class Stats : MonoBehaviour
 
         Debug.Log($"<color=green>{gameObject.name} ĐÃ ĐƯỢC HỒI SINH!</color>");
     }
-    // [MỚI] Hàm giải phóng nhân vật khỏi mọi trạng thái khống chế hiện tại
+
+    // [PHASE D] Legacy Airborne API wrapper — mọi physical movement đi qua DisplacementController.
+    public void Airborne(float duration, float height = 1.2f)
+        => ApplyEffect(new CombatEffectInfo(CombatEffectType.Airborne, duration)
+        {
+            height = height,
+            effectId = "LEGACY_AIRBORNE"
+        });
+
+    public void Airborne(float duration, float height, InterruptContext interruptCtx)
+        => ApplyEffect(new CombatEffectInfo(CombatEffectType.Airborne, duration)
+        {
+            height = height,
+            effectId = "LEGACY_AIRBORNE",
+            interruptCurrentAction = interruptCtx.interruptCurrentAction,
+            putInterruptedSkillOnCooldown = interruptCtx.putInterruptedSkillOnCooldown,
+            note = interruptCtx.note
+        }, interruptCtx.source);
+
+    // [MỚI] Hàm giải phóng nhân vật khỏi mọi trạng thái khống chế cleanseable hiện tại.
     public void BreakCrowdControl()
     {
-        isStunned = false;
-        stunEndTime = 0f;
-
-        // Ngắt Coroutine Stun nếu đang chạy
-        if (currentStunCoroutine != null)
-        {
-            StopCoroutine(currentStunCoroutine);
-            currentStunCoroutine = null;
-        }
-
-        // Triệt tiêu động lượng (Lực đẩy lùi Knockback)
-        if (rb != null && !isDead)
-        {
-            rb.linearVelocity = Vector3.zero;
-        }
-
-        // Đảm bảo bật lại NavMeshAgent nếu lỡ bị KnockbackRoutine tắt đi
-        if (agent != null && !agent.enabled && !isDead)
-        {
-            agent.enabled = true;
-            if (agent.isOnNavMesh) agent.isStopped = false;
-        }
-
-        Debug.Log($"<color=orange>{gameObject.name} đã THOÁT KHỎI KHỐNG CHẾ!</color>");
+        EnsureStatusInfrastructure();
+        if (_statusEffects != null) _statusEffects.CleanseCrowdControl();
+        else ExecuteLegacyCrowdControlCleanse();
     }
-    // [MỚI] Hàm xóa các hiệu ứng bất lợi dạng DoT hiện có (Bleed, Burn)
+
+    internal void ExecuteLegacyCrowdControlCleanse()
+    {
+        // Managed Stun/Root/Silence/Slow/Taunt/Fear đã được StatusEffectController xóa trước khi vào legacy cleanup.
+        // Chỉ dọn legacy raw Silence bridge; KHÔNG động Airborne/Knockback/Pull.
+        isSilenced = false;
+        _silenceTokens = 0;
+        SynchronizeManagedCrowdControlState();
+
+        if (!IsDisplaced && agent != null && !isDead)
+        {
+            if (!agent.enabled) agent.enabled = true;
+            // Không ép isStopped=false ở đây: AI/Companion consumer sẽ quyết định ở frame kế tiếp.
+        }
+
+        Debug.Log($"<color=orange>{gameObject.name} đã THOÁT KHỎI CC CLEANSEABLE!</color>");
+    }
+
+    internal void ExecuteLegacySlowCleanse()
+    {
+        // Không còn Slow store legacy từ Phase C. Giữ method để compatibility với code Phase A/B.
+    }
+
+    // [MỚI] Hàm xóa các Debuff legacy hiện có (Bleed, Burn). Phase F sẽ chuyển sang generic registry.
     public void ClearDebuffs()
     {
-        if (bleedCoroutine != null) { StopCoroutine(bleedCoroutine); bleedCoroutine = null; }
-        bleedTimer = 0f;
-        isBleeding = false;
-
-        if (burnCoroutine != null) { StopCoroutine(burnCoroutine); burnCoroutine = null; }
-        burnTimer = 0f;
-        isBurning = false;
+        EnsureStatusInfrastructure();
+        if (_statusEffects != null) _statusEffects.CleanseDebuffs();
+        else ExecuteLegacyDebuffCleanse();
     }
+
+    internal void ExecuteLegacyDebuffCleanse()
+    {
+        // Phase F1: Bleed/Burn đã thuộc registry. Giữ hook này để các Debuff legacy khác còn migration
+        // có chỗ cleanup; hiện không được phép tự clear compatibility flags nếu registry vẫn còn instance.
+    }
+
     // ==========================================
     // [MỚI] HỆ THỐNG KINH NGHIỆM VÀ LÊN CẤP
     // ==========================================

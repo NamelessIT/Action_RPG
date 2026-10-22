@@ -113,7 +113,7 @@ public class BloodReaverSkill : SkillBehavior
                             Debug.Log($"<color=red>EXECUTE!</color> Địch đang chảy máu -> X{bonusMult} Damage");
 
                         // Gây sát thương
-                        DealDamage(enemyStats, damageMult);
+                        DealDamageBow(enemyStats, damageMult);
 
                         hitCount++; // Tăng đếm sau khi đã tính damage
                     }
@@ -126,8 +126,7 @@ public class BloodReaverSkill : SkillBehavior
                 float healPercent = Mathf.Min(validHits * healPerEnemyPercent, maxHealPercent);
                 float healAmount = stats.maxHp * healPercent;
 
-                stats.currentHp += healAmount;
-                if (stats.currentHp > stats.maxHp) stats.currentHp = stats.maxHp;
+                stats.Heal(healAmount, true, false, HealSource.Skill);
 
                 Debug.Log($"<color=green>Huyết Tế:</color> Trúng {validHits} địch -> Hồi {healAmount} HP");
             }
@@ -183,8 +182,7 @@ public class BloodReaverSkill : SkillBehavior
             float healPercent = Mathf.Min(validHits * healPerEnemyPercent, maxHealPercent);
             float healAmount = stats.maxHp * healPercent;
 
-            stats.currentHp += healAmount;
-            if (stats.currentHp > stats.maxHp) stats.currentHp = stats.maxHp;
+            stats.Heal(healAmount, true, false, HealSource.Skill);
 
             Debug.Log($"<color=green>Huyết Tế:</color> Trúng {validHits} địch -> Hồi {healAmount} HP");
         }
@@ -208,10 +206,14 @@ public class BloodReaverSkill : SkillBehavior
         stats.isInvincible = false;
     }
 
-    // Hàm gây sát thương chung
     private void DealDamage(Stats enemyStats, float multiplier)
     {
         stats.EnterCombat();
         DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, multiplier, data, equipmentManager.currentWeapon, 0);
+    }
+    private void DealDamageBow(Stats enemyStats, float multiplier)
+    {
+        stats.EnterCombat();
+        DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, multiplier, data, equipmentManager.currentWeapon, 0, sourceType: DamageSourceType.Ranged);
     }
 }

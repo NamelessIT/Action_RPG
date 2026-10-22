@@ -1,0 +1,586 @@
+# Action_RPG Workspace
+
+File nay la **noi theo doi trang thai chinh** giua user va Claude. Trello board `Unity` la board cua
+team; file nay la ban chi tiet o muc code, cap nhat sau moi phien lam viec.
+
+Cap nhat lan cuoi: **2026-08-27**
+
+---
+
+## DA XONG — 2026-08-27
+
+### Ha tang
+- [x] **Fix Safe Mode do xung dot package AI.** `com.unity.ai.assistant` 2.x da bao gom san
+  `ai.toolkit` + `ai.generators`, nhung manifest van keo ban standalone ve qua
+  `com.unity.2d.enhancers` -> trung GUID + trung ten assembly. Da go
+  `com.unity.2d.enhancers` va `com.unity.ai.generators`.
+- [x] **Chon MCP for Unity (CoplayDev)** thay cho Unity MCP chinh chu.
+  Ly do: license Unity Personal cho phep 0 direct MCP connection
+  (`AllowedMcpConnections = 0`), Unity xac nhan chinh thuc "a subscription is required".
+  Config o `.mcp.json` -> `http://127.0.0.1:8080/mcp`.
+  Luu y: nut Configure cho Claude Code trong panel LUON hong vi no goi CLI `claude`
+  ma may nay khong cai ban terminal. Ghi `.mcp.json` tay la xong.
+- [x] **Go han `com.unity.ai.assistant`.** Khong con dung, va no la nguon cua cac dong
+  `NoSubscription` do trong console. Con lai `ai.inference` (Sentis) va `ai.navigation` (NavMesh).
+
+### Refactor buoc 1 — gom enum  (commit `23a6a92`)
+- [x] Gop 4 enum rarity trung nhau thanh mot `Rarity` dung chung:
+  `WeaponData.Rarity`, `AccessoryData.Rarity`, `CoreShieldData.Rarity`, `CompanionRarity`.
+- [x] Xac minh 197 asset ScriptableObject giu nguyen gia tri (serialize la int).
+
+### Bug fix — Player roi xuyen dat vo han khi vao Play Mode
+- [x] **Nguyen nhan:** save file ghi `positionY = -2858.67`, `GameManager.AssignStatsToPlayer()`
+  nap lai nguyen xi -> player o duoi dat -> Rigidbody keo roi tiep -> thoat Play lai luu Y con
+  thap hon -> lan sau te hon. Vong lap tu nuoi.
+- [x] **Da loai tru:** scene khong co loi. Terrain co TerrainCollider enabled, phu kin vi tri
+  Player, raycast xuong trung Terrain tai y=0, Player scene pos y=1.402 (cao hon mat dat 1.4m).
+- [x] **Da loai tru:** khong phai do doi GameObject.Find -> FindGameObjectWithTag,
+  scene chi co dung 1 object mang tag Player.
+- [x] Sua save file hien tai (backup `.bak`), giu nguyen tien do level 3 / 296 exp / 15 diem.
+- [x] Them `GameManager.IsSavedPositionUsable()` — tu choi toa do NaN/Infinity hoac nam duoi
+  day the gioi (`Terrain.activeTerrain.y - 5`), roi dung vi tri spawn cua scene thay the.
+- **LUU Y cho tuong lai:** day la ca THU HAI cua cung mot kieu bug save->load. Ca thu nhat la
+  `[P2-DATA-FIX-02]` (baseHp cong don 20*level moi chu ky). Khi them field moi vao save,
+  luon hoi: gia tri nay co the tro thanh dau vao cua chinh no o lan load sau khong?
+
+### Refactor buoc 2 — gom link
+- [x] Gom 14 duong dan `Resources.Load` viet cung vao `ResourcePaths`.
+- [x] Gom 15 cho `FindFirstObjectByType<CompanionAI>()` vao `CompanionAI.Current` (co cache).
+- [x] Gom 7 `PlayerStats` + 4 `EquipmentManager` + 3 `InventoryRuntime` vao `.Current` tuong ung.
+- [x] Thong nhat cach tim Player: ca 7 cho dung `GameObject.FindGameObjectWithTag("Player")`
+  (truoc do `GameManager` tim theo TEN, de gay khi doi ten object).
+- [x] Va bug hieu nang: `CoreShieldEffectManager` quet toan scene MOI FRAME trong `Update()`.
+
+**KHONG dong vao (co ly do):**
+- `SkillManager` — scene co 3 instance (Player + Enemy). Comment o `DevToolPanel:129` da canh bao.
+  Khong duoc gom thanh `.Current`.
+- Cac `Find` con lai trong UI component — deu la lazy-init `if (_x == null) _x = Find...`,
+  chay mot lan moi vong doi component. Gom them khong duoc gi.
+
+---
+
+### Refactor buoc 3a — gom style: hop nhat bang mau rarity
+
+- [x] **Quyet dinh:** giu `RarityColors` lam NGUON DUY NHAT. Ly do: no da la bang dung chung,
+  danh theo tier nen dung duoc cho ca module companion, va co san ca `Get()` lan `Hex()`.
+- [x] Doi bac 1 Stained tu `#BFE6BF` (xanh nhat, chim tren nen dat) sang `#4CCC4C` cua bang
+  item roi. 4 bac con lai giu theo bang UI (lech khong dang ke).
+- [x] Xoa bang mau rieng trong `DroppedItemBehaviour.GetRarityColor()`, tro ve goi `RarityColors`.
+- [x] Them overload `Get(Rarity)` / `Hex(Rarity)` de khoi phai ep `(int)` o cho goi.
+- [x] **Tien the sua mot bug:** `GetRarityColor()` chi doc `entry.weaponData`, nen moi item roi
+  la accessory deu ra mau TRANG. Nay doc ca `accessoryData`.
+- Bang mau chot (da chay kiem tra tren Unity, khong can vao Play Mode):
+
+  | Tier | Enum | RGB | Hex |
+  |---|---|---|---|
+  | 0 | Residual_1 | (0.62, 0.62, 0.62) | `#9E9E9E` xam |
+  | 1 | Stained_2 | (0.30, 0.80, 0.30) | `#4CCC4C` luc |
+  | 2 | Corrupted_3 | (0.30, 0.60, 1.00) | `#4C99FF` lam |
+  | 3 | Condemned_4 | (0.70, 0.35, 1.00) | `#B259FF` tim |
+  | 4 | Anomalous_5 | (1.00, 0.55, 0.10) | `#FF8C1A` cam |
+
+---
+
+## DANG CHO QUYET DINH
+
+_Khong con muc nao._
+
+---
+
+## HANG DOI — REFACTOR (theo thu tu da thong nhat)
+
+1. [x] Gom enum
+2. [x] Gom link
+3. [~] **Gom style** — bang mau rarity DA hop nhat (xem buoc 3a ben tren).
+   Con lai: ~254 gia tri mau viet cung trong script (146 `new Color(...)` + 108 `Color.<ten>`)
+   -> `UIPalette`.
+4. [ ] **Gom time** — 12 cho ghi `Time.timeScale` (DevTool speed vs UI pause dang da nhau)
+   va 78 so ma thuat trong `WaitForSeconds`. Day la buoc DUY NHAT doi hanh vi runtime,
+   phai test theo ma tran M-06 ben duoi.
+5. [ ] **Tach file qua lon** — `WeaponEffectManager` 1772 dong, `AccessoryEffectManager` 1648,
+   `PlayerController` 1347, `Stats` 1295, `EnemyAI` 1188, `CoreShieldEffectManager` 1043,
+   `EnemyCombat` 1009. Huong: switch khong lo -> polymorphism.
+6. [ ] **Chia assembly** bang `.asmdef` (hien tai 191 script nam chung `Assembly-CSharp`).
+
+---
+
+## HANG DOI — CC & DEBUFF  (tu Trello, chua bat dau)
+
+### T-CC-01 — Hoan thien he thong CC va Debuff
+
+**Cac hieu ung CC:**
+| Hieu ung | Hanh vi |
+|---|---|
+| Slow | Enemy: nhan % giam vao `baseMoveSpeed`. Player/Companion: cong vao `bonusMoveSpeed` |
+| Stun | — |
+| Knockback | — |
+| Airborne | — |
+| Root | Bi troi chan. VAN attack va dung Skill duoc, KHONG di chuyen va KHONG Dash |
+| Silence | Khong the su dung Skill |
+| Taunt | Bat buoc danh thuong vao muc tieu dung Taunt. Khong Skill, khong Dash |
+| Pull | Lien tuc bi keo ve diem chi dinh |
+| Fear | Chay ra xa khoi ke dung Fear voi 50% toc do. Khong Skill, khong Dash |
+
+**Khang va mien nhiem:**
+- `resistanceEffect` giam THOI GIAN chiu CC. **Khong** ap dung cho Knockback, Airborne, Pull.
+- `knockbackResistance` chi ap dung cho Knockback, giam LUC knockback.
+- Them bien **mien nhiem CC** (bool): true -> khong bi anh huong boi moi CC noi tren.
+- Them bien **mien nhiem Slow** (bool): true -> khong the bi Slow.
+- Them trang thai moi: kich hoat -> **ngay lap tuc thoat khoi moi CC**.
+
+**Debuff:**
+- Bleed — chiu sat thuong VAT LY moi giay.
+- Burn — chiu sat thuong PHEP moi giay.
+- (sau nay them tiep)
+- Them trang thai moi: kich hoat -> **ngay lap tuc thoat khoi moi Debuff dang chiu**.
+
+### T-CC-02 — Chinh sua Skill va effect sau khi xong he thong CC
+
+Bug chung can sua truoc: **Slow apply len Enemy** — trong Inspector chua thay giam
+`baseMoveSpeed` cua Enemy, nhung thuc te Enemy co bi Slow. Sua lai cho giam dung.
+
+| Nhom | Muc | Viec |
+|---|---|---|
+| Skill | MageSkill | Mat Stun cua huong S; chua Slow huong SW |
+| Skill | TricksterSkill | Sua code, dung ham Taunt moi |
+| Skill | SpellbinderSkill | Sua code, dung ham Taunt moi |
+| Signature | WarriorLiteSignature | Sua code, dung bien mien nhiem CC moi |
+| Signature | BattleMageSignature | Chua slow |
+| Signature | MageLiteSignature | Chua slow |
+| Signature | MageSignature | Chua slow |
+| Signature | CatalystLiteSignature | Sua code, dung ham Fear moi |
+| Weapon | WPN_SW_T4_04 | Chua slow |
+| Weapon | WPN_BW_T4_01 | Chua slow |
+| Weapon | WPN_SW_T5_03 | Sua code, dung bien mien nhiem CC moi |
+| Weapon | WPN_SP_T5_02 | Chua slow |
+| Core Shield | SHD_CS_T4_01 | Sua code, dung bien mien nhiem CC moi |
+| Accessory | ACC_RM_T5_05 | Sua code, dung bien mien nhiem CC moi |
+| Accessory | ACC_MS_T4_06 | Chua tu stun ban than (BUG) |
+| Accessory | ACC_PA_T5_03 | Sua code, dung bien mien nhiem CC moi |
+| Protocol | PRT_SUP_T3_02 | Chua test Silence |
+| Protocol | PRT_CAR_T4_01 | Chua slow |
+| Protocol | PRT_SUP_T4_02 | Chua slow |
+| Matrix | MTX_DEF_T3_01 | Sua code, dung bien mien nhiem CC moi |
+| Matrix | MTX_REG_T4_02 | Sua code, dung bien giai CC + giai Debuff moi |
+| Matrix | MTX_PHA_T4_02 | Sua code, dung bien Taunt moi |
+
+### T-CC-03 — Audit tinh CC  (DA XONG 2026-08-27 — doc code, CHUA vao Play Mode)
+
+Ket qua: **17/26 dat**, **9/26 co van de**. Moi muc giu 1 dong rieng, khong gom.
+Cot "Code thuc te" ghi dung file:dong de mo thang.
+
+#### Passive
+
+| | Muc | Spec doi | Code thuc te | Ket luan |
+|---|---|---|---|---|
+| [x] | VanguardPassive | tu slow ban than | `VanguardPassive.cs:81/107` — `bonusMoveSpeed -= 0.5`, co `_slowWasApplied` guard, gate `vanguardCM3_NoBlockSlow` | **DAT** (dung `bonusMoveSpeed` dung nhu spec, nhung ngoai pipeline CC) |
+| [x] | DuelistPassive | stun quai khi perfect parry | `DuelistPassive.cs:261` — `AddEffect(Stun 0.5s)` | **DAT** |
+| [x] | MagePassive | slow, stun | `MagePassive.cs:432` Slow(0.1, 3s) · `:515` `SkillForceFreeze` | **DAT** |
+
+#### Skill
+
+| | Muc | Spec doi | Code thuc te | Ket luan |
+|---|---|---|---|---|
+| [ ] | ChrisSkill | knockback | `ChrisSkill.cs:20` `knockbackForce=15f` **khong dung o dau**; `:178` truyen `applyStun:true` | **SAI** — ra Stun thay vi Knockback |
+| [ ] | VanguardSkill | knockback | `VanguardSkill.cs:175` `applyStun:true, stunTime:stunDuration` | **SAI** — ra Stun thay vi Knockback |
+| [x] | WarriorSkill | stun | `WarriorSkill.cs:115` | **DAT** |
+| [x] | BattleMageSkill | stun | `BattleMageSkill.cs:70` | **DAT** |
+| [ ] | DuelistSkill | stun | `DuelistSkill.cs:101` — `impactLvl:0`, `applyStun` mac dinh **false** | **THIEU** — khong co CC nao |
+| [ ] | MageSkill (huong S) | stun | `ArcaneEmpowerment.cs:305` — `if (magePassive != null) SkillForceFreeze(...)` | **THIEU co dieu kien** — stun nam TRONG MagePassive; khong co component do thi S chi gay damage. Dung nguyen nhan Trello ghi |
+| [x] | MageSkill (huong SW) | slow | `ArcaneEmpowerment.cs:315` — `ApplyEffect(Slow)` vo dieu kien | **DAT** — Trello ghi "chua slow" la da cu |
+| [ ] | WardenSkill | knockback + stun | `WardenSkill.cs:205` chi `AddEffect(Stun)` impact 2 | **THIEU Knockback** |
+| [x] | JuggernautSkill | stun | `JuggernautSkill.cs:202` Stun + `:204` Knockback | **DAT** (du them knockback) |
+| [ ] | DarkInquisitorSkill | pull | `DarkInquisitorSkill.cs:201` `PullEnemiesToCage` — `agent.Warp` moi frame, goi trong while loop `:142/:153` | **NGOAI PIPELINE** — chay dung nhung khong kiem `ccImmune`/khang |
+| [x] | SwordMasterSkill | stun | `SwordMasterSkill.cs:160` impact 2, kem `:52` `BreakCrowdControl` + `:53` `ClearDebuffs` | **DAT** |
+| [ ] | TricksterSkill | taunt + stun | Stun `:232` OK. Taunt `:222` = `agent.SetDestination(decoyPos)` **mot lan duy nhat** | **TAUNT HONG** — `EnemyAI:755/879` ghi de destination tick sau |
+| [x] | InfiltratorSkill | stun | `InfiltratorSkill.cs:207` `_effStunDur` | **DAT** |
+| [x] | SpellbladeSkill | stun | `SpellbladeSkill.cs:205` (`:168` don chinh khong stun) | **DAT** — chi nhanh phan don |
+| [ ] | TacticianSkill | taunt + stun | Taunt `:121` — aggro + `nearestTarget`, co refresh theo interval, co revert (ban tot nhat trong 3) | **STUN THIEU** — khong tim thay stun nao trong file |
+| [x] | SpellbinderSkill | stun | `SpellbinderSkill.cs:209` | **DAT** (taunt `:156` khong refresh/revert nhung spec khong doi taunt o day) |
+
+#### Signature
+
+| | Muc | Spec doi | Code thuc te | Ket luan |
+|---|---|---|---|---|
+| [x] | ChrisSignature | knockback | `ChrisSignature.cs:76` `AddEffect(Knockback)` | **DAT** |
+| [x] | LeoSignature | stun | `LeoSignature.cs:67` | **DAT** |
+| [x] | VanguardLiteSignature | stun | `VanguardLiteSignature.cs:120` — stun + knockback o hit thu 3 | **DAT** |
+| [x] | WarriorLiteSignature | mien nhiem CC | `:53` `BreakCrowdControl()` + `:72` `isSuperArmor=true, superArmorLevel=999`, restore tu bien luu | **DAT** — chay dung, nhung **khong counter-safe**, xem T-CC-04 |
+| [x] | BattleMageSignature | slow | `BattleMageSignature.cs:120` `ApplyEffect(Slow)` | **DAT** — Trello ghi "chua slow" la da cu |
+| [x] | MageLiteSignature | slow | `MageLiteSignature.cs:95` | **DAT** — nt |
+| [x] | MageSignature | slow | `MageSignature.cs:161` | **DAT** — nt |
+| [ ] | CatalystLiteSignature | fear | `CatalystLiteSignature.cs:78` `FearFleeRoutine` tu che | **HONG** — 4 loi, xem T-CC-04 |
+
+#### Cac muc T-CC-02 THUC RA DA XONG (dong lai, khong can lam)
+
+- [x] **"Bug chung: Slow khong giam `baseMoveSpeed` cua Enemy"** — **KHONG phai bug.** Slow la he so
+  nhan doc luc chay (`EffectiveSlowMultiplier`), co chu dich khong sua `baseMoveSpeed`, nen Inspector
+  khong bao gio doi. Da noi day du: Player (`PlayerController:245/840/1279`), Enemy (`EnemyAI:755`,
+  `EnemyCombat:199/510/720`), Companion (`CompanionAI:143/426/470`) — ca move lan attack cadence.
+- [x] BattleMageSignature / MageLiteSignature / MageSignature "chua slow" — deu da co `ApplyEffect(Slow)`.
+- [x] MageSkill "chua Slow huong SW" — da co (`ArcaneEmpowerment.cs:315`).
+- [x] PRT_SUP_T4_02 "chua slow" — da co `SlowEnemy(target, 0.10f, 5f)` (`ProtocolEffectManager.cs:205`).
+- [~] MTX_REG_T4_02 "dung bien giai CC + giai Debuff" — phan giai CC **da dung** (`BreakCrowdControl()`),
+  phan giai Debuff **hong** — xem T-CC-04.
+
+#### Chua audit (khong nam trong 26 muc user liet ke)
+
+Cac muc T-CC-02 con lai thuoc Weapon/Core Shield/Accessory/Protocol/Matrix chua soi tung cai:
+WPN_SW_T4_04, WPN_BW_T4_01, WPN_SW_T5_03, WPN_SP_T5_02, SHD_CS_T4_01, ACC_RM_T5_05,
+ACC_MS_T4_06 (tu stun ban than), ACC_PA_T5_03, PRT_SUP_T3_02 (test Silence), PRT_CAR_T4_01,
+MTX_DEF_T3_01, MTX_PHA_T4_02. Phan lon se tu het sau khi sua muc `isSuperArmor` o T-CC-04.
+
+
+### T-CC-04 — Loi he thong tim duoc trong luc audit (MOI, uu tien cao)
+
+Day la cac loi **khong nam trong Trello**, phat hien khi doc code. Sua nhung cai nay truoc
+thi phan lon T-CC-02 tu het.
+
+- [x] **`isSuperArmor` bi ghi truc tiep tu 6 noi, khong counter-safe.** — DA SUA, commit `623b5a3`.
+  Tach 2 tang trong `Stats`: giu `isSuperArmor`/`superArmorLevel` lam NEN (Inspector / EnemyStats
+  theo monsterRank / PlayerStats theo characterId), them counter `PushSuperArmor`/`PopSuperArmor`
+  cho nguon tam thoi. `ApplyCombatEffects` doc qua `IsSuperArmor` / `EffectiveSuperArmorLevel`.
+  Da chuyen 10 call-site. Tim them 2 bug cung ho trong luc sua: `WPN_SW_T5_03` gan `= 99` roi `-= 99`
+  ma khong he bat co (cap 99 vo nghia), va Companion Aegis chi `+= 2` cung khong bat co (vo hieu
+  voi Leo). Ca hai nay het luon. Kiem chung 5 ca tren Unity, deu dung.
+  ~~Mo ta loi cu:~~ `superArmorLevel` duoc dung
+  nhu bo dem cong don (`+=99/-=99`, `+=50/-=50`, `+=2/-=2`) nhung `isSuperArmor` lai la bool doc lap.
+  Hai kieu hong nguoc nhau, ca hai deu that:
+  - `AccessoryEffectManager` 630/1521 va `WeaponEffectManager` 795 khi TAT chi tru level,
+    **khong bao gio set `isSuperArmor=false`** -> super armor ket vinh vien.
+  - `CoreShieldEffectManager.ForceTurnOff_T4_01` (438) set `isSuperArmor=false`
+    **vo dieu kien** -> **cuop mat** super armor cua nguon khac dang giu.
+  - **Cach sua:** bien `isSuperArmor` thanh property dan xuat (`superArmorLevel > 0` hoac counter
+    rieng), giong het cach `_ccImmuneCount` dang lam. Chi `MatrixEffectManager` (93/105) dung dung
+    `PushCrowdControlImmunity/Pop`.
+  - Muc T-CC-02 lien quan: WarriorLiteSignature, WPN_SW_T5_03, SHD_CS_T4_01, ACC_RM_T5_05, ACC_PA_T5_03, MTX_DEF_T3_01.
+
+- [ ] **`MatrixEffectManager.Cleanse()` giai Debuff la NO-OP.** No set `stats.isBleeding = false`
+  nhung `BleedRoutine` lap theo `bleedTimer` chu khong theo co `isBleeding` -> coroutine van tick
+  du sat thuong roi tu set lai co. Va no **khong dung Burn**.
+  `Stats.ClearDebuffs()` da lam dung ca hai (stop coroutine + reset timer). **Sua: goi `ClearDebuffs()`.**
+
+- [ ] **`CatalystLiteSignature.FearFleeRoutine` — 4 loi:**
+  1. `enemy.GetComponent<MonoBehaviour>()` lay **MonoBehaviour dau tien bat ky** tren object roi
+     `enabled = false`. Comment trong code tu thu nhan "Gia dinh la EnemyAI script". Co the tat
+     nham `Stats`/`EnemyCombat`. Thu tu component trong Inspector quyet dinh.
+  2. Neu (1) khong trung EnemyAI thi EnemyAI van chay -> ghi de `agent.speed` (EnemyAI 755 set
+     moi frame) va ghi de `SetDestination` -> **Fear khong lam gi ca**, chi pha mot component ngau nhien.
+  3. `agent.speed *= 0.75f` roi `/= 0.75f`: hai Fear chong nhau -> hong vinh vien. Spec ghi **50%**, code **75%**.
+  4. Quai chet giua Fear -> nhanh khoi phuc bi bo qua -> AI khong bat lai, speed khong tra ve.
+
+- [ ] **Taunt co 3 ban tu che, khong ban nao theo spec.** Spec: "bat buoc danh thuong vao muc tieu
+  Taunt, khong Skill, khong Dash". Ca 3 ban chi doi aggro, khong chan Skill/Dash:
+  `TricksterSkill` (SetDestination mot lan, vo hieu) < `SpellbinderSkill` (aggro, khong refresh,
+  khong revert) < `TacticianSkill` (aggro + refresh + revert).
+
+---
+
+### T-CC-05 — Viec con lai cua T-CC-01 sau audit
+
+Nhieu thu spec doi **da co san** trong `Stats.cs`, khong can viet lai:
+
+| Spec doi | Trang thai |
+|---|---|
+| Bien mien nhiem CC | DA CO — `IsCrowdControlImmune` + `Push/PopCrowdControlImmunity` (counter-safe) |
+| Trang thai giai het CC | DA CO — `BreakCrowdControl()` (dung rule: khong cleanse duoc khi Airborne) |
+| Trang thai giai het Debuff | DA CO — `ClearDebuffs()` (Bleed + Burn, stop dung coroutine) |
+| Bleed / Burn | DA CO — `ApplyBleed` / `ApplyBurn` |
+| `resistanceEffect` KHONG ap cho Knockback/Airborne | DA DUNG — Airborne dung raw `duration`, Knockback dung `knockbackResistance` rieng |
+| `knockbackResistance` chi giam luc knockback | DA DUNG — `ApplyKnockbackEffect` |
+| Slow: Enemy vao baseMoveSpeed, Player/Companion vao bonusMoveSpeed | Lam KHAC spec nhung **tot hon**: mot he so nhan chung `EffectiveSlowMultiplier` cho ca 3 phe. Khuyen nghi giu, sua spec thay vi sua code |
+
+**Con THIEU that su — day moi la viec can lam cho T-CC-01:**
+- [ ] Them `Taunt`, `Pull`, `Fear` vao enum `CombatEffectType` (hien chi co Stun/Knockback/Airborne/Root/Silence/Slow/Unknown).
+- [ ] Viet handler cho 3 loai do trong `Stats.ApplyCombatEffects()`, va cac gate hanh vi:
+      Taunt -> khoa Skill + Dash + ep muc tieu; Fear -> chay ra xa 50% toc do, khoa Skill + Dash;
+      Pull -> keo lien tuc ve diem chi dinh.
+- [ ] Them **mien nhiem Slow** (bool/counter rieng) — hien `ApplySlow` khong kiem gi ca.
+- [ ] `ResistedDuration` phai bo qua Pull (spec) khi Pull ra doi.
+
+---
+
+## HANG DOI — COMPANION  (tu Trello, chua bat dau)
+
+### T-COMP-01 — Sua UI Companion
+Sua lai cho dep. Hien tai **chua hien**: Avatar, ProtocolType, MatrixType, PassiveIcon.
+(Cac phan tu nay da tao san trong Canvas.)
+
+### T-COMP-02 — Them Inventory cho Companion
+Giong Inventory cua Player, co ca bang Stats de cong luon.
+
+---
+
+## [!!] LUAT: KHONG BAO GIO TU DONG SAVE SCENE / PREFAB CUA USER
+
+**2026-08-27 — su co da xay ra, da khac phuc hoan toan.** Ghi lai de khong lap lai.
+
+Claude chay `EditorSceneManager.SaveScene()` tu `execute_code` de ghi vinh vien cac sua
+doi bo cuc. Hau qua LAN ROSNG HON nhieu so voi du kien — cham vao 3 file:
+
+**1. `OdoScene.unity`** — mat 8 GameObject + 13 MonoBehaviour (4 VerticalLayoutGroup,
+4 LayoutElement, 4 ContentSizeFitter, 1 TextMeshProUGUI).
+
+**2. `Canvas.prefab`** — +396 dong: DUNG 13 component + 1 GameObject do. Tuc la khong
+phai "mat du lieu" nhu ket luan dau tien cua Claude, ma la mot cu **"Apply to Prefab"
+ngoai y muon**: override cua scene bi day thang vao prefab. Neu chi revert scene ma
+khong revert prefab thi cac component se BI NHAN DOI (mot ban trong prefab, mot ban
+la override cua scene).
+
+**3. `Node.prefab`** — NANG NHAT: mat SACH 9 tham chieu serialize
+(`_iconImage`, `_frameBorder`, `_nameText`, `_costText`, `_unlockButton`, `_equipButton`,
+`_statNodeIcon`, `_coreNodeIcon`, `_skillNodeDefaultIcon`) — tat ca thanh `fileID: 0`.
+Prefab node cua ca cay skill coi nhu hong. Kha nang cao do luc do
+`Assembly-CSharp` dang loi bien dich (loi `TMP_Text` vs `TextMeshProUGUI`), MonoBehaviour
+khong bind duoc, va lan ghi lai prefab da xoa sach tham chieu.
+
+**Da khac phuc, xac minh tung file:**
+- `git checkout` ca 3 file, roi bat Unity nap lai tu dia
+  (`EditorSceneManager.OpenScene` cho scene, `AssetDatabase.ImportAsset(ForceUpdate)`
+  cho prefab) — vi Unity van giu ban hong trong bo nho, user bam Save la hong lai.
+- Xac minh: scene 19 GameObject / 25 MonoBehaviour khop HEAD; 9/9 tham chieu cua
+  `Node.prefab` da co lai; ca 3 file `git diff` sach.
+- Ban hong luu o scratchpad (`OdoScene.after-my-save.unity`, `broken-prefabs/`).
+
+**Luat tu day:**
+- KHONG goi `SaveScene` / `SaveAssets` / `PrefabUtility.ApplyPrefabInstance` tren file
+  user tu code. User tu bam Save.
+- Sua bo cuc thi lam o RUNTIME (`Awake`/`Start`) nhu `UILayoutTidy`,
+  `InventoryLayoutRepair`, `SkillTreeLayoutRepair`. Danh doi: Editor van hien bo cuc cu,
+  chi vao Play Mode moi thay — chap nhan duoc, doi lay an toan.
+- Neu that su can ghi vinh vien: bao user tu lam trong Inspector, dua so lieu cu the.
+- Sau BAT KY thao tac nao co the cham asset: chay `git status` va kiem TUNG file, dung
+  chi kiem file minh dinh sua. Lan nay Claude chi revert scene va bo sot 2 prefab.
+
+---
+
+## HANG DOI — UI / GIAO DIEN  (user them 2026-08-27)
+
+Muc tieu user dat ra: **toan bo UI hien dang la mac dinh Unity, lam bang tay** — can nang cap cho
+"xin xo, dam chat game RPG". Day la viec THIET KE, khong chi sua code, nen chia nho ra.
+
+### T-UI-01 — Thanh Shield  (DA XONG, commit `4d399b1`)
+
+- [x] **So lieu quyet dinh huong giai:** do tren Unity, tuong phan `BarShield` tren `BarHp`
+  chi **2.84** — duoi xa nguong 4.5. Ket luan: DOI MAU KHONG CUU DUOC. Phai giai bang
+  thu mat bat tot hon sac do.
+- [x] Shader `UI/ShieldBar`: gach cheo DANG CHAY + vien sang o mep dan + nhap nhay khi
+  luong khien doi. Them chu `+N` (o `shieldText`, tuy chon, chua gan).
+- [x] Material dung LUC CHAY trong `UIStats` -> khong phai tao asset material, khong phai
+  sua prefab. Hai Image khien van gan nhu cu. Co `OnDestroy` huy material.
+
+### T-UI-01b — Khung o skill  (DA XONG, cung commit)
+
+Tra loi cau hoi "sao skill Signature khong co border bo tron":
+- [x] **Kiem tra scene: ca hai o KHONG he co phan tu vien nao.** Cau truc giong het nhau —
+  `Skill_E_Slot` / `Skill_Q_Slot ` > `Background` > (`icon`, `CooldownOverlay`), va
+  `Background` khong co Image. Nghia la "border bo tron" nhin thay trong game la do
+  **art cua tung icon tu ve**. Skill nao art khong co khung thi nhin tran.
+- [x] Shader `UI/RoundedFrame` (SDF hop bo tron, khu rang cua theo `fwidth`) + component
+  `UISlotFrame`. Dung khung THAT luc chay cho ca 2 o -> moi skill deu co khung nhu nhau.
+
+**Hai diem lech trong prefab da ghi nhan (KHONG phai bug):**
+- `skillQ_Container` gan vao `Background`, trong khi `skillE_Container` gan vao
+  `Skill_E_Slot` — lech mot cap. Vo hai vi container chi dung de `SetActive(true)`.
+  Vi the khung duoc dung vao CHA CUA ICON chu khong dua vao container.
+- GameObject `Skill_Q_Slot ` co **dau cach thua** o cuoi ten.
+
+### [!] VIEC USER PHAI LAM TRONG EDITOR
+
+- [ ] **M-08 — Them 2 shader vao Always Included Shaders.**
+  `Project Settings > Graphics > Always Included Shaders` -> them `UI/ShieldBar` va
+  `UI/RoundedFrame`. Hai shader nay tim qua `Shader.Find` nen KHI BUILD se bi strip neu
+  khong khai bao. Trong Editor thi van chay binh thuong.
+  (Cach khac: gan thang shader vao o `shieldBarShader` / `frameShader` trong Inspector.)
+- [ ] **M-09 — Reset component de thay mau moi.** `SkillNodeUI` va `UIBarPulse` dung
+  `[SerializeField]` nen prefab/scene da luu gia tri cu VAN DE LEN mac dinh moi.
+  Reset component trong Inspector moi thay doi.
+- [ ] **M-10 — (tuy chon) gan `shieldText`.** Tao mot TMP nho canh thanh mau va keo vao
+  o `shieldText` cua `UIStats` neu muon hien so luong khien.
+
+### T-UI-05 — ArcaneUISkin  (DA XONG, commit `b901d02`)
+
+Toan bo UI la control uGUI mac dinh, gan tay qua Inspector trong prefab. Thay vi sua
+tung cai (lau + chac chan lech nhau), viet skinner chay LUC RUNTIME.
+
+- [x] Phu Button (5 state + khung bo tron), TMP_Dropdown (ca template xo xuong),
+  Toggle, Scrollbar, va chu con lai phan vai theo co chu.
+- [x] Noi vao `DevToolPanel`, `InventoryController`, `StatDetailUI`.
+- [x] `StatAllocationPanel` (UI nang diem STR/DEX/INT/VIT/AGI) nam TRONG `InventoryPanel`
+  nen duoc phu luon. `Section_Attributes` nam trong `StatDetailPanel`.
+- [x] **Cache material dung chung** — moi Image mot material thi DevToolPanel sinh ~71
+  material, moi cai pha mot batch. Gop theo (aspect lam tron 2 so, radius, bo mau):
+  DevTool 6 nut -> 1 material, Inventory 19 -> 3, Stat 1 -> 1.
+
+Pham vi se duoc khoac (dem tren scene that):
+
+| Panel | Button | Dropdown | Toggle | Scrollbar | TMP |
+|---|---|---|---|---|---|
+| DevToolPanel | 55 | 16 | 16 | 22 | 103 |
+| InventoryPanel | 19 | 0 | 0 | 1 | 35 |
+| StatDetailPanel | 1 | 0 | 0 | 0 | 49 |
+
+**Con lai cho phan UI (chua lam):**
+- [ ] Bo cuc inventory — skinner chi doi MAU, khong doi bo cuc. Cac o van la luoi
+  o vuong deu. Neu muon dep hon that su thi phai sap xep lai layout, la viec khac.
+- [ ] O item trong inventory chua dung `UISlotFrame` (moi chi doi mau icon).
+
+---
+
+### T-UI-06 — Sua 3 loi UI user bao  (DA XONG, commit `76d3c68`)
+
+- [x] **Chu kho doc (loi cua minh).** `SkinLooseText` gan `TextDim` cho chu < 18pt, ma
+  `TextDim` do duoc **2.47-2.92** tren MOI nen — duoi xa 4.5. Bo han bac do; gio chi 2 bac:
+  `TextBright` (>=14.0) cho tieu de, `TextMuted` (>=5.62) cho phan con lai.
+  **Bai hoc:** skinner quet dai tra thi khong the biet chu nao la trang tri, nen bac thap
+  nhat BUOC PHAI doc duoc.
+- [x] **Border skill E ve vuong khi vao Play Mode (loi cua minh).** Khung dung thanh
+  GameObject rieng dat SAU icon, nhung icon lap kin dung 100x100 cua o nen che sach.
+  Sua: gan khung THANG len Image cua icon + them che do `_TextureFill` vao shader.
+- [x] **Bug lo ra trong luc sua:** `AddComponent` goi `Awake` NGAY LAP TUC, truoc khi ben
+  goi kip gan field -> moi co doc trong `Awake` deu la gia tri mac dinh. Bo field
+  `disableRaycast`, them `Refresh()`.
+- [x] **Layout di sat nhau.** Gan nhu moi layout group deu `spacing = 0`. Them `UILayoutTidy`.
+  Do thuc te: **52 group GIU NGUYEN** (DevTool 46, StatDetail 6), 42 group duoc noi.
+
+### T-UI-07 — Bo cuc Inventory  (DA XONG, commit `865bc1b`)
+
+- [x] **TopEquipDiv — KHONG sua, va de xuat truoc do cua minh la SAI.**
+  Minh tung noi no "rong 10px, khong layout group, tran ra ngoai" va de nghi them layout
+  group. Doc vi tri that thi day la **paper-doll co y**:
+
+  ```
+          TDV1 (190, 120)              <- mu
+  TDV4 ( 80,  50)      TDV5 (300,  50)
+  TDV2 ( 80,   0)  [Avatar 190,0]  TDV3 (300,   0)
+  TDV7 ( 80, -50)      TDV6 (300, -50)
+  ```
+
+  Cac o dung anchor (0.5,0.5) nen container 10px khong cat gi, va khong co mask.
+  Nhet layout group vao se **pha** thiet ke. Da ghi chu ro trong code de sau khong ai sua nham.
+
+- [x] **Nhung do lai thi tim ra loi that o cho khac:** `Slider_HP` (y=-250) va
+  `Slider_Experience` (y=-270) deu cao 25px pivot 0.5 -> **chong nhau dung 5px**.
+  Da xep lai, cach 8px. Cong thuc tinh TU vi tri HP nen idempotent (chay 3 lan deu ra -283.0).
+
+- [x] **Chieu cao hang chi so 15 -> 30, co chu 8 -> 16.** Font 8pt moi la thu pham chinh
+  khien bang chi so khong doc duoc, khong phai mau. 15px ep chu xuong 8pt.
+
+- [x] **Can bang Attribute / Value.** Truoc: ca hai canh GIUA, Attribute minW 50 va Value
+  minW 200 -> con so troi giua hang. Sau: Attribute gian no + canh TRAI, Value hep + canh
+  PHAI. Nut "+" 15px -> 26px (15px nho hon vung bam toi thieu).
+
+**Bai hoc ghi lai:** lan do dau bi sai vi tim object theo TEN, ma scene co toi **3** object
+ten `Slider_HP` (CompanionHUD, TopEquipDiv, GameUI_MainLayout). Tim theo ten trong scene nay
+khong dang tin — phai gioi han trong cay con cu the.
+
+---
+
+### T-UI-02 — UI hien Debuff / CC dang chiu  (THUC RA LA LAM MOI, khong phai sua)
+- **Da kiem tra: hien khong co UI debuff nao ca.** Grep toan bo `.prefab` + `.unity` khong ra
+  object nao ten Debuff/Buff/Status. Nghia la nguoi choi dang bi Stun/Root/Silence/Slow/Bleed/Burn
+  ma **khong co gi bao tren man hinh**.
+- Phu thuoc: nen lam SAU khi xong T-CC-01 (them Taunt/Pull/Fear vao enum), de khoi phai
+  ve lai icon lan hai.
+- Can: hang icon trang thai + dem nguoc thoi gian + phan biet CC (khong hanh dong duoc)
+  voi Debuff (mat mau theo thoi gian).
+
+### T-UI-03 — DevToolPanel  (DA XONG phan khoac giao dien, commit `b901d02`)
+- `DevToolPanel.cs` 915 dong, toan Button mac dinh cua Unity (anh chup man hinh cua user:
+  "Take Damage (10)", "Heal Full", "Add EXP +100", "Force Level Up", "Toggle God Mode",
+  tab COMBAT / SKILLS / EQUIPMENT / PLAYER / Companion Equipment).
+- Day la panel dev, khong phai UI nguoi choi -> **uu tien thap hon T-UI-01/02**, va tieu chi khac:
+  can DE DUNG va DE DOC, khong can dep kieu RPG.
+- Luu y: co lien quan toi **M-02** (gan nut game speed) va **buoc refactor 4 (gom time)**.
+  Lam UI DevTool truoc khi gom time thi se phai sua lai. Nen doi.
+
+### T-UI-04 — He thong thiet ke dung chung  (DA XONG, commit `2f6ed7d`)
+- Hien tai co **~254 gia tri mau viet cung** trong script (146 `new Color(...)` + 108 `Color.<ten>`)
+  — chinh la buoc refactor 3 con dang do.
+- Neu di thang vao ve lai tung panel ma khong co bang mau/typography chung thi se lai ra
+  mot mo gia tri roi rac nua. Lam `UIPalette` truoc, roi moi ve.
+- Da co san lam diem tua: `RarityColors` (da hop nhat, 5 bac xam/luc/lam/tim/cam).
+
+**Cau hoi can user chot truoc khi bat tay:**
+1. Tong the huong nao — dark fantasy (nau/vang dong, vien kim loai), hay arcane (tim/lam, phat sang)?
+   Bang mau rarity hien tai dang nghieng ve arcane.
+2. Co asset UI (sprite khung, icon) mua san khong, hay ve bang shader/9-slice?
+3. Uu tien: dep truoc hay ro rang truoc? (T-UI-01 va T-UI-02 la "ro rang", T-UI-03 la "de dung")
+
+---
+
+## MANUAL UNITY EDITOR TASKS
+
+Tat ca checkbox trong muc nay can user thuc hien/confirm trong Unity Editor hoac Play Mode.
+
+- [ ] **[GAP] M-01 - Xac minh scene dang dirty**
+  - File user-owned: `Action_RPG/Assets/Scenes/OdoScene.unity`.
+  - Diff truoc do chi tang `EnemyCombat.skillEffects.Array.size` len `1` tren mot prefab instance.
+  - Trong Inspector, mo `Skill Effects[0]`, xac nhan `type`, `duration`, `impactLevel`,
+    resistance va interrupt flags dung y do.
+  - Save scene sau khi xac nhan.
+
+- [ ] **M-02 - Gan nut DevTool game speed**
+  - Tren `Canvas.prefab > DevToolPanel > Combat`, tao/gan bon Button vao:
+    `CMD_SetGameSpeedSlow()` 0.25x, `CMD_SetGameSpeedHalf()` 0.5x,
+    `CMD_SetGameSpeedNormal()` 1x, `CMD_SetGameSpeedFast()` 2x.
+  - Test mo Inventory/SkillTree/DevTool van pause 0x.
+  - **Lam SAU khi xong buoc refactor 4 (gom time)**, khong thi gan vao API sap bi thay.
+
+- [ ] **M-03 - Tao va gan sample Enemy Attack Module assets**
+  - Folder: `Assets/Resources/Datas/EnemyAttackModules/`.
+  - Assets: `EAM_Melee_Sword`, `EAM_Melee_Dagger`, `EAM_Melee_Heavy_AOE`, `EAM_Ranged_Bow`,
+    `EAM_Mage_TargetBolt`, `EAM_Mage_GroundAOE`, `EAM_DashStrike`.
+
+- [ ] **M-04 - Tao/gan projectile va telegraph prefabs**
+  - Projectile prefab cho Bow va Mage. Kiem Collider, Rigidbody, layer collision,
+    `EnemyProjectile`, VFX, lifetime. Telegraph prefab cho GroundTargetAOE.
+
+- [ ] **M-05 - Gan module cho enemy prefabs**
+  - Enemy melee fallback de module null phai van danh nhu cu.
+  - Gan basic/skill module cho: Sword/Dagger, Bow, Mage Ground AoE, Dash Strike.
+  - Uu tien gan vao `EnemyData`; `EnemyCombat.basicAttackModule/skillAttackModule`
+    chi dung nhu local override.
+
+- [ ] **M-07 - Tao va gan EnemyData assets**
+  - Folder: `Assets/Resources/Datas/Enemies/`.
+  - `ED_Odo`, `ED_Orc_Warrior`, `ED_Boss_Golem`, `ED_Archer`, `ED_Mage`.
+  - Set toi thieu: `enemyID`, `enemyName`, `monsterRank`, `baseHp`, `baseMoveSpeed`,
+    `baseAttackSpeed`, `expReward`.
+
+- [ ] **[GAP TRUOC COMMIT CUOI] M-06 - Play Mode acceptance matrix**
+  - Fallback melee hoat dong khi enemy khong co module.
+  - Sword/Dagger, ranged projectile, Ground AoE va Dash Strike hoat dong.
+  - Stun, Knockback, Airborne, Root, Silence, Slow dung rule.
+  - Stun co the cleanse bang skill duoc phep; Airborne khong the cleanse/action.
+  - Player hit moi camera shake; Companion/Enemy hit khong camera shake.
+  - Dev speed va UI pause khong dap `Time.timeScale` cua nhau.
+  - Boss dash giu dung dash multiplier khi bi Slow.
+  - EnemyAI khong ghi de destination khi module dang override movement.
+  - Disable enemy giua dash khong ket invincibility/override.
+  - Save/load player khong lam `initialBaseHp` tang them `20*level`.
+  - SkillTree unlock va stat allocation cap nhat UI/runtime/save dung.
+  - Console khong co error do.
+
+---
+
+## VIEC LINH TINH CHUA XU LY
+
+- [ ] `Action_RPG/Assets/_Sprites/` — meta cu `craftpix-net-176111-...` bi xoa, `Boss.meta` moi
+  chua track. Day la dau vet doi ten thu muc. Xac nhan Unity khong bao missing sprite roi commit rieng.
+- [ ] File rong `rm` o goc repo (0 byte, tao 2026-08-27 09:55) — nhieu kha nang go nham lenh, xoa duoc.
+- [ ] `GeneratedAssets/` (27 muc) o goc project — output cu cua `com.unity.ai.generators` da go.
+  Neu khong con dung thi xoa.
+
+---
+
+## INFRA NOTES
+
+### 2026-07-12 - Fix mat sprite khi clone tu nhanh `test`
+- Nguyen nhan: `.gitignore` co dong `/Action_RPG/Assets/_Sprites` -> toan bo thu muc sprite
+  nhan vat/enemy bi bo, khong push len. Prefab + animation van co, nhung tham chieu sprite
+  bi thieu -> hien o hong/missing khi clone.
+- Da xu ly: xoa dong ignore do, `git add` lai 813 file trong `Action_RPG/Assets/_Sprites`,
+  commit + push nhanh `test`.
+- **Viec can lam cho ai da clone truoc do:** `git pull origin test`. Sau khi pull, mo Unity
+  de re-import; neu prefab van missing thi Reimport All.

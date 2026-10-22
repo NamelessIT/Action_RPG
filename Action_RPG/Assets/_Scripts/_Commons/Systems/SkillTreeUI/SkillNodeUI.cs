@@ -12,11 +12,13 @@ public class SkillNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
     [SerializeField] private TextMeshProUGUI    _nameText;
     [SerializeField] private TextMeshProUGUI    _costText;       // "1 SP"
 
+    // Mặc định lấy từ UIPalette. LƯU Ý: đây là [SerializeField] nên prefab/scene đã lưu giá trị
+    // cũ sẽ ĐÈ LÊN mặc định này — phải Reset component (hoặc sửa tay) trong Editor mới thấy đổi.
     [Header("State Colors")]
-    [SerializeField] private Color _lockedColor    = new Color(0.3f, 0.3f, 0.3f, 1f);
-    [SerializeField] private Color _availableColor = new Color(1f, 0.85f, 0f, 1f);
-    [SerializeField] private Color _unlockedColor  = new Color(0.2f, 0.8f, 0.2f, 1f);
-    [SerializeField] private Color _equippedColor  = new Color(0f, 0.6f, 1f, 1f);
+    [SerializeField] private Color _lockedColor    = new Color(0.290f, 0.267f, 0.353f, 1f); // UIPalette.StateLocked
+    [SerializeField] private Color _availableColor = new Color(1.000f, 0.780f, 0.180f, 1f); // UIPalette.StateWarn
+    [SerializeField] private Color _unlockedColor  = new Color(0.298f, 0.831f, 0.365f, 1f); // UIPalette.StateGood
+    [SerializeField] private Color _equippedColor  = new Color(0.545f, 0.361f, 0.965f, 1f); // UIPalette.ArcaneCore
 
     [Header("Buttons")]
     [SerializeField] private Button _unlockButton;
@@ -61,6 +63,29 @@ public class SkillNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         Refresh();
     }
 
+    /// <summary>
+    /// Dat nhan mac dinh cho hai nut NGAY khi node ton tai.
+    ///
+    /// Vi sao can: ca hai nut trong Node.prefab deu ten "Button" va nhan mac dinh cung la
+    /// "Button". Refresh() co dat nhan that ("Unlock"/"Equip"), NHUNG no early-return ngay
+    /// dong dau khi _nodeData hoac _runtime con null. Node nao chua duoc Bind thi hai nut
+    /// giu nguyen chu "Button" — 2 nut x ~100 node = ~200 chu "Button" rai khap cay skill.
+    ///
+    /// Awake chay vo dieu kien nen bit duoc ca truong hop node khong bao gio duoc Bind.
+    /// </summary>
+    private void Awake()
+    {
+        SetButtonLabel(_unlockButton, "Unlock");
+        SetButtonLabel(_equipButton,  "Equip");
+    }
+
+    private static void SetButtonLabel(Button button, string label)
+    {
+        if (button == null) return;
+        var t = button.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (t != null) t.text = label;
+    }
+
     // ─────────────────────────────────────────────────────────────
     //  REFRESH
     // ─────────────────────────────────────────────────────────────
@@ -100,16 +125,32 @@ public class SkillNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
             // Có sprite → hiện; nếu vẫn null (chưa gán default) → ẩn để tránh ô vuông trắng.
             _iconImage.enabled = icon != null;
             // Locked: tint xám nhưng VẪN NHÌN THẤY (không trong suốt hẳn).
-            _iconImage.color   = isUnlocked ? Color.white : new Color(0.45f, 0.45f, 0.45f, 1f);
+            _iconImage.color   = isUnlocked ? Color.white : UIPalette.IconDimmed;
         }
 
-        // ── Name ──────────────────────────────────────────────────
-        if (_nameText != null)
-            _nameText.text = _nodeData.nodeName;
+        // ── Name + Cost ──────────────────────────────
+        // Node.prefab chi co DUNG MOT label tu do ("Text (TMP)" o goc node); hai Text (TMP)
+        // con lai la nhan ben trong hai Button. Vi vay _nameText va _costText dang tro
+        // CUNG MOT doi tuong — ghi lan luot thi dong sau de len dong truoc, va TEN NODE
+        // KHONG BAO GIO HIEN, chi con lai chu cost.
+        //
+        // Day KHONG phai loi keo-tha: khong co o thu hai nao de keo _costText sang.
+        // Nen xu ly o code — phat hien tro trung thi GOP hai thong tin vao mot label.
+        string costLabel = isUnlocked ? string.Empty : $"{_nodeData.unlockCost} SP";
 
-        // ── Cost ──────────────────────────────────────────────────
-        if (_costText != null)
-            _costText.text = isUnlocked ? "" : $"{_nodeData.unlockCost} SP";
+        if (_nameText != null && ReferenceEquals(_nameText, _costText))
+        {
+            // Dung Environment.NewLine chu khong phai escape trong chuoi — tranh
+            // rui ro dau backslash bi nuot khi sinh code qua pipeline.
+            _nameText.text = string.IsNullOrEmpty(costLabel)
+                ? _nodeData.nodeName
+                : _nodeData.nodeName + System.Environment.NewLine + costLabel;
+        }
+        else
+        {
+            if (_nameText != null) _nameText.text = _nodeData.nodeName;
+            if (_costText != null) _costText.text = costLabel;
+        }
 
         // ── Frame Color ───────────────────────────────────────────
         if (_frameBorder != null)
@@ -128,8 +169,7 @@ public class SkillNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
             _unlockButton.gameObject.SetActive(!isUnlocked);
             _unlockButton.interactable = canUnlock;
 
-            TextMeshProUGUI btnText = _unlockButton.GetComponentInChildren<TextMeshProUGUI>();
-            if (btnText != null) btnText.text = "Unlock";
+            SetButtonLabel(_unlockButton, "Unlock");
         }
 
         // ── Equip Button ─────────────────────────────────────────
@@ -153,13 +193,7 @@ public class SkillNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
             // Chỉ cho bấm trang bị nếu chưa được gán VÀ không nằm trong danh sách cấm
             _equipButton.interactable = !isEquipped && !isBanned;
 
-            TextMeshProUGUI btnText = _equipButton.GetComponentInChildren<TextMeshProUGUI>();
-            if (btnText != null)
-            {
-                if (isEquipped) btnText.text = "Equipped";
-                else if (isBanned) btnText.text = "Locked";
-                else btnText.text = "Equip";
-            }
+            SetButtonLabel(_equipButton, isEquipped ? "Equipped" : isBanned ? "Locked" : "Equip");
         }
     }
 

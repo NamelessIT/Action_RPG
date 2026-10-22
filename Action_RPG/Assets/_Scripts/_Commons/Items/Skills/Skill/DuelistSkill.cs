@@ -101,7 +101,7 @@ public class DuelistSkill : SkillBehavior
         DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillPhysicalMultiplier, data, equipmentManager.currentWeapon, 0);
 
         // [QUAN TRỌNG] Gắn ấn Thách Đấu
-        enemyStats.ApplyChallengeMark(challengeDuration);
+        enemyStats.ApplyChallengeMark(challengeDuration, stats);
 
         // Sinh ra VFX cái ấn trên đầu quái
         //if (challengeMarkVfxPrefab != null)

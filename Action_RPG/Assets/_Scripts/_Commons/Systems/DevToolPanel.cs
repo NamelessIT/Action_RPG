@@ -21,6 +21,16 @@ public class DevToolPanel : MonoBehaviour
     [SerializeField] private GameObject _panelSkills;
     [SerializeField] private GameObject _panelEquipment;
     [SerializeField] private GameObject _panelPlayer;
+    [SerializeField] private GameObject _panelCompanion;        // Tab chọn nguyên mẫu Companion (1/5)
+    [SerializeField] private GameObject _panelCompanionEquip;   // Tab trang bị Companion (Protocol/Matrix/SyncCore)
+
+    [Header("Companion Tab")]
+    [SerializeField] private TMP_Dropdown _ddCompanionArchetype; // 5 lựa chọn: Debuffer/Sustain/Controller/Buffer/DamageDealer
+
+    [Header("Companion Equipment Tab")]
+    [SerializeField] private TMP_Dropdown _ddCompProtocol;
+    [SerializeField] private TMP_Dropdown _ddCompMatrix;
+    [SerializeField] private TMP_Dropdown _ddCompSyncCore;
 
     // ============================================================
     //  SKILLS TAB — 5 SLOTS (1 DefaultPassive · 2 Passive · 1 Skill · 1 Signature)
@@ -90,6 +100,11 @@ public class DevToolPanel : MonoBehaviour
     private List<AccessoryData> _parasiteList   = new List<AccessoryData>();
     private List<AccessoryData> _chainList      = new List<AccessoryData>();
 
+    // Companion module data
+    private List<CompanionProtocolData> _compProtocols  = new List<CompanionProtocolData>();
+    private List<CompanionMatrixData>   _compMatrices   = new List<CompanionMatrixData>();
+    private List<CompanionSyncCoreData> _compSyncCores  = new List<CompanionSyncCoreData>();
+
     // ============================================================
     //  STATE
     // ============================================================
@@ -108,8 +123,8 @@ public class DevToolPanel : MonoBehaviour
 
     private void Awake()
     {
-        _playerStats      = FindFirstObjectByType<PlayerStats>();
-        _equipmentManager = FindFirstObjectByType<EquipmentManager>();
+        _playerStats      = PlayerStats.Current;
+        _equipmentManager = EquipmentManager.Current;
 
         // Không dùng FindFirstObjectByType<SkillManager>() vì sẽ tìm thấy Enemy SkillManager trước.
         // Tìm đúng SkillManager có isPlayer = true (của Player, không phải Enemy).
@@ -127,7 +142,7 @@ public class DevToolPanel : MonoBehaviour
     private SkillManager FindPlayerSkillManager()
     {
         // Ưu tiên tìm qua tag "Player"
-        GameObject playerObj = GameObject.FindWithTag("Player");
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
         {
             SkillManager sm = playerObj.GetComponent<SkillManager>();
@@ -145,17 +160,44 @@ public class DevToolPanel : MonoBehaviour
 
     private void Start()
     {
-        _weapons     = new List<WeaponData>(Resources.LoadAll<WeaponData>("Datas/Weapons"));
-        _shields     = new List<CoreShieldData>(Resources.LoadAll<CoreShieldData>("Datas/Core Shields"));
-        _accessories = new List<AccessoryData>(Resources.LoadAll<AccessoryData>("Datas/Accessories"));
-        _skills      = new List<SkillData>(Resources.LoadAll<SkillData>("Datas/Skills"));
+        _weapons     = new List<WeaponData>(Resources.LoadAll<WeaponData>(ResourcePaths.Weapons));
+        _shields     = new List<CoreShieldData>(Resources.LoadAll<CoreShieldData>(ResourcePaths.CoreShields));
+        _accessories = new List<AccessoryData>(Resources.LoadAll<AccessoryData>(ResourcePaths.Accessories));
+        _skills      = new List<SkillData>(Resources.LoadAll<SkillData>(ResourcePaths.Skills));
 
         Debug.Log($"[DevTool] Loaded — Weapons:{_weapons.Count} Shields:{_shields.Count} " +
                   $"Accessories:{_accessories.Count} Skills:{_skills.Count}");
 
+        // Companion module data (đường dẫn Resources/Datas/CompanionModules)
+        _compProtocols = new List<CompanionProtocolData>(Resources.LoadAll<CompanionProtocolData>(ResourcePaths.CompanionModules));
+        _compMatrices  = new List<CompanionMatrixData>(Resources.LoadAll<CompanionMatrixData>(ResourcePaths.CompanionModules));
+        _compSyncCores = new List<CompanionSyncCoreData>(Resources.LoadAll<CompanionSyncCoreData>(ResourcePaths.CompanionModules));
+
         BuildFilteredLists();
         PopulateDropdowns();
+        PopulateCompanionDropdowns();
         ShowTab(0);
+
+        // Khoác lại giao diện SAU khi dropdown đã populate, để caption/item text mới sinh
+        // cũng được tô. Đây là panel dev nên tiêu chí là DỄ ĐỌC, không phải đẹp.
+        CenterOnScreen();
+        Systems.UILayoutTidy.Apply(gameObject);
+        Systems.ArcaneUISkin.Apply(gameObject);
+    }
+
+    /// <summary>
+    /// Panel dang neo vao GOC TREN-PHAI (anchor 1,1) voi offset co dinh (-350,-240), nen o
+    /// moi do phan giai no roi mot cho khac nhau va tren man 4K thi lech han khoi tam.
+    /// Doi sang neo TAM de luon nam giua, bat ke do phan giai.
+    /// </summary>
+    private void CenterOnScreen()
+    {
+        var rt = transform as RectTransform;
+        if (rt == null) return;
+
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot     = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
     }
 
     // ============================================================
@@ -216,12 +258,98 @@ public class DevToolPanel : MonoBehaviour
 
     public void ShowTab(int index)
     {
-        if (_panelCombat    != null) _panelCombat.SetActive(index == 0);
-        if (_panelSkills    != null) _panelSkills.SetActive(index == 1);
-        if (_panelEquipment != null) _panelEquipment.SetActive(index == 2);
-        if (_panelPlayer    != null) _panelPlayer.SetActive(index == 3);
+        if (_panelCombat         != null) _panelCombat.SetActive(index == 0);
+        if (_panelSkills         != null) _panelSkills.SetActive(index == 1);
+        if (_panelEquipment      != null) _panelEquipment.SetActive(index == 2);
+        if (_panelPlayer         != null) _panelPlayer.SetActive(index == 3);
+        if (_panelCompanion      != null) _panelCompanion.SetActive(index == 4);
+        if (_panelCompanionEquip != null) _panelCompanionEquip.SetActive(index == 5);
         _activeTab = index;
     }
+
+    // ============================================================
+    //  COMPANION TABS
+    // ============================================================
+    private void PopulateCompanionDropdowns()
+    {
+        if (_ddCompanionArchetype != null)
+        {
+            _ddCompanionArchetype.ClearOptions();
+            _ddCompanionArchetype.AddOptions(new List<string>
+            { "1 - Debuffer", "2 - Sustain", "3 - Controller", "4 - Buffer", "5 - Damage Dealer" });
+        }
+        FillDropdown(_ddCompProtocol, _compProtocols, m => string.IsNullOrEmpty(m.protocolName) ? m.name : m.protocolName);
+        FillDropdown(_ddCompMatrix,   _compMatrices,  m => m.name);
+        FillDropdown(_ddCompSyncCore, _compSyncCores, m => m.name);
+    }
+
+    private CompanionAI FindCompanion() => CompanionAI.Current;
+
+    /// <summary>Tab Companion: đổi nguyên mẫu theo dropdown (lưu PlayerPrefs).</summary>
+    public void CMD_SetCompanionArchetype()
+    {
+        CompanionAI c = FindCompanion();
+        if (c == null) { Debug.LogWarning("[DevTool] Không tìm thấy Companion trong scene."); return; }
+        var ctrl = c.GetComponent<CompanionSkillController>();
+        if (ctrl == null) { Debug.LogWarning("[DevTool] Companion thiếu CompanionSkillController."); return; }
+        int idx = _ddCompanionArchetype != null ? _ddCompanionArchetype.value : 0;
+        ctrl.SetArchetype((CompanionArchetype)idx);
+        Debug.Log($"[DevTool] Companion archetype → {(CompanionArchetype)idx}");
+    }
+
+    private CompanionEquipmentManager FindCompanionEquip()
+    {
+        CompanionAI c = FindCompanion();
+        return c != null ? c.GetComponent<CompanionEquipmentManager>() : null;
+    }
+
+    public void CMD_EquipCompProtocol()
+    {
+        var eq = FindCompanionEquip();
+        if (eq == null || !AssertListIndex(_compProtocols, _ddCompProtocol, "CompProtocol")) return;
+        eq.EquipProtocol(_compProtocols[_ddCompProtocol.value]);
+        Debug.Log($"[DevTool] Companion EquipProtocol: {_compProtocols[_ddCompProtocol.value].name}");
+    }
+    public void CMD_UnequipCompProtocol()
+    {
+        var eq = FindCompanionEquip();
+        if (eq != null) { eq.EquipProtocol(null); Debug.Log("[DevTool] Companion UnequipProtocol"); }
+    }
+    public void CMD_EquipCompMatrix()
+    {
+        var eq = FindCompanionEquip();
+        if (eq == null || !AssertListIndex(_compMatrices, _ddCompMatrix, "CompMatrix")) return;
+        eq.EquipMatrix(_compMatrices[_ddCompMatrix.value]);
+        Debug.Log($"[DevTool] Companion EquipMatrix: {_compMatrices[_ddCompMatrix.value].name}");
+    }
+    public void CMD_UnequipCompMatrix()
+    {
+        var eq = FindCompanionEquip();
+        if (eq != null) { eq.EquipMatrix(null); Debug.Log("[DevTool] Companion UnequipMatrix"); }
+    }
+    public void CMD_EquipCompSyncCore()
+    {
+        var eq = FindCompanionEquip();
+        if (eq == null || !AssertListIndex(_compSyncCores, _ddCompSyncCore, "CompSyncCore")) return;
+        eq.EquipSyncCore(_compSyncCores[_ddCompSyncCore.value]);
+        Debug.Log($"[DevTool] Companion EquipSyncCore: {_compSyncCores[_ddCompSyncCore.value].name}");
+    }
+    public void CMD_UnequipCompSyncCore()
+    {
+        var eq = FindCompanionEquip();
+        if (eq != null) { eq.EquipSyncCore(null); Debug.Log("[DevTool] Companion UnequipSyncCore"); }
+    }
+
+    // ============================================================
+    //  GAME SPEED (DevTool) — qua UIPauseManager.GameplayTimeScale
+    //  Không set Time.timeScale trực tiếp để KHÔNG phá pause Inventory/SkillTree/DevTool.
+    // ============================================================
+    public void CMD_SetGameSpeedSlow()   => UIPauseManager.SetGameplayTimeScale(0.25f);
+    public void CMD_SetGameSpeedHalf()   => UIPauseManager.SetGameplayTimeScale(0.5f);
+    public void CMD_SetGameSpeedNormal() => UIPauseManager.SetGameplayTimeScale(1f);
+    public void CMD_SetGameSpeedFast()   => UIPauseManager.SetGameplayTimeScale(2f);
+    /// <summary>Gọi từ Slider/InputField nếu muốn tốc độ tùy ý.</summary>
+    public void CMD_SetGameSpeed(float scale) => UIPauseManager.SetGameplayTimeScale(scale);
 
     // ============================================================
     //  POPULATE DROPDOWNS
@@ -617,7 +745,7 @@ public class DevToolPanel : MonoBehaviour
         }
 
         // Tìm vị trí player để spawn enemy phía trước
-        GameObject playerObj = GameObject.FindWithTag("Player");
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         Vector3 spawnPos;
         if (playerObj != null)
         {
@@ -741,13 +869,15 @@ public class DevToolPanel : MonoBehaviour
         _playerStats.exp                 = 0f;
         _playerStats.attributePointRemain = 5;
         _playerStats.skillPointRemain    = 1;
-        _playerStats.baseSTR             = dbEntry.STR;
-        _playerStats.baseDEX             = dbEntry.DEX;
-        _playerStats.baseINT             = dbEntry.INT;
-        _playerStats.baseVIT             = dbEntry.VIT;
-        _playerStats.baseAGI             = dbEntry.AGI;
-        _playerStats.initialBaseHp       = dbEntry.base_hp;
-        _playerStats.maxStamina          = dbEntry.max_stamina;
+        // [P2-DATA-01B] Reset base stats từ DB qua API. currentHp/currentStamina được set thủ công ngay
+        // sau RecalculateStats() bên dưới nên resetCurrentVitals=false (maxHp chưa đúng ở thời điểm này).
+        _playerStats.ApplyBaseRuntimeStats(new Stats.BaseStatSnapshot
+        {
+            initialBaseHp = dbEntry.base_hp,
+            maxStamina    = dbEntry.max_stamina,
+            baseSTR = dbEntry.STR, baseDEX = dbEntry.DEX, baseINT = dbEntry.INT,
+            baseVIT = dbEntry.VIT, baseAGI = dbEntry.AGI,
+        }, resetCurrentVitals: false);
 
         _playerStats.RefreshExpRequirements();
         _playerStats.RecalculateStats();

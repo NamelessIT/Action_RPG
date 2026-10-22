@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4873d6db67d502247839ae8a1e23c8e0, type: 3}
+  m_Name: MTX_REG_T3_02
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionMatrixData
+  id: MTX_REG_T3_02
+  description: Converts excess healing into a protective barrier.
+  icon: {fileID: 0}
+  rarity: 2
+  effectType: 1
+  effectCondition: 
+  effectDescription: "20% l\u01B0\u1EE3ng m\xE1u h\u1ED3i v\u01B0\u1EE3t m\u1EE9c
+    c\u1EE7a Companion s\u1EBD t\u1EF1 \u0111\u1ED9ng chuy\u1EC3n h\xF3a th\xE0nh
+    L\xE1 Ch\u1EAFn (Shield), t\u1ED3n t\u1EA1i 5 gi\xE2y. Gi\xE1 tr\u1ECB l\xE1
+    ch\u1EAFn kh\xF4ng v\u01B0\u1EE3t qu\xE1 50% m\xE1u t\u1ED1i \u0111a c\u1EE7a
+    Companion."
+  matrixName: Overflow Shielding
+  matrixType: 0
+  armor: 50
+  magicResist: 50
+  flatHp: 350
+  bonusHp: 0.1

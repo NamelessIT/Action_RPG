@@ -20,6 +20,7 @@ public class DuelistSignature : SkillBehavior
     public GameObject debuffVfxPrefab; // Icon kiếm gãy trên đầu địch
 
     private Coroutine windowCoroutine;
+    private int _weakenSequence = 0;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
@@ -141,41 +142,39 @@ public class DuelistSignature : SkillBehavior
 
         target.TakeDamage(counterInfo);
 
-        // Gắn Debuff giảm sát thương
-        StartCoroutine(ApplyDamageDebuff(target));
+        // Gắn Weaken managed Debuff. Legacy dùng WaitForSecondsRealtime nên request dùng Unscaled clock.
+        ApplyDamageDebuff(target);
 
         // Chờ thêm 0.3s xem ngầu trước khi nhả Time Stop
         yield return new WaitForSecondsRealtime(0.3f);
 
         // --- PHASE 3: KẾT THÚC ---
-        // Tôn trọng UIPauseManager: nếu UI đang mở thì giữ pause (0), không ép 1 (tránh unpause oan).
+        // Tôn trọng UIPauseManager: timeScale giữ pause nếu UI mở, ngược lại về dev speed;
+        // fixedDeltaTime theo dev speed (không hard-code 0.02f).
         Time.timeScale = UIPauseManager.ResumeTimeScale;
-        Time.fixedDeltaTime = 0.02f; // Trả lại vật lý bình thường
+        Time.fixedDeltaTime = UIPauseManager.ResumeFixedDeltaTime;
 
         stats.isInvincible = false;
         player.isAttacking = false;
     }
 
-    private IEnumerator ApplyDamageDebuff(Stats target)
+    private void ApplyDamageDebuff(Stats target)
     {
-        if (target != null && target.currentHp > 0)
-        {
-            Debug.Log($"<color=purple>Duelist: {target.name} bị suy yếu, giảm 50% Sát thương!</color>");
+        if (target == null || target.currentHp <= 0) return;
 
-            target.damageOutputMultiplier -= damageReductionPercent; // Trừ đi 0.5
+        Debug.Log($"<color=purple>Duelist: {target.name} bị suy yếu, giảm 50% Sát thương!</color>");
 
-            //GameObject vfx = null;
-            //if (debuffVfxPrefab) vfx = Instantiate(debuffVfxPrefab, target.transform);
-
-            // Chờ thời gian THỰC (Phòng trường hợp TimeScale bị đổi bởi skill khác)
-            yield return new WaitForSecondsRealtime(debuffDuration);
-
-            if (target != null)
+        const string effectId = "DuelistSignature.Weaken";
+        string sourceKey = $"{effectId}:{GetInstanceID()}:{++_weakenSequence}";
+        target.ApplyDamageOutputDown(
+            effectId, damageReductionPercent, debuffDuration, stats, sourceKey,
+            EffectStackPolicy.IndependentPerSource, 1, damageReductionPercent,
+            "Duelist Signature Weaken 50% / realtime duration",
+            (snapshot, reason) =>
             {
-                target.damageOutputMultiplier += damageReductionPercent; // Trả lại 0.5
-                //if (vfx) Destroy(vfx);
-                Debug.Log($"<color=gray>Duelist: {target.name} đã phục hồi sức mạnh.</color>");
-            }
-        }
+                Debug.Log($"<color=gray>Duelist: {target.name} đã hết suy yếu ({reason}).</color>");
+            },
+            DebuffTimeMode.Unscaled);
     }
+
 }

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,11 +16,42 @@ public class AllyStats : Stats
     public float bonusHpGain;
     public float bonusHp;
     public float flatHp;
+    [Tooltip("Máu cộng thẳng KHÔNG bị bonusHp nhân lên (vd gộp máu Companion từ Core Shield T5_08).")]
+    public float flatBonusMaxHp;
+
+    [Header("--- Dash override (Core Shield T5_04) ---")]
+    [HideInInspector] public bool dashNoCooldown = false; // bỏ cooldown Dash (T5_04)
+    [HideInInspector] public bool accBlockDashSprint = false; // ACC_PA_T5_04: cấm Dash và chạy nhanh
+    [HideInInspector] public float accStaminaConsumeMult = 1f;     // ACC_RM_T5_02: hệ số nhân Stamina tiêu hao (0.5 = giảm 50%)
+    [HideInInspector] public bool accStaminaFreeWhileHighHp = false; // ACC_CH_T5_04: HP>80% → không tốn Stamina
+    [HideInInspector] public float accStaminaToSinGain = 0f;       // ACC_CH_T5_05: tiêu Stamina → nhận Sin = % lượng tiêu
+    [HideInInspector] public float accHpPerSinOverride = 0f;       // ACC_CH_T5_02: trả Máu cho mỗi Sin thiếu khi dùng Signature (0 = tắt)
+    [HideInInspector] public float accHpPerStaminaOverride = 0f;   // ACC_CH_T5_02: trả Máu cho mỗi Stamina thiếu (0 = tắt)
+    [HideInInspector] public float accSignatureSinCostMult = 1f;   // ACC (CH_T3_03/CH_T5_08/PA_T5_05): hệ số phí Sin Signature từ trang sức (nhân với của weapon)
+    [HideInInspector] public float accBloodSignatureDmgBonus = 0f;  // ACC_MS_T4_06: +sát thương cho Signature dùng máu
+    [HideInInspector] public bool lastSignatureBloodPaid = false;   // ACC_MS_T4_06: lần Signature gần nhất có trả bằng máu không
+    [HideInInspector] public bool accDashSprintNoRegenInterrupt = false; // ACC_CH_T4_04: dash/chạy nhanh không làm gián đoạn hồi Stamina tự nhiên
+    [HideInInspector] public float accSkillChargeTime = 0f;        // ACC_CH_T4_03: thời gian gồng trước khi thi triển Skill/Signature (0 = tắt)
+    [HideInInspector] public float accSkillCdrBonus = 0f;          // ACC_CH_T4_03: giảm thêm % cooldown Skill/Signature
+    [HideInInspector] public float accSkillSinCostMult = 1f;       // ACC_CH_T4_03: hệ số phí Sin cho MỌI skill (cả Skill lẫn Signature)
+    [HideInInspector] public float accSignatureDmgBonusAlways = 0f; // ACC_MS_T5_03: +sát thương cho MỌI Signature
+    [HideInInspector] public bool accOnlyLifestealHeal = false;    // ACC_MS_T5_02: chỉ nhận hồi máu từ Hút máu
+    [HideInInspector] public bool accLifestealTripleLowHp = false; // ACC_MS_T5_02: Hút máu x3 khi HP<50%
+    [HideInInspector] public bool bowNoChargeSlow = false; // WPN_BW_T3_01: gồng bắn không giảm tốc di chuyển
+    [HideInInspector] public bool bowHoming = false;       // WPN_BW_T5_02: đạn biến thành Chim Ánh Trăng tự bẻ cong đuổi địch
+    [HideInInspector] public bool bowSunBeam = false;      // WPN_BW_T5_01: khi HP<50% → đòn đánh thành Tia Sáng Mặt Trời
+    [Tooltip("WPN_ST_T4_05: true khi đã hoàn thành quest ẩn → mới được cộng stat từ effect. Hệ thống quest set cờ này.")]
+    public bool stT4_05QuestComplete = false;
 
     [Header("--- Sub-Sin ---")]
     public float flatSinGain;
     public float sinGain;
     public float bonusSinGain;
+    [Tooltip("Hệ số nhân phí Sin của Signature (1 = gốc; <1 giảm, >1 tăng). VD: ST_T3_01 = 0.85, GR_T4_02 = 1.15.")]
+    [HideInInspector] public float signatureSinCostMult = 1f;
+    /// <summary>Bắn khi tiêu hao Sin để dùng kỹ năng (truyền lượng Sin đã tiêu). Cho WPN_ST hồi máu...</summary>
+    public event System.Action<float> OnSinConsumed;
+    public void NotifySinConsumed(float amount) { if (amount > 0f) OnSinConsumed?.Invoke(amount); }
     public float S = 100f;
     public float maxSinBonus=0.7f;
 
@@ -53,6 +84,64 @@ public class AllyStats : Stats
     public float M = 150f;
     public float bonusMoveSpeed;
     public float trueMoveFlexibility;
+
+    /// <summary>
+    /// Phase B unified runtime movement. Slow của Player/Companion được tính như bonusMoveSpeed âm
+    /// (vd Slow 20% => -0.20), không nhân lên final moveSpeed sau cùng.
+    /// </summary>
+    public override float EffectiveMoveSpeed
+    {
+        get
+        {
+            RuntimeStatModifierLedger ledger = RuntimeModifiers;
+            float runtimeBonusMove = ledger != null
+                ? ledger.GetAdditivePercent(RuntimeStatKey.BonusMoveSpeed)
+                : 0f;
+            float baseMoveAdd = ledger != null
+                ? ledger.GetAdditivePercent(RuntimeStatKey.BaseMoveSpeedMultiplier)
+                : 0f;
+            float baseMoveMult = ledger != null
+                ? ledger.GetMultiplicativeFactor(RuntimeStatKey.BaseMoveSpeedMultiplier)
+                : 1f;
+
+            float effectiveBaseMove = baseMoveSpeed * Mathf.Max(0f, 1f + baseMoveAdd) * baseMoveMult;
+            float effectiveBonusMove = bonusMoveSpeed + runtimeBonusMove - CurrentSlowAmount;
+            float value = effectiveBaseMove
+                * (1 + ((0.05f * Mathf.Sqrt(AGI) - VIT * moveSpeedReducePerVIT) * (1 + trueMoveFlexibility) / 2))
+                * Mathf.Max(0f, 1f + effectiveBonusMove);
+
+            return Mathf.Clamp(value, minSpeed, maxSpeed);
+        }
+    }
+
+    /// <summary>Phase B unified runtime attack speed. Slow không còn tác động Attack Speed.</summary>
+    public override float EffectiveAttackSpeed
+    {
+        get
+        {
+            RuntimeStatModifierLedger ledger = RuntimeModifiers;
+            float runtimeBonusAttack = ledger != null
+                ? ledger.GetAdditivePercent(RuntimeStatKey.BonusAttackSpeed)
+                : 0f;
+            float baseAttackAdd = ledger != null
+                ? ledger.GetAdditivePercent(RuntimeStatKey.BaseAttackSpeedMultiplier)
+                : 0f;
+            float baseAttackMult = ledger != null
+                ? ledger.GetMultiplicativeFactor(RuntimeStatKey.BaseAttackSpeedMultiplier)
+                : 1f;
+
+            float effectiveBaseAttack = baseAttackSpeed * Mathf.Max(0f, 1f + baseAttackAdd) * baseAttackMult;
+            float agiAttackSpeedBonus = maxAttackSpeedBuff * AGI / (AGI + A);
+            float normalWithoutRuntime = baseAttackSpeed * (1 + agiAttackSpeedBonus + bonusAttackSpeed);
+
+            // Compatibility bridge: một số content cũ (vd WPN_GS_T5_01) ghi đè trực tiếp attackSpeed.
+            // Nếu field runtime khác công thức normal, tạm coi đó là explicit override cho tới Phase G migrate producer.
+            if (attackSpeed > 0f && !Mathf.Approximately(attackSpeed, normalWithoutRuntime))
+                return Mathf.Max(0.01f, attackSpeed);
+
+            return Mathf.Max(0.01f, effectiveBaseAttack * (1 + agiAttackSpeedBonus + bonusAttackSpeed + runtimeBonusAttack));
+        }
+    }
 
     [Header("--- Dash ---")]
     public float dashDistance;
@@ -247,7 +336,7 @@ public class AllyStats : Stats
         // 1. Tính HP
         baseHp = initialBaseHp + 20 * level;
         hpGain = (baseHpGain * (1 + maxHpGainBonus * VIT / (VIT + H)) + flatHpGain) * (1 + bonusHpGain);
-        maxHp = (flatHp + baseHp + hpPerVIT * VIT) * (1 + bonusHp);
+        maxHp = (flatHp + baseHp + hpPerVIT * VIT) * (1 + bonusHp) + flatBonusMaxHp;
         currentHp = Mathf.Clamp(currentHp, 0, maxHp);
 
         // 2. Tính Sin
@@ -320,9 +409,30 @@ public class AllyStats : Stats
     //    };
     //    TakeDamage(info); // Gọi hàm trên
     //}
-    // Cho Leo Passive
+    // Rogue CM3: one ArmorDown instance per Rogue -> target pair.
+    // A later qualifying Backstab refreshes the same 3s debuff instead of stacking another copy.
+    // Producer lives on the authoritative hit notification path instead of relying on a runtime
+    // event subscription that can be missed/rebound during Skill Tree lifecycle changes.
+
+    // Cho Leo Passive / Rogue Core Mechanic / các producer post-hit khác.
     public void NotifyOnHitEnemy(Stats target, float t, bool isCrit)
     {
+        if (rogueCM3_BackstabAppliesDebuff && target != null && t > 0.5f)
+        {
+            // User-confirmed CM3 semantics: -30% Armor, non-stackable; repeat Backstab only refreshes duration.
+            // Snapshot from raw/base Armor so refreshing while this debuff is active does not accidentally
+            // recalculate from the already-reduced EffectiveArmor and change the magnitude.
+            float armorDebuff = Mathf.Max(0f, target.armor * 0.30f);
+            if (armorDebuff > 0f)
+            {
+                string sourceKey = $"RogueCM3.ArmorDown:{GetInstanceID()}";
+                target.ApplyArmorMagicResistDown(
+                    "RogueCM3.ArmorDown", armorDebuff, 0f, 3f, this, sourceKey,
+                    EffectStackPolicy.RefreshSameSource, 1, 0.30f,
+                    "Rogue CM3 Backstab ArmorDown 30% base Armor / refresh-only 3s");
+            }
+        }
+
         OnHitEnemy?.Invoke(target, t, isCrit);
     }
     // Hàm để CombatMath gọi khi tính toán thấy Block thành công (Cho Vanguard)
@@ -370,7 +480,7 @@ public class AllyStats : Stats
             if (amount <= 0f) return;
 
             // showPopup=false: không hiện số xanh lá cho hồi máu tự nhiên
-            Heal(amount, false);
+            Heal(amount, false, false, HealSource.Regen);
         }
     }
 
@@ -406,9 +516,10 @@ public class AllyStats : Stats
         yield return new WaitForSecondsRealtime(slowMotionDuration);
 
         // 3. Trả lại thời gian bình thường — nhưng tôn trọng UIPauseManager:
-        // nếu người chơi mở UI (Inventory/SkillTree/DevTool) trong lúc slow-mo, giữ pause (0) thay vì ép 1.
+        // - timeScale: giữ pause (0) nếu UI mở, ngược lại về GameplayTimeScale (dev speed).
+        // - fixedDeltaTime: theo dev speed (không hard-code 0.02f, tránh phá DevTool 2x/0.25x).
         Time.timeScale = UIPauseManager.ResumeTimeScale;
-        Time.fixedDeltaTime = 0.02f;
+        Time.fixedDeltaTime = UIPauseManager.ResumeFixedDeltaTime;
     }
 
     IEnumerator ResetPerfectDodgeFlag()

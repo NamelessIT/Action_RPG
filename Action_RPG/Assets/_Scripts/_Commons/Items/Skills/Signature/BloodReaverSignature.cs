@@ -87,11 +87,11 @@ public class BloodReaverSignature : SkillBehavior
                 info.sourcePosition = transform.position;
                 info.physDamage = explosionDamage;
                 info.isCrit = false;
-                info.isKnockback = true;
-                info.knockbackForce = 8f;
-                info.isStun = true;
-                info.stunDuration = 0.5f;
                 info.attacker = stats;
+                // [CC] 1 Stun 0.5s + 1 Knockback force 8 qua effect system.
+                info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, 0.5f) { sourcePosition = info.sourcePosition });
+                info.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f)
+                { force = 8f, sourcePosition = info.sourcePosition, respectEffectResistance = false });
 
                 enemyStats.TakeDamage(info);
             }
@@ -153,7 +153,7 @@ public class BloodReaverSignature : SkillBehavior
             {
                 // Khóa hồi máu của signature này đã được Pop ở trên; finisher heal dùng Heal() trực tiếp.
                 float amountToHeal = targetHp - stats.currentHp;
-                stats.Heal(amountToHeal);
+                stats.Heal(amountToHeal, true, false, HealSource.Skill);
                 Debug.Log($"<color=green>Kết thúc Huyết Tế: Đặt lại máu về {targetHp} HP.</color>");
             }
         }

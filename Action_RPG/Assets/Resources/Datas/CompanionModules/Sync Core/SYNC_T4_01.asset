@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82e5cd566f753c1418940889f761cc03, type: 3}
+  m_Name: SYNC_T4_01
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionSyncCoreData
+  id: SYNC_T4_01
+  description: Converts the companion's kills into pure vitality for the master.
+  icon: {fileID: 0}
+  rarity: 3
+  effectType: 2
+  effectCondition: "Khi Companion h\u1EA1 g\u1EE5c k\u1EBB \u0111\u1ECBch"
+  effectDescription: "Nu\u1ED1t ch\u1EEDng linh h\u1ED3n: Player l\u1EADp t\u1EE9c
+    \u0111\u01B0\u1EE3c h\u1ED3i 3% M\xE1u T\u1ED1i \u0110a v\xE0 t\u0103ng 20% bonusMoveSpeed
+    trong 5 gi\xE2y."
+  syncCoreName: Soul-Eater's Link
+  statModifiers:
+  - stat: 0
+    val: 40
+    powerMod: 0
+  - stat: 2
+    val: 40
+    powerMod: 0
+  - stat: 4
+    val: 30
+    powerMod: 0
+  - stat: 1
+    val: 30
+    powerMod: 0

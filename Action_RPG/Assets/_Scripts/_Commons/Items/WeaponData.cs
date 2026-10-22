@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 [System.Serializable]
@@ -29,14 +29,6 @@ public class WeaponData : ScriptableObject
         Physical,
         Magic,
         Both,
-    }
-    public enum Rarity
-    {
-        Residual_1,
-        Stained_2,
-        Corrupted_3,
-        Condemned_4,
-        Anomalous_5
     }
 
     /// <summary>

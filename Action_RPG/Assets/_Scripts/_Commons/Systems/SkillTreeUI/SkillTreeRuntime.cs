@@ -522,11 +522,59 @@ public class SkillTreeRuntime : MonoBehaviour
     private ClassCoreMechanicBase FindCoreMechanicHandler(string className)
     {
         if (string.IsNullOrEmpty(className)) return null;
+
+        // CoreMechanic handlers are intentionally resolved from the Player root.
+        // The current Player prefab does not serialize these handler components, so relying only on
+        // GetComponents<ClassCoreMechanicBase>() makes every T4 Core Mechanic silently no-op.
+        // Resolve an existing handler first; otherwise lazily attach the exact class handler when
+        // the Skill Tree actually needs it. This keeps the prefab lean and also works for saved
+        // trees being re-applied through LoadAndReapply().
         var handlers = GetComponents<ClassCoreMechanicBase>();
         foreach (var h in handlers)
-            if (string.Equals(h.ClassName, className, System.StringComparison.OrdinalIgnoreCase))
+        {
+            if (h != null && string.Equals(h.ClassName, className, System.StringComparison.OrdinalIgnoreCase))
                 return h;
-        return null;
+        }
+
+        ClassCoreMechanicBase created = null;
+        switch (className.Trim().ToLowerInvariant())
+        {
+            case "warrior":
+                created = gameObject.AddComponent<WarriorCoreMechanic>();
+                break;
+            case "rogue":
+                created = gameObject.AddComponent<RogueCoreMechanic>();
+                break;
+            case "duelist":
+                created = gameObject.AddComponent<DuelistCoreMechanic>();
+                break;
+            case "vanguard":
+                created = gameObject.AddComponent<VanguardCoreMechanic>();
+                break;
+            case "mage":
+                created = gameObject.AddComponent<MageCoreMechanic>();
+                break;
+            case "battlemage":
+                created = gameObject.AddComponent<BattleMageCoreMechanic>();
+                break;
+            case "bloodreaver":
+                created = gameObject.AddComponent<BloodReaverCoreMechanic>();
+                break;
+            case "catalyst":
+                created = gameObject.AddComponent<CatalystCoreMechanic>();
+                break;
+        }
+
+        if (created != null)
+        {
+            Debug.Log($"[SkillTreeRuntime] Auto-attached {created.GetType().Name} for class '{className}'.");
+        }
+        else
+        {
+            Debug.LogWarning($"[SkillTreeRuntime] No CoreMechanic handler mapping for class '{className}'.");
+        }
+
+        return created;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -588,12 +636,12 @@ public class SkillTreeRuntime : MonoBehaviour
         // Stats nằm trong base class Stats (accessible qua _allyStats kế thừa)
         switch (type)
         {
-            case StatFieldType.BaseHp:                    _allyStats.initialBaseHp             += val;       break;
-            case StatFieldType.BaseVIT:                   _allyStats.baseVIT                   += val;       break;
-            case StatFieldType.BaseSTR:                   _allyStats.baseSTR                   += val;       break;
-            case StatFieldType.BaseINT:                   _allyStats.baseINT                   += val;       break;
-            case StatFieldType.BaseDEX:                   _allyStats.baseDEX                   += val;       break;
-            case StatFieldType.BaseAGI:                   _allyStats.baseAGI                   += val;       break;
+            case StatFieldType.BaseHp:                    _allyStats.AddInitialBaseHp(val);                          break;
+            case StatFieldType.BaseVIT:                   _allyStats.AddBaseAttribute(Stats.BaseAttribute.VIT, val); break;
+            case StatFieldType.BaseSTR:                   _allyStats.AddBaseAttribute(Stats.BaseAttribute.STR, val); break;
+            case StatFieldType.BaseINT:                   _allyStats.AddBaseAttribute(Stats.BaseAttribute.INT, val); break;
+            case StatFieldType.BaseDEX:                   _allyStats.AddBaseAttribute(Stats.BaseAttribute.DEX, val); break;
+            case StatFieldType.BaseAGI:                   _allyStats.AddBaseAttribute(Stats.BaseAttribute.AGI, val); break;
             case StatFieldType.Armor:                     _allyStats.armor                     += val;       break;
             case StatFieldType.MagicResist:               _allyStats.magicResist               += val;       break;
             case StatFieldType.DefenseValue:              _allyStats.defenseValue              += val;       break;

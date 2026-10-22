@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e40770cb45e9ce4c9d849e90913ad92, type: 3}
+  m_Name: PRT_SUP_T4_01
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionProtocolData
+  id: PRT_SUP_T4_01
+  description: Distorts gravity to pull enemies into a centralized cluster.
+  icon: {fileID: 0}
+  rarity: 3
+  effectType: 2
+  effectCondition: "M\u1ED7i \u0111\xF2n \u0111\xE1nh th\u1EE9 3"
+  effectDescription: "T\u1EA1o m\u1ED9t h\u1ED1 \u0111en nh\u1ECF b\xE1n k\xEDnh
+    1f t\u1ED3n t\u1EA1i 1 gi\xE2y, li\xEAn t\u1EE5c h\xFAt nh\u1EB9 k\u1EBB \u0111\u1ECBch
+    xung quanh v\xE0o t\xE2m \u0111i\u1EC3m."
+  protocolName: Gravity Well Emitter
+  protocolType: 2
+  atkType: 1
+  baseAtk: 55
+  defenseValue: 20
+  bonusCritChance: 0.1
+  baseAttackSpeed: 1.2
+  attackRange: 8
+  isRange: 1

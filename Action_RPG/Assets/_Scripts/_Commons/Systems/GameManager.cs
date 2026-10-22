@@ -1,4 +1,4 @@
-﻿// _Scripts/_Commons/System/GameManager.cs
+// _Scripts/_Commons/System/GameManager.cs
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
@@ -29,12 +29,9 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
-        // Khởi tạo hệ thống quản lý state
-        stateManager = new PlayerStateManager(playerDB, weaponDB, checkpointDB, accessoryDB);
-
         // Tải player ID = 1
-        currentPlayerState = stateManager.RebuildRuntimeState(playerId: 1);
-        inventoryRuntime = FindFirstObjectByType<InventoryRuntime>();
+        currentPlayerState = EnsureStateManager().RebuildRuntimeState(playerId: 1);
+        inventoryRuntime = InventoryRuntime.Current;
 
         Debug.Log("[GameManager] ✅ Đã tải xong Player Runtime State!");
     }
@@ -79,13 +76,18 @@ public class GameManager : MonoBehaviour
         // Không ghi đè bằng playerName từ DB (DB chỉ có entry cho player 1 = "Chris Don").
         if (string.IsNullOrEmpty(playerStats.characterName))
             playerStats.characterName = currentPlayerState.playerName;
-        playerStats.initialBaseHp = currentPlayerState.baseHp > 0f ? currentPlayerState.baseHp : 100f;
-        playerStats.baseSTR = currentPlayerState.baseSTR;
-        playerStats.baseDEX = currentPlayerState.baseDEX;
-        playerStats.baseINT = currentPlayerState.baseINT;
-        playerStats.baseVIT = currentPlayerState.baseVIT;
-        playerStats.baseAGI = currentPlayerState.baseAGI;
-        playerStats.maxStamina = currentPlayerState.maxStamina > 0 ? currentPlayerState.maxStamina : playerStats.maxStamina;
+        // [P2-DATA-01B] Nạp base stats qua API. Fallback (baseHp≤0 → 100, maxStamina≤0 → giữ giá trị hiện tại)
+        // do caller quyết định, giống hệt hành vi cũ. resetCurrentVitals=false: currentHp/Stamina được set ở dưới.
+        playerStats.ApplyBaseRuntimeStats(new Stats.BaseStatSnapshot
+        {
+            initialBaseHp = currentPlayerState.baseHp > 0f ? currentPlayerState.baseHp : 100f,
+            maxStamina    = currentPlayerState.maxStamina > 0 ? currentPlayerState.maxStamina : playerStats.maxStamina,
+            baseSTR = currentPlayerState.baseSTR,
+            baseDEX = currentPlayerState.baseDEX,
+            baseINT = currentPlayerState.baseINT,
+            baseVIT = currentPlayerState.baseVIT,
+            baseAGI = currentPlayerState.baseAGI,
+        }, resetCurrentVitals: false);
         playerStats.dashCost = currentPlayerState.dashCost > 0 ? currentPlayerState.dashCost : playerStats.dashCost;
         playerStats.armorBackstabReduce = currentPlayerState.armorBackstabReduce;
         playerStats.attributePointRemain = currentPlayerState.attributePointRemain;
@@ -122,14 +124,52 @@ public class GameManager : MonoBehaviour
             playerStats.maxStamina);
         playerStats.currentSin = Mathf.Clamp(currentPlayerState.currentSin, 0f, playerStats.maxSin);
 
-        Vector3 currentPosition = playerObject.transform.position;
-        playerObject.transform.position = new Vector3(currentPlayerState.position.x, currentPlayerState.position.y, currentPosition.z);
+        Vector3 spawnPosition = playerObject.transform.position;
+        Vector3 savedPosition = new Vector3(currentPlayerState.position.x, currentPlayerState.position.y, spawnPosition.z);
+
+        if (IsSavedPositionUsable(savedPosition))
+        {
+            playerObject.transform.position = savedPosition;
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"[GameManager] ⚠️ Vị trí trong save không hợp lệ ({savedPosition}) - giữ nguyên vị trí spawn " +
+                $"của scene ({spawnPosition}). Nguyên nhân thường gặp: player từng rơi khỏi map " +
+                "và toạ độ đó bị ghi vào save.");
+        }
 
         Debug.Log($"[GameManager] ✅ Đã gán stats cho Player:");
         Debug.Log($"  - HP: {playerStats.currentHp}/{playerStats.maxHp}");
         Debug.Log($"  - Level: {playerStats.level} | EXP: {playerStats.exp}/{playerStats.maxExpForCurrentLevel}");
         Debug.Log($"  - STR/DEX/INT/VIT/AGI: {playerStats.baseSTR}/{playerStats.baseDEX}/{playerStats.baseINT}/{playerStats.baseVIT}/{playerStats.baseAGI}");
     }
+
+    /// <summary>
+    /// Khoảng an toàn dưới đáy thế giới. Toạ độ Y thấp hơn mức này chắc chắn là dữ liệu hỏng.
+    /// </summary>
+    private const float k_WorldFloorMargin = 5f;
+
+    /// <summary>
+    /// Chặn vòng lặp "rơi khỏi map -> lưu toạ độ rơi -> nạp lại -> rơi tiếp -> lưu toạ độ còn thấp hơn".
+    /// Khi toạ độ trong save nằm dưới đáy thế giới (hoặc là NaN/Infinity), bỏ qua nó và
+    /// dùng vị trí spawn đã đặt sẵn trong scene.
+    /// </summary>
+    private bool IsSavedPositionUsable(Vector3 position)
+    {
+        if (float.IsNaN(position.x) || float.IsNaN(position.y) ||
+            float.IsInfinity(position.x) || float.IsInfinity(position.y))
+        {
+            return false;
+        }
+
+        float worldFloor = Terrain.activeTerrain != null
+            ? Terrain.activeTerrain.transform.position.y - k_WorldFloorMargin
+            : -k_WorldFloorMargin;
+
+        return position.y >= worldFloor;
+    }
+
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.F5))
@@ -140,7 +180,7 @@ public class GameManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.F9))
         {
             // Tải lại runtime state
-            currentPlayerState = stateManager.RebuildRuntimeState(1);
+            currentPlayerState = EnsureStateManager().RebuildRuntimeState(1);
             AssignStatsToPlayer();
             Debug.Log("🎮 Đã tải lại game (F9)");
         }
@@ -176,6 +216,25 @@ public class GameManager : MonoBehaviour
         Debug.Log($"[GameManager] 🔄 Inventory synced → {currentPlayerState.inventoryItems.Count} items saved to state.");
     }
 
+    /// <summary>
+    /// Trả về <see cref="stateManager"/>, dựng lại nếu nó đã biến mất.
+    ///
+    /// TẠI SAO CẦN: <see cref="PlayerStateManager"/> là object C# thuần trong field private,
+    /// KHÔNG serialize được qua domain reload. Mỗi lần sửa script trong lúc đang Play Mode,
+    /// Unity reload domain và field này thành null — GameObject vẫn sống nhưng Awake không
+    /// chạy lại. Lúc thoát Play, SaveGame() gọi vào null và nổ NullReferenceException:
+    /// **việc lưu game hỏng âm thầm, người chơi mất tiến độ mà chỉ thấy một dòng lỗi**.
+    /// Dựng lại tại chỗ rẻ hơn nhiều so với mất save.
+    /// </summary>
+    private PlayerStateManager EnsureStateManager()
+    {
+        if (stateManager == null)
+        {
+            stateManager = new PlayerStateManager(playerDB, weaponDB, checkpointDB, accessoryDB);
+        }
+        return stateManager;
+    }
+
     private void SaveGame()
     {
         if (suppressNextSave)
@@ -192,7 +251,7 @@ public class GameManager : MonoBehaviour
             SyncRuntimeStateFromScene();
         }
 
-        stateManager.SaveGameState(currentPlayerState);
+        EnsureStateManager().SaveGameState(currentPlayerState);
         Debug.Log("[GameManager] 💾 Đã lưu game khi thoát.");
     }
 
@@ -200,12 +259,12 @@ public class GameManager : MonoBehaviour
     {
         if (playerObject == null)
         {
-            playerObject = GameObject.Find("Player");
+            playerObject = GameObject.FindGameObjectWithTag("Player");
         }
 
         if (playerObject == null)
         {
-            Debug.LogError("[GameManager] ❌ Không tìm thấy GameObject 'Player' trong scene!");
+            Debug.LogError("[GameManager] ❌ Không tìm thấy GameObject nào mang tag 'Player' trong scene!");
             return false;
         }
 
@@ -242,8 +301,13 @@ public class GameManager : MonoBehaviour
         currentPlayerState.currentSin = playerStats.currentSin;
         currentPlayerState.checkpointId = currentPlayerState.checkpointId <= 0 ? 1 : currentPlayerState.checkpointId;
         currentPlayerState.position = new Vector2(playerObject.transform.position.x, playerObject.transform.position.y);
-        currentPlayerState.maxStamina = Mathf.RoundToInt(playerStats.maxStamina);
-        currentPlayerState.baseHp = playerStats.baseHp;
+        // [P2-DATA-01B] Đọc base stats qua API thay vì field.
+        Stats.BaseStatSnapshot snap = playerStats.CaptureRuntimeStats();
+        currentPlayerState.maxStamina = Mathf.RoundToInt(snap.maxStamina);
+        // [P2-DATA-FIX-02] Ghi HẰNG SỐ gốc, không phải `snap.baseHp` (= initialBaseHp + 20*level).
+        // `currentPlayerState.baseHp` được load lại vào `initialBaseHp` và là base của PlayerRuntimeState.MaxHp,
+        // nên ghi giá trị dẫn xuất sẽ cộng dồn 20*level sau mỗi chu kỳ save→load.
+        currentPlayerState.baseHp = snap.initialBaseHp;
         currentPlayerState.dashCost = Mathf.RoundToInt(playerStats.dashCost);
         currentPlayerState.armorBackstabReduce = playerStats.armorBackstabReduce;
         currentPlayerState.level = playerStats.level;
@@ -252,11 +316,11 @@ public class GameManager : MonoBehaviour
         currentPlayerState.maxExpForCurrentLevel = playerStats.maxExpForCurrentLevel;
         currentPlayerState.attributePointRemain = playerStats.attributePointRemain;
         currentPlayerState.skillPointRemain = playerStats.skillPointRemain;
-        currentPlayerState.baseSTR = playerStats.baseSTR;
-        currentPlayerState.baseDEX = playerStats.baseDEX;
-        currentPlayerState.baseINT = playerStats.baseINT;
-        currentPlayerState.baseVIT = playerStats.baseVIT;
-        currentPlayerState.baseAGI = playerStats.baseAGI;
+        currentPlayerState.baseSTR = snap.baseSTR;
+        currentPlayerState.baseDEX = snap.baseDEX;
+        currentPlayerState.baseINT = snap.baseINT;
+        currentPlayerState.baseVIT = snap.baseVIT;
+        currentPlayerState.baseAGI = snap.baseAGI;
 
         if (equipmentManager == null)
         {
@@ -418,9 +482,9 @@ public class GameManager : MonoBehaviour
         coreShieldLookup = new Dictionary<string, CoreShieldData>();
         accessoryLookup = new Dictionary<string, AccessoryData>();
 
-        RegisterWeapons(Resources.LoadAll<WeaponData>("Datas/Weapons"));
-        RegisterCoreShields(Resources.LoadAll<CoreShieldData>("Datas/Core Shields"));
-        RegisterAccessories(Resources.LoadAll<AccessoryData>("Datas/Accessories"));
+        RegisterWeapons(Resources.LoadAll<WeaponData>(ResourcePaths.Weapons));
+        RegisterCoreShields(Resources.LoadAll<CoreShieldData>(ResourcePaths.CoreShields));
+        RegisterAccessories(Resources.LoadAll<AccessoryData>(ResourcePaths.Accessories));
     }
 
     private void RegisterWeapons(WeaponData[] weapons)

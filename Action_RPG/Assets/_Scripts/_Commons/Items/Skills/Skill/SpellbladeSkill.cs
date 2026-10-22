@@ -165,7 +165,7 @@ public class SpellbladeSkill : SkillBehavior
 
             float reduction = Mathf.Min(damageFalloffPerHit * i, maxFalloffPercent);
             float mult = _effBaseDmgMult * (1f - reduction);
-            DamageHelper.ApplyStandardDamage(stats, enemy, transform, mult, null, MagicProxy, 0);
+            DamageHelper.ApplyStandardDamage(stats, enemy, transform, mult, null, MagicProxy, 0, sourceType: DamageSourceType.Ranged);
 
             if (markedEnemies.TryGetValue(enemy, out var existing))
             {
@@ -202,7 +202,7 @@ public class SpellbladeSkill : SkillBehavior
         if (enemyCombat != null) enemyCombat.CancelAttack();
 
         // 200% magicAtk + choáng + phá siêu giáp (ép phép qua MagicProxy).
-        DamageHelper.ApplyStandardDamage(stats, enemy, transform, _effCounterDmgMult, null, MagicProxy, 2, true, _effCounterStunDur);
+        DamageHelper.ApplyStandardDamage(stats, enemy, transform, _effCounterDmgMult, null, MagicProxy, 2, true, _effCounterStunDur, sourceType: DamageSourceType.Ranged);
     }
 
     private void CleanUpAllMarks()

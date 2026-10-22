@@ -62,10 +62,9 @@ public class LeoSignature : SkillBehavior
                 DamageInfo info = new DamageInfo();
                 info.sourcePosition = explosionPos;
                 info.physDamage = 0f;
-                info.isStun = true;
-                info.stunDuration = stunDuration;
-                info.isKnockback = false;
                 info.attacker = stats;
+                // [CC] Chỉ Stun theo config stunDuration.
+                info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, stunDuration) { sourcePosition = info.sourcePosition });
 
                 enemyStats.TakeDamage(info);
                 hitCount++;

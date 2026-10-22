@@ -129,7 +129,7 @@ public class PaladinSkill : SkillBehavior
         else
             finalMultiplier = (totalRawDamage > 0) ? totalRawDamage : 0f;
 
-        DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, finalMultiplier, data, currentWpn, 0);
+        DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, finalMultiplier, data, currentWpn, 0, sourceType: DamageSourceType.DoT);
     }
 
     private void ApplyHealing(int enemyCount)
@@ -140,8 +140,7 @@ public class PaladinSkill : SkillBehavior
 
         if (healAmount > 0)
         {
-            stats.currentHp += healAmount;
-            if (stats.currentHp > stats.maxHp) stats.currentHp = stats.maxHp;
+            stats.Heal(healAmount, true, false, HealSource.Skill);
 
             Debug.Log($"<color=green>Sanctuary Heal: {healAmount} ({enemyCount} targets)");
         }

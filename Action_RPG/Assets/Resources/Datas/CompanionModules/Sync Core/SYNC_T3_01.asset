@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82e5cd566f753c1418940889f761cc03, type: 3}
+  m_Name: SYNC_T3_01
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionSyncCoreData
+  id: SYNC_T3_01
+  description: Synchronizes targeting data, turning the companion into a spotter.
+  icon: {fileID: 0}
+  rarity: 2
+  effectType: 2
+  effectCondition: "Khi Companion t\u1EA5n c\xF4ng tr\xFAng m\u1EE5c ti\xEAu"
+  effectDescription: "K\u1EBB \u0111\u1ECBch b\u1ECB \u0110\xE1nh D\u1EA5u trong
+    3s. \u0110\xF2n \u0111\xE1nh ti\u1EBFp theo c\u1EE7a Player l\xEAn m\u1EE5c ti\xEAu
+    n\xE0y g\xE2y th\xEAm 5% S\xE1t th\u01B0\u01A1ng v\xE0 x\xF3a d\u1EA5u \u1EA5n."
+  syncCoreName: Bond of the Hunter
+  statModifiers:
+  - stat: 4
+    val: 20
+    powerMod: 0
+  - stat: 0
+    val: 20
+    powerMod: 0
+  - stat: 2
+    val: 20
+    powerMod: 0

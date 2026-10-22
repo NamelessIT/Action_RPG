@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -12,14 +12,6 @@ public class AccessoryData : ScriptableObject
         RelicOfMemory,
         Parasite,
         Chain
-    }
-    public enum Rarity
-    {
-        Residual_1,
-        Stained_2,
-        Corrupted_3,
-        Condemned_4,
-        Anomalous_5
     }
     public string id;
     public AccessoryType accessoryType;

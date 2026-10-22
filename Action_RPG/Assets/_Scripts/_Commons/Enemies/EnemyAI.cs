@@ -1,7 +1,4 @@
-﻿using Mono.Cecil.Cil;
-using System.Collections;
-using UnityEditor;
-using UnityEditor.PackageManager.UI;
+﻿using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -71,7 +68,12 @@ public class EnemyAI : MonoBehaviour
     [Range(0f, 1f)]
     public float bossDodgeChance = 0.65f;
     private bool isBossDodging = false;
+    private Coroutine _bossDodgeCoroutine;
     private float lastBossDodgeTime = -100f;
+
+    // Phase E3A — actor-neutral forced-control consumer.
+    private ForcedControlRunner _forcedControlRunner;
+    private bool _wasForcedControlled = false;
 
     [Header("--- AI Parry System ---")]
     [Tooltip("Tỷ lệ phản xạ đỡ đòn (0.8 = 80%)")]
@@ -97,19 +99,39 @@ public class EnemyAI : MonoBehaviour
     // Tham chiếu skill
     private DuelistPassive parrySkill;
 
+    void Awake()
+    {
+        // Cache ref trong AWAKE chu khong phai Start.
+        //
+        // Start CHI chay khi component dang enabled, con Awake chay ca khi component bi
+        // disable (mien GameObject con active). Ma OnDamageTaken la API cong khai, EnemyStats
+        // goi vao bat ky luc nao — ke ca khi EnemyAI da bi tat. Truong hop that:
+        //   • Stats.Die() tat EnemyAI roi giu xac 3 giay -> danh tiep vao xac.
+        //   • Enemy vua spawn (vd DevTool) da bi chem ngay trong frame do.
+        // Truoc day mọi ref gan trong Start nen o hai truong hop tren `stats` van null
+        // -> NullReferenceException tai dong leash trong OnDamageTaken.
+        CacheComponentRefs();
+    }
+
+    /// <summary>Lay va giu cac component tren cung GameObject. Idempotent — chi lay cai con thieu.</summary>
+    private void CacheComponentRefs()
+    {
+        if (agent          == null) agent          = GetComponent<NavMeshAgent>();
+        if (stats          == null) stats          = GetComponent<EnemyStats>();
+        if (combat         == null) combat         = GetComponent<EnemyCombat>();
+        if (animator       == null) animator       = GetComponentInChildren<Animator>();
+        if (spriteRenderer == null) spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+    }
+
     void Start()
     {
-        agent = GetComponent<NavMeshAgent>();
-        stats = GetComponent<EnemyStats>();
-        combat = GetComponent<EnemyCombat>();
-        animator = GetComponentInChildren<Animator>();
-        spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        CacheComponentRefs();
 
         combat.Setup(stats, null, animator);
 
         agent.updateRotation = false;
         agent.updateUpAxis = false;
-        agent.speed = stats.baseMoveSpeed;
+        SetMoveSpeed(1f);
         agent.acceleration = 20f;   // Dừng nhanh nhưng không instant → không khựng
         agent.angularSpeed = 0f;    // Tắt rotation của NavMesh, dùng facingDirection thủ công
 
@@ -120,6 +142,7 @@ public class EnemyAI : MonoBehaviour
         HandleAnimation(stats.facingDirection);
 
         parrySkill = GetComponent<DuelistPassive>();
+        _forcedControlRunner = stats.ForcedControl;
 
         if (parrySkill == null && stats.canParry)
         {
@@ -138,11 +161,29 @@ public class EnemyAI : MonoBehaviour
 
     void Update()
     {
-        if (stats.isDead || stats.isStunned)
+        StatusControlSnapshot control = stats.ControlState;
+        if (stats.isDead || control.mode == ControlMode.Stunned || control.mode == ControlMode.Displaced)
         {
             if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
             return;
         }
+
+        // Phase B: Enemy movement luôn đọc một effective MoveSpeed path.
+        RefreshAgentSpeed();
+
+        // Phase E3A: forced control chiếm quyền TRƯỚC normal AI / dodge / parry / scan / skill.
+        // Priority hard CC (Displacement/Stun) đã return ở trên. Root vẫn có thể tồn tại dưới Taunt/Fear:
+        // runner sẽ cho Taunt basic-attack nếu đã trong range nhưng không forced-move khi rooted.
+        if (ForcedControlRunner.IsForcedMode(control.mode))
+        {
+            HandleForcedControl(control);
+            return;
+        }
+        if (_wasForcedControlled) ExitForcedControl();
+
+        // [EXTERNAL OVERRIDE] Dash/nguồn ngoài đang giữ movement — vẫn refresh Slow ở trên nhưng AI thường
+        // KHÔNG chen SetDestination/agent.speed.
+        if (_externalMoveOverride) return;
 
         // Boss dodge đang chạy — coroutine tự quản lý movement
         if (isBossDodging) return;
@@ -192,7 +233,7 @@ public class EnemyAI : MonoBehaviour
         }
 
         // LOGIC AI PARRY CẢI TIẾN
-        if (nearestTarget != null && stats.canParry && !stats.isStunned) // [QUAN TRỌNG] Chỉ chạy khi có Target
+        if (nearestTarget != null && stats.canParry && stats.ControlState.canBasicAttack) // [QUAN TRỌNG] Chỉ chạy khi có Target
         {
             // 1. Melee Parry (Cận chiến)
             HandleParryReaction();
@@ -208,10 +249,15 @@ public class EnemyAI : MonoBehaviour
         float distToSpawn = Vector3.Distance(transform.position, stats.spawnPosition);
         float distToTarget = (nearestTarget != null) ? Vector3.Distance(transform.position, nearestTarget.position) : 9999f;
 
-        // Điều kiện quay về: Đi quá xa và không phải là Friendly
+        // Điều kiện quay về (không phải Friendly):
+        //  - Bản thân đi quá xa nhà, HOẶC
+        //  - Mục tiêu đã ra NGOÀI vùng hoạt động (bị nhử ra rìa). → cam kết chạy về, đừng đứng rìa.
+        float homeZone = stats.aggroRadius * 1.5f;
+        bool targetOutOfZone = nearestTarget != null
+                               && Vector3.Distance(nearestTarget.position, stats.spawnPosition) > homeZone;
         bool shouldReturn = !isReturningHome
-                            && distToSpawn > (stats.aggroRadius * 1.5f)
-                            && stats.enemyType != EnemyType.Friendly;
+                            && stats.enemyType != EnemyType.Friendly
+                            && (distToSpawn > homeZone || targetOutOfZone);
 
         if (shouldReturn)
         {
@@ -399,6 +445,10 @@ public class EnemyAI : MonoBehaviour
         Transform bestPredator = null;
         float closeDist = Mathf.Infinity;
 
+        // [COMPANION AGGRO] Ứng viên Player & Companion (để cân aggro theo Matrix khi CHỌN mục tiêu mới).
+        Transform aggroPlayerCand = null;
+        Transform aggroCompanionCand = null;
+
         foreach (var hit in hits)
         {
             Transform t = hit.transform;
@@ -415,6 +465,9 @@ public class EnemyAI : MonoBehaviour
             {
                 if (CanSeeTarget(t))
                 {
+                    if (t.CompareTag("Player")) aggroPlayerCand = t;
+                    else if (t.GetComponentInParent<CompanionAI>() != null) aggroCompanionCand = t;
+
                     float d = Vector3.Distance(transform.position, t.position);
                     if (d < closeDist)
                     {
@@ -429,7 +482,16 @@ public class EnemyAI : MonoBehaviour
         // --- [MỚI] GÁN MỤC TIÊU VÀ RESET ĐỒNG HỒ ---
         if (nearestTarget == null && bestTarget != null)
         {
-            nearestTarget = bestTarget;
+            // [COMPANION AGGRO] Thấy CẢ Player lẫn Companion → cân theo AggroWeight của Matrix
+            // (Regen 50/50, Phantoms 20/80, Deflector 80/20 = Companion/Player). Chỉ roll khi CHỌN mới.
+            Transform chosen = bestTarget;
+            if (aggroPlayerCand != null && aggroCompanionCand != null)
+            {
+                var eq = aggroCompanionCand.GetComponentInParent<CompanionEquipmentManager>();
+                float w = eq != null ? eq.AggroWeight : 0.5f;
+                chosen = (Random.value < w) ? aggroCompanionCand : aggroPlayerCand;
+            }
+            nearestTarget = chosen;
             // Vừa tự phát hiện ra mục tiêu mới -> Reset đồng hồ 15s cho nó
             lastTimeCurrentTargetDamagedMe = Time.time;
         }
@@ -495,19 +557,187 @@ public class EnemyAI : MonoBehaviour
 
     // --- BEHAVIOR ---
 
+    /// <summary>
+    /// Phase E3A — Enemy consumer cho Taunt/Fear. Không thay nearestTarget/aggro nền: forced target chỉ
+    /// override quyền điều khiển trong lúc CC, để AI có thể resume state bình thường khi effect hết.
+    /// </summary>
+    private void HandleForcedControl(StatusControlSnapshot control)
+    {
+        _wasForcedControlled = true;
+        if (_forcedControlRunner == null) _forcedControlRunner = stats.ForcedControl;
+
+        // Forced control là action ownership mới: không cho giữ parry / boss dodge cũ.
+        if (stats.isParrying && parrySkill != null) parrySkill.AI_StopParry();
+        CancelBossDodgeForForcedControl();
+
+        if (_forcedControlRunner == null || !_forcedControlRunner.TryBuildIntent(out ForcedControlIntent intent))
+        {
+            StopForcedMovement("Forced Control (invalid anchor)");
+            return;
+        }
+
+        Transform anchor = intent.targetTransform;
+
+        // Fear phải chiếm quyền movement NGAY CẢ khi Enemy còn sót state attack/telegraph.
+        // Catalyst Fear chỉ bắt mục tiêu ở cự ly rất gần, nên chúng thường đang giữa basic attack;
+        // guard attack chung trước đây return sớm và khiến Enemy đứng im suốt Fear thay vì chạy trốn.
+        // StatusEffectController bình thường đã interrupt đồng bộ; CancelAttack() ở đây chỉ là safety-net
+        // nếu consumer còn state attack/telegraph chưa được dọn vì timing/legacy attack path.
+        if (intent.mode == ControlMode.Feared)
+        {
+            if (combat.isAttacking || combat.isTelegraphing)
+                combat.CancelAttack();
+
+            currentState = "Forced Fear";
+            if (!intent.canMove || intent.direction.sqrMagnitude <= 0.0001f)
+            {
+                StopForcedMovement(currentState);
+                return;
+            }
+
+            // Fear = 50% final normal movement speed (runner supplies multiplier 0.5).
+            SetMoveSpeed(intent.speedMultiplier);
+            if (agent.isOnNavMesh)
+            {
+                agent.stoppingDistance = 0f;
+                Vector3 desired = transform.position + intent.direction * 5f;
+                NavMeshHit hit;
+                if (NavMesh.SamplePosition(desired, out hit, 5f, NavMesh.AllAreas))
+                {
+                    agent.isStopped = false;
+                    agent.SetDestination(hit.position);
+                }
+                else
+                {
+                    agent.isStopped = true;
+                    agent.velocity = Vector3.zero;
+                }
+            }
+            FaceDirection(intent.direction);
+            HandleVisuals();
+            return;
+        }
+
+        // Taunt mới cần combat target = Taunter. Fear không set attack target.
+        combat.SetTarget(anchor);
+
+        // Nếu một đòn basic do Taunt đã commit thì để routine chạy hết; forced target vẫn là Taunter.
+        if (combat.isAttacking || combat.isTelegraphing)
+        {
+            StopForcedMovement("Taunted (attacking)");
+            FaceForcedAnchor(anchor, false);
+            return;
+        }
+
+        // Taunt: chỉ basic attack Taunter, tuyệt đối không normal skill / dodge / parry.
+        currentState = "Forced Taunt";
+        Vector3 toAnchor = anchor.position - transform.position;
+        toAnchor.y = 0f;
+        float distance = toAnchor.magnitude;
+        float basicRange = Mathf.Max(0.05f, combat.GetBasicRange());
+
+        if (distance <= basicRange && intent.canBasicAttack)
+        {
+            StopForcedMovement("Forced Taunt Attack");
+            FaceForcedAnchor(anchor, false);
+            stats.EnterCombat();
+            combat.PerformForcedBasicAttack(anchor);
+            HandleVisuals();
+            return;
+        }
+
+        if (!intent.canMove)
+        {
+            StopForcedMovement("Forced Taunt (rooted/out of range)");
+            FaceForcedAnchor(anchor, false);
+            HandleVisuals();
+            return;
+        }
+
+        SetMoveSpeed(intent.speedMultiplier);
+        if (agent.isOnNavMesh)
+        {
+            agent.stoppingDistance = basicRange * 0.9f;
+            agent.isStopped = false;
+            agent.SetDestination(anchor.position);
+        }
+        FaceForcedAnchor(anchor, false);
+        HandleVisuals();
+        stats.EnterCombat();
+    }
+
+    private void ExitForcedControl()
+    {
+        _wasForcedControlled = false;
+        SetMoveSpeed(1f);
+        combat.SetTarget(nearestTarget);
+        if (agent.isOnNavMesh)
+        {
+            agent.velocity = Vector3.zero;
+            agent.isStopped = true;
+        }
+    }
+
+    private void StopForcedMovement(string state)
+    {
+        currentState = state;
+        if (agent.isOnNavMesh)
+        {
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+        }
+        if (animator != null) animator.SetBool("IsWalking", false);
+    }
+
+    private void FaceForcedAnchor(Transform anchor, bool away)
+    {
+        if (anchor == null) return;
+        Vector3 dir = away ? transform.position - anchor.position : anchor.position - transform.position;
+        dir.y = 0f;
+        FaceDirection(dir);
+    }
+
+    private void FaceDirection(Vector3 dir)
+    {
+        dir.y = 0f;
+        if (dir.sqrMagnitude <= 0.0001f) return;
+        stats.facingDirection = dir.normalized;
+        HandleAnimation(stats.facingDirection);
+    }
+
+    private void CancelBossDodgeForForcedControl()
+    {
+        if (_bossDodgeCoroutine != null)
+        {
+            StopCoroutine(_bossDodgeCoroutine);
+            _bossDodgeCoroutine = null;
+        }
+        if (!isBossDodging) return;
+
+        isBossDodging = false;
+        stats.isInvincible = false;
+        SetMoveSpeed(1f);
+        if (agent.isOnNavMesh)
+        {
+            agent.velocity = Vector3.zero;
+            agent.isStopped = true;
+            agent.ResetPath();
+        }
+    }
+
     void HandleCombatBehavior(float distToTarget)
     {
         // ==========================================
         // 0. BOSS DODGE — Chỉ cho rank >= 1, né đòn player rồi phản công
         // ==========================================
-        if (stats.monsterRank >= 1 && !isBossDodging && Time.time >= lastBossDodgeTime + bossDodgeCooldown)
+        if (stats.ControlState.canDash && stats.monsterRank >= 1 && !isBossDodging && Time.time >= lastBossDodgeTime + bossDodgeCooldown)
         {
             PlayerController pc = nearestTarget?.GetComponent<PlayerController>();
-            if (pc != null && pc.isAttacking && distToTarget <= combat.basicAttackRange * 2.5f)
+            if (pc != null && pc.isAttacking && distToTarget <= combat.GetBasicRange() * 2.5f)
             {
                 if (Random.value <= bossDodgeChance)
                 {
-                    StartCoroutine(BossDodgeRoutine());
+                    _bossDodgeCoroutine = StartCoroutine(BossDodgeRoutine());
                     return;
                 }
                 // Trượt dodge chance thì reset cooldown ngắn để không liên tục roll fail
@@ -519,7 +749,7 @@ public class EnemyAI : MonoBehaviour
         // 1. POST-ATTACK COOLDOWN BEHAVIOR
         // Enemy vừa đánh xong → hành động thông minh trong thời gian chờ hồi
         // ==========================================
-        float attackCooldown = 1.0f / Mathf.Max(stats.baseAttackSpeed, 0.01f);
+        float attackCooldown = 1.0f / Mathf.Max(stats.EffectiveAttackSpeed, 0.01f);
         bool isOnAttackCooldown = Time.time < lastAttackEndTime + attackCooldown;
         if (isOnAttackCooldown)
         {
@@ -571,7 +801,7 @@ public class EnemyAI : MonoBehaviour
         if (shouldDefend)
         {
             // --- HÀNH ĐỘNG PHÒNG THỦ (CHỜ ĐỢI) ---
-            if (distToTarget <= combat.basicAttackRange * 1.5f) // Cho tầm nhìn rộng hơn chút để nó biết xoay mặt
+            if (distToTarget <= combat.GetBasicRange() * 1.5f) // Cho tầm nhìn rộng hơn chút để nó biết xoay mặt
             {
                 currentState = "Defending (Waiting)";
                 if (agent.isOnNavMesh) agent.isStopped = true;
@@ -589,17 +819,47 @@ public class EnemyAI : MonoBehaviour
         }
         else
         {
-            // --- HÀNH ĐỘNG TẤN CÔNG ---
-            if (distToTarget <= combat.basicAttackRange)
+            // --- ƯU TIÊN SKILL (nếu có skill + sẵn sàng) ---
+            // Có skill → cố gắng dùng skill trước; nếu chưa trong tầm thì áp sát; chỉ khi
+            // không có/không sẵn sàng mới rơi xuống đánh thường (fallback).
+            if (combat.HasSkill && combat.CanUseSkill())
+            {
+                if (distToTarget <= combat.GetSkillRange())
+                {
+                    State_Skill();
+                    return;
+                }
+                // Skill sẵn sàng nhưng xa → chạy lại gần để dùng skill
+                State_Chase();
+                return;
+            }
+
+            // --- HÀNH ĐỘNG TẤN CÔNG THƯỜNG (fallback) ---
+            if (distToTarget <= combat.GetBasicRange())
             {
                 State_Attack();
             }
             else
             {
-                //Debug.Log("EnemyAI HandleCombatBehavior do không đủ combat.basicAttackRange");
+                //Debug.Log("EnemyAI HandleCombatBehavior do không đủ combat.GetBasicRange()");
                 State_Chase();
             }
         }
+    }
+
+    void State_Skill()
+    {
+        if (nearestTarget == null) return;
+        currentState = "Using Skill";
+        if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
+
+        // Ép mặt về phía player trước khi dùng skill
+        Vector3 dirToTarget = (nearestTarget.position - transform.position).normalized;
+        dirToTarget.y = 0;
+        if (dirToTarget != Vector3.zero) stats.facingDirection = dirToTarget;
+
+        stats.EnterCombat();
+        combat.PerformSkillAttack();
     }
 
     void HandleFleeBehavior()
@@ -667,8 +927,8 @@ public class EnemyAI : MonoBehaviour
         if (nearestTarget == null) return;
         if (agent.isOnNavMesh)
         {
-            agent.stoppingDistance = combat.basicAttackRange * 0.9f;
-            agent.speed = stats.baseMoveSpeed; // đảm bảo tốc độ về bình thường sau khi circle
+            agent.stoppingDistance = combat.GetBasicRange() * 0.9f;
+            SetMoveSpeed(1f); // đảm bảo tốc độ về bình thường sau khi circle (đã trừ Slow)
         }
         else
         {
@@ -680,12 +940,46 @@ public class EnemyAI : MonoBehaviour
 
     void RestoreNormalSpeed()
     {
-        if (agent.isOnNavMesh) agent.speed = stats.baseMoveSpeed;
+        SetMoveSpeed(1f);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Phase B: tốc độ agent = Stats.EffectiveMoveSpeed × hệ số chiến thuật (state).
+    //  Enemy Slow được resolve bên Stats như baseMoveSpeed × (1-slow), không mutate base stat.
+    // ─────────────────────────────────────────────────────────────
+    private float _tacticalSpeedMult = 1f;
+    private void SetMoveSpeed(float tacticalMult)
+    {
+        _tacticalSpeedMult = tacticalMult;
+        RefreshAgentSpeed();
+    }
+    private void RefreshAgentSpeed()
+    {
+        if (agent != null && agent.isOnNavMesh)
+            agent.speed = stats.EffectiveMoveSpeed * _tacticalSpeedMult;
+    }
+
+    // [EXTERNAL MOVE OVERRIDE] Cho phép nguồn ngoài (vd BossCombat.DashRoutine) chiếm quyền điều khiển
+    // movement: AI thường KHÔNG ghi đè SetDestination/agent.speed, nhưng RefreshAgentSpeed mỗi frame VẪN
+    // áp Slow lên hệ số chiến thuật do override đặt (vd dash 5x → 5x×Slow). Tránh việc EnemyAI và
+    // BossCombat cùng ghi agent.speed trực tiếp gây giật/đè nhau.
+    private bool _externalMoveOverride = false;
+    public bool IsExternalMoveOverride => _externalMoveOverride;
+    public void BeginExternalMoveOverride(float tacticalMult)
+    {
+        _externalMoveOverride = true;
+        SetMoveSpeed(tacticalMult);
+    }
+    public void EndExternalMoveOverride()
+    {
+        if (!_externalMoveOverride) return; // idempotent — không clear nhầm khi chưa override
+        _externalMoveOverride = false;
+        SetMoveSpeed(1f);
     }
 
     void State_Attack()
     {
-        if (nearestTarget == null) return;
+        if (nearestTarget == null || !stats.ControlState.canBasicAttack) return;
         currentState = "Attacking";
         if (agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
 
@@ -700,9 +994,15 @@ public class EnemyAI : MonoBehaviour
 
     void HandleReturningState(float distToSpawn, float distToTarget)
     {
-        bool gotHit = stats.currentAggro > 0;
-        bool blockedByTarget = distToTarget <= combat.basicAttackRange;
-        if (gotHit || (blockedByTarget && nearestTarget != null))
+        // Đã CAM KẾT chạy về nhà. CHỈ dừng lại để đánh nếu có kẻ địch vừa Ở TRONG vùng hoạt động
+        // vừa ÁP SÁT trong tầm đánh (chặn đường / cận chiến). Kẻ kite/bắn xa ngoài vùng → phớt lờ.
+        // (Điều kiện áp sát tránh dao động khi Companion kite quanh ranh giới vùng.)
+        float zone = stats.aggroRadius * 1.5f;
+        bool blocker = nearestTarget != null
+            && Vector3.Distance(nearestTarget.position, stats.spawnPosition) <= zone
+            && distToTarget <= combat.GetBasicRange() + 1.0f;
+
+        if (blocker)
         {
             isReturningHome = false;
             stats.outCombat = false;
@@ -711,12 +1011,16 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        // Còn lại: PHỚT LỜ mọi tấn công, xoá aggro/target, LUÔN chạy về nhà (không đứng yên/xoay).
+        stats.currentAggro = 0;
+        nearestTarget = null;
+
         if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.5f)
         {
             isReturningHome = false;
-            stats.currentAggro = 0;
             stats.outCombat = true;
             baseIdleDirection = stats.facingDirection;
+            stats.currentHp = stats.maxHp; // Về tới nhà an toàn → HỒI ĐẦY MÁU ngay.
             ResetPatrolState();
         }
         else
@@ -766,6 +1070,14 @@ public class EnemyAI : MonoBehaviour
     void State_MoveTo(Vector3 targetPos, string debugState)
     {
         if (!agent.isOnNavMesh) return;
+        // [ROOT] Bị trói chân → KHÔNG di chuyển/pathfinding (giữ agent dừng, vẫn cho attack/cast ở state khác).
+        if (!stats.ControlState.canMove)
+        {
+            currentState = "MovementLocked";
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+            return;
+        }
         currentState = debugState;
         agent.isStopped = false;
         agent.SetDestination(targetPos);
@@ -820,13 +1132,21 @@ public class EnemyAI : MonoBehaviour
     {
         if (attacker == null) return;
 
+        // API cong khai -> co the bi goi truoc Start hoac khi component da disable.
+        CacheComponentRefs();
+        if (stats == null) return;
+
         // [MỚI] Không khóa mục tiêu nếu kẻ tấn công vô hình
         Stats attackerStats = attacker.GetComponent<Stats>();
         if (attackerStats != null && attackerStats.isInvisible) return;
 
+        // [LEASH] Kẻ tấn công NGOÀI vùng hoạt động (vd Companion nhử ra rìa rồi bắn từ xa)
+        // → PHỚT LỜ hoàn toàn: không đánh thức, không khóa mục tiêu, không hủy lệnh về nhà.
+        if (Vector3.Distance(attacker.position, stats.spawnPosition) > stats.aggroRadius * 1.5f) return;
+
         // Đánh thức AI
         isReturningHome = false;
-        if (agent.isOnNavMesh) agent.isStopped = false;
+        if (agent != null && agent.enabled && agent.isOnNavMesh) agent.isStopped = false;
 
         // --- LOGIC KHÓA MỤC TIÊU (STICKY AGGRO) ---
         if (nearestTarget == null)
@@ -868,13 +1188,43 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Phase E4C — chuyển AGGRO nền sang một target mà KHÔNG tạo Taunt CC.
+    /// Nếu đang bị Taunt/Fear thật, forced-control vẫn giữ quyền điều khiển; target nền này
+    /// chỉ được dùng lại khi forced control kết thúc.
+    /// </summary>
+    public void RedirectAggroTo(Transform newTarget)
+    {
+        if (newTarget == null) return;
+
+        CacheComponentRefs();
+        if (stats == null) return;
+
+        Stats targetStats = newTarget.GetComponentInParent<Stats>();
+        if (targetStats == null || targetStats.isDead || targetStats.isInvisible) return;
+        if (!stats.IsHostileTo(newTarget)) return;
+
+        isReturningHome = false;
+        nearestTarget = newTarget;
+        lastTimeCurrentTargetDamagedMe = Time.time;
+        receiveDamageTimer = cooldownTimerReceiveDame;
+        stats.AddAggro(stats.maxAggro);
+
+        // Aggro redirect là mechanic nền, không được cướp quyền từ Taunt/Fear CC đang active.
+        if (!ForcedControlRunner.IsForcedMode(stats.ControlState.mode))
+        {
+            if (combat != null) combat.SetTarget(newTarget);
+            if (agent != null && agent.enabled && agent.isOnNavMesh) agent.isStopped = false;
+        }
+    }
+
     // --- POST-ATTACK BEHAVIOR ---
     // Được gọi trong thời gian hồi đòn thường. Tùy tình huống enemy sẽ:
     // lùi ra, xoay vòng, hoặc đứng tại chỗ mặt nhìn player chờ thời.
     void HandlePostAttackBehavior(float distToTarget)
     {
         // Quá xa → áp sát (reset về chase, không giữ behavior cũ)
-        if (distToTarget > combat.basicAttackRange * 2.0f)
+        if (distToTarget > combat.GetBasicRange() * 2.0f)
         {
             _postAttackBehaviorChosen = false;
             RestoreNormalSpeed();
@@ -883,7 +1233,7 @@ public class EnemyAI : MonoBehaviour
         }
 
         // Quá gần (player áp sát) → lùi ra (override behavior hiện tại)
-        if (distToTarget < combat.basicAttackRange * 0.6f)
+        if (distToTarget < combat.GetBasicRange() * 0.6f)
         {
             _postAttackBehaviorChosen = false;
             RestoreNormalSpeed();
@@ -922,7 +1272,7 @@ public class EnemyAI : MonoBehaviour
         NavMeshHit hit;
         if (NavMesh.SamplePosition(dest, out hit, backOffDistance + 1f, NavMesh.AllAreas))
         {
-            agent.speed = stats.baseMoveSpeed * 0.8f; // lùi ra xa player với 80% tốc độ
+            SetMoveSpeed(0.8f); // lùi ra xa player với 80% tốc độ (đã trừ Slow)
             State_MoveTo(hit.position, "Post-Attack BackOff");
         }
         else
@@ -938,12 +1288,12 @@ public class EnemyAI : MonoBehaviour
         toTarget.y = 0;
         Vector3 circleDir = Vector3.Cross(toTarget, Vector3.up).normalized;
         if (!_postAttackCircleRight) circleDir = -circleDir; // chiều đã cố định từ lúc chọn
-        float circleDist = combat.basicAttackRange * 0.8f;
+        float circleDist = combat.GetBasicRange() * 0.8f;
         Vector3 dest = transform.position + circleDir * circleDist;
         NavMeshHit hit;
         if (NavMesh.SamplePosition(dest, out hit, circleDist + 1f, NavMesh.AllAreas))
         {
-            agent.speed = stats.baseMoveSpeed * 0.5f;
+            SetMoveSpeed(0.5f); // xoay vòng 50% tốc độ (đã trừ Slow)
             State_MoveTo(hit.position, "Post-Attack Circle");
         }
         else
@@ -968,7 +1318,11 @@ public class EnemyAI : MonoBehaviour
     // Dành cho enemy rank >= 1: lướt né đòn player theo kiểu Genshin rồi phản công ngay
     IEnumerator BossDodgeRoutine()
     {
-        if (nearestTarget == null) yield break;
+        if (nearestTarget == null)
+        {
+            _bossDodgeCoroutine = null;
+            yield break;
+        }
 
         isBossDodging = true;
         lastBossDodgeTime = Time.time;
@@ -991,7 +1345,7 @@ public class EnemyAI : MonoBehaviour
         if (agent.isOnNavMesh)
         {
             agent.isStopped = false;
-            agent.speed = stats.baseMoveSpeed * 3.5f;
+            SetMoveSpeed(3.5f); // lướt né 3.5x (đã trừ Slow)
             agent.SetDestination(dodgeDest);
         }
 
@@ -1009,20 +1363,21 @@ public class EnemyAI : MonoBehaviour
 
         stats.isInvincible = false;
         isBossDodging = false;
+        _bossDodgeCoroutine = null;
 
         if (agent.isOnNavMesh)
         {
-            agent.speed = stats.baseMoveSpeed;
+            SetMoveSpeed(1f);
             agent.isStopped = true;
         }
 
         // Ngay sau khi dodge xong → phản công nếu player vẫn trong tầm
         yield return new WaitForSeconds(0.1f);
 
-        if (nearestTarget != null && !stats.isDead && !stats.isStunned)
+        if (nearestTarget != null && !stats.isDead && stats.ControlState.canBasicAttack)
         {
             float dist = Vector3.Distance(transform.position, nearestTarget.position);
-            if (dist <= combat.basicAttackRange + 1.5f) State_Attack();
+            if (dist <= combat.GetBasicRange() + 1.5f) State_Attack();
             else State_Chase();
         }
     }

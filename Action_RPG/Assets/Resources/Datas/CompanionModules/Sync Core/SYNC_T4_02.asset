@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82e5cd566f753c1418940889f761cc03, type: 3}
+  m_Name: SYNC_T4_02
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionSyncCoreData
+  id: SYNC_T4_02
+  description: Amplifies the companion's combat output whenever the master unleashes
+    their ultimate power.
+  icon: {fileID: 0}
+  rarity: 3
+  effectType: 2
+  effectCondition: "Khi Player thi tri\u1EC3n Signature"
+  effectDescription: "Companion l\u1EADp t\u1EE9c tung ra m\u1ED9t tia s\xE9t nh\u1EAFm
+    th\u1EB3ng v\xE0o k\u1EBB \u0111\u1ECBch nhi\u1EC1u m\xE1u nh\u1EA5t trong ph\u1EA1m
+    vi 5f c\u1EE7a Player, g\xE2y s\xE1t th\u01B0\u01A1ng ph\xE9p b\u1EB1ng 200%
+    physicalAtk + 200% magicAtk c\u1EE7a Companion."
+  syncCoreName: Resonance Core
+  statModifiers:
+  - stat: 3
+    val: 40
+    powerMod: 0
+  - stat: 0
+    val: 30
+    powerMod: 0
+  - stat: 2
+    val: 30
+    powerMod: 0
+  - stat: 4
+    val: 20
+    powerMod: 0
+  - stat: 1
+    val: 20
+    powerMod: 0

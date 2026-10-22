@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using UnityEngine.AI;
 
@@ -56,7 +56,7 @@ public class VanguardSignature : SkillBehavior
         forward.y = 0;
 
         // 2. Kéo Companion về và Hồi Sinh (nếu cần)
-        CompanionAI companion = FindFirstObjectByType<CompanionAI>();
+        CompanionAI companion = CompanionAI.Current;
         if (companion != null)
         {
             currentCompanionStats = companion.GetComponent<Stats>();
@@ -132,8 +132,7 @@ public class VanguardSignature : SkillBehavior
             reflectInfo.sourcePosition = transform.position;
             reflectInfo.trueDamage = reflectDmg;
             reflectInfo.attacker = stats;
-            reflectInfo.isKnockback = false;
-            reflectInfo.isStun = false;
+            // [CC] Phản đòn là PURE true damage — không kèm CC (DamageInfo mới, effects rỗng sẵn).
 
             // Xuyên luôn giáp để phản đòn đau nhất có thể
             info.attacker.TakeDamage(reflectInfo);

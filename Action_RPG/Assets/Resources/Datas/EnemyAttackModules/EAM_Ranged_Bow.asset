@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4238a5c0c70c460e804149b98d285851, type: 3}
+  m_Name: EAM_Ranged_Bow
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackModuleData
+  id: EAM_Ranged_Bow
+  displayName: "B\u1EAFn cung"
+  style: 5
+  range: 10
+  cooldown: 2
+  damageMultiplier: 1
+  windupDuration: 0.4
+  activeDuration: 0.1
+  recoveryDuration: 0.3
+  attackAngle: 90
+  sweepStartAngle: -45
+  sweepEndAngle: 45
+  aoeRadius: 1.5
+  projectileSpeed: 15
+  projectileLifetime: 4
+  projectilePrefab: {fileID: 1452241493649932977, guid: 6e97325dd94546e42a25940c8a136c69, type: 3}
+  telegraphPrefab: {fileID: 0}
+  faceTargetOnStart: 1
+  useTelegraph: 1
+  impactBonus: 0
+  effects: []

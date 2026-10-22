@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -70,16 +70,28 @@ public class MagePassive : SkillBehavior
     private int windStacks = 0;
     private float activeWindSpeedBonus = 0f;
 
-    // Dictionaries for debuffs
-    private Dictionary<Stats, ChillData> chillDict = new Dictionary<Stats, ChillData>();
-    private Dictionary<Stats, FractureData> fracDict = new Dictionary<Stats, FractureData>();
-    private Dictionary<Stats, float> immuneDict = new Dictionary<Stats, float>();
-    private Dictionary<Stats, float> atkSlowDict = new Dictionary<Stats, float>(); // Chống cộng dồn Tốc đánh
+    // Managed Debuff ownership: Chill/Fracture timing + stacking live in Debuff Registry.
+    // Chill immunity remains a Mage-specific mechanic (legacy semantics), not a Debuff instance.
+    private readonly Dictionary<Stats, ChillManagedState> chillStates = new Dictionary<Stats, ChillManagedState>();
+    private readonly Dictionary<Stats, FractureManagedState> fractureStates = new Dictionary<Stats, FractureManagedState>();
+    private readonly Dictionary<Stats, EffectHandle> earthquakeExtraHandles = new Dictionary<Stats, EffectHandle>();
+    private readonly Dictionary<Stats, float> immuneDict = new Dictionary<Stats, float>();
 
     private enum Direction8 { None = 0, N = 1, NE = 2, E = 3, SE = 4, S = 5, SW = 6, W = 7, NW = 8 }
 
-    private class ChillData { public int stacks; public float expireTime; }
-    private class FractureData { public int stacks; public float expireTime; public bool isReduced; public float armorReduc; public float mrReduc; }
+    private sealed class ChillManagedState
+    {
+        public EffectHandle handle = EffectHandle.Invalid;
+        public int stackCount;
+    }
+
+    private sealed class FractureManagedState
+    {
+        public EffectHandle markHandle = EffectHandle.Invalid;
+        public EffectHandle defenseHandle = EffectHandle.Invalid;
+        public float armorReduction;
+        public float mrReduction;
+    }
 
     // ========================================================
     // INITIALIZATION & CLEANUP
@@ -115,12 +127,10 @@ public class MagePassive : SkillBehavior
             isGrimoireEquipped = false;
         }
 
-        RestoreAllFracturedStats();
-        RestoreAllAtkSpeed();
-        chillDict.Clear();
-        fracDict.Clear();
+        ClearManagedChills(EffectRemoveReason.Manual);
+        ClearManagedFractures(EffectRemoveReason.Manual);
+        ClearEarthquakeExtraShreds(EffectRemoveReason.Manual);
         immuneDict.Clear();
-        atkSlowDict.Clear();
     }
 
     private void Update()
@@ -148,30 +158,11 @@ public class MagePassive : SkillBehavior
             }
         }
 
-        // 3. Clear Expired Buffs/Debuffs
-        List<Stats> chillKeys = new List<Stats>(chillDict.Keys);
-        foreach (var k in chillKeys)
-            if (k == null || k.currentHp <= 0 || Time.time > chillDict[k].expireTime) chillDict.Remove(k);
-
-        List<Stats> fracKeys = new List<Stats>(fracDict.Keys);
-        foreach (var k in fracKeys)
-            if (k == null || k.currentHp <= 0 || Time.time > fracDict[k].expireTime)
-            {
-                RestoreSingleFracture(k);
-                fracDict.Remove(k);
-            }
-
+        // 3. Chill lifecycle/expiry lives in Debuff Registry. Only the post-Freeze Chill immunity remains local.
         List<Stats> immuneKeys = new List<Stats>(immuneDict.Keys);
         foreach (var k in immuneKeys)
             if (k == null || k.currentHp <= 0 || Time.time > immuneDict[k]) immuneDict.Remove(k);
-
-        List<Stats> slowKeys = new List<Stats>(atkSlowDict.Keys);
-        foreach (var k in slowKeys)
-            if (k == null || k.currentHp <= 0 || Time.time > atkSlowDict[k])
-            {
-                RestoreSingleAtkSpeed(k);
-                atkSlowDict.Remove(k);
-            }
+        // [CE-02C4] atkSlow giờ qua effect system (tự hết hạn) → không cần quản lý dict/restore ở đây.
     }
 
     // ========================================================
@@ -187,7 +178,9 @@ public class MagePassive : SkillBehavior
         bool wasEquipped = isGrimoireEquipped;
 
         if (bypassWeaponCheck) isGrimoireEquipped = true;
-        else isGrimoireEquipped = (weapon != null && weapon.weaponType == requiredWeaponType);
+        // WPN_GR_T4_04: là Grimoire nhưng KHÔNG kích hoạt hiệu ứng yêu cầu Grimoire (tính như vũ khí khác).
+        else isGrimoireEquipped = (weapon != null && weapon.weaponType == requiredWeaponType
+                                   && (weapon.id == null || weapon.id.Trim() != "WPN_GR_T4_04"));
 
         if (isGrimoireEquipped && !wasEquipped)
         {
@@ -332,23 +325,23 @@ public class MagePassive : SkillBehavior
         {
             case Direction8.N:
                 // Áp dụng Burn khi đang Cooldown (không phải swing vừa phóng cầu lửa)
-                if (timerN > 0f && !castNThisSwing) target.ApplyBurn(burnDmg, burnDuration);
+                if (timerN > 0f && !castNThisSwing) target.ApplyBurn(burnDmg, burnDuration, stats);
                 break;
 
             case Direction8.NE:
-                target.ApplyBurn(burnDmg, burnDuration);
+                target.ApplyBurn(burnDmg, burnDuration, stats);
                 Collider[] hits = Physics.OverlapSphere(target.transform.position, 1.5f, player.dangerLayer);
                 foreach (var hit in hits)
                 {
                     Stats e = hit.GetComponent<Stats>();
-                    if (e != null && e != target) e.ApplyBurn(burnDmg, burnDuration);
+                    if (e != null && e != target) e.ApplyBurn(burnDmg, burnDuration, stats);
                 }
                 VisualDebugHelper.DrawSphere(target.transform.position, 1.5f, new Color(1, 0.5f, 0, 0.3f), 0.5f);
                 break;
 
             case Direction8.SE:
                 ApplyChill(target);
-                ApplyAtkSlow(target); // Dùng hàm riêng chống cộng dồn
+                ApplyAttackSpeedDownDebuff(target);
                 break;
 
             case Direction8.S:
@@ -366,7 +359,7 @@ public class MagePassive : SkillBehavior
 
             case Direction8.NW:
                 // Nếu Thiên thạch đang Cooldown -> Đánh thường gây Cháy + Rạn nứt
-                if (timerNW > 0f && !castNWThisSwing) { target.ApplyBurn(burnDmg, burnDuration); ApplyFracture(target); }
+                if (timerNW > 0f && !castNWThisSwing) { target.ApplyBurn(burnDmg, burnDuration, stats); ApplyFracture(target); }
                 break;
         }
     }
@@ -376,112 +369,251 @@ public class MagePassive : SkillBehavior
     // ========================================================
     private void ApplyChill(Stats target)
     {
-        if (immuneDict.ContainsKey(target) && Time.time < immuneDict[target]) return;
+        if (target == null || target.currentHp <= 0) return;
 
-        if (!chillDict.ContainsKey(target)) chillDict[target] = new ChillData { stacks = 0 };
-
-        // ĐÒN THỨ 8 ĐÓNG BĂNG: Chỉ nổ khi TRƯỚC ĐÓ đã có đủ 7 cộng dồn
-        if (chillDict[target].stacks >= maxChillStacks)
+        if (immuneDict.TryGetValue(target, out float immuneUntil))
         {
-            DamageHelper.ApplyStandardDamage(stats, target, player.transform, 0f, null, null, 0, true, freezeStunDuration);
-            chillDict.Remove(target);
-            immuneDict[target] = Time.time + chillImmuneDuration;
-            VisualDebugHelper.DrawBox(target.transform.position + Vector3.up, new Vector3(1, 2, 1), Quaternion.identity, new Color(0, 1, 1, 0.6f), 3f);
-            Debug.Log($"<color=cyan>[Mage-S]</color> Đòn thứ 8! Đóng băng {target.name} trong 3s!");
+            if (Time.time < immuneUntil) return;
+            immuneDict.Remove(target);
         }
-        else
+
+        // ĐÒN THỨ 8 ĐÓNG BĂNG: chỉ nổ khi target ĐÃ có đủ 7 stack trước hit hiện tại.
+        if (chillStates.TryGetValue(target, out ChillManagedState existing)
+            && existing != null
+            && existing.handle.IsValid
+            && target.StatusEffects.IsEffectActive(existing.handle)
+            && existing.stackCount >= Mathf.Max(1, maxChillStacks))
         {
-            // Nếu chưa đủ 7 thì tăng số đếm lên
-            chillDict[target].stacks++;
-            chillDict[target].expireTime = Time.time + chillDuration;
-            VisualDebugHelper.DrawSphere(target.transform.position + Vector3.up * 2f, 0.3f, Color.cyan, 1f);
+            TriggerChillFreeze(target, freezeStunDuration, true);
+            return;
+        }
+
+        const string effectId = "MagePassive.Chill";
+        var request = new DebuffRequest
+        {
+            effectId = effectId,
+            duration = chillDuration,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.AdditiveStacks,
+            maxStacks = Mathf.Max(1, maxChillStacks),
+            potency = 1f,
+            note = "Mage Passive Chill mark; 7 stacks, next Chill hit triggers Freeze"
+        };
+        request.onApply = snapshot => HandleChillStackChanged(target, snapshot);
+        request.onRefreshOrStack = snapshot => HandleChillStackChanged(target, snapshot);
+        request.onRemove = (snapshot, reason) => HandleChillRemoved(target, snapshot);
+
+        EffectApplyResult result = target.ApplyDebuff(request, stats, $"{effectId}:{GetInstanceID()}");
+        if (result.Accepted)
+        {
+            ChillManagedState state = GetOrCreateChillState(target);
+            state.handle = result.handle;
+        }
+    }
+
+    private ChillManagedState GetOrCreateChillState(Stats target)
+    {
+        if (!chillStates.TryGetValue(target, out ChillManagedState state) || state == null)
+        {
+            state = new ChillManagedState();
+            chillStates[target] = state;
+        }
+        return state;
+    }
+
+    private void HandleChillStackChanged(Stats target, DebuffRuntimeSnapshot snapshot)
+    {
+        if (target == null || target.currentHp <= 0) return;
+        ChillManagedState state = GetOrCreateChillState(target);
+        state.handle = snapshot.handle;
+        state.stackCount = snapshot.stackCount;
+        VisualDebugHelper.DrawSphere(target.transform.position + Vector3.up * 2f, 0.3f, Color.cyan, 1f);
+    }
+
+    private void HandleChillRemoved(Stats target, DebuffRuntimeSnapshot snapshot)
+    {
+        if (target == null)
+        {
+            chillStates.Remove(target);
+            return;
+        }
+
+        if (!chillStates.TryGetValue(target, out ChillManagedState state) || state == null) return;
+        if (state.handle.IsValid && !state.handle.Equals(snapshot.handle)) return;
+        chillStates.Remove(target);
+    }
+
+    private void RemoveManagedChill(Stats target, EffectRemoveReason reason)
+    {
+        if (target == null) return;
+        if (chillStates.TryGetValue(target, out ChillManagedState state)
+            && state != null && state.handle.IsValid)
+            target.StatusEffects.RemoveEffect(state.handle, reason);
+        chillStates.Remove(target);
+    }
+
+    private void ClearManagedChills(EffectRemoveReason reason)
+    {
+        if (chillStates.Count == 0) return;
+        var entries = new List<KeyValuePair<Stats, ChillManagedState>>(chillStates);
+        foreach (var pair in entries)
+        {
+            Stats target = pair.Key;
+            ChillManagedState state = pair.Value;
+            if (target != null && state != null && state.handle.IsValid)
+                target.StatusEffects.RemoveEffect(state.handle, reason);
+        }
+        chillStates.Clear();
+    }
+
+    private void TriggerChillFreeze(Stats target, float stunDuration, bool thresholdTriggered)
+    {
+        if (target == null || target.currentHp <= 0) return;
+
+        DamageHelper.ApplyStandardDamage(stats, target, player.transform, 0f, null, null, 0, true, stunDuration, sourceType: DamageSourceType.Ranged);
+        RemoveManagedChill(target, EffectRemoveReason.Manual);
+        immuneDict[target] = Time.time + chillImmuneDuration;
+
+        if (thresholdTriggered)
+        {
+            VisualDebugHelper.DrawBox(target.transform.position + Vector3.up, new Vector3(1, 2, 1), Quaternion.identity, new Color(0, 1, 1, 0.6f), 3f);
+            Debug.Log($"<color=cyan>[Mage-S]</color> Đòn thứ 8! Đóng băng {target.name} trong {stunDuration:0.#}s!");
         }
     }
 
     private void ApplyFracture(Stats target)
     {
-        if (!fracDict.ContainsKey(target)) fracDict[target] = new FractureData { stacks = 0, isReduced = false };
+        if (target == null || target.currentHp <= 0) return;
 
-        fracDict[target].stacks = Mathf.Min(maxFractureStacks, fracDict[target].stacks + 1);
-        fracDict[target].expireTime = Time.time + fractureDuration;
-
-        if (fracDict[target].stacks == maxFractureStacks && !fracDict[target].isReduced)
+        const string effectId = "MagePassive.Fracture";
+        string sourceKey = $"{effectId}:{GetInstanceID()}";
+        var request = new DebuffRequest
         {
-            fracDict[target].isReduced = true;
-            fracDict[target].armorReduc = target.armor * defReducePercent;
-            fracDict[target].mrReduc = target.magicResist * defReducePercent;
+            effectId = effectId,
+            duration = fractureDuration,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.AdditiveStacks,
+            maxStacks = Mathf.Max(1, maxFractureStacks),
+            potency = defReducePercent,
+            note = "Mage Passive Fracture stacks; max stacks activates 15% Armor/MR Down"
+        };
 
-            target.armor -= fracDict[target].armorReduc;
-            target.magicResist -= fracDict[target].mrReduc;
-            VisualDebugHelper.DrawSphere(target.transform.position + Vector3.up * 0.5f, 0.8f, new Color(0.5f, 0.5f, 0.5f, 0.5f), 1f);
+        request.onApply = snapshot => HandleFractureStackChanged(target, snapshot);
+        request.onRefreshOrStack = snapshot => HandleFractureStackChanged(target, snapshot);
+        request.onRemove = (snapshot, reason) => HandleFractureRemoved(target, snapshot, reason);
+
+        EffectApplyResult result = target.ApplyDebuff(request, stats, sourceKey);
+        if (result.Accepted)
+        {
+            FractureManagedState state = GetOrCreateFractureState(target);
+            state.markHandle = result.handle;
         }
     }
 
-    private void RestoreSingleFracture(Stats target)
+    private FractureManagedState GetOrCreateFractureState(Stats target)
     {
-        if (fracDict.ContainsKey(target) && fracDict[target].isReduced)
+        if (!fractureStates.TryGetValue(target, out FractureManagedState state) || state == null)
         {
-            target.armor += fracDict[target].armorReduc;
-            target.magicResist += fracDict[target].mrReduc;
+            state = new FractureManagedState();
+            fractureStates[target] = state;
         }
+        return state;
     }
 
-    private void RestoreAllFracturedStats()
+    private void HandleFractureStackChanged(Stats target, DebuffRuntimeSnapshot snapshot)
     {
-        foreach (var k in fracDict.Keys)
-            if (k != null) RestoreSingleFracture(k);
+        if (target == null || target.currentHp <= 0) return;
+
+        FractureManagedState state = GetOrCreateFractureState(target);
+        state.markHandle = snapshot.handle;
+        if (snapshot.stackCount < Mathf.Max(1, maxFractureStacks)) return;
+
+        // Snapshot đúng 1 lần khi Fracture lần đầu đạt max stack. Các hit sau chỉ refresh timer.
+        if (!state.defenseHandle.IsValid || !target.StatusEffects.IsEffectActive(state.defenseHandle))
+        {
+            state.armorReduction = Mathf.Max(0f, target.EffectiveArmor * defReducePercent);
+            state.mrReduction = Mathf.Max(0f, target.EffectiveMagicResist * defReducePercent);
+        }
+
+        var defenseRequest = new DebuffRequest
+        {
+            effectId = "MagePassive.Fracture.DefenseDown",
+            duration = fractureDuration,
+            cleanseable = false, // internal child: Fracture mark chính sở hữu cleanup/cleanse lifecycle
+            stackPolicy = EffectStackPolicy.RefreshSameSource,
+            maxStacks = 1,
+            potency = defReducePercent,
+            note = "Mage Passive Fracture max stacks - linked 15% Armor/MR Down"
+        };
+        if (state.armorReduction > 0f)
+            defenseRequest.statModifiers.Add(new RuntimeStatModifierSpec(
+                RuntimeStatKey.Armor, RuntimeModifierOperation.Flat, -state.armorReduction));
+        if (state.mrReduction > 0f)
+            defenseRequest.statModifiers.Add(new RuntimeStatModifierSpec(
+                RuntimeStatKey.MagicResist, RuntimeModifierOperation.Flat, -state.mrReduction));
+
+        EffectApplyResult defenseResult = target.ApplyDebuff(
+            defenseRequest, stats, $"MagePassive.Fracture.DefenseDown:{GetInstanceID()}");
+        if (defenseResult.Accepted) state.defenseHandle = defenseResult.handle;
+        VisualDebugHelper.DrawSphere(target.transform.position + Vector3.up * 0.5f, 0.8f, new Color(0.5f, 0.5f, 0.5f, 0.5f), 1f);
     }
 
-    // [FIX SE]: Quản lý Giảm Tốc Đánh bằng Dictionary để không bị cộng dồn
-    private void ApplyAtkSlow(Stats target)
+    private void HandleFractureRemoved(Stats target, DebuffRuntimeSnapshot snapshot, EffectRemoveReason reason)
     {
-        if (!atkSlowDict.ContainsKey(target))
+        if (target == null)
         {
-            // Lần đầu dính -> Trừ thẳng 10%
-            target.baseAttackSpeed *= 0.9f;
-            atkSlowDict[target] = Time.time + 3f;
+            fractureStates.Remove(target);
+            return;
         }
-        else
-        {
-            // Đã dính rồi -> Chỉ làm mới thời gian
-            atkSlowDict[target] = Time.time + 3f;
-        }
+
+        if (!fractureStates.TryGetValue(target, out FractureManagedState state) || state == null) return;
+        if (state.markHandle.IsValid && !state.markHandle.Equals(snapshot.handle)) return;
+
+        if (state.defenseHandle.IsValid)
+            target.StatusEffects.RemoveEffect(state.defenseHandle, reason);
+        fractureStates.Remove(target);
     }
 
-    private void RestoreSingleAtkSpeed(Stats target)
+    private void ClearManagedFractures(EffectRemoveReason reason)
     {
-        if (target != null)
+        if (fractureStates.Count == 0) return;
+        var entries = new List<KeyValuePair<Stats, FractureManagedState>>(fractureStates);
+        foreach (var pair in entries)
         {
-            target.baseAttackSpeed /= 0.9f; // Phục hồi lại chỉ số gốc
+            Stats target = pair.Key;
+            FractureManagedState state = pair.Value;
+            if (target != null && state != null)
+            {
+                if (state.markHandle.IsValid) target.StatusEffects.RemoveEffect(state.markHandle, reason);
+                else if (state.defenseHandle.IsValid) target.StatusEffects.RemoveEffect(state.defenseHandle, reason);
+            }
         }
+        fractureStates.Clear();
     }
 
-    private void RestoreAllAtkSpeed()
+    // Phase F2: Giảm Tốc Đánh -10% là Debuff/stat modifier riêng, KHÔNG phải Slow CC.
+    private string attackSpeedDownSourceKey;
+    private void ApplyAttackSpeedDownDebuff(Stats target)
     {
-        foreach (var k in atkSlowDict.Keys)
-            RestoreSingleAtkSpeed(k);
+        if (target == null || target.currentHp <= 0) return;
+        if (string.IsNullOrEmpty(attackSpeedDownSourceKey))
+            attackSpeedDownSourceKey = $"MagePassive.SE.AttackSpeedDown:{GetInstanceID()}";
+
+        target.ApplyAttackSpeedDown(
+            0.1f, 3f, stats, attackSpeedDownSourceKey,
+            "MagePassive SE - AttackSpeedDown 10%");
     }
 
     // Gọi bởi Thiên Thạch (NW): thiêu đốt 5s + giảm giáp/kháng phép CÓ THỜI HẠN (5s)
-    // Dùng lại fracDict để cleanup tự khôi phục khi hết hạn (tránh giảm giáp vĩnh viễn)
+    // Fracture stack/lifecycle giờ thuộc Debuff Registry; Meteor chỉ ép stack lên max.
     public void ApplyMeteorHit(Stats target)
     {
         if (target == null) return;
 
-        target.ApplyBurn(stats.magicAtk * 0.05f, 5f);
+        target.ApplyBurn(stats.magicAtk * 0.05f, 5f, stats);
 
-        if (!fracDict.ContainsKey(target)) fracDict[target] = new FractureData { stacks = 0, isReduced = false };
-        FractureData f = fracDict[target];
-        if (!f.isReduced)
-        {
-            f.isReduced = true;
-            f.armorReduc = target.armor * defReducePercent;
-            f.mrReduc = target.magicResist * defReducePercent;
-            target.armor -= f.armorReduc;
-            target.magicResist -= f.mrReduc;
-        }
-        f.stacks = maxFractureStacks;
-        f.expireTime = Time.time + fractureDuration;
+        // Meteor legacy semantics: ép Fracture lên max ngay và refresh 5s. Registry sở hữu stack/lifecycle.
+        SkillAddFracture(target, maxFractureStacks);
     }
 
     public float GetXpBonusMultiplier() => isGrimoireEquipped ? (1f + xpBonusPercent) : 1f;
@@ -509,45 +641,53 @@ public class MagePassive : SkillBehavior
 
     /// <summary>
     /// W - Earthquake: giảm 30% giáp/kháng phép trong `duration` giây, sau đó về 15% của nội tại.
-    /// Tính toán tập trung tại đây (nơi sở hữu fracDict) để KHÔNG bị cộng dồn sai 15%+30%=40.5%.
+    /// Tính toán tập trung tại đây trên managed Fracture snapshot để KHÔNG bị cộng dồn sai 15%+30%=40.5%.
     /// Đúng cả khi địch ĐÃ bị giảm 15% trước lẫn khi CHƯA bị giảm.
     /// </summary>
     public void SkillApplyEarthquakeShred(Stats target, float duration)
     {
         if (target == null || target.currentHp <= 0) return;
 
-        // 1) Đưa Fractured lên max → nội tại giảm đúng 15% (chỉ giảm 1 lần nhờ cờ isReduced).
-        //    Nếu địch đã bị giảm trước thì chỉ làm mới thời gian, không giảm thêm.
+        // 1) Đưa Fracture lên max → managed base shred 15%. Nếu đã max thì chỉ refresh.
         SkillAddFracture(target, maxFractureStacks);
-        if (!fracDict.ContainsKey(target) || !fracDict[target].isReduced) return;
+        if (!fractureStates.TryGetValue(target, out FractureManagedState state)
+            || state == null || !state.defenseHandle.IsValid) return;
 
-        // 2) Giảm TẠM thêm đúng bằng phần nội tại (15% của base) → tổng = 30% trong `duration`.
-        StartCoroutine(EarthquakeExtraShred(target, fracDict[target].armorReduc, fracDict[target].mrReduc, duration));
+        // 2) Thêm đúng cùng snapshot 15% trong duration → tổng 30%, sau đó extra tự hết và base Fracture còn lại.
+        var request = new DebuffRequest
+        {
+            effectId = "MagePassive.Fracture.EarthquakeExtra",
+            duration = Mathf.Max(0.1f, duration),
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.RefreshSameSource,
+            maxStacks = 1,
+            potency = defReducePercent,
+            note = "Mage Earthquake extra 15% Armor/MR shred on top of max Fracture"
+        };
+        if (state.armorReduction > 0f)
+            request.statModifiers.Add(new RuntimeStatModifierSpec(RuntimeStatKey.Armor, RuntimeModifierOperation.Flat, -state.armorReduction));
+        if (state.mrReduction > 0f)
+            request.statModifiers.Add(new RuntimeStatModifierSpec(RuntimeStatKey.MagicResist, RuntimeModifierOperation.Flat, -state.mrReduction));
+
+        EffectApplyResult result = target.ApplyDebuff(
+            request, stats, $"MagePassive.Fracture.EarthquakeExtra:{GetInstanceID()}");
+        if (result.Accepted) earthquakeExtraHandles[target] = result.handle;
     }
 
-    private IEnumerator EarthquakeExtraShred(Stats target, float extraArmor, float extraMr, float duration)
+    private void ClearEarthquakeExtraShreds(EffectRemoveReason reason)
     {
-        if (target == null) yield break;
-        target.armor -= extraArmor;
-        target.magicResist -= extraMr;
-
-        yield return new WaitForSeconds(duration);
-
-        // Trả lại đúng phần TẠM đã trừ (đối xứng), giữ nguyên phần 15% của nội tại.
-        if (target != null)
-        {
-            target.armor += extraArmor;
-            target.magicResist += extraMr;
-        }
+        if (earthquakeExtraHandles.Count == 0) return;
+        var entries = new List<KeyValuePair<Stats, EffectHandle>>(earthquakeExtraHandles);
+        foreach (var pair in entries)
+            if (pair.Key != null && pair.Value.IsValid) pair.Key.StatusEffects.RemoveEffect(pair.Value, reason);
+        earthquakeExtraHandles.Clear();
     }
 
     /// <summary>S - Absolute Zero: đóng băng (stun) tức thì bất kể số cộng dồn, xóa cộng dồn + miễn nhiễm tê tái.</summary>
     public void SkillForceFreeze(Stats target, float stunDuration)
     {
         if (target == null || target.currentHp <= 0) return;
-        DamageHelper.ApplyStandardDamage(stats, target, player.transform, 0f, null, null, 0, true, stunDuration);
-        if (chillDict.ContainsKey(target)) chillDict.Remove(target);
-        immuneDict[target] = Time.time + chillImmuneDuration;
+        TriggerChillFreeze(target, stunDuration, false);
     }
 }
 
@@ -615,7 +755,7 @@ public class MageBurningArea : MonoBehaviour
             foreach (var hit in hits)
             {
                 Stats e = hit.GetComponentInParent<Stats>();
-                if (e != null) e.ApplyBurn(dps, 2f);
+                if (e != null) e.ApplyBurn(dps, 2f, attacker);
             }
             yield return new WaitForSeconds(0.5f); // Gây tick mỗi 0.5s nhưng damage vẫn tính theo giây chuẩn của ApplyBurn
         }
@@ -654,11 +794,11 @@ public class MageMeteor : MonoBehaviour
             {
                 hitTargets.Add(e);
                 // Gây 200% dmg PHÉP + Stun 2s (truyền weapon Grimoire = Magic)
-                DamageHelper.ApplyStandardDamage(attacker, e, transform, 2.0f, null, weapon, 0, true, 2f);
+                DamageHelper.ApplyStandardDamage(attacker, e, transform, 2.0f, null, weapon, 0, true, 2f, sourceType: DamageSourceType.Ranged);
 
                 // Đính kèm các debuff của hướng NW (thiêu đốt 5s + giảm giáp/kháng phép 5s, tự khôi phục)
                 if (passive != null) passive.ApplyMeteorHit(e);
-                else e.ApplyBurn(attacker.magicAtk * 0.05f, 5f);
+                else e.ApplyBurn(attacker.magicAtk * 0.05f, 5f, attacker);
             }
         }
 

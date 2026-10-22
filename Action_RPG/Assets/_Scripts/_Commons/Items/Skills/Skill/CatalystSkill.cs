@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 
 public class CatalystSkill : SkillBehavior
@@ -83,7 +83,7 @@ public class CatalystSkill : SkillBehavior
 
             // --- GÂY SÁT THƯƠNG PHÉP ---
             stats.EnterCombat();
-            DamageHelper.ApplyStandardDamage(stats, bestTarget, transform, data.skillMagicMultiplier, data, equipmentManager.currentWeapon, 0, true, 1f);
+            DamageHelper.ApplyStandardDamage(stats, bestTarget, transform, data.skillMagicMultiplier, data, equipmentManager.currentWeapon, 0, true, 1f, sourceType: DamageSourceType.Ranged);
             // ---------------------------
 
             // Hiện VFX trên đầu mục tiêu
@@ -95,7 +95,7 @@ public class CatalystSkill : SkillBehavior
             //}
 
             // Gọi Companion ra lệnh Focus
-            CompanionAI companion = FindFirstObjectByType<CompanionAI>();
+            CompanionAI companion = CompanionAI.Current;
             if (companion != null)
             {
                 companion.ForceFocusTarget(bestTarget.transform, companionAtkSpeedBuff, focusDuration);

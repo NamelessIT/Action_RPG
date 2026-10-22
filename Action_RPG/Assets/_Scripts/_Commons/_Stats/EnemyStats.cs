@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 public enum EnemyType { Hostile, Neutral, Friendly }
@@ -14,6 +14,11 @@ public enum DetectionMethod
 
 public class EnemyStats : Stats
 {
+    [Header("--- Archetype Data ---")]
+    [Tooltip("[P2-DATA-02] EnemyData là SOURCE-OF-TRUTH cho thông số archetype (ID/rank/hp/move/attack speed/exp/EAM). " +
+             "Các trường runtime stats trên inspector chỉ còn là FALLBACK khi data == null, hoặc override tạm thời khi test.")]
+    public EnemyData data;
+
     [Header("--- Enemy Identity ---")]
     public string enemyID;
     public EnemyType enemyType = EnemyType.Hostile;
@@ -58,15 +63,24 @@ public class EnemyStats : Stats
 
     public override void Start()
     {
+        // [P2-DATA-02] Data phải apply TRƯỚC base.Start() để mọi thứ phía sau (maxHp, SetupResistances,
+        // AI/Combat đọc monsterRank) thấy đúng giá trị archetype.
+        ApplyEnemyData();
+
         base.Start();
         if (maxHp == 0) maxHp = baseHp;
         currentHp = maxHp;
-        base.baseAttackSpeed = 0.667f; // 1 đòn mỗi 1.5 giây (= 1/1.5). Subclass override để chỉnh.
+
+        // Fallback attack speed CHỈ khi không có data và inspector chưa set giá trị hợp lệ.
+        // (Trước đây dòng này vô điều kiện → ghi đè mọi cấu hình. Prefab enemy hiện tại đều là 0 nên hành vi giữ nguyên.)
+        if (data == null && baseAttackSpeed <= 0f) SetBaseAttackSpeed(0.667f); // 1 đòn mỗi 1.5 giây
+
         spawnPosition = transform.position;
 
         currentAggro = 0;
         obstacleMask = LayerMask.GetMask("Obstacle");
 
+        // Chạy SAU khi monsterRank đã được copy từ data.
         SetupResistances();
 
         // Đảm bảo tag đúng để hệ thống nhận diện
@@ -75,11 +89,31 @@ public class EnemyStats : Stats
         enemyAI = GetComponent<EnemyAI>();
     }
 
+    /// <summary>[P2-DATA-02] Copy archetype config từ `data` vào runtime stats. No-op nếu `data == null`
+    /// (enemy prefab cũ giữ nguyên giá trị inspector). Chỉ copy CONFIG, không đụng runtime state.</summary>
+    private void ApplyEnemyData()
+    {
+        if (data == null) return;
+
+        if (!string.IsNullOrEmpty(data.enemyID))   enemyID       = data.enemyID;
+        if (!string.IsNullOrEmpty(data.enemyName)) characterName = data.enemyName;
+
+        monsterRank = data.monsterRank;
+        expReward   = data.expReward;
+
+        if (data.baseHp > 0f)          baseHp = data.baseHp;
+        if (data.baseMoveSpeed > 0f)   SetBaseMoveSpeed(data.baseMoveSpeed);
+        if (data.baseAttackSpeed > 0f) SetBaseAttackSpeed(data.baseAttackSpeed);
+    }
+
     void SetupResistances()
     {
-        if (monsterRank == 0) { isSuperArmor = false; resistanceKnockBack = 0.1f; }
-        else if (monsterRank == 1) { isSuperArmor = true; superArmorLevel = 0; resistanceKnockBack = 0.5f; }
-        else if (monsterRank == 2) { isSuperArmor = true; superArmorLevel = 10; resistanceKnockBack = 1.0f; resistanceEffect = 1.0f; }
+        // resistanceEffect giảm THỜI LƯỢNG CC cleanseable; knockbackResistance chỉ giảm lực Knockback.
+        // Lưu ý rule Super Armor mới: superArmorLevel=0 không block CC nào; data rank/prefab sẽ được audit ở phase migration content.
+        // Lưu ý: nay rank1 cũng giảm 50% Root/Silence/Slow (đồng nhất qua resistanceEffect).
+        if (monsterRank == 0) { isSuperArmor = false; knockbackResistance = 0.1f; resistanceEffect = 0f; }
+        else if (monsterRank == 1) { isSuperArmor = true; superArmorLevel = 0; knockbackResistance = 0.5f; resistanceEffect = 0.5f; }
+        else if (monsterRank == 2) { isSuperArmor = true; superArmorLevel = 10; knockbackResistance = 1.0f; resistanceEffect = 1.0f; }
     }
 
     public override void Update()
@@ -132,18 +166,20 @@ public class EnemyStats : Stats
                 if (duelist != null) duelist.OnParrySuccess(false, info.attacker);
 
                 // --- BẬT SUPER ARMOR BẢO VỆ ---
-                bool oldSuperArmor = this.isSuperArmor;
-                int oldArmorLevel = this.superArmorLevel;
+                // Chống mọi Stun/Knockback (trừ skill có Impact >= 100) trong đúng cú parry.
+                PushSuperArmor(99);
 
-                this.isSuperArmor = true;
-                this.superArmorLevel = 99; // Chống mọi Stun/Knockback (trừ skill có Impact >= 100)
-
-                // [QUAN TRỌNG NHẤT] Gọi TakeDamage GỐC ngay lúc Super Armor đang level 99
-                base.TakeDamage(info);
-
-                // Xử lý xong mới trả lại chỉ số giáp cũ
-                this.isSuperArmor = oldSuperArmor;
-                this.superArmorLevel = oldArmorLevel;
+                // [QUAN TRỌNG NHẤT] Gọi TakeDamage GỐC ngay lúc Super Armor đang level 99.
+                // try/finally vì lý do như PlayerStats: exception trong event của TakeDamage
+                // sẽ làm enemy miễn nhiễm CC vĩnh viễn nếu Pop nằm ngoài finally.
+                try
+                {
+                    base.TakeDamage(info);
+                }
+                finally
+                {
+                    PopSuperArmor(99);
+                }
 
                 return; // Đã xử lý xong, KHÔNG chạy xuống dưới nữa
             }
@@ -207,7 +243,7 @@ public class EnemyStats : Stats
         // ── 1. TRAO EXP CHO PLAYER ──────────────────────────────────────
         if (expReward > 0f)
         {
-            PlayerStats playerStats = FindFirstObjectByType<PlayerStats>();
+            PlayerStats playerStats = PlayerStats.Current;
             if (playerStats != null)
             {
                 float xpGain = expReward;

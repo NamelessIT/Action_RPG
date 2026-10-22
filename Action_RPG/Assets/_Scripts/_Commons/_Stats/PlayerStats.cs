@@ -1,8 +1,23 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 public class PlayerStats : AllyStats
 {
+    private static PlayerStats _current;
+
+    /// <summary>
+    /// PlayerStats duy nhất trong scene. Thay cho FindFirstObjectByType&lt;PlayerStats&gt;() rải rác:
+    /// lần đầu quét scene, các lần sau lấy cache. Player bị huỷ thì cache tự rỗng nên quét lại.
+    /// </summary>
+    public static PlayerStats Current
+    {
+        get
+        {
+            if (_current == null) _current = FindFirstObjectByType<PlayerStats>();
+            return _current;
+        }
+    }
+
     [Header("--- Skill Point---")]
     public int skillPointRemain;
 
@@ -57,10 +72,8 @@ public class PlayerStats : AllyStats
             {
                 // ... (Logic Parry cũ của bạn: Perfect/Normal, SuperArmor...) ...
 
-                bool oldSuperArmor = this.isSuperArmor;
-                int oldArmorLevel = this.superArmorLevel;
-                this.isSuperArmor = true;
-                this.superArmorLevel = 99;
+                // Super armor tạm trong đúng cú parry — Push/Pop để không đạp nguồn khác đang giữ.
+                PushSuperArmor(99);
 
                 DuelistPassive duelist = GetComponent<DuelistPassive>();
 
@@ -80,10 +93,18 @@ public class PlayerStats : AllyStats
                     info.magicDamage *= 0.2f;
                     if (duelist != null) duelist.OnParrySuccess(false, info.attacker);
                 }
-                // [FIX LỖI] Gọi base.TakeDamage Ở ĐÂY khi Super Armor đang bật
-                base.TakeDamage(info);  
-                this.isSuperArmor = oldSuperArmor;
-                this.superArmorLevel = oldArmorLevel;
+                // [FIX LỖI] Gọi base.TakeDamage Ở ĐÂY khi Super Armor đang bật.
+                // try/finally: TakeDamage fire nhiều event của bên thứ ba (OnBeforeTakeDamage,
+                // damageInterceptor, Die...). Một exception ở bất kỳ subscriber nào mà không có
+                // finally thì Pop không chạy → người chơi miễn nhiễm CC vĩnh viễn.
+                try
+                {
+                    base.TakeDamage(info);
+                }
+                finally
+                {
+                    PopSuperArmor(99);
+                }
                 return; // Thoát luôn
             }
             else

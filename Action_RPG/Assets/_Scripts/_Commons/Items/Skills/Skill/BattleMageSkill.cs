@@ -67,7 +67,7 @@ public class BattleMageSkill : SkillBehavior
             Stats enemyStats = hit.GetComponent<Stats>();
             if (enemyStats != null && enemyStats.currentHp > 0)
             {
-                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 1, true, stunDuration);
+                DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, data.skillMagicMultiplier, data, currentWpn, 1, true, stunDuration, sourceType: DamageSourceType.Ranged);
                 hitCount++;
             }
         }
@@ -76,7 +76,7 @@ public class BattleMageSkill : SkillBehavior
         if (hitCount >= minEnemiesToHeal)
         {
             float totalHeal = Mathf.Min(hitCount * healAmountPerEnemy, maxHealLimit);
-            stats.Heal(totalHeal);
+            stats.Heal(totalHeal, true, false, HealSource.Skill);
             Debug.Log($"<color=green>BattleMage:</color> Trúng {hitCount} địch, hồi {totalHeal} HP!");
 
             // Có thể thêm một VFX hồi máu nhỏ ở đây

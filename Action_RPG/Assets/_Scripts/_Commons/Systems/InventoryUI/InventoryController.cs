@@ -46,7 +46,7 @@ public class InventoryController : MonoBehaviour
     private void Awake()
     {
         if (_inventoryRuntime == null)
-            _inventoryRuntime = FindFirstObjectByType<InventoryRuntime>();
+            _inventoryRuntime = InventoryRuntime.Current;
 
         if (_rootCanvas == null)
             _rootCanvas = GetComponentInParent<Canvas>();
@@ -57,6 +57,20 @@ public class InventoryController : MonoBehaviour
         BuildSlotViews();
         // Mặc định hiển thị trang Weapon
         ShowWeaponsTab();
+
+        // Nới khoảng cách TRƯỚC, khoác màu SAU — skinner đọc kích thước ô để tính góc bo,
+        // nên phải để layout ổn định trước rồi mới tính.
+        Systems.UILayoutTidy.Apply(gameObject);
+        Systems.UILayoutTidy.ApplyRows(gameObject);
+
+        // Sua cac loi bo cuc DICH DANH da do duoc: hang chi so 15px/font 8pt, va hai
+        // slider HP/EXP chong nhau 5px. Chay sau UILayoutTidy vi no dat LayoutElement
+        // de len ket qua cua buoc chung.
+        Systems.InventoryLayoutRepair.Apply(gameObject);
+
+        // Khoác tông arcane cho toàn bộ control mặc định trong panel (nút tab, dropdown,
+        // thanh cuộn, chữ). Chạy sau BuildSlotViews để các ô vừa sinh cũng được tính.
+        Systems.ArcaneUISkin.Apply(gameObject);
     }
 
     private void OnEnable()

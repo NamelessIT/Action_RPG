@@ -154,10 +154,11 @@ public class SwordMasterSkill : SkillBehavior
             sourcePosition = transform.position,
             attacker = stats,
             physDamage = 0,
-            isStun = true,
-            stunDuration = _effectiveStunDuration, // Duelist U1
             impactLevel = 2
         };
+        // [CC] Stun qua effect system, impact 2 (phá siêu giáp) trên chính CombatEffectInfo.
+        stunInfo.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, _effectiveStunDuration) // Duelist U1
+        { impactLevel = 2, sourcePosition = transform.position });
         targetEnemy.TakeDamage(stunInfo);
 
         // 3. DỊCH CHUYỂN RA SAU LƯNG ĐỊCH

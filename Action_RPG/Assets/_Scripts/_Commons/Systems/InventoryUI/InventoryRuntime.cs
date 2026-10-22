@@ -15,6 +15,20 @@ using UnityEngine;
 /// </summary>
 public class InventoryRuntime : MonoBehaviour
 {
+    private static InventoryRuntime _current;
+
+    /// <summary>
+    /// Kho đồ duy nhất trong scene. Thay cho FindFirstObjectByType&lt;InventoryRuntime&gt;() rải rác.
+    /// </summary>
+    public static InventoryRuntime Current
+    {
+        get
+        {
+            if (_current == null) _current = FindFirstObjectByType<InventoryRuntime>();
+            return _current;
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────
     //  CONSTANTS
     // ─────────────────────────────────────────────────────────────
@@ -379,11 +393,11 @@ public class InventoryRuntime : MonoBehaviour
         var shieldLookup    = new System.Collections.Generic.Dictionary<string, CoreShieldData>();
         var accessoryLookup = new System.Collections.Generic.Dictionary<string, AccessoryData>();
 
-        foreach (var w in Resources.LoadAll<WeaponData>("Datas/Weapons"))
+        foreach (var w in Resources.LoadAll<WeaponData>(ResourcePaths.Weapons))
             if (!string.IsNullOrEmpty(w.id)) weaponLookup[w.id]    = w;
-        foreach (var s in Resources.LoadAll<CoreShieldData>("Datas/Core Shields"))
+        foreach (var s in Resources.LoadAll<CoreShieldData>(ResourcePaths.CoreShields))
             if (!string.IsNullOrEmpty(s.id)) shieldLookup[s.id]    = s;
-        foreach (var a in Resources.LoadAll<AccessoryData>("Datas/Accessories"))
+        foreach (var a in Resources.LoadAll<AccessoryData>(ResourcePaths.Accessories))
             if (!string.IsNullOrEmpty(a.id)) accessoryLookup[a.id] = a;
 
         foreach (var saved in savedItems)

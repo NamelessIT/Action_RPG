@@ -21,6 +21,24 @@ public class Projectile : MonoBehaviour
     /// </summary>
     public bool visualOnly = false;
 
+    // ── WPN_BW_T5_02: Chim Ánh Trăng (homing) ───────────────────────
+    private bool homing = false;
+    private LayerMask homingLayer;
+    private float homingLife = 0f;
+    private const float HOMING_TURN_SPEED = 720f;   // độ/giây — bẻ cong mọi góc
+    private const float HOMING_SEARCH_RADIUS = 15f;  // tầm dò mục tiêu
+    private const float HOMING_MAX_LIFE = 5f;        // tự hủy sau 5s nếu không trúng
+
+    /// <summary>Bật chế độ tự bẻ cong đuổi kẻ địch gần nhất (WPN_BW_T5_02).</summary>
+    public void EnableHoming(LayerMask enemyLayer)
+    {
+        homing = true;
+        homingLayer = enemyLayer;
+    }
+
+    // WPN_GR_T4_04: đạn Phi Dao — đòn chính tính vật lý + bonus phép (xử lý trong ApplyDamageToTarget).
+    public bool grimoirePhiDao = false;
+
     public void Setup(PlayerController _owner, Vector3 dir, float _maxRange, bool _isHeavy, int _stepIndex)
     {
         owner = _owner;
@@ -42,8 +60,30 @@ public class Projectile : MonoBehaviour
 
     void Update()
     {
+        // WPN_BW_T5_02: bẻ cong hướng bay về kẻ địch gần nhất trước khi di chuyển.
+        if (homing)
+        {
+            Transform tgt = FindNearestEnemy();
+            if (tgt != null)
+            {
+                Vector3 desired = (tgt.position - transform.position).normalized;
+                moveDirection = Vector3.RotateTowards(
+                    moveDirection, desired,
+                    HOMING_TURN_SPEED * Mathf.Deg2Rad * Time.deltaTime, 0f).normalized;
+                transform.rotation = Quaternion.LookRotation(moveDirection);
+            }
+        }
+
         // Tự di chuyển viên đạn mỗi frame
         transform.position += moveDirection * speed * Time.deltaTime;
+
+        // Homing: không giới hạn tầm, chỉ tự hủy sau HOMING_MAX_LIFE.
+        if (homing)
+        {
+            homingLife += Time.deltaTime;
+            if (homingLife >= HOMING_MAX_LIFE) Destroy(gameObject);
+            return;
+        }
 
         // Tự hủy nếu bay quá tầm đánh (Max Range)
         if (Vector3.Distance(startPos, transform.position) >= maxRange)
@@ -51,6 +91,21 @@ public class Projectile : MonoBehaviour
             // Debug.Log("[Projectile] Đạn đã bay hết tầm tối đa, tự hủy.");
             Destroy(gameObject);
         }
+    }
+
+    private Transform FindNearestEnemy()
+    {
+        Collider[] hits = Physics.OverlapSphere(transform.position, HOMING_SEARCH_RADIUS, homingLayer);
+        Transform best = null;
+        float min = float.MaxValue;
+        foreach (var h in hits)
+        {
+            Stats s = h.GetComponentInParent<Stats>();
+            if (s == null || s.currentHp <= 0 || !s.gameObject.CompareTag("Enemy")) continue;
+            float d = Vector3.Distance(transform.position, s.transform.position);
+            if (d < min) { min = d; best = s.transform; }
+        }
+        return best;
     }
 
     void OnTriggerEnter(Collider other)
@@ -71,7 +126,7 @@ public class Projectile : MonoBehaviour
                 hasHit = true;
                 Debug.Log($"<color=red>[Projectile] Trúng kẻ địch {other.name}! Gây damage.</color>");
 
-                owner.ApplyDamageToTarget(enemyStats, isHeavy, stepIndex);
+                owner.ApplyDamageToTarget(enemyStats, isHeavy, stepIndex, false, grimoirePhiDao);
 
                 AllyStats allyStats = owner.GetComponent<AllyStats>();
                 if (allyStats != null) allyStats.GainSinFromAttack(1);

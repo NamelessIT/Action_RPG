@@ -1,7 +1,6 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine.AI;
 
 /// <summary>
 /// DarkInquisitorSkill — "Gravity Guillotine".
@@ -59,13 +58,13 @@ public class DarkInquisitorSkill : SkillBehavior
         }
     }
 
-    private class StatBackup
+    private class ManagedShredData
     {
-        public float originalArmor;
-        public float originalMagicResist;
-        public Coroutine revertCoroutine;
+        public float armorAmount;
+        public float magicResistAmount;
+        public EffectHandle handle;
     }
-    private Dictionary<Stats, StatBackup> activeDebuffs = new Dictionary<Stats, StatBackup>();
+    private readonly Dictionary<Stats, ManagedShredData> activeDebuffs = new Dictionary<Stats, ManagedShredData>();
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
@@ -78,18 +77,14 @@ public class DarkInquisitorSkill : SkillBehavior
 
     protected override void OnUnequip()
     {
-        foreach (var kvp in activeDebuffs)
-        {
-            Stats target = kvp.Key;
-            StatBackup backup = kvp.Value;
-            if (target != null)
-            {
-                if (backup.revertCoroutine != null) StopCoroutine(backup.revertCoroutine);
-                target.armor = backup.originalArmor;
-                target.magicResist = backup.originalMagicResist;
-            }
-        }
+        // Preserve legacy behavior: unequip immediately clears this Skill's active shred.
+        var snapshot = new List<KeyValuePair<Stats, ManagedShredData>>(activeDebuffs);
         activeDebuffs.Clear();
+        foreach (var kv in snapshot)
+        {
+            if (kv.Key != null && kv.Value != null && kv.Value.handle.IsValid)
+                kv.Key.StatusEffects.RemoveEffect(kv.Value.handle, EffectRemoveReason.Manual);
+        }
     }
 
     public override bool Use()
@@ -126,6 +121,7 @@ public class DarkInquisitorSkill : SkillBehavior
 
         Vector3 cageSize = new Vector3(boxWidth, 2f, boxLength);
         float total = pullDuration + cageHoldDuration;
+        float displacementEndsAt = Time.time + total;
 
         // VFX (tạm): TẠO LỒNG — khung tím trong suốt tồn tại suốt skill.
         VisualDebugHelper.DrawBox(cageCenter, cageSize, cageRot, new Color(0.55f, 0.1f, 0.9f, 0.22f), total + 0.3f);
@@ -139,7 +135,7 @@ public class DarkInquisitorSkill : SkillBehavior
         float timer = 0f;
         while (timer < pullDuration)
         {
-            PullEnemiesToCage(cageCenter, effCaptureRadius);
+            PullEnemiesToCage(cageCenter, effCaptureRadius, Mathf.Max(0f, displacementEndsAt - Time.time));
             timer += Time.deltaTime;
             yield return null;
         }
@@ -150,7 +146,7 @@ public class DarkInquisitorSkill : SkillBehavior
         timer = 0f;
         while (timer < cageHoldDuration)
         {
-            PullEnemiesToCage(cageCenter, effCaptureRadius);
+            PullEnemiesToCage(cageCenter, effCaptureRadius, Mathf.Max(0f, displacementEndsAt - Time.time));
             timer += Time.deltaTime;
             yield return null;
         }
@@ -186,7 +182,7 @@ public class DarkInquisitorSkill : SkillBehavior
         {
             float healPercent = Mathf.Min(hitCount * effHealPerHit, maxHealPercent);
             float healAmount = stats.maxHp * healPercent;
-            stats.Heal(healAmount);
+            stats.Heal(healAmount, true, false, HealSource.Skill);
             Debug.Log($"<color=green>Inquisitor Heal:</color> +{healAmount:F0} HP ({hitCount} kẻ địch)");
         }
 
@@ -196,10 +192,10 @@ public class DarkInquisitorSkill : SkillBehavior
         player.isAttacking = false;
     }
 
-    // Kéo kẻ địch trong bán kính về tâm lồng. MoveTowards: ai ở ngoài bị hút vào,
-    // ai đã ở trong bị giữ quanh tâm (đóng lồng). Warp NavMeshAgent để không bị giật về.
-    private void PullEnemiesToCage(Vector3 cageCenter, float radius)
+    // Phase D: lồng chỉ author Pull request; physical movement/priority/cleanup do DisplacementController sở hữu.
+    private void PullEnemiesToCage(Vector3 cageCenter, float radius, float remainingDuration)
     {
+        if (remainingDuration <= 0f) return;
         Collider[] hits = Physics.OverlapSphere(cageCenter, radius, player.dangerLayer);
         HashSet<Stats> moved = new HashSet<Stats>();
 
@@ -208,57 +204,55 @@ public class DarkInquisitorSkill : SkillBehavior
             Stats e = hit.GetComponentInParent<Stats>();
             if (e == null || e.currentHp <= 0 || !moved.Add(e)) continue;
 
-            Transform et = e.transform;
-            Vector3 next = Vector3.MoveTowards(et.position, cageCenter, pullSpeed * Time.deltaTime);
-
-            NavMeshAgent agent = e.GetComponentInParent<NavMeshAgent>();
-            if (agent != null && agent.enabled && agent.isOnNavMesh)
+            e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Pull, remainingDuration)
             {
-                agent.velocity = Vector3.zero;
-                agent.Warp(next);
-            }
-            else
-            {
-                et.position = next;
-            }
+                effectId = "DARK_INQUISITOR_CAGE_PULL",
+                pullAnchorMode = PullAnchorMode.FixedPoint,
+                pullPoint = cageCenter,
+                pullSpeed = Mathf.Max(0f, pullSpeed),
+                interruptCurrentAction = true,
+                note = "Gravity Guillotine cage pull"
+            }, stats);
         }
     }
 
     // ==========================================================
-    // GIẢM GIÁP / KHÁNG PHÉP (50%, 5s, tự khôi phục)
+    // F2-09 — MANAGED ARMOR / MAGIC RESIST SHRED
+    // 50% / 5s. First application snapshots the reduction amount; subsequent applications
+    // refresh duration only, matching the legacy coroutine behavior.
     // ==========================================================
     private void ApplyDualShred(Stats target)
     {
-        if (!activeDebuffs.ContainsKey(target))
-        {
-            StatBackup backup = new StatBackup
-            {
-                originalArmor = target.armor,
-                originalMagicResist = target.magicResist
-            };
-            target.armor *= (1.0f - shredPercent);
-            target.magicResist *= (1.0f - shredPercent);
-            backup.revertCoroutine = StartCoroutine(RevertShredRoutine(target, shredDuration));
-            activeDebuffs.Add(target, backup);
-        }
-        else
-        {
-            // Đã dính → chỉ làm mới thời gian, KHÔNG giảm chồng.
-            StatBackup backup = activeDebuffs[target];
-            if (backup.revertCoroutine != null) StopCoroutine(backup.revertCoroutine);
-            backup.revertCoroutine = StartCoroutine(RevertShredRoutine(target, shredDuration));
-        }
-    }
+        if (target == null || target.currentHp <= 0) return;
 
-    private IEnumerator RevertShredRoutine(Stats target, float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        if (target != null && activeDebuffs.ContainsKey(target))
+        const string effectId = "DarkInquisitorSkill.GravityGuillotine.ArmorMRShred";
+        string sourceKey = $"{effectId}:{GetInstanceID()}";
+
+        if (!activeDebuffs.TryGetValue(target, out ManagedShredData data)
+            || data == null || !data.handle.IsValid || !target.StatusEffects.IsEffectActive(data.handle))
         {
-            StatBackup backup = activeDebuffs[target];
-            target.armor = backup.originalArmor;
-            target.magicResist = backup.originalMagicResist;
-            activeDebuffs.Remove(target);
+            data = new ManagedShredData
+            {
+                armorAmount = Mathf.Max(0f, target.EffectiveArmor * Mathf.Clamp01(shredPercent)),
+                magicResistAmount = Mathf.Max(0f, target.EffectiveMagicResist * Mathf.Clamp01(shredPercent)),
+                handle = EffectHandle.Invalid
+            };
+            activeDebuffs[target] = data;
+        }
+
+        EffectApplyResult result = target.ApplyArmorMagicResistDown(
+            effectId, data.armorAmount, data.magicResistAmount, shredDuration, stats, sourceKey,
+            EffectStackPolicy.RefreshSameSource, 1, shredPercent,
+            "Dark Inquisitor Gravity Guillotine 50% Armor/MR snapshot + refresh",
+            (snapshot, reason) =>
+            {
+                if (target != null) activeDebuffs.Remove(target);
+            });
+
+        if (result.Accepted)
+        {
+            data.handle = result.handle;
+            activeDebuffs[target] = data;
         }
     }
 

@@ -40,7 +40,7 @@ public class CatalystSignature : SkillBehavior
     public override bool Use()
     {
         // 1. Kiểm tra xem có Companion trên sân không
-        CompanionAI companion = FindFirstObjectByType<CompanionAI>();
+        CompanionAI companion = CompanionAI.Current;
         if (companion == null)
         {
             Debug.Log("<color=red>CATALYST: Không tìm thấy Companion để truyền năng lượng!</color>");
@@ -83,8 +83,8 @@ public class CatalystSignature : SkillBehavior
             }
             else
             {
-                // Nếu dùng Stats thường, giảm thời gian vung đòn (Cooldown) đi 3 lần để mô phỏng +200% tốc đánh
-                compStats.baseAttackSpeed /= (1f + compAttackSpeedBuff);
+                // [P2-DATA-FIX-01] baseAttackSpeed là TỐC ĐỘ (đòn/giây), không phải cooldown → buff phải NHÂN.
+                compStats.MultiplyBaseAttackSpeed(1f + compAttackSpeedBuff);
             }
 
             // Đăng ký lắng nghe sự kiện đánh trúng của Player
@@ -123,7 +123,7 @@ public class CatalystSignature : SkillBehavior
                 }
                 else
                 {
-                    compStats.baseAttackSpeed *= (1f + compAttackSpeedBuff);
+                    compStats.MultiplyBaseAttackSpeed(1f / (1f + compAttackSpeedBuff)); // revert đối xứng của nhánh apply
                 }
             }
 
@@ -163,6 +163,7 @@ public class CatalystSignature : SkillBehavior
         bonusInfo.attacker = stats;
         bonusInfo.magicDamage = bonusMagicDamage;
         bonusInfo.isCrit = isCrit; // Cho phép sát thương thêm có thể Crit theo đòn gốc
+        bonusInfo.sourceType = DamageSourceType.Other;
 
         enemy.TakeDamage(bonusInfo);
 

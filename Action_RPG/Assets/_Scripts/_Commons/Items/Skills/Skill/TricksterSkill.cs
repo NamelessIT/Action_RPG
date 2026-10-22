@@ -98,7 +98,9 @@ public class TricksterSkill : SkillBehavior, IEmpoweredAttackProvider
     private void CheckGrimoireEquipped(WeaponData weapon)
     {
         if (magePassive != null) isGrimoireEquipped = magePassive.IsGrimoireActive;
-        else isGrimoireEquipped = (weapon != null && weapon.weaponType == WeaponData.WeaponType.Grimoire);
+        // WPN_GR_T4_04: tính như vũ khí khác Grimoire → không kích hoạt TricksterSkill.
+        else isGrimoireEquipped = (weapon != null && weapon.weaponType == WeaponData.WeaponType.Grimoire
+                                   && (weapon.id == null || weapon.id.Trim() != "WPN_GR_T4_04"));
     }
 
     // ==========================================================
@@ -211,13 +213,29 @@ public class TricksterSkill : SkillBehavior, IEmpoweredAttackProvider
         if (decoy == null) yield break;
         Vector3 decoyPos = decoy.transform.position;
 
-        // Khiêu khích: kéo kẻ địch gần đó di chuyển về phía tàn ảnh.
+        // G1C: true managed Taunt. Decoy là forced-control anchor nên Enemy sẽ chase + basic attack
+        // tàn ảnh trong thời gian Taunt; core tự áp resistanceEffect/priority và resume AI khi effect hết.
         Collider[] taunted = Physics.OverlapSphere(decoyPos, tauntRadius, playerController.dangerLayer);
+        var seenEnemies = new System.Collections.Generic.HashSet<EnemyAI>();
         foreach (var col in taunted)
         {
-            var agent = col.GetComponentInParent<UnityEngine.AI.NavMeshAgent>();
-            if (agent != null && agent.enabled && agent.isOnNavMesh)
-                agent.SetDestination(decoyPos);
+            EnemyAI enemyAi = col.GetComponentInParent<EnemyAI>();
+            if (enemyAi == null || !seenEnemies.Add(enemyAi)) continue;
+
+            Stats enemyStats = enemyAi.GetComponent<Stats>() ?? enemyAi.GetComponentInParent<Stats>();
+            if (enemyStats == null || enemyStats.isDead) continue;
+
+            enemyStats.ApplyEffectWithResult(
+                new CombatEffectInfo(CombatEffectType.Taunt, tauntDuration)
+                {
+                    effectId = "Trickster.BlinkTrap.DecoyTaunt",
+                    impactLevel = 0,
+                    stackPolicy = EffectStackPolicy.RefreshSameSource,
+                    forcedControlAnchor = decoy.transform,
+                    interruptCurrentAction = true,
+                    note = "Trickster Blink Trap Decoy"
+                },
+                stats);
         }
 
         yield return new WaitForSeconds(tauntDuration);

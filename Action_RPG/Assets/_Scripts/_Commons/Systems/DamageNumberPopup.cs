@@ -34,10 +34,10 @@ public class DamageNumberPopup : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     //  COLORS
     // ─────────────────────────────────────────────────────────────
-    private static readonly Color ColPhys  = new Color(1.0f, 0.55f, 0.1f);  // Cam vàng
-    private static readonly Color ColMagic = new Color(0.75f, 0.2f, 1.0f); // Tím
-    private static readonly Color ColTrue  = Color.white;                    // Trắng
-    private static readonly Color ColHeal  = new Color(0.2f, 0.9f, 0.2f);  // Xanh lá
+    private static readonly Color ColPhys  = UIPalette.DamagePhys;
+    private static readonly Color ColMagic = UIPalette.DamageMagic;
+    private static readonly Color ColTrue  = UIPalette.DamageTrue;
+    private static readonly Color ColHeal  = UIPalette.DamageHeal;
 
     // ─────────────────────────────────────────────────────────────
     //  RUNTIME
@@ -152,7 +152,10 @@ public class DamageNumberPopup : MonoBehaviour
         }
         else
         {
-            string num = Mathf.RoundToInt(damage).ToString();
+            // Small mitigation/debuff deltas can be real but disappear when every value is rounded
+            // to an integer. Keep integer display for larger hits, but show one decimal below 100
+            // so Armor/MR changes are visibly testable without changing combat math.
+            string num = damage < 100f ? damage.ToString("0.0") : Mathf.RoundToInt(damage).ToString();
             // Dùng "!" thay ký tự ⚡ để tránh warning missing-glyph của LiberationSans.
             line.text = isCrit ? $"<b>{num}!</b>" : num;
         }

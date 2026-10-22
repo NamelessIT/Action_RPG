@@ -24,6 +24,8 @@ public class WardenSkill : SkillBehavior
     public float dashDuration = 0.35f;    // thời gian lướt theo
     public float pushHitRadius = 2.2f;    // bán kính bắt địch để ủi
     public float pushStandoff = 1.2f;     // giữ địch cách trước mặt khoảng này khi ủi
+    [Tooltip("Impact level của Driven Knockback trong phase ủi. Mặc định 1 để khớp strength đòn chém đầu sau charge.")]
+    public int drivenKnockbackImpactLevel = 1;
 
     [Header("Vùng chém (về phía trước)")]
     public float slashWidth = 2.0f;       // bề rộng
@@ -53,16 +55,41 @@ public class WardenSkill : SkillBehavior
 
     private Rigidbody rb;
     private EquipmentManager equipmentManager;
+    private DrivenKnockbackSourceController drivenKnockback;
 
     public override void Initialize(AllyStats myStats, SkillData myData, PlayerController myPlayer)
     {
         rb = myPlayer.GetComponent<Rigidbody>();
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
+        drivenKnockback = myPlayer.GetComponent<DrivenKnockbackSourceController>();
+        if (drivenKnockback == null) drivenKnockback = myPlayer.gameObject.AddComponent<DrivenKnockbackSourceController>();
         base.Initialize(myStats, myData, myPlayer);
     }
 
     protected override void OnEquip() { }
-    protected override void OnUnequip() { }
+    // Cờ giữ nguồn super armor — để nhả được cả khi coroutine bị cắt ngang.
+    private bool _superArmorHeld;
+
+    private void HoldSuperArmor()
+    {
+        if (_superArmorHeld) return;
+        stats.PushSuperArmor(99);
+        _superArmorHeld = true;
+    }
+
+    private void ReleaseSuperArmor()
+    {
+        if (!_superArmorHeld) return;
+        stats.PopSuperArmor(99);
+        _superArmorHeld = false;
+    }
+
+    protected override void OnUnequip()
+    {
+        // Tháo skill giữa lúc chiêu đang chạy: finally của coroutine KHÔNG chắc chạy,
+        // nên nhả ở đây. Có cờ nên gọi hai lần cũng không trừ dư.
+        ReleaseSuperArmor();
+    }
 
     public override bool Use()
     {
@@ -100,15 +127,13 @@ public class WardenSkill : SkillBehavior
         rb.useGravity = false;
         rb.linearVelocity = Vector3.zero;
 
-        bool oldIsSuperArmor = stats.isSuperArmor;
-        int oldSuperArmorLevel = stats.superArmorLevel;
         WaitForFixedUpdate waitFixed = new WaitForFixedUpdate();
+
+        // Không thể bị ngăn cản suốt skill. Push/Pop thay cho gán-rồi-khôi-phục để không đạp nguồn khác.
+        HoldSuperArmor();
 
         try
         {
-            stats.isSuperArmor = true;
-            stats.superArmorLevel = 99; // không thể bị ngăn cản suốt skill
-
             // ---------- PHASE 1: NHẢY + CẮM XUỐNG ----------
             stats.isInvincible = true;
             Debug.Log("<color=cyan>WARDEN: NHẢY LÊN CAO!</color>");
@@ -139,14 +164,21 @@ public class WardenSkill : SkillBehavior
             // Lướt về phía trước bám theo, giữ kẻ địch ngay trước mặt (không bị bỏ lại xa) rồi mới chém.
             Debug.Log("<color=orange>WARDEN: LƯỚT THEO ỦI ĐỊCH!</color>");
             float dashTimer = 0f;
+            drivenKnockback.BeginSession(stats, $"WARDEN_CHARGE_{GetInstanceID()}", forward, pushStandoff, dashDuration + 0.5f);
             while (dashTimer < dashDuration)
             {
-                Vector3 nextPos = rb.position + forward * dashSpeed * Time.fixedDeltaTime;
+                drivenKnockback.PruneInvalidTargets();
+                CaptureDrivenEnemies(rb.position, forward);
+
+                float effectiveDashSpeed = dashSpeed * drivenKnockback.CurrentSpeedMultiplier;
+                Vector3 nextPos = rb.position + forward * effectiveDashSpeed * Time.fixedDeltaTime;
+                drivenKnockback.SetPredictedAnchor(nextPos, forward);
                 rb.MovePosition(nextPos);
-                DragEnemiesForward(nextPos, forward);
+
                 dashTimer += Time.fixedDeltaTime;
                 yield return waitFixed;
             }
+            drivenKnockback.EndSession();
             rb.linearVelocity = Vector3.zero;
 
             if (slash1VfxPrefab) Instantiate(slash1VfxPrefab, transform.position + forward * (slashRange * 0.5f), rot);
@@ -194,15 +226,17 @@ public class WardenSkill : SkillBehavior
                                  + selfVit * vitToTrueDamageScale
                                  + e.maxHp * targetMaxHpPercent;
 
-                e.TakeDamage(new DamageInfo
+                var wardenInfo = new DamageInfo
                 {
                     sourcePosition = transform.position,
                     attacker = stats,
                     trueDamage = trueDamage, // bỏ qua giáp/kháng phép
-                    isStun = true,
-                    stunDuration = effStun,
                     impactLevel = 2 // phá siêu giáp
-                });
+                };
+                // [CC] Stun qua effect system, impact 2 trên chính CombatEffectInfo.
+                wardenInfo.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, effStun)
+                { impactLevel = 2, sourcePosition = transform.position });
+                e.TakeDamage(wardenInfo);
                 Debug.Log($"<color=red>True Damage:</color> {trueDamage:F0} lên {e.name}");
             }
 
@@ -212,13 +246,13 @@ public class WardenSkill : SkillBehavior
         }
         finally
         {
+            drivenKnockback?.EndSession();
             rb.useGravity = originalUseGravity;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
 
             stats.isInvincible = false;
-            stats.isSuperArmor = oldIsSuperArmor;
-            stats.superArmorLevel = oldSuperArmorLevel;
+            ReleaseSuperArmor();
 
             player.isUsingSpecialSkill = false;
         }
@@ -244,9 +278,9 @@ public class WardenSkill : SkillBehavior
         return min;
     }
 
-    // Ủi kẻ địch ĐI THEO trước mặt: giữ địch cách player ~pushStandoff về phía trước,
-    // để player lướt tới đâu địch bị đẩy tới đó (không bị bỏ lại xa).
-    private void DragEnemiesForward(Vector3 playerPos, Vector3 forward)
+    // Quét target trong vùng ủi rồi xin Driven Knockback qua CC gateway.
+    // Player speed sẽ do max knockbackResistance của các target đã được accept quyết định.
+    private void CaptureDrivenEnemies(Vector3 playerPos, Vector3 forward)
     {
         Collider[] hits = Physics.OverlapSphere(playerPos + Vector3.up * 0.5f, pushHitRadius, player.dangerLayer);
         HashSet<Stats> done = new HashSet<Stats>();
@@ -255,23 +289,11 @@ public class WardenSkill : SkillBehavior
             Stats e = col.GetComponentInParent<Stats>();
             if (e == null || e.currentHp <= 0 || !done.Add(e)) continue;
 
-            // Chỉ ủi kẻ địch ở phía trước (không kéo kẻ ở sau lưng).
-            Vector3 to = e.transform.position - playerPos; to.y = 0f;
+            Vector3 to = e.transform.position - playerPos;
+            to.y = 0f;
             if (Vector3.Dot(to, forward) < -0.2f) continue;
 
-            Vector3 ideal = playerPos + forward * pushStandoff;
-            ideal.y = e.transform.position.y;
-
-            NavMeshAgent agent = e.GetComponentInParent<NavMeshAgent>();
-            if (agent != null && agent.enabled && agent.isOnNavMesh)
-            {
-                agent.velocity = Vector3.zero;
-                agent.Warp(ideal);
-            }
-            else
-            {
-                e.transform.position = ideal;
-            }
+            drivenKnockback.TryCapture(e, Mathf.Max(0, drivenKnockbackImpactLevel));
         }
     }
 

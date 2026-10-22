@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e40770cb45e9ce4c9d849e90913ad92, type: 3}
+  m_Name: PRT_SUP_T4_02
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionProtocolData
+  id: PRT_SUP_T4_02
+  description: Lowers the temperature to absolute freezing points.
+  icon: {fileID: 0}
+  rarity: 3
+  effectType: 2
+  effectCondition: "M\u1ED7i \u0111\xF2n \u0111\xE1nh tr\xFAng \u0111\xEDch"
+  effectDescription: "L\xE0m ch\u1EADm k\u1EBB \u0111\u1ECBch tr\xFAng \u0111\xF2n
+    10%. C\u1ED9ng d\u1ED3n t\u1ED1i \u0111a 3 l\u1EA7n. K\u1EBB \u0111\u1ECBch b\u1ECB
+    l\xE0m ch\u1EADm \u1EDF max stack li\xEAn t\u1EE5c trong 5 gi\xE2y s\u1EBD b\u1ECB
+    stun 2 gi\xE2y, sau khi h\u1EBFt stun s\u1EBD \u0111\u1EB7t l\u1EA1i stack c\u1EE7a
+    k\u1EBB \u0111\u1ECBch \u0111\xF3 v\u1EC1 0."
+  protocolName: Frostbite Matrix
+  protocolType: 2
+  atkType: 1
+  baseAtk: 55
+  defenseValue: 20
+  bonusCritChance: 0.1
+  baseAttackSpeed: 1.1
+  attackRange: 8
+  isRange: 1

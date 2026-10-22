@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4238a5c0c70c460e804149b98d285851, type: 3}
+  m_Name: EAM_Melee_Sword
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackModuleData
+  id: EAM_Melee_Sword
+  displayName: "Ki\u1EBFm th\u01B0\u1EDDng"
+  style: 0
+  range: 2.2
+  cooldown: 0
+  damageMultiplier: 1
+  windupDuration: 0.3
+  activeDuration: 0.2
+  recoveryDuration: 0.25
+  attackAngle: 90
+  sweepStartAngle: -45
+  sweepEndAngle: 45
+  aoeRadius: 1.5
+  projectileSpeed: 10
+  projectileLifetime: 4
+  projectilePrefab: {fileID: 0}
+  telegraphPrefab: {fileID: 0}
+  faceTargetOnStart: 1
+  useTelegraph: 1
+  impactBonus: 0
+  effects: []

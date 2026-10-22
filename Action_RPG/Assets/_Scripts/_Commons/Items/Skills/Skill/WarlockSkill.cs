@@ -184,7 +184,8 @@ public class WarlockSkill : SkillBehavior
                     magicDamage = extraDamage,
                     attacker = stats,
                     sourcePosition = transform.position,
-                    isCrit = isCrit
+                    isCrit = isCrit,
+                    sourceType = DamageSourceType.Other
                 });
             }
             if (markHitVfxPrefab) Instantiate(markHitVfxPrefab, target.transform.position, Quaternion.identity);
@@ -199,7 +200,7 @@ public class WarlockSkill : SkillBehavior
     private void TriggerBuffAndHeal()
     {
         // Hồi 3% máu tối đa mỗi lần tiêu stack.
-        stats.Heal(stats.maxHp * _effHealPercent);
+        stats.Heal(stats.maxHp * _effHealPercent, true, false, HealSource.Skill);
 
         // +20% tốc chạy 3s — KHÔNG cộng dồn, chỉ làm mới thời gian.
         if (msBuffActive)

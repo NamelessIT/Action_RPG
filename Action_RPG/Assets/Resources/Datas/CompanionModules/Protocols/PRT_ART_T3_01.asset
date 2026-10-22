@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e40770cb45e9ce4c9d849e90913ad92, type: 3}
+  m_Name: PRT_ART_T3_01
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionProtocolData
+  id: PRT_ART_T3_01
+  description: Its ammunitions are designed to cause severe bleeding.
+  icon: {fileID: 0}
+  rarity: 2
+  effectType: 2
+  effectCondition: "M\u1ED7i \u0111\xF2n \u0111\xE1nh tr\xFAng \u0111\xEDch"
+  effectDescription: "C\xF3 20% t\u1EF7 l\u1EC7 g\xE2y Ch\u1EA3y M\xE1u (Bleed) cho
+    m\u1EE5c ti\xEAu, g\xE2y 10% physicalAtk m\u1ED7i gi\xE2y trong 3 gi\xE2y."
+  protocolName: Piercing Gaze Module
+  protocolType: 0
+  atkType: 0
+  baseAtk: 52
+  defenseValue: 10
+  bonusCritChance: 0.15
+  baseAttackSpeed: 0.8
+  attackRange: 15
+  isRange: 1

@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(mkdir -p \"D:\\\\DATA D\\\\CODE\\\\Resposity_GitHub\\\\Action_RPG\\\\Action_RPG\\\\Assets\\\\_Scripts\\\\_Commons\\\\Systems\\\\SkillTreeUI\")"
-    ]
-  }
-}

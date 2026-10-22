@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e40770cb45e9ce4c9d849e90913ad92, type: 3}
+  m_Name: PRT_ART_T4_02
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionProtocolData
+  id: PRT_ART_T4_02
+  description: Calibrated to eliminate weakened hostiles efficiently.
+  icon: {fileID: 0}
+  rarity: 3
+  effectType: 2
+  effectCondition: "T\u1EA5n c\xF4ng k\u1EBB \u0111\u1ECBch d\u01B0\u1EDBi 30% M\xE1u"
+  effectDescription: "S\xE1t th\u01B0\u01A1ng c\u1EE7a \u0111\xF2n \u0111\xE1nh \u0111\u01B0\u1EE3c
+    khu\u1EBFch \u0111\u1EA1i th\xEAm 50%."
+  protocolName: Executioner's Eye
+  protocolType: 0
+  atkType: 0
+  baseAtk: 120
+  defenseValue: 10
+  bonusCritChance: 0.2
+  baseAttackSpeed: 0.75
+  attackRange: 15
+  isRange: 1

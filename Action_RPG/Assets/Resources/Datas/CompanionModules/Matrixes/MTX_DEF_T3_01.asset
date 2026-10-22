@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4873d6db67d502247839ae8a1e23c8e0, type: 3}
+  m_Name: MTX_DEF_T3_01
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionMatrixData
+  id: MTX_DEF_T3_01
+  description: A heavy core that anchors the unit to the ground.
+  icon: {fileID: 0}
+  rarity: 2
+  effectType: 1
+  effectCondition: 
+  effectDescription: "Companion mi\u1EC5n nhi\u1EC5m v\u1EDBi m\u1ECDi hi\u1EC7u
+    \u1EE9ng kh\u1ED1ng ch\u1EBF."
+  matrixName: Unyielding Bastion
+  matrixType: 2
+  armor: 120
+  magicResist: 120
+  flatHp: 800
+  bonusHp: 0.15

@@ -33,7 +33,8 @@ public static class DamageHelper
         float stunTime = 0f,
         bool applyKnockback = false,
         float knockbackForce = 0f,
-        bool isGuaranteedCrit = false)
+        bool isGuaranteedCrit = false,
+        DamageSourceType sourceType = DamageSourceType.Melee)
     {
         // 1. Chốt chặn an toàn (Sanity Checks)
         if (target == null || target.currentHp <= 0 || attacker == null) return;
@@ -71,6 +72,7 @@ public static class DamageHelper
         );
 
         // 5. Đóng gói Sát thương cuối cùng
+        float finalKnockbackForce = applyKnockback ? knockbackForce : 0f;
         DamageInfo info = new DamageInfo
         {
             sourcePosition = sourceTransform != null ? sourceTransform.position : attacker.transform.position,
@@ -80,12 +82,32 @@ public static class DamageHelper
             trueDamage = dmgTuple.trueDmg,
             isCrit = isCrit,
             impactLevel = impactLvl,
-            isStun = applyStun,
-            stunDuration = stunTime
+            sourceType = sourceType
         };
+
+        // [CC] Dùng Combat Effect system thay legacy isStun/isKnockback (mỗi loại 1 effect/đòn).
+        if (applyStun && stunTime > 0f)
+            info.AddEffect(new CombatEffectInfo(CombatEffectType.Stun, stunTime)
+            { impactLevel = impactLvl, sourcePosition = info.sourcePosition });
+        if (applyKnockback && finalKnockbackForce > 0f)
+            info.AddEffect(new CombatEffectInfo(CombatEffectType.Knockback, 0f)
+            { force = finalKnockbackForce, impactLevel = impactLvl, sourcePosition = info.sourcePosition, respectEffectResistance = false });
 
         // 6. Giáng đòn thực tế
         target.TakeDamage(info);
+
+        // 7. Bắn sự kiện "kỹ năng/hiệu ứng của Player trúng kẻ địch" (đòn đánh thường KHÔNG đi qua đây).
+        //    Dùng cho các weapon effect "khi kỹ năng trúng đích" (vd ST_T4_01, ST_T4_03).
+        if (target is EnemyStats)
+        {
+            PlayerController pc = attacker.GetComponent<PlayerController>();
+            if (pc != null)
+            {
+                pc.NotifySkillHitEnemy(target, dmgTuple.magic > 0f, isCrit);
+                // Kill-source attribution: địch vừa chết bởi đòn CÓ SkillData (ACC_RM_T3_06/CH_T5_01).
+                if (skill != null && target.currentHp <= 0f) pc.NotifySkillKill(skill);
+            }
+        }
     }
 
     /// <summary>
