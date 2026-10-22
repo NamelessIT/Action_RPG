@@ -110,7 +110,7 @@ public class BloodReaverPassive : SkillBehavior
             float bleedDmg = stats.physicalAtk * bleedDamagePercent;
 
             // Gọi hàm chảy máu bên Stats của địch
-            target.ApplyBleed(bleedDmg, (int)bleedDuration);
+            target.ApplyBleed(bleedDmg, (int)bleedDuration, stats, $"BloodReaverPassive.Bleed:{GetInstanceID()}");
         }
     }
 }

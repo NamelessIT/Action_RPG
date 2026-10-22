@@ -37,6 +37,10 @@ public abstract class CompanionSkillBehavior : MonoBehaviour
     public abstract void ExecuteSkill(CompanionProtocolType? protocol);
     public abstract void ExecuteSignature(CompanionProtocolType? protocol);
 
+    /// <summary>Phase B: behavior có thể khai báo Skill/Signature là Cleanse thay vì controller hard-code.</summary>
+    public virtual SkillControlPolicy GetSkillControlPolicy(CompanionProtocolType? protocol) => SkillControlPolicy.Normal;
+    public virtual SkillControlPolicy GetSignatureControlPolicy(CompanionProtocolType? protocol) => SkillControlPolicy.Normal;
+
     protected virtual void Awake()
     {
         stats = GetComponent<AllyStats>();
@@ -182,23 +186,45 @@ public abstract class CompanionSkillBehavior : MonoBehaviour
         target.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, dur) { magnitude = percent }, stats);
     }
 
-    /// <summary>Giảm Armor địch trong dur giây (tự khôi phục).</summary>
-    protected void ReduceArmor(Stats target, float flatOrPctAmount, float dur)
+    /// <summary>
+    /// Phase F2C: giảm Armor qua Debuff Registry. amount là snapshot flat tại thời điểm producer apply,
+    /// giúp giữ semantics legacy (producer tự tính % nếu cần) nhưng lifecycle/cleanse không còn mutate raw stat.
+    /// </summary>
+    protected EffectApplyResult ReduceArmor(Stats target, float amount, float dur, string effectId)
     {
-        if (target == null || flatOrPctAmount <= 0f) return;
-        StartCoroutine(ReduceStatRoutine(target, flatOrPctAmount, 0f, dur));
+        return ReduceArmorMR(target, amount, 0f, dur, effectId);
     }
-    /// <summary>Giảm Armor & MR địch trong dur giây.</summary>
-    protected void ReduceArmorMR(Stats target, float armorAmount, float mrAmount, float dur)
+
+    /// <summary>Phase F2C: giảm Armor/MR qua một Debuff package source-aware.</summary>
+    protected EffectApplyResult ReduceArmorMR(Stats target, float armorAmount, float mrAmount, float dur, string effectId)
     {
-        if (target == null) return;
-        StartCoroutine(ReduceStatRoutine(target, armorAmount, mrAmount, dur));
-    }
-    private System.Collections.IEnumerator ReduceStatRoutine(Stats target, float armorAmt, float mrAmt, float dur)
-    {
-        if (target != null) { target.armor -= armorAmt; target.magicResist -= mrAmt; }
-        yield return new WaitForSeconds(dur);
-        if (target != null) { target.armor += armorAmt; target.magicResist += mrAmt; }
+        if (target == null || dur <= 0f || string.IsNullOrWhiteSpace(effectId))
+            return EffectApplyResult.Reject(EffectApplyStatus.Invalid);
+
+        armorAmount = Mathf.Max(0f, armorAmount);
+        mrAmount = Mathf.Max(0f, mrAmount);
+        if (armorAmount <= 0f && mrAmount <= 0f)
+            return EffectApplyResult.Reject(EffectApplyStatus.Invalid);
+
+        var request = new DebuffRequest
+        {
+            effectId = effectId,
+            duration = dur,
+            cleanseable = true,
+            stackPolicy = EffectStackPolicy.RefreshSameSource,
+            maxStacks = 1,
+            potency = Mathf.Max(armorAmount, mrAmount),
+            note = $"{effectId} (CompanionSkillBehavior)"
+        };
+
+        if (armorAmount > 0f)
+            request.statModifiers.Add(new RuntimeStatModifierSpec(
+                RuntimeStatKey.Armor, RuntimeModifierOperation.Flat, -armorAmount));
+        if (mrAmount > 0f)
+            request.statModifiers.Add(new RuntimeStatModifierSpec(
+                RuntimeStatKey.MagicResist, RuntimeModifierOperation.Flat, -mrAmount));
+
+        return target.ApplyDebuff(request, stats, $"{effectId}:{GetInstanceID()}");
     }
 
     /// <summary>Đạn bay theo hướng dir, nổ khi chạm địch (hitRadius) hoặc đi hết maxDist → gọi onExplode(vị trí nổ).</summary>
@@ -260,36 +286,19 @@ public abstract class CompanionSkillBehavior : MonoBehaviour
         e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Root, dur), stats);
     }
 
-    /// <summary>Kéo địch về 'center' (hút). Dùng NavMeshAgent.Warp nếu có để mượt.</summary>
-    protected void PullToward(Stats e, Vector3 center, float speed)
+    /// <summary>Phase D: kéo địch về fixed-point anchor qua displacement motor chung.</summary>
+    protected void PullToward(Stats e, Vector3 center, float speed, float remainingDuration, string effectId, int impact = 0)
     {
-        if (e == null) return;
-        Vector3 next = Vector3.MoveTowards(e.transform.position, center, speed * Time.deltaTime);
-        var agent = e.GetComponentInParent<UnityEngine.AI.NavMeshAgent>();
-        if (agent != null && agent.enabled && agent.isOnNavMesh) agent.Warp(next);
-        else e.transform.position = next;
-    }
-
-    /// <summary>Gây Bleed/Burn: mỗi giây 'dmgPerSec' trong 'duration' giây.</summary>
-    protected void DoT(Stats target, float dmgPerSec, float duration, bool magic)
-    {
-        if (target == null) return;
-        StartCoroutine(DoTRoutine(target, dmgPerSec, duration, magic));
-    }
-    private System.Collections.IEnumerator DoTRoutine(Stats target, float dps, float dur, bool magic)
-    {
-        float t = 0f;
-        while (t < dur && target != null && target.currentHp > 0)
+        if (e == null || e.currentHp <= 0 || remainingDuration <= 0f) return;
+        e.ApplyEffect(new CombatEffectInfo(CombatEffectType.Pull, remainingDuration)
         {
-            target.TakeDamage(new DamageInfo
-            {
-                physDamage = magic ? 0f : dps,
-                magicDamage = magic ? dps : 0f,
-                attacker = stats,
-                sourceType = DamageSourceType.DoT
-            });
-            t += 1f;
-            yield return new WaitForSeconds(1f);
-        }
+            effectId = effectId,
+            impactLevel = impact,
+            pullAnchorMode = PullAnchorMode.FixedPoint,
+            pullPoint = center,
+            pullSpeed = Mathf.Max(0f, speed),
+            interruptCurrentAction = true,
+            note = "Companion Pull"
+        }, stats);
     }
 }

@@ -95,6 +95,7 @@ public class SpellbinderSkill : SkillBehavior
         NavMeshAgent compAgent = companion.GetComponent<NavMeshAgent>();
         bool wasAIEnabled = companion.enabled;
         GameObject shieldAura = null;
+        Dictionary<Stats, EffectHandle> activeTaunts = null;
 
         try
         {
@@ -108,7 +109,7 @@ public class SpellbinderSkill : SkillBehavior
                                          : MageVfxHelper.AttachSphere(companion.transform, 1.4f, new Color(0.3f, 0.6f, 1f, 0.3f));
 
             // ---------- 2. KHIÊU KHÍCH ĐỊCH VÀO COMPANION ----------
-            TauntEnemiesToCompanion(companion);
+            activeTaunts = TauntEnemiesToCompanion(companion, compStats, _effOverloadDur);
 
             // ---------- 3. TÌM CỤM ĐÔNG KẺ ĐỊCH NHẤT ----------
             Vector3 targetPosition = FindDensestCluster(companion.transform.position);
@@ -141,6 +142,7 @@ public class SpellbinderSkill : SkillBehavior
         }
         finally
         {
+            ReleaseTaunts(activeTaunts);
             if (compAgent && compAgent.isOnNavMesh)
             {
                 compAgent.speed /= companionSpeedMult;
@@ -153,17 +155,43 @@ public class SpellbinderSkill : SkillBehavior
         }
     }
 
-    private void TauntEnemiesToCompanion(CompanionAI companion)
+    private Dictionary<Stats, EffectHandle> TauntEnemiesToCompanion(CompanionAI companion, Stats compStats, float duration)
     {
+        Dictionary<Stats, EffectHandle> handles = new Dictionary<Stats, EffectHandle>();
+        if (compStats == null || compStats.isDead) return handles;
+
         Collider[] hits = Physics.OverlapSphere(companion.transform.position, tauntRadius, player.dangerLayer);
-        HashSet<EnemyAI> seen = new HashSet<EnemyAI>();
+        HashSet<Stats> seen = new HashSet<Stats>();
         foreach (var hit in hits)
         {
-            EnemyAI ai = hit.GetComponentInParent<EnemyAI>();
-            if (ai == null || !seen.Add(ai)) continue;
-            ai.OnDamageTaken(companion.transform);     // đánh thức + aggro sang Companion
-            ai.nearestTarget = companion.transform;
+            Stats enemy = hit.GetComponentInParent<Stats>();
+            if (enemy == null || enemy.isDead || !seen.Add(enemy)) continue;
+
+            EffectApplyResult result = enemy.ApplyEffectWithResult(
+                new CombatEffectInfo(CombatEffectType.Taunt, duration)
+                {
+                    effectId = "Spellbinder.ArcaneConduit.Taunt",
+                    impactLevel = 0,
+                    stackPolicy = EffectStackPolicy.RefreshSameSource,
+                    interruptCurrentAction = true,
+                    note = "Spellbinder Arcane Conduit"
+                },
+                compStats);
+            if (result.Accepted) handles[enemy] = result.handle;
         }
+        return handles;
+    }
+
+    private void ReleaseTaunts(Dictionary<Stats, EffectHandle> handles)
+    {
+        if (handles == null) return;
+        foreach (var pair in handles)
+        {
+            Stats enemy = pair.Key;
+            if (enemy != null && enemy.StatusEffects != null)
+                enemy.StatusEffects.RemoveEffect(pair.Value, EffectRemoveReason.Manual);
+        }
+        handles.Clear();
     }
 
     private Vector3 FindDensestCluster(Vector3 fallback)
@@ -221,6 +249,9 @@ public class SpellbinderSkill : SkillBehavior
 
         Stats es = ai.GetComponent<Stats>() ?? ai.GetComponentInParent<Stats>();
         if (es == null || es.isDead) yield break;
+
+        // Nếu trong lúc chờ có Fear/Taunt khác chiếm quyền thì không stomp target của effect đó.
+        if (ForcedControlRunner.IsForcedMode(es.ControlState.mode)) yield break;
 
         ai.OnDamageTaken(player.transform);     // đánh thức + aggro về Player
         ai.nearestTarget = player.transform;

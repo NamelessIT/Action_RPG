@@ -8,7 +8,8 @@ public class CatalystLiteSignature : SkillBehavior
     [Header("Fear Settings (Tiếng Hét)")]
     public float fearRadius = 1.5f;          // Bán kính gây sợ hãi
     public float fearDuration = 2.0f;        // Chạy trốn trong 2s
-    public float fleeDistance = 8.0f;        // Khoảng cách quái sẽ bỏ chạy ra xa
+    [Tooltip("[LEGACY] Không còn dùng từ Phase E4B. Fear movement do ForcedControlRunner/consumer xử lý.")]
+    public float fleeDistance = 8.0f;
 
     [Header("AOE Aura Settings (Vùng năng lượng)")]
     public float auraRadius = 4.0f;          // Bán kính vùng buff/debuff
@@ -23,6 +24,7 @@ public class CatalystLiteSignature : SkillBehavior
 
     private Coroutine auraCoroutine;
     private GameObject currentAuraVfx;
+    private string auraAttackSpeedDownSourceKey;
 
     // Quản lý để không cộng dồn/trừ lố chỉ số (Chống Stacking Bug)
     private HashSet<AllyStats> affectedAllies = new HashSet<AllyStats>();
@@ -62,54 +64,26 @@ public class CatalystLiteSignature : SkillBehavior
         //if (howlVfxPrefab) Instantiate(howlVfxPrefab, transform.position, Quaternion.identity);
         // if (howlSfx) AudioSource.PlayClipAtPoint(howlSfx, transform.position);
 
-        // Tìm quái trong phạm vi 1.5f
+        // Phase E4B: Fear đi qua StatusEffectController thay vì tự disable EnemyAI / mutate NavMeshAgent.
+        // Duration được resistanceEffect xử lý ở core; consumer chạy trốn ở 50% final normal move speed.
         Collider[] hits = Physics.OverlapSphere(transform.position, fearRadius, player.dangerLayer);
+        HashSet<Stats> seen = new HashSet<Stats>();
 
         foreach (var hit in hits)
         {
-            Stats enemy = hit.GetComponent<Stats>();
-            if (enemy != null && !enemy.isDead)
-            {
-                StartCoroutine(FearFleeRoutine(enemy));
-            }
-        }
-    }
+            Stats enemy = hit.GetComponentInParent<Stats>();
+            if (enemy == null || enemy.isDead || !seen.Add(enemy)) continue;
 
-    private IEnumerator FearFleeRoutine(Stats enemy)
-    {
-        // Vô hiệu hóa AI cũ để quái không tự đánh trả
-        var enemyAI = enemy.GetComponent<MonoBehaviour>(); // Giả định là EnemyAI script
-        if (enemyAI != null) enemyAI.enabled = false;
-
-        var agent = enemy.GetComponent<UnityEngine.AI.NavMeshAgent>();
-        if (agent != null && agent.enabled)
-        {
-            agent.isStopped = false;
-
-            // Tính toán vị trí chạy trốn (Ngược hướng với Player)
-            Vector3 fleeDir = (enemy.transform.position - transform.position).normalized;
-            Vector3 targetPos = enemy.transform.position + fleeDir * fleeDistance;
-
-            // Tìm điểm gần nhất trên NavMesh để quái không chạy vào tường
-            UnityEngine.AI.NavMeshHit navHit;
-            if (UnityEngine.AI.NavMesh.SamplePosition(targetPos, out navHit, 5f, UnityEngine.AI.NavMesh.AllAreas))
-            {
-                agent.SetDestination(navHit.position);
-                agent.speed *= 0.75f; // Quái chạy chậm hơn vì đang sợ hãi
-            }
-        }
-
-        yield return new WaitForSeconds(fearDuration);
-
-        // Khôi phục lại quái
-        if (enemy != null && !enemy.isDead)
-        {
-            if (agent != null && agent.enabled)
-            {
-                agent.speed /= 0.75f;
-                agent.ResetPath();
-            }
-            if (enemyAI != null) enemyAI.enabled = true;
+            enemy.ApplyEffect(
+                new CombatEffectInfo(CombatEffectType.Fear, fearDuration)
+                {
+                    effectId = "CatalystLiteSignature.PrimalHowl.Fear",
+                    impactLevel = 0,
+                    stackPolicy = EffectStackPolicy.RefreshSameSource,
+                    interruptCurrentAction = true,
+                    note = "Catalyst Lite Signature - Primal Howl"
+                },
+                stats);
         }
     }
 
@@ -156,13 +130,31 @@ public class CatalystLiteSignature : SkillBehavior
         }
 
         // --- XỬ LÝ KẺ ĐỊCH (DEBUFF) ---
-        // [CE-02C4] Slow -debuffPercent (move+attack) qua effect system; refresh mỗi frame khi còn trong vùng,
-        // tự hết hạn khi rời vùng (strongest-wins, KHÔNG mutate base stat → không cần lưu gốc/restore).
+        // Phase F2: aura có HAI effect độc lập theo authored behavior:
+        // Slow giảm movement + AttackSpeedDown giảm attack cadence. Cả hai refresh ngắn khi còn trong vùng.
+        if (string.IsNullOrEmpty(auraAttackSpeedDownSourceKey))
+            auraAttackSpeedDownSourceKey = $"CatalystLiteSignature.Aura.AttackSpeedDown:{GetInstanceID()}";
+
         foreach (var hit in enemyHits)
         {
-            Stats enemy = hit.GetComponent<Stats>();
+            Stats enemy = hit.GetComponentInParent<Stats>();
             if (enemy != null && !enemy.isDead)
-                enemy.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, 0.25f) { magnitude = debuffPercent }, stats);
+            {
+                // Stable identity: refresh đúng MỘT Slow instance/source thay vì tạo instance mới mỗi frame.
+                // Strongest-wins vẫn do StatusEffectController resolve giữa các nguồn Slow khác nhau.
+                enemy.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, 0.25f)
+                {
+                    effectId = "CatalystLiteSignature.Aura.Slow",
+                    magnitude = debuffPercent,
+                    stackPolicy = EffectStackPolicy.RefreshSameSource,
+                    maxStacks = 1,
+                    note = "Catalyst Lite Signature - Aura Slow"
+                }, stats);
+
+                enemy.ApplyAttackSpeedDown(
+                    debuffPercent, 0.25f, stats, auraAttackSpeedDownSourceKey,
+                    "Catalyst Lite Signature - Aura AttackSpeedDown");
+            }
         }
 
         // --- DỌN DẸP KHI RỜI VÙNG (chỉ ĐỒNG MINH; enemy Slow tự hết hạn) ---
@@ -198,7 +190,7 @@ public class CatalystLiteSignature : SkillBehavior
             }
         }
         affectedAllies.Clear();
-        // enemy Slow tự hết hạn qua effect system → không cần restore base stat ở cleanup.
+        // enemy Slow + AttackSpeedDown tự hết hạn qua effect system → không cần restore stat ở cleanup.
 
         auraCoroutine = null;
     }

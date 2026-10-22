@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -151,8 +151,7 @@ public class MatrixEffectManager : CompanionEffectManagerBase
     private void Cleanse()
     {
         stats.BreakCrowdControl(); // gỡ Stun/Root/Silence/Slow qua API chung (Airborne KHÔNG cleanse được)
-        stats.isBleeding = false;
-        stats.damageTakenMultiplier = 1f; // gỡ "dễ tổn thương"
+        stats.ClearDebuffs();       // Phase F2: registered cleanseable Debuff tự cleanup modifier lifecycle
         VisualDebugHelper.DrawSphere(transform.position, 1f, Color.blue, 0.3f);
     }
 
@@ -312,11 +311,30 @@ public class MatrixEffectManager : CompanionEffectManagerBase
 
     private IEnumerator DecoyRoutine()
     {
-        // taunt địch quanh Companion 2s
-        foreach (var e in EnemiesInRadius(transform.position, 5f)) TauntToCompanion(e);
+        const float decoyTauntDuration = 2f;
         Vector3 pos = transform.position;
-        VisualDebugHelper.DrawSphere(pos, 1f, new Color(0.6f, 0.3f, 1f, 0.4f), 2f);
-        yield return new WaitForSeconds(2f);
+
+        // Phase E4B: MTX_PHA_T4_02 dùng Taunt thật thay cho SetTarget/AddAggro legacy.
+        // Source vẫn là Companion để bảo toàn behavior cũ: enemy chase/đánh Companion trong thời gian Taunt.
+        // resistanceEffect được core áp lên duration; hết Taunt thì AI nền tự resume, không cần reset target thủ công.
+        foreach (var e in EnemiesInRadius(pos, 5f))
+        {
+            e.ApplyEffect(
+                new CombatEffectInfo(CombatEffectType.Taunt, decoyTauntDuration)
+                {
+                    effectId = "MTX_PHA_T4_02.Decoy.Taunt",
+                    impactLevel = 0,
+                    stackPolicy = EffectStackPolicy.RefreshSameSource,
+                    interruptCurrentAction = true,
+                    note = "Matrix Phantom T4-02 Decoy"
+                },
+                stats);
+        }
+
+        VisualDebugHelper.DrawSphere(pos, 1f, new Color(0.6f, 0.3f, 1f, 0.4f), decoyTauntDuration);
+        yield return new WaitForSeconds(decoyTauntDuration);
+
+        // Explosion giữ nguyên mechanic cũ: nổ tại vị trí Companion lúc tạo tàn ảnh, không follow Companion.
         foreach (var e in EnemiesInRadius(pos, 2f)) DealMagic(e, 0.50f);
         VisualDebugHelper.DrawSphere(pos, 2f, Color.magenta, 0.4f);
     }

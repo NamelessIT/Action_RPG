@@ -44,6 +44,7 @@ public class InfiltratorSkill : SkillBehavior
     private Coroutine invisCoroutine;
     private GameObject currentInvisVfx;
     private bool isPhantomStrikeReady = false;
+    private int armorMrDebuffSerial = 0;
 
     private float _effInvisDur;
     private float _effStunDur;
@@ -178,7 +179,7 @@ public class InfiltratorSkill : SkillBehavior
                 ? Instantiate(markVfx, target.transform.position + Vector3.up * 2f, Quaternion.identity, target.transform)
                 : MageVfxHelper.AttachSphere(target.transform, 0.6f, new Color(0.7f, 0.2f, 1f, 0.5f));
 
-            StartCoroutine(DebuffRoutine(target));
+            ApplyArmorMrDebuff(target);
 
             stats.EnterCombat();
             DamageHelper.ApplyStandardDamage(stats, target, transform, _effEngageMult, null, currentWpn, 1);
@@ -283,22 +284,20 @@ public class InfiltratorSkill : SkillBehavior
         }
     }
 
-    private IEnumerator DebuffRoutine(Stats enemy)
+    private void ApplyArmorMrDebuff(Stats enemy)
     {
-        if (enemy == null || enemy.currentHp <= 0) yield break;
+        if (enemy == null || enemy.currentHp <= 0) return;
 
         float armorCut = enemy.armor * armorShredPercent;
         float mrCut = enemy.magicResist * magicResistShredPercent;
-        enemy.armor -= armorCut;
-        enemy.magicResist -= mrCut;
+        const string effectId = "InfiltratorSkill.SynchronizedStrike.ArmorMRDown";
 
-        yield return new WaitForSeconds(debuffDuration);
-
-        if (enemy != null)
-        {
-            enemy.armor += armorCut;
-            enemy.magicResist += mrCut;
-        }
+        // Legacy coroutine cho phép nhiều lần cast overlap độc lập; sourceKey riêng giữ nguyên semantics đó.
+        enemy.ApplyArmorMagicResistDown(
+            effectId, armorCut, mrCut, debuffDuration, stats,
+            $"{effectId}:{GetInstanceID()}:{++armorMrDebuffSerial}",
+            EffectStackPolicy.IndependentPerSource, 1, Mathf.Max(armorShredPercent, magicResistShredPercent),
+            "Infiltrator Synchronized Strike Armor/MR Down");
     }
 
     void OnDrawGizmosSelected()

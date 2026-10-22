@@ -22,7 +22,7 @@ public class CatalystPassive : SkillBehavior
         // Đánh trúng thì gắn dấu ấn
         if (target != null && target.currentHp > 0)
         {
-            target.ApplyResonanceMark(markDuration);
+            target.ApplyResonanceMark(markDuration, stats);
             Debug.Log($"<color=orange>[Catalyst] Đã gắn Nội tại Cộng Hưởng lên {target.name}.</color>");
             // Bạn có thể spawn thêm VFX dấu ấn nhỏ trên đầu quái ở đây
         }

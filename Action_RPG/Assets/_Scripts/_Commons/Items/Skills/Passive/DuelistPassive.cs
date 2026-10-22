@@ -271,15 +271,12 @@ public class DuelistPassive : SkillBehavior
             // Normal Parry thì vẫn giữ thế thủ được đến khi hết giờ hoặc thả tay
         }
 
-        // [MỚI] KIỂM TRA ẤN THÁCH ĐẤU
-        if (attacker != null && attacker.isChallenged)
+        // [F3D] Challenge Mark là managed Debuff và bị consume atomically khi Parry đúng target.
+        if (attacker != null && attacker.ConsumeChallengeMark(stats))
         {
             Debug.Log("<color=magenta>Duelist: Kẻ địch Thách Đấu đã sập bẫy! Đòn tiếp theo x2 Sát thương!</color>");
             hasEmpoweredAttack = true; // Nhận buff Cường hóa đòn đánh
             empoweredAttackTimer = winnerBuffDuration; // Buff "Kẻ chiến thắng" tồn tại 3s
-            
-            // Xóa ấn trên đầu kẻ địch luôn để không lạm dụng
-            attacker.isChallenged = false; 
         }
     }
 

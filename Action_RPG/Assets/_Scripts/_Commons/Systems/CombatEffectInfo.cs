@@ -5,15 +5,27 @@ using UnityEngine;
 /// Đây là model thống nhất thay cho các bool rời rạc (isStun/isKnockback) — bước đầu của
 /// hệ Combat Effect. Legacy isStun/isKnockback vẫn được giữ và bridge sang đây (xem DamageInfo).
 /// </summary>
+public enum KnockbackMotionMode
+{
+    Standard,
+    Driven
+}
+
 public enum CombatEffectType
 {
-    Stun,       // choáng: khóa move + attack thường; có thể bị cleanse tùy thiết kế
-    Knockback,  // đẩy lùi theo lực 'force'
-    Airborne,   // hất tung: khóa MỌI hành động, không cleanse được trong lúc bay
-    Root,       // trói chân: khóa move/dash, KHÔNG khóa skill (nếu không kèm Silence/Stun/Airborne)
-    Silence,    // câm lặng: khóa Skill/Signature; basic attack vẫn dùng được
-    Slow,       // làm chậm (giảm move/attack speed) qua EffectiveSlowMultiplier
-    Unknown     // [INT-01A] sentinel: interrupt KHÔNG gắn với 1 effect cụ thể (legacy/direct routine). Thêm CUỐI để an toàn serialize.
+    // GIỮ GIÁ TRỊ SỐ CŨ để không phá dữ liệu enum đã serialize trong prefab/asset.
+    Stun = 0,
+    Knockback = 1,
+    Airborne = 2,
+    Root = 3,
+    Silence = 4,
+    Slow = 5,
+    Unknown = 6,
+
+    // Phase A: type mới append ở cuối.
+    Taunt = 7,
+    Fear = 8,
+    Pull = 9
 }
 
 /// <summary>
@@ -53,11 +65,27 @@ public class CombatEffectInfo
 {
     public CombatEffectType type = CombatEffectType.Stun;
 
-    [Tooltip("Thời lượng hiệu ứng (giây). Với Knockback chỉ dùng force.")]
+    [Tooltip("Định danh content/effect ổn định để runtime source-aware/stack-aware. Có thể để trống với legacy.")]
+    public string effectId;
+
+    [Tooltip("Thời lượng hiệu ứng (giây). Airborne dùng làm motion duration. Pull/Driven Knockback dùng như safety timeout; Standard Knockback không dùng duration để giữ control.")]
     public float duration = 1f;
 
-    [Tooltip("Lực đẩy (chỉ Knockback).")]
+    [Tooltip("Lực đẩy (Standard Knockback). Giữ field legacy để toàn bộ content hiện tại không phải refactor trong Phase D.")]
     public float force = 0f;
+
+    [Header("--- Knockback Motion ---")]
+    [Tooltip("Standard = impulse knockback hiện tại. Driven = target bị source đang lao tới ủi đi liên tục.")]
+    public KnockbackMotionMode knockbackMode = KnockbackMotionMode.Standard;
+
+    [Tooltip("Anchor do source của Driven Knockback cập nhật liên tục. Chỉ dùng khi knockbackMode=Driven.")]
+    public Transform drivenAnchor;
+
+    [Tooltip("Hướng ủi world-space. Chỉ dùng khi knockbackMode=Driven.")]
+    public Vector3 drivenDirection;
+
+    [Tooltip("Khoảng cách target được giữ ở phía trước anchor/source khi Driven Knockback.")]
+    public float drivenOffset = 1f;
 
     [Tooltip("Độ cao hất tung (chỉ Airborne).")]
     public float height = 1.2f;
@@ -65,14 +93,19 @@ public class CombatEffectInfo
     [Tooltip("Cấp va chạm để vượt Super Armor (0 thường, 1 heavy, 2 massive).")]
     public int impactLevel = 0;
 
-    [Tooltip("Độ mạnh hiệu ứng — CHỈ dùng cho Slow: tỉ lệ giảm tốc 0..1 (vd 0.3 = giảm 30% move/attack speed).")]
+    [Tooltip("Độ mạnh hiệu ứng — dùng cho Slow: tỉ lệ giảm TỐC ĐỘ DI CHUYỂN 0..1 (vd 0.3 = giảm 30%).")]
     [Range(0f, 1f)]
     public float magnitude = 0f;
 
     [Tooltip("Vị trí nguồn (để tính hướng đẩy lùi). Thường set runtime = vị trí kẻ đánh.")]
     public Vector3 sourcePosition;
 
-    [Tooltip("True = thời lượng bị giảm bởi resistanceEffect (effectRes). Airborne nên để FALSE.")]
+    [Header("--- Forced Control Anchor ---")]
+    [Tooltip("Anchor mà target phải chase/flee đối với Taunt/Fear. Nếu null, runtime dùng source.transform. " +
+             "Dùng cho decoy/illusion không có Stats.")]
+    public Transform forcedControlAnchor;
+
+    [Tooltip("[LEGACY] Phase A giữ field để không phá asset. Global CC rule giờ tự quyết định resistance theo type; content mới không dùng field này.")]
     public bool respectEffectResistance = true;
 
     [Tooltip("True = ngắt hành động đang thực hiện (đòn đánh/skill) của mục tiêu.")]
@@ -80,6 +113,19 @@ public class CombatEffectInfo
 
     [Tooltip("True = nếu ngắt 1 skill đang cast thì đưa skill đó vào cooldown (cho Silence/CC).")]
     public bool putInterruptedSkillOnCooldown = false;
+
+    [Header("--- Status Effect Runtime Contract ---")]
+    [Tooltip("Cách instance cùng effect/source stack hoặc refresh. Phase A mới dựng contract.")]
+    public EffectStackPolicy stackPolicy = EffectStackPolicy.RefreshSameSource;
+
+    [Min(1)] public int maxStacks = 1;
+
+    [Tooltip("Pull anchor mode. Chỉ có ý nghĩa với CombatEffectType.Pull.")]
+    public PullAnchorMode pullAnchorMode = PullAnchorMode.SourceTransform;
+    public Vector3 pullPoint;
+    public Transform pullTransform;
+    [Tooltip("Tốc độ kéo theo world units/giây (chỉ Pull).")]
+    public float pullSpeed = 0f;
 
     [Tooltip("Ghi chú tùy chọn (debug/tooltip).")]
     public string note;
@@ -90,5 +136,36 @@ public class CombatEffectInfo
     {
         type = t;
         duration = dur;
+    }
+
+    /// <summary>Clone request trước khi resolver chỉnh duration/runtime payload, tránh mutate asset/shared object.</summary>
+    public CombatEffectInfo CreateRuntimeCopy()
+    {
+        return new CombatEffectInfo
+        {
+            type = type,
+            effectId = effectId,
+            duration = duration,
+            force = force,
+            knockbackMode = knockbackMode,
+            drivenAnchor = drivenAnchor,
+            drivenDirection = drivenDirection,
+            drivenOffset = drivenOffset,
+            height = height,
+            impactLevel = impactLevel,
+            magnitude = magnitude,
+            sourcePosition = sourcePosition,
+            forcedControlAnchor = forcedControlAnchor,
+            respectEffectResistance = respectEffectResistance,
+            interruptCurrentAction = interruptCurrentAction,
+            putInterruptedSkillOnCooldown = putInterruptedSkillOnCooldown,
+            stackPolicy = stackPolicy,
+            maxStacks = maxStacks,
+            pullAnchorMode = pullAnchorMode,
+            pullPoint = pullPoint,
+            pullTransform = pullTransform,
+            pullSpeed = pullSpeed,
+            note = note
+        };
     }
 }

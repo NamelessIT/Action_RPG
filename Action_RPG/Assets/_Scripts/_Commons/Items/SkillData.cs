@@ -76,6 +76,9 @@ public class SkillData : ScriptableObject
     public Sprite icon;
     [TextArea] public string skilDesc;
     public SkillType skillType;
+    [Header("Control Policy")]
+    [Tooltip("Normal: tuân CC khóa skill. Cleanse: được cast dưới mọi CC trừ Airborne/Knockback/Pull.")]
+    public SkillControlPolicy controlPolicy = SkillControlPolicy.Normal;
     public float skillPhysicalMultiplier;
     public float skillMagicMultiplier;
     public float cooldown;

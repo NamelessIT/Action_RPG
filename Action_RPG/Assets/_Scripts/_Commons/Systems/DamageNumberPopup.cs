@@ -152,7 +152,10 @@ public class DamageNumberPopup : MonoBehaviour
         }
         else
         {
-            string num = Mathf.RoundToInt(damage).ToString();
+            // Small mitigation/debuff deltas can be real but disappear when every value is rounded
+            // to an integer. Keep integer display for larger hits, but show one decimal below 100
+            // so Armor/MR changes are visibly testable without changing combat math.
+            string num = damage < 100f ? damage.ToString("0.0") : Mathf.RoundToInt(damage).ToString();
             // Dùng "!" thay ký tự ⚡ để tránh warning missing-glyph của LiberationSans.
             line.text = isCrit ? $"<b>{num}!</b>" : num;
         }

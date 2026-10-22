@@ -31,7 +31,77 @@ public class SpearChainAttackHandler : IWeaponAttackHandler
             new Color(1f, 0.9f, 0.2f, 0.5f), // đoạn 3: vàng
         };
 
-        for (int seg = 0; seg < SEGMENT_MULT.Length; seg++)
+        int firstGenericSegment = 0;
+
+        // Phase E2.1 / WPN_SP_T5_01 dưới Taunt:
+        // - reach cưỡng chế là vô hạn => Player không chase.
+        // - đoạn đầu PRIMARY-TARGET thẳng Taunter và bẻ ngay tại Taunter.
+        // - sau khi đã chạm Taunter, các đoạn 2/3 tiếp tục bẻ góc tìm mục tiêu khác như behavior gốc.
+        Stats forced = ctx.ForcedPrimaryTargetStats;
+        if (ctx.HasForcedPrimaryTarget && forced != null && !forced.isDead)
+        {
+            Vector3 targetPos = forced.transform.position;
+            Vector3 toForced = targetPos - segStart;
+            toForced.y = 0f;
+            if (toForced.sqrMagnitude > 0.0001f) segDir = toForced.normalized;
+
+            Vector3 forcedEnd = targetPos;
+            forcedEnd.y = segStart.y;
+
+            // Không guarantee damage: Taunter vẫn phải nằm trong hit geometry/layer thật của đoạn giáo.
+            Collider[] firstHits = Physics.OverlapCapsule(segStart, forcedEnd, THRUST_RADIUS, ctx.DangerLayer);
+            bool forcedHit = false;
+            foreach (var hit in firstHits)
+            {
+                Stats enemy = ctx.GetEnemyStats(hit);
+                if (enemy == forced) { forcedHit = true; break; }
+            }
+
+            if (forcedHit)
+            {
+                // Primary target trước, rồi collateral trên chính đoạn Player -> Taunter.
+                if (ctx.TryAddHitTarget(forced.transform))
+                    ctx.ApplyDamage(forced, ctx.IsHeavy, ctx.ComboStep);
+
+                foreach (var hit in firstHits)
+                {
+                    Stats enemy = ctx.GetEnemyStats(hit);
+                    if (enemy == null || enemy == forced) continue;
+                    if (!ctx.TryAddHitTarget(enemy.transform)) continue;
+                    ctx.ApplyDamage(enemy, ctx.IsHeavy, ctx.ComboStep);
+                }
+
+                VisualDebugHelper.DrawBox((segStart + forcedEnd) * 0.5f,
+                    new Vector3(THRUST_RADIUS * 2f, 0.3f, Mathf.Max(0.5f, Vector3.Distance(segStart, forcedEnd))),
+                    Quaternion.LookRotation(segDir), segColors[0], 0.6f);
+
+                // ĐÃ TRÚNG Taunter -> bẻ góc từ chính Taunter, đúng rule special weapon.
+                Vector3 bendOrigin = forced.transform.position;
+                Stats next = FindNearestUnhit(ctx, bendOrigin);
+                if (next == null)
+                {
+                    if (ctx.HitTargets.Count > 0 && ctx.Stats != null)
+                        ctx.Stats.GainSinFromAttack(ctx.HitTargets.Count);
+                    ctx.OnHitEvent?.Invoke(ctx.ComboStep, ctx.IsHeavy);
+                    yield return new WaitForSeconds(ctx.SwingDuration);
+                    yield break;
+                }
+
+                segStart = bendOrigin;
+                segDir = next.transform.position - bendOrigin; segDir.y = 0f;
+                if (segDir.sqrMagnitude < 0.0001f)
+                {
+                    yield return new WaitForSeconds(ctx.SwingDuration);
+                    yield break;
+                }
+                segDir.Normalize();
+                firstGenericSegment = 1;
+            }
+            // Nếu Taunter KHÔNG nằm trong hit geometry thật, không fake damage.
+            // Giữ segDir đã aim vào Taunter và chạy behavior đoạn 1 vô hạn gốc từ seg=0.
+        }
+
+        for (int seg = firstGenericSegment; seg < SEGMENT_MULT.Length; seg++)
         {
             Vector3 segEnd = segStart + segDir * SEGMENT_LENGTH;
 

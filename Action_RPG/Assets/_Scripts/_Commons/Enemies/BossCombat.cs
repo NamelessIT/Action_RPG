@@ -12,6 +12,7 @@ public class BossCombat : EnemyCombat
 
     private float lastDashTime = -10f;
     private bool isDashing = false;
+    private Coroutine _dashCoroutine;
     private NavMeshAgent agent; // Boss cần tham chiếu Agent để lướt
     private EnemyAI _enemyAI;   // để mượn external move override (tránh đánh nhau agent.speed với EnemyAI.Update)
 
@@ -30,9 +31,9 @@ public class BossCombat : EnemyCombat
     // Hàm Dash đặc biệt của Boss
     public void PerformBossDash(Vector3 dashDirection)
     {
-        // 1. Check Cooldown Dash
+        // 1. Check Cooldown Dash + unified CC capability.
         if (Time.time < lastDashTime + dashCooldown) return;
-        if (isDashing) return;
+        if (isDashing || stats == null || !stats.ControlState.canDash) return;
 
         // 2. --- LOGIC CANCEL ATTACK (Giống Player) ---
         // Nếu Boss đang vung tay đánh mà quyết định lướt -> Hủy đánh
@@ -46,7 +47,7 @@ public class BossCombat : EnemyCombat
         // ---------------------------------------------
 
         // 3. Thực hiện Dash
-        StartCoroutine(DashRoutine(dashDirection));
+        _dashCoroutine = StartCoroutine(DashRoutine(dashDirection));
     }
 
     IEnumerator DashRoutine(Vector3 dir)
@@ -69,7 +70,7 @@ public class BossCombat : EnemyCombat
             // [OWNERSHIP] Mượn override của EnemyAI: tốc độ = base × dashMult × Slow, AI.Update không ghi đè
             // SetDestination/agent.speed trong lúc dash. Fallback set trực tiếp nếu không có EnemyAI.
             if (_enemyAI != null) _enemyAI.BeginExternalMoveOverride(dashSpeedMultiplier);
-            else agent.speed = stats.baseMoveSpeed * dashSpeedMultiplier;
+            else agent.speed = stats.EffectiveMoveSpeed * dashSpeedMultiplier;
 
             // Set điểm đến là vị trí cách đó 1 đoạn theo hướng Dash
             agent.SetDestination(transform.position + dir * 5.0f);
@@ -80,22 +81,42 @@ public class BossCombat : EnemyCombat
         }
 
         EndDash(); // restore tốc độ/accel/invincibility/override idempotent
+        _dashCoroutine = null;
     }
 
     /// <summary>Kết thúc dash idempotent: trả override, acceleration, invincibility, cờ. Gọi được nhiều lần an toàn.</summary>
     private void EndDash()
     {
         if (_enemyAI != null) _enemyAI.EndExternalMoveOverride();
-        else if (agent != null && stats != null) agent.speed = stats.baseMoveSpeed;
+        else if (agent != null && stats != null) agent.speed = stats.EffectiveMoveSpeed;
         if (agent != null && _dashAccelStored) { agent.acceleration = _dashOriginalAccel; _dashAccelStored = false; }
         if (stats != null) stats.isInvincible = false;
         isDashing = false;
+    }
+
+    /// <summary>
+    /// Phase E3A: Taunt/Fear (và interrupting CC nói chung) phải cắt Boss dash ngay.
+    /// Dash là action riêng của BossCombat, không nằm trong currentAttackCoroutine của EnemyCombat.
+    /// </summary>
+    protected override void OnCrowdControlInterrupted(InterruptContext ctx)
+    {
+        if (_dashCoroutine != null)
+        {
+            StopCoroutine(_dashCoroutine);
+            _dashCoroutine = null;
+        }
+        if (isDashing) EndDash();
     }
 
     // [CLEANUP] Bị disable/destroy giữa lúc dash → coroutine dừng; vẫn phải trả mọi trạng thái (idempotent).
     protected override void OnDisable()
     {
         base.OnDisable();
+        if (_dashCoroutine != null)
+        {
+            StopCoroutine(_dashCoroutine);
+            _dashCoroutine = null;
+        }
         if (isDashing) EndDash();
     }
 }

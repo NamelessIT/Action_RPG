@@ -78,6 +78,8 @@ public class PlayerController : MonoBehaviour
     private WeaponEffectManager _weaponFx; // hệ effect vũ khí (hook nhân dmg đòn đánh thường / xuyên giáp)
     private AccessoryEffectManager _accessoryFx; // hệ effect trang sức (hook chỉnh dmg đòn đánh thường)
     private CompanionSkillController _companionSkillCtrl; // cache controller skill của Companion (phím R/T)
+    private ForcedControlRunner _forcedControlRunner;
+    private Coroutine currentDashCoroutine;
     private int _heavyArmorApplied = 0; // +armor tạm khi heavy swing; FIELD để hoàn trả được nếu bị ngắt giữa chừng
 
     /// <summary>Tìm/cache CompanionSkillController của Companion trong scene (companion có thể spawn sau).</summary>
@@ -156,7 +158,11 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         stats = GetComponent<AllyStats>();
-        if (stats != null) stats.OnInterrupted += HandleInterrupted; // CC ngắt đòn đánh
+        if (stats != null)
+        {
+            stats.OnInterruptedContext += HandleInterrupted; // context-aware: forced CC cancel dash/attack safely
+            _forcedControlRunner = stats.ForcedControl;
+        }
 
         animator = GetComponentInChildren<Animator>();
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
@@ -228,10 +234,23 @@ public class PlayerController : MonoBehaviour
     {
         if (stats == null) return;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // DEV CC test panel owns mouse/keyboard while open; keep Time running for live CC-duration tests.
+        if (CCDebugTestPanel.IsOpen) return;
+#endif
+
         if (InventoryUIManager.IsInventoryOpen || SkillTreeController.IsSkillTreeOpen || IsDevToolOpen()) return;
 
+        // Phase E: forced-control sở hữu locomotion trước manual movement.
+        if (_forcedControlRunner == null) _forcedControlRunner = stats.ForcedControl;
+        if (_forcedControlRunner != null && _forcedControlRunner.TryBuildIntent(out ForcedControlIntent forcedIntent))
+        {
+            HandleForcedMovementPhysics(forcedIntent);
+            return;
+        }
+
         // [ACTION-LOCK] Stun / Airborne / Root đều khóa di chuyển (qua query thống nhất).
-        if (stats.IsMovementLocked) return;
+        if (!stats.ControlState.canMove) return;
 
         // [SỬA Ở ĐÂY] Khóa di chuyển vật lý nếu đang dùng skill, lướt, parry, hoặc ĐANG GỒNG
         // Bow heavy charge: cho phép di chuyển nhưng cản thường (isCharging block bị tắt)
@@ -241,8 +260,8 @@ public class PlayerController : MonoBehaviour
         // Logic di chuyển thường
         if (!isTurning && isWalking)
         {
-            // [SLOW] nhân hệ số giảm tốc dùng chung (EffectiveSlowMultiplier = 1 nếu không bị Slow).
-            float currentSpeed = stats.moveSpeed * (isSprinting ? stats.runSpeedMultiplier : 1f) * stats.EffectiveSlowMultiplier;
+            // Phase B: một đường effective movement chung. AllyStats tự resolve Slow như bonusMoveSpeed âm.
+            float currentSpeed = stats.EffectiveMoveSpeed * (isSprinting ? stats.runSpeedMultiplier : 1f);
 
             // Bow heavy charge: giảm tốc 50% — trừ khi WPN_BW_T3_01 (gồng bắn không giảm tốc).
             bool bowNoSlow = (stats as AllyStats)?.bowNoChargeSlow ?? false;
@@ -284,6 +303,11 @@ public class PlayerController : MonoBehaviour
     {
         if (stats == null) return;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // Do not let clicks/keys used on CCDebugTestPanel leak into attack/dash/skill gameplay input.
+        if (CCDebugTestPanel.IsOpen) return;
+#endif
+
         // Đang gõ vào ô tìm kiếm/input → bỏ qua mọi phím tắt (B/C/F/V) để không bị đóng UI ngoài ý muốn
         if (IsTypingInInputField()) return;
 
@@ -314,14 +338,15 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.F) && !InventoryUIManager.IsInventoryOpen)
+        bool forcedControlActive = ForcedControlRunner.IsForcedMode(stats.ControlState.mode);
+        if (!forcedControlActive && Input.GetKeyDown(KeyCode.F) && !InventoryUIManager.IsInventoryOpen)
         {
             _pickupManager?.TryPickupNearest();
         }
 
-        // [COMPANION] R = ra lệnh Companion dùng Skill, T = dùng Signature.
-        if (Input.GetKeyDown(KeyCode.R)) { ResolveCompanionSkillCtrl()?.CommandSkill(); }
-        if (Input.GetKeyDown(KeyCode.T)) { ResolveCompanionSkillCtrl()?.CommandSignature(); }
+        // [COMPANION] Taunt/Fear = mất manual control, nên không nhận lệnh R/T trong lúc bị ép điều khiển.
+        if (!forcedControlActive && Input.GetKeyDown(KeyCode.R)) { ResolveCompanionSkillCtrl()?.CommandSkill(); }
+        if (!forcedControlActive && Input.GetKeyDown(KeyCode.T)) { ResolveCompanionSkillCtrl()?.CommandSignature(); }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (Input.GetKeyDown(KeyCode.V))
@@ -341,6 +366,23 @@ public class PlayerController : MonoBehaviour
         // --- 0. CÁC LOGIC NỀN (Luôn chạy bất kể trạng thái) ---
         UpdateTimersAndCombo(); // Tách logic reset combo ra hàm riêng cho gọn
         UpdateAnimatorParameters(); // Tách logic update animator parameter
+
+        // Phase E: Taunt/Fear bỏ manual gameplay input. Chỉ Cleanse Skill có thể lọt qua SkillManager policy.
+        StatusControlSnapshot currentControl = stats.ControlState;
+        if (ForcedControlRunner.IsForcedMode(currentControl.mode))
+        {
+            HandleForcedControlUpdate();
+            HandleSkillInput(); // normal skill tự bị resolver reject; Cleanse được phép.
+            return;
+        }
+
+        // Nếu Taunt vừa kết thúc/bị Stun-Displacement override thì chainsaw forced-channel phải dừng ngay.
+        attackDispatcher?.StopForcedBasicChanneled();
+
+        // [CC MOVEMENT LOCK] Physical movement đã bị FixedUpdate chặn, nhưng input/animation/sprint
+        // cũng phải reset ngay. KHÔNG return toàn Update ở đây vì Root vẫn cho phép basic attack + skill.
+        if (!stats.ControlState.canMove)
+            SuppressLocomotionForMovementLock();
 
         // --- 1. CHẶN INPUT (Priority High) ---
         // Nếu đang dùng Skill đặc biệt -> Chặn toàn bộ Input điều khiển
@@ -380,8 +422,158 @@ public class PlayerController : MonoBehaviour
     {
         if (animator != null)
         {
-            animator.SetFloat("AttackSpeedMultiplier", stats.attackSpeed);
+            animator.SetFloat("AttackSpeedMultiplier", stats.EffectiveAttackSpeed);
         }
+    }
+
+    /// <summary>
+    /// Reset riêng locomotion intent/presentation khi CC khóa di chuyển.
+    /// Không đụng Rigidbody velocity để không triệt tiêu Knockback/Airborne displacement.
+    /// Không return toàn Update để Root vẫn có thể basic attack và dùng Skill.
+    /// </summary>
+    private void SuppressLocomotionForMovementLock()
+    {
+        movementInput = Vector3.zero;
+        isWalking = false;
+        isTurning = false;
+        isSprinting = false;
+
+        if (animator != null)
+            animator.SetBool("IsWalking", false);
+
+        // Đồng bộ cho các listener/passive đang nghe input movement, tránh giữ vector frame trước.
+        OnMovementInputChanged?.Invoke(Vector2.zero);
+    }
+
+    private void HandleForcedMovementPhysics(ForcedControlIntent intent)
+    {
+        if (rb == null || stats == null) return;
+        if (!intent.canMove || intent.direction.sqrMagnitude <= 0.0001f) return;
+
+        // Taunt chỉ chase tới khi BASIC ATTACK HIỆN TẠI thực sự vào reach.
+        // Dispatcher sở hữu knowledge theo weapon; SP_T5_01 trả true ở mọi khoảng cách.
+        if (intent.mode == ControlMode.Taunted && intent.targetTransform != null
+            && CanForcedBasicAttackTarget(intent.targetTransform))
+            return;
+
+        float speed = stats.EffectiveMoveSpeed * Mathf.Max(0f, intent.speedMultiplier);
+        rb.MovePosition(rb.position + intent.direction * speed * Time.fixedDeltaTime);
+    }
+
+    private void HandleForcedControlUpdate()
+    {
+        if (_forcedControlRunner == null) _forcedControlRunner = stats.ForcedControl;
+        if (_forcedControlRunner == null || !_forcedControlRunner.TryBuildIntent(out ForcedControlIntent intent))
+        {
+            attackDispatcher?.StopForcedBasicChanneled();
+            return;
+        }
+
+        movementInput = Vector3.zero;
+        isSprinting = false;
+        isTurning = false;
+        OnMovementInputChanged?.Invoke(Vector2.zero);
+
+        if (intent.direction.sqrMagnitude > 0.0001f)
+        {
+            currentVisualDir = intent.direction;
+            stats.facingDirection = currentVisualDir;
+            UpdateAnimationDirection(currentVisualDir);
+        }
+
+        bool inAttackReach = intent.mode == ControlMode.Taunted
+                             && intent.targetTransform != null
+                             && CanForcedBasicAttackTarget(intent.targetTransform);
+
+        bool moving = intent.canMove && intent.direction.sqrMagnitude > 0.0001f
+                      && (intent.mode == ControlMode.Feared
+                          || (intent.mode == ControlMode.Taunted && !inAttackReach));
+        isWalking = moving;
+        if (animator != null) animator.SetBool("IsWalking", moving);
+
+        // Fear không được duy trì bất kỳ forced basic channel nào còn sót từ Taunt.
+        if (intent.mode != ControlMode.Taunted)
+        {
+            attackDispatcher?.StopForcedBasicChanneled();
+            return;
+        }
+
+        if (!intent.canBasicAttack || intent.targetTransform == null)
+        {
+            attackDispatcher?.StopForcedBasicChanneled();
+            return;
+        }
+
+        // Taunter chạy ra khỏi reach trong lúc đang bị cưa -> dừng cưa, chase lại; vào reach thì channel lại.
+        if (!inAttackReach)
+        {
+            attackDispatcher?.StopForcedBasicChanneled();
+            return;
+        }
+
+        Vector3 toTarget = intent.targetTransform.position - transform.position;
+        toTarget.y = 0f;
+        if (toTarget.sqrMagnitude > 0.0001f) ForceFaceDirection(toTarget.normalized);
+
+        // WPN_SW_T5_02: normal/basic attack là ChainsawAttackHandler channeled.
+        if (attackDispatcher != null && attackDispatcher.CurrentNormalIsChanneled)
+        {
+            if (!attackDispatcher.IsForcedBasicChanneledActive)
+            {
+                hitTargets.Clear();
+                float swingDur = 0.4f;
+                var ctx = attackDispatcher.BuildContext(
+                    isHeavy: false, comboCount, swingDur,
+                    hitTargets, dangerLayer,
+                    (e, h, step) => ApplyDamageToTarget(e, h, step), OnAttackPerformed,
+                    intent.targetTransform);
+
+                if (attackDispatcher.TryStartForcedBasicChanneled(ctx))
+                    isAttacking = true;
+            }
+            return;
+        }
+
+        attackDispatcher?.StopForcedBasicChanneled();
+        if (!isAttacking)
+            PerformAttack(false, intent.targetTransform);
+    }
+
+    private bool CanForcedBasicAttackTarget(Transform targetTransform)
+    {
+        if (targetTransform == null) return false;
+        if (attackDispatcher != null)
+            return attackDispatcher.CanForcedBasicAttackTarget(targetTransform);
+
+        // Fallback nếu dispatcher chưa init: dùng range hiện tại như behavior E2 cũ.
+        Collider targetCollider = targetTransform.GetComponentInChildren<Collider>();
+        Vector3 targetPoint = targetCollider != null
+            ? targetCollider.ClosestPoint(transform.position)
+            : targetTransform.position;
+        targetPoint.y = transform.position.y;
+        Vector3 origin = transform.position; origin.y = targetPoint.y;
+        return Vector3.Distance(origin, targetPoint) <= Mathf.Max(0.1f, attackRange);
+    }
+
+    private void CancelCurrentDash(bool preserveMotionVelocity)
+    {
+        if (!isDashing && currentDashCoroutine == null) return;
+        if (currentDashCoroutine != null)
+        {
+            StopCoroutine(currentDashCoroutine);
+            currentDashCoroutine = null;
+        }
+
+        stats.isInvincible = false;
+        AllyStats allyDash = stats as AllyStats;
+        if (allyDash != null && allyDash.rogueCM1_DashPhaseEnemies)
+        {
+            int enemyLayerIdx = LayerMask.NameToLayer("Enemy");
+            if (enemyLayerIdx >= 0) Physics.IgnoreLayerCollision(gameObject.layer, enemyLayerIdx, false);
+        }
+
+        if (!preserveMotionVelocity && rb != null) rb.linearVelocity = Vector3.zero;
+        isDashing = false;
     }
 
     void HandleDashInput()
@@ -394,6 +586,9 @@ public class PlayerController : MonoBehaviour
 
     void HandleSprintInput()
     {
+        // [CC MOVEMENT LOCK] Stun / Root / Airborne / Knockback legacy không được tiêu Stamina sprint.
+        if (!stats.ControlState.canMove) { isSprinting = false; return; }
+
         // [ACC_PA_T5_04] Cấm chạy nhanh khi đeo trang sức tương ứng.
         if ((stats as AllyStats)?.accBlockDashSprint == true) { isSprinting = false; return; }
 
@@ -417,7 +612,7 @@ public class PlayerController : MonoBehaviour
     void HandleAttackInput()
     {
         // [ACTION-LOCK] Airborne / Stun khóa đánh thường (Root & Silence KHÔNG chặn basic attack).
-        if (stats.IsActionLocked) return;
+        if (!stats.ControlState.canBasicAttack) return;
 
         // [ACC_CH_T4_03] Đang gồng skill (channel) → khóa mọi thao tác đánh.
         if (isSkillChanneling) return;
@@ -538,7 +733,7 @@ public class PlayerController : MonoBehaviour
         AllyStats allyDashStats = stats as AllyStats;
 
         // [ACTION-LOCK] Stun / Airborne / Root khóa Dash.
-        if (stats.IsMovementLocked) return;
+        if (!stats.ControlState.canMove) return;
 
         // [ACC_CH_T4_03] Đang gồng skill (channel) → không cho Dash.
         if (isSkillChanneling) return;
@@ -578,7 +773,7 @@ public class PlayerController : MonoBehaviour
         CancelCurrentAttack("Dash");
         // ---------------------------------
 
-        StartCoroutine(DashCoroutine());
+        currentDashCoroutine = StartCoroutine(DashCoroutine());
         OnDashPerformed?.Invoke();
     }
 
@@ -628,12 +823,20 @@ public class PlayerController : MonoBehaviour
         _heavyArmorApplied = 0;
     }
 
-    /// <summary>Bị STUN/KNOCKBACK → hủy đòn đánh đang vung. (Skill đặc biệt tự xử lý qua isStunned nếu cần.)</summary>
-    private void HandleInterrupted() => CancelCurrentAttack("CC: Stun/Knockback");
+    /// <summary>Interrupting CC hủy attack/dash hiện tại. Với hard displacement, giữ velocity vì motor mới sở hữu nó.</summary>
+    private void HandleInterrupted(InterruptContext ctx)
+    {
+        if (!ctx.interruptCurrentAction) return;
+        CancelCurrentAttack($"CC: {ctx.type}");
+        bool displacementOwnsMotion = ctx.type == CombatEffectType.Airborne
+                                   || ctx.type == CombatEffectType.Knockback
+                                   || ctx.type == CombatEffectType.Pull;
+        CancelCurrentDash(displacementOwnsMotion);
+    }
 
     private void OnDisable()
     {
-        if (stats != null) stats.OnInterrupted -= HandleInterrupted;
+        if (stats != null) stats.OnInterruptedContext -= HandleInterrupted;
     }
 
 
@@ -684,6 +887,7 @@ public class PlayerController : MonoBehaviour
 
         rb.linearVelocity = Vector3.zero;
         isDashing = false;
+        currentDashCoroutine = null;
     }
 
     // Hàm kiểm tra xem có mối nguy hiểm nào gần đó không
@@ -721,6 +925,13 @@ public class PlayerController : MonoBehaviour
 
     void HandleMovementStopToTurn()
     {
+        // [CC MOVEMENT LOCK] Không đọc WASD khi bị khóa di chuyển. Nếu không có guard này,
+        // Rigidbody đứng yên nhưng isWalking/isTurning vẫn bật và animator vẫn chạy locomotion.
+        if (!stats.ControlState.canMove)
+        {
+            SuppressLocomotionForMovementLock();
+            return;
+        }
 
         // Nếu đang đánh thì KHÔNG nhận input di chuyển
         // Ngoại lệ: Bow heavy charge và Staff normal attack cho phép di chuyển chậm
@@ -823,7 +1034,7 @@ public class PlayerController : MonoBehaviour
     }
 
 
-    void PerformAttack(bool isHeavy = false)
+    void PerformAttack(bool isHeavy = false, Transform forcedPrimaryTarget = null)
     {
         if (stats == null) return;
 
@@ -836,8 +1047,8 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // Check cooldown bình thường cho đòn đầu tiên. [SLOW] giảm tốc → tăng cooldown (đọc multiplier chung).
-        float cooldownTime = 1.0f / Mathf.Max(0.01f, stats.attackSpeed * stats.EffectiveSlowMultiplier);
+        // Phase B: Slow không giảm Attack Speed. Mọi AttackSpeedDown về sau đi qua EffectiveAttackSpeed.
+        float cooldownTime = 1.0f / Mathf.Max(0.01f, stats.EffectiveAttackSpeed);
         if (Time.time < lastAttackTime + cooldownTime) return;
 
         // Reset combo nếu quá hạn
@@ -846,10 +1057,10 @@ public class PlayerController : MonoBehaviour
             comboCount = 0;
         }
 
-        currentAttackCoroutine=StartCoroutine(AttackRoutine(isHeavy));
+        currentAttackCoroutine=StartCoroutine(AttackRoutine(isHeavy, forcedPrimaryTarget));
     }
 
-    IEnumerator AttackRoutine(bool isHeavy)
+    IEnumerator AttackRoutine(bool isHeavy, Transform forcedPrimaryTarget = null)
     {
         // 1. Setup
         isAttacking = true;
@@ -906,7 +1117,7 @@ public class PlayerController : MonoBehaviour
 
         // --- CẤU HÌNH SWEEP ---
         float baseAnimDuration = 0.5f; // Thời gian animation chuẩn
-        float speedMod = isHeavy ? (stats.attackSpeed * 0.7f) : stats.attackSpeed;
+        float speedMod = isHeavy ? (stats.EffectiveAttackSpeed * 0.7f) : stats.EffectiveAttackSpeed;
         float realDuration = baseAnimDuration / speedMod;
 
         // Player chém nhanh: Gây damage từ 20% đến 50% thời lượng
@@ -923,7 +1134,8 @@ public class PlayerController : MonoBehaviour
             var ctx = attackDispatcher.BuildContext(
                 isHeavy, currentStep, swingDuration,
                 hitTargets, dangerLayer,
-                (e, h, s) => ApplyDamageToTarget(e, h, s), OnAttackPerformed);
+                (e, h, s) => ApplyDamageToTarget(e, h, s), OnAttackPerformed,
+                forcedPrimaryTarget);
 
             yield return StartCoroutine(attackDispatcher.ExecuteSwing(ctx));
         }
@@ -949,6 +1161,9 @@ public class PlayerController : MonoBehaviour
     public void ApplyDamageToTarget(Stats enemyStats, bool isHeavy, int stepIndex, bool forceTrueDamage = false, bool grimoirePhiDao = false)
     {
         if (enemyStats == null || enemyStats.currentHp <= 0) return;
+
+        // Phase E2.1: Taunt khóa PRIMARY TARGET ở WeaponAttackContext/handler, KHÔNG filter damage tại đây.
+        // Nhờ vậy sweep/pierce/chain collateral tự nhiên của weapon vẫn hoạt động bình thường.
 
         bool wasAlive = enemyStats.currentHp > 0;
         stats.EnterCombat();
@@ -1262,7 +1477,7 @@ public class PlayerController : MonoBehaviour
     public void AI_MoveTo(Vector3 targetPos)
     {
         // [ACTION-LOCK] AI-control (Ravager...) cũng phải tuân luật CC: Root/Stun/Airborne → không tự đi.
-        if (stats == null || stats.IsMovementLocked) return;
+        if (stats == null || !stats.ControlState.canMove) return;
 
         // 1. Tính hướng
         Vector3 dir = (targetPos - transform.position).normalized;
@@ -1275,8 +1490,8 @@ public class PlayerController : MonoBehaviour
         // 3. Di chuyển Rigidbody
         if (!isAttacking && !isDashing)
         {
-            // Tính tốc độ (có tính sprint nếu cần, hoặc mặc định). [SLOW] nhân multiplier chung.
-            float speed = stats.moveSpeed * stats.EffectiveSlowMultiplier;
+            // Phase B: AI-control của Player dùng cùng effective movement như input thường.
+            float speed = stats.EffectiveMoveSpeed;
             // Nếu muốn Ravager chạy nhanh như Sprint thì nhân thêm:
             // float speed = stats.moveSpeed * stats.runSpeedMultiplier; 
 
@@ -1291,8 +1506,8 @@ public class PlayerController : MonoBehaviour
     // Hàm AI tự đánh
     public void AI_Attack()
     {
-        // [ACTION-LOCK] Stun/Airborne khóa đánh (Root/Silence vẫn cho basic attack — IsActionLocked không gồm 2 cái đó).
-        if (stats == null || stats.IsActionLocked) return;
+        // Phase B: AI-control của Player dùng cùng capability CanBasicAttack.
+        if (stats == null || !stats.ControlState.canBasicAttack) return;
 
         // 1. Dừng animation chạy để chuyển sang đánh
         if (animator != null) animator.SetBool("IsWalking", false);

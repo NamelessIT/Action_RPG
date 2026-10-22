@@ -102,8 +102,8 @@ public static class CombatMath
         physMult *= externalMult;
         magicMult *= externalMult;
         // Raw Phys + Raw Magic
-        float rawPhysical = attacker.physicalAtk * physMult * critMult * attacker.damageOutputMultiplier; //buff hay debuff giảm damage apply vào đây
-        float rawMagic = attacker.magicAtk * magicMult * critMult * attacker.damageOutputMultiplier;
+        float rawPhysical = attacker.physicalAtk * physMult * critMult * attacker.EffectiveDamageOutputMultiplier; //buff hay debuff giảm damage apply vào đây
+        float rawMagic = attacker.magicAtk * magicMult * critMult * attacker.EffectiveDamageOutputMultiplier;
 
 
         // XỬ LÝ SÁT THƯƠNG CHUẨN (Bỏ qua Giáp)
@@ -119,8 +119,8 @@ public static class CombatMath
 
         // --- 2. Tính Armor/MagicResist thực tế theo hướng đánh (Armor Direction) ---
         // armorPenetration: bỏ qua % Giáp của mục tiêu (vd ACC_RM_T5_03 đánh thường xuyên 25%/50% giáp).
-        float armorDir = target.armor * (1 - (attacker.armorBackstabReduce * t)) * (1f - Mathf.Clamp01(armorPenetration));
-        float magicResistDir = target.magicResist * (1 - (attacker.magicResistBackstabReduce * t));
+        float armorDir = target.EffectiveArmor * (1 - (attacker.armorBackstabReduce * t)) * (1f - Mathf.Clamp01(armorPenetration));
+        float magicResistDir = target.EffectiveMagicResist * (1 - (attacker.magicResistBackstabReduce * t));
 
 
         // --- 3. Tính % Giảm Sát Thương (Damage Reduction) ---
@@ -139,7 +139,7 @@ public static class CombatMath
         if (t <= target.blockThreshold)
         {
             // A. Auto Block — áp dụng defenseValueIgnore từ attacker
-            float effectiveDefenseValue = target.defenseValue;
+            float effectiveDefenseValue = target.EffectiveDefenseValue;
             if (attacker is AllyStats allyIgnore && allyIgnore.defenseValueIgnore > 0f)
                 effectiveDefenseValue *= (1f - Mathf.Clamp01(allyIgnore.defenseValueIgnore));
             defenseValMult = 1f / (1f + effectiveDefenseValue * K_CONST);
@@ -156,7 +156,7 @@ public static class CombatMath
             }
             else // Nếu target là Enemy thường
             {               
-                if (target.defenseValue > 0)
+                if (target.EffectiveDefenseValue > 0)
                 {
                     // Enemy có thể cần logic notify riêng nếu muốn, tạm thời bỏ qua
                 }
@@ -205,12 +205,12 @@ public static class CombatMath
     {
         float critMult = isCrit ? attacker.baseCritMultiplier : 1.0f;
         // Đòn chính: magnitude theo magicAtk nhưng tính là VẬT LÝ.
-        float rawMain  = attacker.magicAtk * 1.0f * externalMult * critMult * attacker.damageOutputMultiplier;
+        float rawMain  = attacker.magicAtk * 1.0f * externalMult * critMult * attacker.EffectiveDamageOutputMultiplier;
         // Bonus phép.
-        float rawBonus = attacker.magicAtk * magicBonusMult * critMult * attacker.damageOutputMultiplier;
+        float rawBonus = attacker.magicAtk * magicBonusMult * critMult * attacker.EffectiveDamageOutputMultiplier;
 
-        float armorDir = target.armor * (1 - (attacker.armorBackstabReduce * t));
-        float magicResistDir = target.magicResist * (1 - (attacker.magicResistBackstabReduce * t));
+        float armorDir = target.EffectiveArmor * (1 - (attacker.armorBackstabReduce * t));
+        float magicResistDir = target.EffectiveMagicResist * (1 - (attacker.magicResistBackstabReduce * t));
         float physDR  = 0.25f * (armorDir / (armorDir + C_CONST));
         float magicDR = 0.25f * (magicResistDir / (magicResistDir + C_CONST));
 
@@ -218,7 +218,7 @@ public static class CombatMath
         float skillReductionMult = 1.0f;
         if (t <= target.blockThreshold)
         {
-            float effDef = target.defenseValue;
+            float effDef = target.EffectiveDefenseValue;
             if (attacker is AllyStats ai && ai.defenseValueIgnore > 0f)
                 effDef *= (1f - Mathf.Clamp01(ai.defenseValueIgnore));
             defenseValMult = 1f / (1f + effDef * K_CONST);

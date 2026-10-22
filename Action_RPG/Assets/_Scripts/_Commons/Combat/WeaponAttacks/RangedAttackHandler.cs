@@ -82,6 +82,14 @@ public class RangedAttackHandler : IWeaponAttackHandler
     /// </summary>
     private Vector3 ResolveFireDirection(WeaponAttackContext ctx)
     {
+        // Phase E2.1: Taunt khóa PRIMARY TARGET vào Taunter cho cả Directional lẫn TargetSeek.
+        // Chỉ khóa hướng bắn; projectile/collision vẫn có thể miss/bị chặn như bình thường.
+        if (ctx.HasForcedPrimaryTarget && ctx.ForcedPrimaryTarget.gameObject.activeInHierarchy)
+        {
+            Vector3 forcedDir = ctx.ForcedPrimaryTarget.position - ctx.PlayerPos;
+            if (forcedDir.sqrMagnitude > 0.0001f) return forcedDir.normalized;
+        }
+
         if (_mode == WeaponData.AttackMode.TargetSeek)
         {
             Stats target = FindNearestTarget(ctx, seekAngle: 45f);

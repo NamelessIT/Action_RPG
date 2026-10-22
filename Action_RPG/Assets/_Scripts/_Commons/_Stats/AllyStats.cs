@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -84,6 +84,64 @@ public class AllyStats : Stats
     public float M = 150f;
     public float bonusMoveSpeed;
     public float trueMoveFlexibility;
+
+    /// <summary>
+    /// Phase B unified runtime movement. Slow của Player/Companion được tính như bonusMoveSpeed âm
+    /// (vd Slow 20% => -0.20), không nhân lên final moveSpeed sau cùng.
+    /// </summary>
+    public override float EffectiveMoveSpeed
+    {
+        get
+        {
+            RuntimeStatModifierLedger ledger = RuntimeModifiers;
+            float runtimeBonusMove = ledger != null
+                ? ledger.GetAdditivePercent(RuntimeStatKey.BonusMoveSpeed)
+                : 0f;
+            float baseMoveAdd = ledger != null
+                ? ledger.GetAdditivePercent(RuntimeStatKey.BaseMoveSpeedMultiplier)
+                : 0f;
+            float baseMoveMult = ledger != null
+                ? ledger.GetMultiplicativeFactor(RuntimeStatKey.BaseMoveSpeedMultiplier)
+                : 1f;
+
+            float effectiveBaseMove = baseMoveSpeed * Mathf.Max(0f, 1f + baseMoveAdd) * baseMoveMult;
+            float effectiveBonusMove = bonusMoveSpeed + runtimeBonusMove - CurrentSlowAmount;
+            float value = effectiveBaseMove
+                * (1 + ((0.05f * Mathf.Sqrt(AGI) - VIT * moveSpeedReducePerVIT) * (1 + trueMoveFlexibility) / 2))
+                * Mathf.Max(0f, 1f + effectiveBonusMove);
+
+            return Mathf.Clamp(value, minSpeed, maxSpeed);
+        }
+    }
+
+    /// <summary>Phase B unified runtime attack speed. Slow không còn tác động Attack Speed.</summary>
+    public override float EffectiveAttackSpeed
+    {
+        get
+        {
+            RuntimeStatModifierLedger ledger = RuntimeModifiers;
+            float runtimeBonusAttack = ledger != null
+                ? ledger.GetAdditivePercent(RuntimeStatKey.BonusAttackSpeed)
+                : 0f;
+            float baseAttackAdd = ledger != null
+                ? ledger.GetAdditivePercent(RuntimeStatKey.BaseAttackSpeedMultiplier)
+                : 0f;
+            float baseAttackMult = ledger != null
+                ? ledger.GetMultiplicativeFactor(RuntimeStatKey.BaseAttackSpeedMultiplier)
+                : 1f;
+
+            float effectiveBaseAttack = baseAttackSpeed * Mathf.Max(0f, 1f + baseAttackAdd) * baseAttackMult;
+            float agiAttackSpeedBonus = maxAttackSpeedBuff * AGI / (AGI + A);
+            float normalWithoutRuntime = baseAttackSpeed * (1 + agiAttackSpeedBonus + bonusAttackSpeed);
+
+            // Compatibility bridge: một số content cũ (vd WPN_GS_T5_01) ghi đè trực tiếp attackSpeed.
+            // Nếu field runtime khác công thức normal, tạm coi đó là explicit override cho tới Phase G migrate producer.
+            if (attackSpeed > 0f && !Mathf.Approximately(attackSpeed, normalWithoutRuntime))
+                return Mathf.Max(0.01f, attackSpeed);
+
+            return Mathf.Max(0.01f, effectiveBaseAttack * (1 + agiAttackSpeedBonus + bonusAttackSpeed + runtimeBonusAttack));
+        }
+    }
 
     [Header("--- Dash ---")]
     public float dashDistance;
@@ -351,9 +409,30 @@ public class AllyStats : Stats
     //    };
     //    TakeDamage(info); // Gọi hàm trên
     //}
-    // Cho Leo Passive
+    // Rogue CM3: one ArmorDown instance per Rogue -> target pair.
+    // A later qualifying Backstab refreshes the same 3s debuff instead of stacking another copy.
+    // Producer lives on the authoritative hit notification path instead of relying on a runtime
+    // event subscription that can be missed/rebound during Skill Tree lifecycle changes.
+
+    // Cho Leo Passive / Rogue Core Mechanic / các producer post-hit khác.
     public void NotifyOnHitEnemy(Stats target, float t, bool isCrit)
     {
+        if (rogueCM3_BackstabAppliesDebuff && target != null && t > 0.5f)
+        {
+            // User-confirmed CM3 semantics: -30% Armor, non-stackable; repeat Backstab only refreshes duration.
+            // Snapshot from raw/base Armor so refreshing while this debuff is active does not accidentally
+            // recalculate from the already-reduced EffectiveArmor and change the magnitude.
+            float armorDebuff = Mathf.Max(0f, target.armor * 0.30f);
+            if (armorDebuff > 0f)
+            {
+                string sourceKey = $"RogueCM3.ArmorDown:{GetInstanceID()}";
+                target.ApplyArmorMagicResistDown(
+                    "RogueCM3.ArmorDown", armorDebuff, 0f, 3f, this, sourceKey,
+                    EffectStackPolicy.RefreshSameSource, 1, 0.30f,
+                    "Rogue CM3 Backstab ArmorDown 30% base Armor / refresh-only 3s");
+            }
+        }
+
         OnHitEnemy?.Invoke(target, t, isCrit);
     }
     // Hàm để CombatMath gọi khi tính toán thấy Block thành công (Cho Vanguard)

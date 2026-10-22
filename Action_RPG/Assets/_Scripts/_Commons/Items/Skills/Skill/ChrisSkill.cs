@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -22,6 +22,7 @@ public class ChrisSkill : SkillBehavior
 
     private Rigidbody rb;
     private EquipmentManager equipmentManager;
+    private DrivenKnockbackSourceController drivenKnockback;
 
     // [MỚI] Tham chiếu Animator để chơi animation ủi
     private Animator animator;
@@ -31,6 +32,8 @@ public class ChrisSkill : SkillBehavior
         base.Initialize(myStats, myData, myPlayer);
         rb = myPlayer.GetComponent<Rigidbody>();
         equipmentManager = myPlayer.GetComponent<EquipmentManager>();
+        drivenKnockback = myPlayer.GetComponent<DrivenKnockbackSourceController>();
+        if (drivenKnockback == null) drivenKnockback = myPlayer.gameObject.AddComponent<DrivenKnockbackSourceController>();
 
         // [MỚI] Lấy Animator
         animator = myPlayer.GetComponentInChildren<Animator>();
@@ -71,6 +74,8 @@ public class ChrisSkill : SkillBehavior
         rb.useGravity = false;
         rb.linearVelocity = Vector3.zero;
 
+        drivenKnockback.BeginSession(stats, $"CHRIS_CHARGE_{GetInstanceID()}", dashDir, pushOffsetDistance, dashDuration + 0.5f);
+
         try
         {
             // [FIX] Dùng WaitForFixedUpdate để đồng bộ hoàn toàn với Physics
@@ -78,40 +83,38 @@ public class ChrisSkill : SkillBehavior
 
             while (timer < dashDuration)
             {
-                // Dùng fixedDeltaTime cho chính xác
                 float dt = Time.fixedDeltaTime;
+                drivenKnockback.PruneInvalidTargets();
 
-                // A. Ép vận tốc Player (Ghi đè hoàn toàn vận tốc cũ -> Tốc độ luôn chuẩn là 3)
-                rb.linearVelocity = dashDir * dashSpeed;
-                rb.angularVelocity = Vector3.zero;
-
-                // B. Quét va chạm
+                // Quét target TRƯỚC khi tính speed để resistance có hiệu lực ngay tick player chạm enemy.
                 Vector3 centerPoint = transform.position + Vector3.up * hitOffsetY;
                 Collider[] hits = Physics.OverlapSphere(centerPoint, hitRadius, player.dangerLayer);
 
-                // Tính trước vị trí frame tiếp theo để Enemy bám dính tốt hơn
-                Vector3 nextFramePos = rb.position + (dashDir * dashSpeed * dt);
-
                 foreach (var hit in hits)
                 {
-                    Stats enemyStats = hit.GetComponent<Stats>();
-                    if (enemyStats != null && enemyStats.currentHp > 0)
-                    {
-                        // Logic 1: Đẩy
-                        HandleContinuousPush(hit.gameObject, dashDir, nextFramePos);
+                    Stats enemyStats = hit.GetComponentInParent<Stats>();
+                    if (enemyStats == null || enemyStats.currentHp <= 0) continue;
 
-                        // Logic 2: Damage
-                        if (!alreadyDamagedList.Contains(hit.gameObject))
-                        {
-                            alreadyDamagedList.Add(hit.gameObject);
-                            ApplyDamage(enemyStats, dashDir);
-                        }
+                    int impactLevel = ComputeImpactLevel(enemyStats, dashDir);
+                    drivenKnockback.TryCapture(enemyStats, impactLevel);
+
+                    if (!alreadyDamagedList.Contains(enemyStats.gameObject))
+                    {
+                        alreadyDamagedList.Add(enemyStats.gameObject);
+                        ApplyDamage(enemyStats, dashDir);
                     }
                 }
 
-                timer += dt;
+                // Driven KB: target càng nặng (KB resistance cao) thì chính SOURCE bị chậm.
+                // Duration charge giữ nguyên => tổng quãng đường charge tự ngắn đi.
+                float effectiveDashSpeed = dashSpeed * drivenKnockback.CurrentSpeedMultiplier;
+                Vector3 nextFramePos = rb.position + (dashDir * effectiveDashSpeed * dt);
+                drivenKnockback.SetPredictedAnchor(nextFramePos, dashDir);
 
-                // [FIX] Chờ nhịp vật lý tiếp theo thay vì chờ Frame màn hình
+                rb.linearVelocity = dashDir * effectiveDashSpeed;
+                rb.angularVelocity = Vector3.zero;
+
+                timer += dt;
                 yield return waitFixed;
             }
             // --- [MỚI] TÍNH TOÁN SIN SAU KHI KẾT THÚC ỦI ---
@@ -126,6 +129,7 @@ public class ChrisSkill : SkillBehavior
         finally
         {
             // --- 3. CLEANUP ---
+            drivenKnockback.EndSession();
             rb.useGravity = originalUseGravity;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
@@ -143,37 +147,21 @@ public class ChrisSkill : SkillBehavior
         player.isUsingSpecialSkill = false;
     }
 
-    void HandleContinuousPush(GameObject enemyObj, Vector3 dashDir, Vector3 playerNextPos)
+    private int ComputeImpactLevel(Stats enemyStats, Vector3 dashDir)
     {
-        Rigidbody enemyRb = enemyObj.GetComponent<Rigidbody>();
-        if (enemyRb != null)
-        {
-            // Điểm neo lý tưởng trước mặt Player
-            Vector3 idealPos = playerNextPos + (dashDir * pushOffsetDistance);
-            idealPos.y = enemyRb.position.y;
-
-            // Dùng MovePosition để ép Enemy vào vị trí đó
-            // Lưu ý: MovePosition hoạt động tốt cho cả Kinematic và Dynamic khi muốn teleport mượt
-            enemyRb.MovePosition(idealPos);
-
-            // Nếu là Dynamic, reset velocity để nó không bị nảy lung tung
-            if (!enemyRb.isKinematic)
-            {
-                enemyRb.linearVelocity = Vector3.zero;
-            }
-        }
+        Vector3 impactDir = enemyStats.transform.position - transform.position;
+        impactDir.y = 0f;
+        if (impactDir.sqrMagnitude <= 0.0001f) return 2;
+        impactDir.Normalize();
+        float angle = Vector3.Angle(dashDir, impactDir);
+        return angle <= headOnAngle ? 2 : 1;
     }
 
     private void ApplyDamage(Stats enemyStats, Vector3 dashDir)
     {
         stats.EnterCombat();
 
-        // Tính góc va chạm để xác định impactLevel
-        Vector3 impactDir = (enemyStats.transform.position - transform.position);
-        impactDir.y = 0;
-        impactDir.Normalize();
-        float angle = Vector3.Angle(dashDir, impactDir);
-        int impactLevel = (angle <= headOnAngle) ? 2 : 1;
+        int impactLevel = ComputeImpactLevel(enemyStats, dashDir);
 
         DamageHelper.ApplyStandardDamage(stats, enemyStats, transform, 1f, data, equipmentManager != null ? equipmentManager.currentWeapon : null, impactLevel, true, dashDuration + 0.2f);
     }

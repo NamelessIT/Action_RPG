@@ -24,6 +24,7 @@ MonoBehaviour:
     l\u1EDBn (Rouge). \n\n\u2022 Design: Th\u01B0\u1EDFng l\u1EDBn cho ph\u1EA3n
     x\u1EA1 (Frame perfect). K\u1EBFt h\u1EE3p N\xE9 & Ph\u1EA3n \u0111\xF2n.\""
   skillType: 2
+  controlPolicy: 1
   skillPhysicalMultiplier: 4
   skillMagicMultiplier: 0
   cooldown: 10

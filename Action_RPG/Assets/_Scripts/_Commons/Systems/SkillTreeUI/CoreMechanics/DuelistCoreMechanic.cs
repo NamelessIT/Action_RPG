@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections;
 
 /// <summary>
 /// Duelist Core Mechanic handler.
@@ -23,11 +22,20 @@ public class DuelistCoreMechanic : ClassCoreMechanicBase
     // CM3 auto-parry
     private float _autoParryCooldownTimer;
     private const float AutoParryCD = 10f;
+    private int _cm2DebuffSequence;
 
     protected override void Awake()
     {
         base.Awake();
         _passive = GetComponent<DuelistPassive>();
+    }
+
+    // DuelistPassive is added dynamically by SkillFactory after the Player root has already Awake'd.
+    // Never rely solely on the Awake cache when Core Mechanic nodes are applied/reverted later.
+    private DuelistPassive ResolvePassive()
+    {
+        if (_passive == null) _passive = GetComponent<DuelistPassive>();
+        return _passive;
     }
 
     public override void Apply(int index)
@@ -37,14 +45,16 @@ public class DuelistCoreMechanic : ClassCoreMechanicBase
             case 1:
                 _cm1Active = true;
                 stats.duelistCM1_ParryRestoresStamina = true;
-                if (_passive != null) _passive.OnParrySuccessEvent += OnParrySuccess_CM1;
+                DuelistPassive passive1 = ResolvePassive();
+                if (passive1 != null) passive1.OnParrySuccessEvent += OnParrySuccess_CM1;
                 Debug.Log("[DuelistCM1] Parry hồi 10 Stamina.");
                 break;
 
             case 2:
                 _cm2Active = true;
                 stats.duelistCM2_ParryBreaksDefense = true;
-                if (_passive != null) _passive.OnParrySuccessEvent += OnParrySuccess_CM2;
+                DuelistPassive passive2 = ResolvePassive();
+                if (passive2 != null) passive2.OnParrySuccessEvent += OnParrySuccess_CM2;
                 Debug.Log("[DuelistCM2] Parry → địch mất 20 Defense Value trong 3s.");
                 break;
 
@@ -63,12 +73,14 @@ public class DuelistCoreMechanic : ClassCoreMechanicBase
             case 1:
                 _cm1Active = false;
                 stats.duelistCM1_ParryRestoresStamina = false;
-                if (_passive != null) _passive.OnParrySuccessEvent -= OnParrySuccess_CM1;
+                DuelistPassive passive1 = ResolvePassive();
+                if (passive1 != null) passive1.OnParrySuccessEvent -= OnParrySuccess_CM1;
                 break;
             case 2:
                 _cm2Active = false;
                 stats.duelistCM2_ParryBreaksDefense = false;
-                if (_passive != null) _passive.OnParrySuccessEvent -= OnParrySuccess_CM2;
+                DuelistPassive passive2 = ResolvePassive();
+                if (passive2 != null) passive2.OnParrySuccessEvent -= OnParrySuccess_CM2;
                 break;
             case 3:
                 _cm3Active = false;
@@ -96,17 +108,13 @@ public class DuelistCoreMechanic : ClassCoreMechanicBase
     private void OnParrySuccess_CM2(bool isPerfect, Stats attacker)
     {
         if (attacker == null) return;
-        float debuff = 20f;
-        attacker.defenseValue -= debuff;
-        StartCoroutine(RevertDefenseDebuff(attacker, debuff, 3f));
-        Debug.Log($"[DuelistCM2] Parry → {attacker.name} mất {debuff} Defense Value trong 3s.");
-    }
-
-    private IEnumerator RevertDefenseDebuff(Stats target, float amount, float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        if (target != null && target.currentHp > 0)
-            target.defenseValue += amount;
+        const float debuff = 20f;
+        string sourceKey = $"DuelistCM2.DefenseValueDown:{GetInstanceID()}:{++_cm2DebuffSequence}";
+        attacker.ApplyDefenseValueDown(
+            "DuelistCM2.DefenseValueDown", debuff, 3f, stats, sourceKey,
+            EffectStackPolicy.IndependentPerSource, 1, debuff,
+            "Duelist CM2 Parry -20 DefenseValue / independent 3s");
+        Debug.Log($"[DuelistCM2] Parry → {attacker.name} mất {debuff} Effective Defense Value trong 3s.");
     }
 
     // CM3: gọi từ combat system khi đòn đánh đánh trúng player và không có parry active

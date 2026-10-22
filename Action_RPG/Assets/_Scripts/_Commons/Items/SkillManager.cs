@@ -512,44 +512,26 @@ public class SkillManager : MonoBehaviour
         _pendingChargeInterrupt = null;
     }
 
-    /// <summary>
-    /// Skill có khả năng GIẢI khống chế (cleanse) — được phép cast ngay cả khi đang bị Stun.
-    /// Nhận diện qua enum effect code (không hard-code string): SwordMasterSkill / WarriorLiteSignature
-    /// (cả 2 đều gọi BreakCrowdControl trong Use()).
-    /// </summary>
+    /// <summary>Phase B: policy nằm trong SkillData, không hard-code skill/effect code trong manager.</summary>
     public static bool IsCleanseSkill(SkillData skillData)
-    {
-        if (skillData == null) return false;
-        return skillData.skillEffectCode == SkillData.SkillEffectCode.SwordMasterSkill
-            || skillData.signatureEffectCode == SkillData.SignatureEffectCode.WarriorLiteSignature;
-    }
+        => skillData != null && skillData.controlPolicy == SkillControlPolicy.Cleanse;
 
     public void CastSkill(SkillData skillData)
     {
         if (skillData == null) return;
 
-        // [ACTION-LOCK] Quy tắc cast theo loại khống chế (chỉ áp cho Skill/Signature, không chặn basic attack):
-        //  - Airborne: chặn MỌI skill kể cả cleanse.
-        //  - Silence: chặn skill (không cooldown/cost khi chỉ bấm).
-        //  - Stun: chỉ cho skill CLEANSE (SwordMaster/WarriorLite) để thoát stun; skill khác bị chặn.
-        //  - Root: KHÔNG chặn skill.
+        // Phase B: mọi Skill/Signature hỏi cùng StatusControlResolver.
+        // Cleanse policy được cast dưới Stun/Root/Silence (và Taunt/Fear khi phase E có runtime),
+        // nhưng không được cast trong Airborne/Knockback/Pull (ControlMode.Displaced).
+        StatusControlSnapshot control = StatusControlSnapshot.Normal;
+        SkillControlPolicy controlPolicy = skillData.controlPolicy;
         if (isPlayer && allyStats != null
             && (skillData.skillType == SkillData.SkillType.Skill || skillData.skillType == SkillData.SkillType.Signature))
         {
-            if (allyStats.IsAirborne)
+            control = allyStats.ControlState;
+            if (!allyStats.CanCastSkill(controlPolicy))
             {
-                Debug.LogWarning($"[SkillManager] '{skillData.skillName}' bị chặn — đang bị Hất Tung (Airborne).");
-                return;
-            }
-            if (allyStats.IsSilenced)
-            {
-                Debug.LogWarning($"[SkillManager] '{skillData.skillName}' bị chặn — đang bị Câm Lặng (Silence).");
-                return;
-            }
-            // Stun: cho phép cleanse skill (để thoát stun), chặn skill thường.
-            if (allyStats.isStunned && !IsCleanseSkill(skillData))
-            {
-                Debug.LogWarning($"[SkillManager] '{skillData.skillName}' bị chặn — đang bị Choáng (Stun, không phải cleanse).");
+                Debug.LogWarning($"[SkillManager] '{skillData.skillName}' bị ControlState chặn (mode={control.mode}, policy={controlPolicy}).");
                 return;
             }
         }
@@ -558,10 +540,9 @@ public class SkillManager : MonoBehaviour
         if (isPlayer && allyStats != null && allyStats.accSkillChargeTime > 0f
             && (skillData.skillType == SkillData.SkillType.Skill || skillData.skillType == SkillData.SkillType.Signature))
         {
-            // [CLEANSE x STUN] Cleanse skill khi đang bị Stun KHÔNG được gồng: Stun (interruptCurrentAction=true)
-            // sẽ ngắt charge ngay → skill không kịp cast để giải khống chế (mà cleanse cần CAST mới gỡ stun).
-            // → Cast thẳng để thoát stun. (Airborne/Silence đã chặn hẳn ở guard phía trên.)
-            if (allyStats.isStunned && IsCleanseSkill(skillData))
+            // Nếu normal skill đang bị CC khóa nhưng Cleanse policy được phép, cast ngay để effect cleanse thực thi.
+            // Không áp dụng khi Displaced vì gate phía trên đã chặn cả Cleanse.
+            if (IsCleanseSkill(skillData) && !control.canCastNormalSkill && control.canCastCleanseSkill)
             {
                 CastSkillImmediate(skillData);
                 return;

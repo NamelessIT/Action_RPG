@@ -14,7 +14,6 @@ public class RogueCoreMechanic : ClassCoreMechanicBase
     public override string ClassName => "Rogue";
 
     private bool _cm2Active;
-    private bool _cm3Active;
 
     // CM2: track after-dash window
     private bool  _waitingFirstHit;
@@ -45,9 +44,9 @@ public class RogueCoreMechanic : ClassCoreMechanicBase
                 break;
 
             case 3:
+                // Producer is resolved directly from AllyStats.NotifyOnHitEnemy using this authoritative flag.
+                // This avoids a fragile runtime event-subscription dependency while preserving the same hit scope.
                 stats.rogueCM3_BackstabAppliesDebuff = true;
-                _cm3Active = true;
-                if (stats != null) stats.OnHitEnemy += OnHitEnemy_CM3;
                 Debug.Log("[RogueCM3] Backstab → -30% Armor và MS trong 3s.");
                 break;
         }
@@ -69,8 +68,6 @@ public class RogueCoreMechanic : ClassCoreMechanicBase
                 break;
             case 3:
                 stats.rogueCM3_BackstabAppliesDebuff = false;
-                _cm3Active = false;
-                if (stats != null) stats.OnHitEnemy -= OnHitEnemy_CM3;
                 break;
         }
     }
@@ -89,26 +86,6 @@ public class RogueCoreMechanic : ClassCoreMechanicBase
         DamageInfo dmg = new DamageInfo { physDamage = bonus, attacker = stats, sourcePosition = transform.position };
         target.TakeDamage(dmg);
         Debug.Log($"[RogueCM2] First hit after dash bonus: {bonus:F1}");
-    }
-
-    private void OnHitEnemy_CM3(Stats target, float directionT, bool isCrit)
-    {
-        if (!_cm3Active || target == null) return;
-        bool isBackstab = directionT > 0.5f; // directionT ~ 1 = backstab
-        if (!isBackstab) return;
-
-        float armorDebuff = target.armor * 0.30f;
-        target.armor -= armorDebuff;
-        StartCoroutine(RevertArmorDebuff(target, armorDebuff, 3f));
-
-        Debug.Log($"[RogueCM3] Backstab → giảm {armorDebuff:F1} Armor của {target.name} trong 3s.");
-    }
-
-    private System.Collections.IEnumerator RevertArmorDebuff(Stats target, float amount, float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        if (target != null && target.currentHp > 0)
-            target.armor += amount;
     }
 
     public override void ApplyUpgrade(int index)

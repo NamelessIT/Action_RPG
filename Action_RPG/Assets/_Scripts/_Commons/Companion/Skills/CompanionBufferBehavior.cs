@@ -186,7 +186,7 @@ public class CompanionBufferBehavior : CompanionSkillBehavior
         System.Action<DamageInfo> onHit = info =>
         {
             if (info == null || remaining <= 0f) return;
-            float dmg = info.TotalRawDamage * pl.damageTakenMultiplier;
+            float dmg = info.TotalRawDamage * pl.EffectiveDamageTakenMultiplier;
             float absorb = Mathf.Min(remaining, dmg);
             blocked += absorb; remaining -= absorb;
         };

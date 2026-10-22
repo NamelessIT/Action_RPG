@@ -138,7 +138,7 @@ public class EnemyCombat : MonoBehaviour
         var m = GetResolvedSkillModule();
         if (m == null) return IsSkillReady(); // fallback legacy (enemySkill)
         if (isAttacking) return false;
-        if (stats != null && stats.IsSkillLocked) return false; // Silence/Stun/Airborne → không cast
+        if (stats != null && !stats.CanCastSkill(SkillControlPolicy.Normal)) return false; // Silence/Stun/Airborne → không cast
         float cd = m.cooldown > 0f ? m.cooldown : 0.1f;
         return Time.time >= lastSkillTime + cd;
     }
@@ -147,7 +147,7 @@ public class EnemyCombat : MonoBehaviour
     public bool IsSkillReady()
     {
         if (enemySkill == null || isAttacking) return false;
-        if (stats != null && stats.IsSkillLocked) return false; // Silence/Stun/Airborne → không dùng được skill
+        if (stats != null && !stats.CanCastSkill(SkillControlPolicy.Normal)) return false; // Silence/Stun/Airborne → không dùng được skill
         float cd = skillCooldown > 0f ? skillCooldown : Mathf.Max(0.1f, enemySkill.cooldown);
         return Time.time >= lastSkillTime + cd;
     }
@@ -178,7 +178,14 @@ public class EnemyCombat : MonoBehaviour
         if (!ctx.interruptCurrentAction) return; // Root/Slow/effect không-ngắt → KHÔNG hủy đòn
         bool keepSkillCooldown = !_currentIsSkill || ctx.putInterruptedSkillOnCooldown;
         CancelAttack(keepSkillCooldown);
+        OnCrowdControlInterrupted(ctx);
     }
+
+    /// <summary>
+    /// Hook cho subclass có movement/action riêng ngoài currentAttackCoroutine (vd Boss dash).
+    /// Base EnemyCombat không cần làm gì thêm.
+    /// </summary>
+    protected virtual void OnCrowdControlInterrupted(InterruptContext ctx) { }
 
 
     // Hàm Update để quản lý Cooldown skill (nếu có)
@@ -190,20 +197,45 @@ public class EnemyCombat : MonoBehaviour
 
     public virtual void PerformBasicAttack()
     {
+        TryPerformBasicAttack(forced: false);
+    }
+
+    /// <summary>
+    /// Phase E3A: basic attack cưỡng chế khi bị Taunt. Manual/basic capability đang false dưới Taunt,
+    /// nên path này chỉ được phép khi ControlState xác nhận canForcedBasicAttack. Không dùng skill.
+    /// </summary>
+    public virtual void PerformForcedBasicAttack(Transform forcedTarget)
+    {
+        if (forcedTarget == null) return;
+        target = forcedTarget;
+        TryPerformBasicAttack(forced: true);
+    }
+
+    private void TryPerformBasicAttack(bool forced)
+    {
         if (stats == null || target == null) return;
         if (isAttacking) return;
 
-        // Tính Cooldown. [SLOW] giảm cadence đánh (cooldown dài hơn) — chỉ tác động đòn thường, không skillCooldown.
-        float speed = stats.baseAttackSpeed;
-        if (speed <= 0) speed = 0.25f;
-        speed *= stats.EffectiveSlowMultiplier;
-        float cooldownTime = 1.0f / Mathf.Max(0.01f, speed);
+        StatusControlSnapshot control = stats.ControlState;
+        if (forced)
+        {
+            if (control.mode != ControlMode.Taunted || !control.canForcedBasicAttack) return;
+        }
+        else if (!control.canBasicAttack)
+        {
+            return;
+        }
+
+        // Phase B: Slow không thay đổi cadence đánh; AttackSpeedDown sẽ đi qua EffectiveAttackSpeed.
+        float speed = Mathf.Max(0.01f, stats.EffectiveAttackSpeed);
+        float cooldownTime = 1.0f / speed;
 
         if (Time.time < lastAttackTime + cooldownTime) return;
 
         _currentAttackMultiplier = 1f; // đòn thường
         _currentIsSkill = false;
-        // [EAM] Có module (local override hoặc EnemyData) → dispatch theo style; null → melee fallback cũ.
+        // [EAM] Giữ nguyên behavior của basic module hiện tại. Taunt chỉ ép primary target,
+        // không đổi attack style / collateral geometry của enemy.
         var basicModule = GetResolvedBasicModule();
         if (basicModule != null) PerformModuleAttack(basicModule, false);
         else currentAttackCoroutine = StartCoroutine(EnemyAttackRoutine());
@@ -216,7 +248,7 @@ public class EnemyCombat : MonoBehaviour
     {
         if (stats == null || target == null) return;
         if (isAttacking) return;
-        if (stats.IsSkillLocked) return; // bị Silence/Stun/Airborne → không cast được
+        if (!stats.CanCastSkill(SkillControlPolicy.Normal)) return; // bị Silence/Stun/Airborne → không cast được
 
         // [EAM] Module skill: tự quản cooldown/range theo data.
         var skillModule = GetResolvedSkillModule();
@@ -507,10 +539,10 @@ public class EnemyCombat : MonoBehaviour
             // Dừng sớm nếu đã tới sát Player (không lấn vào trong) — coi như đã chạm → gây damage.
             if (target != null && Vector3.Distance(transform.position, target.position) <= endGap)
             { ModuleContactHit(module, contactRadius); break; }
-            float slow = stats != null ? stats.EffectiveSlowMultiplier : 1f;
-            // Đẩy vị trí TRỰC TIẾP mỗi frame (bỏ qua giới hạn gia tốc của NavMeshAgent) nhưng vẫn bám NavMesh.
-            if (agent != null && agent.isOnNavMesh) agent.Move(moveDir * dashSpeed * slow * dt);
-            else transform.position += moveDir * dashSpeed * slow * dt;
+            float moveMult = stats != null ? stats.EffectiveMoveSpeedMultiplier : 1f;
+            // Movement skill tôn trọng cùng effective MoveSpeed path (Slow chỉ ảnh hưởng movement).
+            if (agent != null && agent.isOnNavMesh) agent.Move(moveDir * dashSpeed * moveMult * dt);
+            else transform.position += moveDir * dashSpeed * moveMult * dt;
             // Chỉ trúng khi thân enemy CHẠM tới Player trong lúc lướt (không phải ngay lúc bắt đầu).
             ModuleContactHit(module, contactRadius);
             yield return null;
@@ -715,9 +747,8 @@ protected IEnumerator EnemyAttackRoutine()
         }
         // ─────────────────────────────────────────────────────────────────────
 
-        // [SLOW] Tốc độ đánh hiệu lực = baseAttackSpeed × EffectiveSlowMultiplier → animation + hit window (startN/endN)
-        // + recovery chậm ĐỒNG BỘ (Slow tác động cadence thực thi đòn đánh; KHÔNG đụng skillCooldown ở IsSkillReady).
-        float effAttackSpeed = Mathf.Max(0.1f, stats.baseAttackSpeed * stats.EffectiveSlowMultiplier);
+        // Phase B: Slow không tác động Attack Speed. Animation/hit window dùng unified EffectiveAttackSpeed.
+        float effAttackSpeed = Mathf.Max(0.1f, stats.EffectiveAttackSpeed);
 
         // 2. Trigger Attack Animation (sau khi telegraph xong)
         if (animator != null)

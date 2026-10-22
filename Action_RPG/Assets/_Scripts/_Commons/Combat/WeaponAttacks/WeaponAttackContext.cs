@@ -24,6 +24,13 @@ public class WeaponAttackContext
     public int  ComboStep;
     public bool IsHeavy;
 
+    // Phase E2.1: khi basic attack bị Taunt cưỡng chế, đây là PRIMARY TARGET mà handler phải
+    // ưu tiên nhắm tới. Không đồng nghĩa với guaranteed hit: geometry/projectile/collision vẫn chạy bình thường.
+    // AoE/pierce/collateral vẫn được phép trúng các mục tiêu khác theo behavior tự nhiên của weapon.
+    public Transform ForcedPrimaryTarget;
+    public Stats     ForcedPrimaryTargetStats;
+    public bool HasForcedPrimaryTarget => ForcedPrimaryTarget != null;
+
     // ── Callbacks ─────────────────────────────────────────────────
     /// <summary>Gọi ApplyDamageToTarget trên PlayerController.</summary>
     public System.Action<Stats, bool, int> ApplyDamage;

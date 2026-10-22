@@ -241,7 +241,7 @@ public class ArcaneEmpowerment
             if (e == null || e.currentHp <= 0 || !done.Add(e)) continue;
 
             DamageHelper.ApplyStandardDamage(stats, e, self, mult * dmgScale, null, MagicProxy, 1, stun > 0f, stun, sourceType: DamageSourceType.Ranged);
-            if (burnPct > 0f) e.ApplyBurn(stats.magicAtk * burnPct, burnTime);
+            if (burnPct > 0f) e.ApplyBurn(stats.magicAtk * burnPct, burnTime, stats);
         }
     }
 
@@ -347,7 +347,7 @@ public class ArcaneEmpowerment
     private void OnLavaTick(Stats e)
     {
         DamageHelper.ApplyStandardDamage(stats, e, self, lavaTickDmgPct * dmgScale, null, MagicProxy, 0, sourceType: DamageSourceType.DoT);
-        e.ApplyBurn(stats.magicAtk * lavaBurnPct, lavaBurnTime);
+        e.ApplyBurn(stats.magicAtk * lavaBurnPct, lavaBurnTime, stats);
         if (magePassive != null) magePassive.SkillAddFracture(e, 1);
     }
 

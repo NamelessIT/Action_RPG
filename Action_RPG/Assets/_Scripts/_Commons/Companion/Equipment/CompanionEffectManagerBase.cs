@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -134,56 +134,29 @@ public abstract class CompanionEffectManagerBase : MonoBehaviour
         target.ApplyEffect(new CombatEffectInfo(CombatEffectType.Slow, dur) { magnitude = percent }, stats);
     }
 
-    /// <summary>Giảm Armor & MR theo lượng tuyệt đối trong dur giây.</summary>
-    protected void ReduceArmorMR(Stats target, float armorAmt, float mrAmt, float dur)
-    {
-        if (target == null) return;
-        StartCoroutine(ReduceStatRoutine(target, armorAmt, mrAmt, dur));
-    }
-    private IEnumerator ReduceStatRoutine(Stats target, float armorAmt, float mrAmt, float dur)
-    {
-        if (target != null) { target.armor -= armorAmt; target.magicResist -= mrAmt; }
-        yield return new WaitForSeconds(dur);
-        if (target != null) { target.armor += armorAmt; target.magicResist += mrAmt; }
-    }
-
-    /// <summary>Giảm % sát thương kẻ địch gây ra (damageOutputMultiplier) trong dur giây.</summary>
-    protected void WeakenEnemyDamage(Stats target, float percent, float dur)
-    {
-        if (target == null || percent <= 0f) return;
-        StartCoroutine(WeakenRoutine(target, percent, dur));
-    }
-    private IEnumerator WeakenRoutine(Stats target, float percent, float dur)
-    {
-        target.damageOutputMultiplier -= percent;
-        yield return new WaitForSeconds(dur);
-        if (target != null) target.damageOutputMultiplier += percent;
-    }
-
-    /// <summary>Tăng % "dễ tổn thương" (damageTakenMultiplier) cho địch trong dur giây.</summary>
-    protected void VulnEnemy(Stats target, float percent, float dur)
-    {
-        if (target == null || percent == 0f) return;
-        StartCoroutine(VulnRoutine(target, percent, dur));
-    }
-    private IEnumerator VulnRoutine(Stats target, float percent, float dur)
-    {
-        target.damageTakenMultiplier += percent;
-        yield return new WaitForSeconds(dur);
-        if (target != null) target.damageTakenMultiplier -= percent;
-    }
-
     /// <summary>
-    /// Khiêu khích (Taunt): ép kẻ địch chuyển mục tiêu sang Companion + dồn aggro tối đa.
-    /// Dùng API có sẵn (EnemyCombat.SetTarget + EnemyStats.AddAggro).
+    /// Aggro redirect: chuyển TARGET NỀN của Enemy sang Companion. Đây KHÔNG phải Taunt CC:
+    /// không chịu resistanceEffect / CC Immunity / Super Armor và không có CC duration.
+    /// Nếu Enemy đang bị Taunt/Fear thật, forced-control vẫn chiếm quyền cho tới khi CC đó kết thúc.
     /// </summary>
-    protected void TauntToCompanion(Stats enemy)
+    protected void RedirectAggroToCompanion(Stats enemy)
     {
         if (enemy == null) return;
-        var ec = enemy.GetComponent<EnemyCombat>();
-        if (ec != null) ec.SetTarget(transform);
-        var es = enemy as EnemyStats;
-        if (es != null) es.AddAggro(99999f);
+
+        EnemyAI enemyAI = enemy.GetComponent<EnemyAI>();
+        if (enemyAI != null)
+        {
+            enemyAI.RedirectAggroTo(transform);
+            return;
+        }
+
+        // Fallback cho target có EnemyCombat nhưng không dùng EnemyAI.
+        EnemyCombat ec = enemy.GetComponent<EnemyCombat>();
+        if (ec != null && !ForcedControlRunner.IsForcedMode(enemy.ControlState.mode))
+            ec.SetTarget(transform);
+
+        EnemyStats es = enemy as EnemyStats;
+        if (es != null) es.AddAggro(es.maxAggro);
     }
 
     // ───────────────────────── VÙNG / BUFF TẠM ─────────────────────────
